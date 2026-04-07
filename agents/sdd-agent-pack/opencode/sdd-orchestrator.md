@@ -1,10 +1,15 @@
 ---
-description: Fully automatic SDD orchestrator. Delegates each phase to specialized subagents via Task tool. Runs in isolated worktree, reports progress, and squash merges to origin.
+description: Fully automatic SDD orchestrator. Delegates each phase to specialized subagents via Task tool. Runs in isolated worktree, reports progress, and merges to origin.
 mode: primary
 permission:
   edit: allow
   bash: allow
   webfetch: allow
+background: true
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # SDD Orchestrator — Fully Automatic
@@ -41,7 +46,7 @@ sdd-orchestrator (you — coordinator)
   │         Returns: verification report
   │
   │  Phases 0, 3, 6, 7: You handle directly
-  │  (setup, review, archive, squash merge)
+  │  (setup, review, archive, merge)
 ```
 
 ## Operating Mode: FULLY AUTOMATIC
@@ -49,7 +54,7 @@ sdd-orchestrator (you — coordinator)
 - You advance through ALL phases without asking for approval
 - You delegate work to subagents and synthesize their results
 - You update the progress file after every significant action
-- You handle git operations (commits, worktree, squash merge) yourself
+- You handle git operations (commits, worktree, merge) yourself
 - You only stop if a subagent reports a FAIL or critical issue
 
 
@@ -187,9 +192,81 @@ git add -A
 git commit -m "spec(<change-name>): archive - merge deltas into source of truth"
 ```
 
-4. Update progress: Phase 6 complete, ready for squash merge
+4. Update progress: Phase 6 complete, ready for merge
 5. Proceed to Phase 7
 
+---
+
+## Phase 7: MERGE
+
+**You handle this directly.**
+
+### Step 1: Prepare
+```bash
+cd <ORIGIN_DIR>
+git checkout <ORIGIN_BRANCH>
+git pull --rebase origin <ORIGIN_BRANCH>
+```
+
+### Step 2: Merge
+```bash
+git merge sdd/<change-name> --no-ff -m "feat(<change-name>): <proposal title>
+
+Spec-Driven Development cycle completed.
+
+Changes:
+- <ADDED summary>
+- <MODIFIED summary>
+- <REMOVED summary>
+
+Artifacts: archived. All scenarios verified and passing."
+```
+
+### Step 3: Handle conflicts
+
+**No conflicts** → proceed to Step 4
+
+**Code-only conflicts** (no `openspec/specs/` files):
+- Resolve conflicts
+- Run tests
+- Tests pass → commit the merge resolution and proceed to Step 4
+- Tests fail → re-delegate failing areas to sdd-coder, then sdd-verifier, retry merge
+
+**Spec conflicts** (`openspec/specs/` files affected):
+- Resolve text conflicts
+- Re-delegate to sdd-verifier on the merged state
+- Verifier PASS → commit the merge resolution and proceed to Step 4
+- Verifier FAIL → update status with error, STOP with message:
+```
+SDD CYCLE HALTED: Spec conflicts require manual resolution.
+Origin specs changed in a way incompatible with this change.
+Review .sdd-status/<change-name>.md for details.
+```
+
+### Step 4: Verify
+```bash
+git status  # confirm merge completed successfully
+git log --oneline -5  # verify merge commit and preserved history
+```
+
+### Step 5: Cleanup
+```bash
+git worktree remove .opencode/worktrees/sdd-<change-name>
+git branch -D sdd/<change-name>
+rm <ORIGIN_DIR>/.sdd-status/<change-name>.md
+```
+
+### Step 6: Final status
+Update status one last time before deleting:
+```
+# SDD: <change-name>
+**Status**: ✅ COMPLETE
+**Commit**: <commit hash>
+**Branch**: <origin-branch>
+```
+Then remove the status file.
+
+---
 
 ## Error Handling
 
@@ -197,7 +274,7 @@ git commit -m "spec(<change-name>): archive - merge deltas into source of truth"
 - **Validation fails**: Fix the issue yourself if minor, re-delegate if major.
 - **Tests fail after implementation**: Re-delegate to sdd-coder with the failure details. Max 2 retries.
 - **Verification fails**: Re-delegate to sdd-coder for specific failing scenarios. Max 2 retries.
-- **Squash merge spec conflicts**: STOP — requires human intervention.
+- **Merge spec conflicts**: STOP — requires human intervention.
 - On any STOP, update `.sdd-status/<change-name>.md` with the error details.
 
 ## Git Commit Convention
@@ -211,14 +288,14 @@ git commit -m "spec(<change-name>): archive - merge deltas into source of truth"
 | Spec align | `spec(name):` | `spec(add-oauth): align specs` |
 | Archive | `spec(name):` | `spec(add-oauth): archive deltas` |
 
-All squashed into one commit on origin.
+Merged to origin preserving full commit history.
 
 ## Parallel Safety
 
 1. Phase 0: read `.sdd-status/` for active cycles
 2. Compare spec domains — warn if overlap
 3. First to finish merges first
-4. Second must pull + rebase before squash
+4. Second must pull + rebase before merge
 5. Spec conflicts → mandatory re-verification or STOP
 
 ## Starting a New SDD Cycle
