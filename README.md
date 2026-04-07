@@ -11,7 +11,7 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 
 ## Highlights
 
-- **6 coordinated agents** that run a full SDD cycle automatically — from spec to squash commit
+- **6 coordinated agents** that run a full SDD cycle automatically — from spec to merge commit
 - **9 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile)
 - **Two platforms**: works with both Claude Code and OpenCode
 - **Zero runtime dependencies** — copy Markdown files into your project and go
@@ -142,15 +142,15 @@ agents-orchestrator/
 **Spec-Driven Development** ensures every code change starts with a specification. The orchestrator manages an 8-phase cycle, delegating each phase to the appropriate subagent:
 
 ```
-Setup → Explore → Propose → Review → Implement → Verify → Archive → Squash Merge
+Setup → Explore → Propose → Review → Implement → Verify → Archive → Merge
 ```
 
 - **Fully automatic** — the orchestrator advances through all phases without manual approval; stops only on unresolvable errors
 - **Progress tracking** — each cycle writes status to `.sdd-status/<change-name>.md` for live monitoring
 - **Parallel-safe** — multiple cycles run on isolated worktrees; the orchestrator detects spec domain overlap and warns
-- **Clean output** — every cycle produces one squash commit with all changes and verified spec artifacts
+- **Clean output** — every cycle produces a merge commit preserving full commit history with verified spec artifacts
 
-**Platform note**: The Claude Code orchestrator is the canonical, complete version. The OpenCode orchestrator is currently missing Phases 1 (Explore), 3 (Review), 5 (Verify), and 7 (Squash Merge).
+**Platform note**: The Claude Code orchestrator is the canonical, complete version. The OpenCode orchestrator is currently missing Phases 1 (Explore), 3 (Review), and 5 (Verify).
 
 > Full phase diagram, conflict handling, monitoring commands, and parallel execution examples: [`agents/sdd-agent-pack/README.md`](agents/sdd-agent-pack/README.md)
 

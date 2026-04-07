@@ -68,9 +68,9 @@ agents-orchestrator/
   Phase 6: ARCHIVE
   ├─ Orchestrator merges deltas into specs/
   │
-  Phase 7: SQUASH MERGE
-  ├─ git merge --squash → origin branch
-  ├─ One clean commit with all changes
+  Phase 7: MERGE
+  ├─ git merge --no-ff → origin branch
+  ├─ Merge commit preserving full history
   └─ Cleanup: removes worktree + branch + status
 ```
 
@@ -211,7 +211,7 @@ The orchestrator detects parallel cycles and warns if they touch the same spec d
 
 ## Conflict Handling
 
-### At squash merge time:
+### At merge time:
 
 | Conflict type | Action |
 |---------------|--------|
@@ -235,13 +235,13 @@ If spec conflicts are unresolvable, the orchestrator stops and writes the error 
 | `sdd-test-writer` | 4 | Generates tests from spec scenarios | Tests only |
 | `sdd-verifier` | 5 | Verifies code matches specs | No |
 
-All agents use **Opus 4.6** for maximum reasoning quality.
+Orchestrator, scanner, and spec-writer use **Opus 4.6** for maximum reasoning quality. Coder, test-writer, and verifier use **Sonnet 4.6** for fast execution.
 
 ---
 
 ## Git Result
 
-Each SDD cycle produces **one clean squash commit** on your branch:
+Each SDD cycle produces **a merge commit preserving full commit history** on your branch:
 
 ```
 a1b2c3d feat(add-oauth): Add OAuth authentication
@@ -268,3 +268,7 @@ Change the orchestrator to semi-auto by adding approval gates
 ### Add more subagents
 Create new `.md` files in `.claude/agents/` or `.opencode/agents/`
 and reference them from the orchestrator via Task.
+
+---
+
+> Inspired by the agent orchestration patterns from [Gentleman Programming](https://github.com/Gentleman-Programming).

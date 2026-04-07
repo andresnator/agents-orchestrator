@@ -25,7 +25,7 @@ sdd-orchestrator (coordinator, no code)
   ├─ Phase 4: Implement    → sdd-coder (per task phase) + sdd-test-writer
   ├─ Phase 5: Verify       → sdd-verifier (code vs spec comparison)
   ├─ Phase 6: Archive      — orchestrator handles (merge deltas into specs/)
-  └─ Phase 7: Squash Merge — orchestrator handles (one clean commit on origin)
+  └─ Phase 7: Merge — orchestrator handles (merge to origin preserving history)
 ```
 
 Agent permissions by role:
@@ -45,14 +45,14 @@ Agent permissions by role:
 - **Git commit prefixes**: `spec(name):` for spec phases, `feat(name):` for implementation, `test(name):` for tests.
 - **Progress tracking**: `.sdd-status/<change-name>.md` in the origin directory, updated after every phase transition.
 - **Worktrees**: SDD cycles run in isolated git worktrees at `.claude/worktrees/sdd-<name>` (Claude Code) or `.opencode/worktrees/` (OpenCode).
-- All agents target **claude-opus-4-6** model.
+- Orchestrator, scanner, and spec-writer use **claude-opus-4-6**. Coder, test-writer, and verifier use **claude-sonnet-4-6**.
 
 ## Parallel Safety
 
 Multiple SDD cycles can run concurrently. The orchestrator enforces:
 1. Each cycle checks `.sdd-status/` for active cycles at Phase 0
 2. Warns if two cycles touch the same spec domain
-3. First to finish merges first; second must pull + rebase before squash
+3. First to finish merges first; second must pull + rebase before merge
 4. Spec conflicts at merge time trigger mandatory re-verification or halt
 
 ## Editing Agents — Keep Variants in Sync
@@ -68,6 +68,8 @@ name: sdd-<role>
 description: ...
 model: claude-opus-4-6
 isolation: worktree  # orchestrator only
+background: true     # orchestrator only
+model: claude-opus-4-6  # or claude-sonnet-4-6 for execution agents
 tools: [Read, Write, Edit, Bash, Grep, Glob, Task]
 ```
 
@@ -83,4 +85,4 @@ permission:
 
 ## Known Gap
 
-The OpenCode orchestrator (`agents/sdd-agent-pack/opencode/sdd-orchestrator.md`) is missing Phases 1, 3, 5, and 7 compared to the Claude Code version. The Claude Code orchestrator is the canonical, complete version.
+The OpenCode orchestrator (`agents/sdd-agent-pack/opencode/sdd-orchestrator.md`) is missing Phases 1, 3, and 5 compared to the Claude Code version. The Claude Code orchestrator is the canonical, complete version.
