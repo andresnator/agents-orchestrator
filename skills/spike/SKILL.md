@@ -7,6 +7,10 @@ description: |
   "spike en Jira", "necesito un spike para", "estudio de viabilidad",
   "ticket de investigación", "spike técnico", "hacer un spike",
   "documentar investigación", "crear tarea de investigación".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Building Spike Tickets

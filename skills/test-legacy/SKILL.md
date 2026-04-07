@@ -32,6 +32,10 @@ description: |
   "dependencias ocultas en el constructor", "este código es imposible de testear",
   "cómo meto tests a este código", "efectos secundarios invisibles",
   "clase monolítica sin tests", "método con demasiadas líneas sin cobertura".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Legacy Code Testing Skill

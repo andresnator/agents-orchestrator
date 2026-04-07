@@ -8,6 +8,10 @@ description: |
   "cobertura de tests", "no tiene tests", "añadir cobertura", "crear pruebas",
   "test parametrizado", "test de excepción", "testear el servicio",
   "cubrir con tests", "generar tests".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Adding Unit Tests

@@ -8,6 +8,10 @@ description: |
   "resumen del libro", "estudiar el capítulo", "síntesis", "notas cornell",
   "extraer ideas principales", "dame un resumen", "qué dice este capítulo",
   "resumir documento", "analizar lectura".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Book Chapter Summary

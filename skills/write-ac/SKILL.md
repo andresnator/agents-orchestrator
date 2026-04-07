@@ -7,6 +7,10 @@ description: |
   "criterios Gherkin", "dado cuando entonces", "condiciones de aceptación",
   "escribir los ACs", "generar criterios", "criterios para esta historia",
   "definir los criterios".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Building Acceptance Criteria

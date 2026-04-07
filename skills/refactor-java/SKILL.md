@@ -10,6 +10,10 @@ description: |
   "mejorar calidad del código", "técnica de refactorización", "extraer método",
   "renombrar variable", "mover método", "eliminar código duplicado",
   "reducir complejidad", "mejorar legibilidad", "reorganizar código".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # Java Refactoring Catalog Skill

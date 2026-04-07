@@ -14,6 +14,10 @@ description: |
   "commit después de cada test", "cadencia de commits", "commit frecuente",
   "commitear si pasa el test", "revertir si falla", "commits pequeños",
   "flujo TCR", "metodología TCR", "test verde y commit".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # TCR Commit Skill

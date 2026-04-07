@@ -14,6 +14,10 @@ description: |
   "registrar una decisión", "crear un ADR", "escribir un ADR", "registro de decisión",
   "decisión de arquitectura", "justificar una decisión técnica",
   "documentar por qué elegimos esta solución", "crear registro de decisión".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # ADR Creator

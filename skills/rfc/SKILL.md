@@ -7,6 +7,10 @@ description: |
   "crear un RFC", "escribir un RFC", "proponer una feature",
   "documentar una decisión técnica", "propuesta de feature", "diseño técnico",
   "quiero proponer un cambio técnico", "necesito documentar una decisión".
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # RFC Creator — Interactive Interview & Markdown Generator
