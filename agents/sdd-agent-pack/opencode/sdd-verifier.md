@@ -5,6 +5,10 @@ permission:
   edit: deny
   bash: ask
   webfetch: deny
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # SDD Verifier

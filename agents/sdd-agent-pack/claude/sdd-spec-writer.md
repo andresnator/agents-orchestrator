@@ -2,6 +2,10 @@
 name: sdd-spec-writer
 description: Creates OpenSpec planning artifacts (proposal.md, delta specs, design.md, tasks.md) from a scanner report and user requirements. Used by the SDD orchestrator during the Propose phase.
 model: claude-opus-4-6
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 tools:
   - Read
   - Write

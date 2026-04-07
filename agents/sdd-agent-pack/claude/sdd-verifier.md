@@ -1,7 +1,11 @@
 ---
 name: sdd-verifier
 description: Verifies that the implemented code satisfies every requirement and scenario in the OpenSpec delta specs. Produces a verification checklist. Used by the SDD orchestrator during the Verify phase.
-model: claude-opus-4-6
+model: claude-sonnet-4-6
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 tools:
   - Read
   - Bash

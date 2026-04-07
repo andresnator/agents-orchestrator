@@ -2,6 +2,10 @@
 name: sdd-scanner
 description: Scans the codebase, existing OpenSpec specs, and active changes to produce a structured analysis report. Used by the SDD orchestrator during the Explore phase.
 model: claude-opus-4-6
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 tools:
   - Read
   - Grep
