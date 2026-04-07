@@ -1,7 +1,11 @@
 ---
 name: sdd-test-writer
 description: Generates tests directly from OpenSpec delta spec scenarios. Each scenario becomes one or more test cases. Used by the SDD orchestrator during the Implement phase.
-model: claude-opus-4-6
+model: claude-sonnet-4-6
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 tools:
   - Read
   - Write
@@ -9,6 +13,14 @@ tools:
   - Bash
   - Grep
   - Glob
+  - Skill
+skills:
+  - refactor-java
+  - tcr
+  - test-legacy
+  - unit-tests
+mcpServers:
+  - claude_ai_Context7
 ---
 
 # SDD Test Writer
@@ -97,3 +109,17 @@ Return a test generation report:
 - Include both happy path and error scenario tests
 - Tests should be independent and not depend on execution order
 - If the test framework cannot be detected, ask in your output which framework to use
+
+## Available Skills and Tools
+
+### Skills
+When available, use these skills for implementation quality:
+- **refactor-java** — Catalog of 62+ refactoring techniques for Java code
+- **tcr** — Test && Commit || Revert loop for safe micro-refactoring
+- **test-legacy** — Testing techniques for legacy code (Feathers methodology)
+- **unit-tests** — JUnit 5 + Mockito test generation following project conventions
+
+### Context7 MCP (documentation lookup)
+When available, use Context7 to fetch up-to-date documentation for libraries/frameworks used in the implementation:
+1. Resolve the library name to a Context7 ID
+2. Query documentation for the resolved library

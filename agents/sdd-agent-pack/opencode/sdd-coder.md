@@ -5,6 +5,10 @@ permission:
   edit: allow
   bash: ask
   webfetch: deny
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0"
 ---
 
 # SDD Coder
@@ -71,3 +75,17 @@ Return a structured implementation report:
 - If you need to modify a spec because the implementation reveals an issue, update the delta spec AND note it in your report as a divergence
 - Write clean, production-quality code with proper error handling
 - Follow existing code patterns and conventions in the project
+
+## Available Skills and Tools
+
+### Skills
+When available, use these skills for implementation quality:
+- **refactor-java** — Catalog of 62+ refactoring techniques for Java code
+- **tcr** — Test && Commit || Revert loop for safe micro-refactoring
+- **test-legacy** — Testing techniques for legacy code (Feathers methodology)
+- **unit-tests** — JUnit 5 + Mockito test generation following project conventions
+
+### Context7 MCP (documentation lookup)
+When available, use Context7 to fetch up-to-date documentation for libraries/frameworks used in the implementation:
+1. Resolve the library name to a Context7 ID
+2. Query documentation for the resolved library
