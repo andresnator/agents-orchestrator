@@ -1,7 +1,7 @@
 # SDD Agent Pack — Fully Automatic Spec-Driven Development
 
 A complete multi-agent system for **Spec-Driven Development** using **OpenSpec**.
-Works with **Claude Code** and **OpenCode**.
+Works with **OpenCode**.
 
 ---
 
@@ -11,14 +11,6 @@ Works with **Claude Code** and **OpenCode**.
 agents-orchestrator/
 ├── agents/
 │   └── sdd-agent-pack/
-│       ├── claude/              ← Copy contents to .claude/agents/
-│       │   ├── sdd-orchestrator.md  ← Main coordinator (fully automatic)
-│       │   ├── sdd-scanner.md       ← Phase 1: Codebase analysis
-│       │   ├── sdd-spec-writer.md   ← Phase 2: Creates specs & proposals
-│       │   ├── sdd-coder.md         ← Phase 4: Implements code
-│       │   ├── sdd-test-writer.md   ← Phase 4: Generates tests from specs
-│       │   └── sdd-verifier.md      ← Phase 5: Verifies code vs specs
-│       │
 │       └── opencode/                ← Copy contents to .opencode/agents/
 │           ├── sdd-orchestrator.md
 │           ├── sdd-scanner.md
@@ -98,20 +90,6 @@ openspec init
 ---
 
 ## Installation
-
-### Claude Code
-
-```bash
-# From your project root:
-mkdir -p .claude/agents
-cp agents-orchestrator/agents/sdd-agent-pack/claude/*.md .claude/agents/
-
-# Add to .gitignore
-echo ".claude/worktrees/" >> .gitignore
-echo ".sdd-status/" >> .gitignore
-```
-
-Verify: run `/agents` in Claude Code — you should see all 6 `sdd-*` agents.
 
 ### OpenCode
 

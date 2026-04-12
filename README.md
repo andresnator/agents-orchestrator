@@ -3,7 +3,7 @@
 A distribution pack of multi-agent definitions and Claude Code skills for fully automatic **Spec-Driven Development** using [OpenSpec](https://www.npmjs.com/package/@fission-ai/openspec).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Claude%20Code%20%7C%20OpenCode-8A2BE2)](agents/sdd-agent-pack/)
+[![Platform](https://img.shields.io/badge/Platform-OpenCode-8A2BE2)](agents/sdd-agent-pack/)
 [![Agents](https://img.shields.io/badge/Agents-6-green)](agents/sdd-agent-pack/)
 [![Skills](https://img.shields.io/badge/Skills-9-orange)](skills/)
 
@@ -13,7 +13,7 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 
 - **6 coordinated agents** that run a full SDD cycle automatically — from spec to merge commit
 - **9 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile)
-- **Two platforms**: works with both Claude Code and OpenCode
+- **OpenCode platform**: agent definitions for OpenCode
 - **Zero runtime dependencies** — copy Markdown files into your project and go
 - **Parallel-safe**: multiple SDD cycles can run concurrently on separate worktrees
 - **Built on OpenSpec** for structured, scenario-based specifications (GIVEN/WHEN/THEN)
@@ -82,20 +82,18 @@ npm install -g @fission-ai/openspec@latest
 cd your-project
 openspec init
 
-# 3. Copy agents (Claude Code)
-mkdir -p .claude/agents
-cp path/to/agents-orchestrator/agents/sdd-agent-pack/claude/*.md .claude/agents/
+# 3. Copy agents (OpenCode)
+mkdir -p .opencode/agents
+cp path/to/agents-orchestrator/agents/sdd-agent-pack/opencode/*.md .opencode/agents/
 
 # 4. Copy skills (optional, Claude Code only)
 mkdir -p .claude/skills
 cp -r path/to/agents-orchestrator/skills/* .claude/skills/
 
 # 5. Run your first SDD cycle
-# In Claude Code:
+# In OpenCode:
 @sdd-orchestrator Add user authentication with OAuth
 ```
-
-> For OpenCode, copy from `agents/sdd-agent-pack/opencode/` to `.opencode/agents/` instead.
 
 ---
 
@@ -106,14 +104,7 @@ agents-orchestrator/
 ├── agents/
 │   └── sdd-agent-pack/
 │       ├── README.md                ← Detailed agent documentation
-│       ├── claude/                  ← Claude Code agents (canonical)
-│       │   ├── sdd-orchestrator.md
-│       │   ├── sdd-scanner.md
-│       │   ├── sdd-spec-writer.md
-│       │   ├── sdd-coder.md
-│       │   ├── sdd-test-writer.md
-│       │   └── sdd-verifier.md
-│       └── opencode/                ← OpenCode agents (same body, different frontmatter)
+│       └── opencode/                ← OpenCode agents
 │           ├── sdd-orchestrator.md
 │           ├── sdd-scanner.md
 │           ├── sdd-spec-writer.md
@@ -150,7 +141,7 @@ Setup → Explore → Propose → Review → Implement → Verify → Archive �
 - **Parallel-safe** — multiple cycles run on isolated worktrees; the orchestrator detects spec domain overlap and warns
 - **Clean output** — every cycle produces a merge commit preserving full commit history with verified spec artifacts
 
-**Platform note**: The Claude Code orchestrator is the canonical, complete version. The OpenCode orchestrator is currently missing Phases 1 (Explore), 3 (Review), and 5 (Verify).
+**Note**: The OpenCode orchestrator is currently missing Phases 1 (Explore), 3 (Review), and 5 (Verify).
 
 > Full phase diagram, conflict handling, monitoring commands, and parallel execution examples: [`agents/sdd-agent-pack/README.md`](agents/sdd-agent-pack/README.md)
 
@@ -206,23 +197,6 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 
 ### Installing Agents
 
-#### Claude Code
-
-```bash
-# From your project root
-mkdir -p .claude/agents
-cp path/to/agents-orchestrator/agents/sdd-agent-pack/claude/*.md .claude/agents/
-
-# Add worktree and status directories to .gitignore
-echo ".claude/worktrees/" >> .gitignore
-echo ".sdd-status/" >> .gitignore
-
-# Initialize OpenSpec (if not already done)
-openspec init
-```
-
-Verify: run `/agents` in Claude Code — you should see all 6 `sdd-*` agents listed.
-
 #### OpenCode
 
 ```bash
@@ -258,7 +232,7 @@ Verify: run `/skills` in Claude Code to see installed skills.
 - **Change the model**: edit the `model:` field in each agent's YAML frontmatter
 - **Cherry-pick skills**: copy only the skill directories you need
 - **Add new agents**: create `.md` files in `.claude/agents/` and reference them from the orchestrator via Task
-- **Keep variants in sync**: the Claude Code version is canonical — edit it first, then copy the instruction body (below the frontmatter `---`) to the OpenCode variant, preserving each platform's frontmatter
+- **Agent definitions**: edit agent files directly in `agents/sdd-agent-pack/opencode/`
 
 ---
 
@@ -266,7 +240,7 @@ Verify: run `/skills` in Claude Code to see installed skills.
 
 Contributions are welcome. When submitting changes:
 
-1. **Agent logic**: edit the Claude Code version first, then sync the instruction body to the OpenCode variant
+1. **Agent logic**: edit agent files in `agents/sdd-agent-pack/opencode/`
 2. **New skills**: follow the `SKILL.md` convention (see any existing skill as a template)
 3. **Keep it Markdown**: this repo has no build system, no tests, no runtime code — keep it that way
 
