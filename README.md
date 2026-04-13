@@ -5,14 +5,14 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-OpenCode-8A2BE2)](agents/sdd-agent-pack/)
 [![Agents](https://img.shields.io/badge/Agents-6-green)](agents/sdd-agent-pack/)
-[![Skills](https://img.shields.io/badge/Skills-9-orange)](skills/)
+[![Skills](https://img.shields.io/badge/Skills-13-orange)](skills/)
 
 ---
 
 ## Highlights
 
 - **6 coordinated agents** that run a full SDD cycle automatically — from spec to merge commit
-- **9 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile)
+- **13 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile)
 - **OpenCode platform**: agent definitions for OpenCode
 - **Zero runtime dependencies** — copy Markdown files into your project and go
 - **Parallel-safe**: multiple SDD cycles can run concurrently on separate worktrees
@@ -56,16 +56,20 @@ All agents use **Opus 4.6** for maximum reasoning quality.
 
 ### Skills
 
-Nine Claude Code skills for common development workflows:
+Thirteen Claude Code skills for common development workflows:
 
 | Skill | Category | Description |
 |-------|----------|-------------|
 | [`adr`](skills/adr/) | Documentation | Generate Architecture Decision Records in Markdown |
+| [`prd`](skills/prd/) | Documentation | Interactive PRD generator with phase-by-phase validation |
 | [`rfc`](skills/rfc/) | Documentation | Interactive RFC document generator |
+| [`sdd-issue`](skills/sdd-issue/) | Agile Workflow | Agent-ready GitHub issues structured for SDD orchestration |
 | [`spike`](skills/spike/) | Documentation | Jira Spike ticket generator for investigations |
 | [`summarize`](skills/summarize/) | Documentation | Pedagogical book chapter synthesis with Cornell method |
-| [`unit-tests`](skills/unit-tests/) | Testing | JUnit 5 + Mockito test generator following project conventions |
+| [`unit-tests`](skills/unit-tests/) | Testing | Unit test generator following project conventions |
+| [`unit-tests-java`](skills/unit-tests-java/) | Testing | JUnit 5 + Mockito + AssertJ test generator for Java |
 | [`test-legacy`](skills/test-legacy/) | Testing | Legacy code testing techniques (Feathers methodology) |
+| [`test-legacy-java`](skills/test-legacy-java/) | Testing | Java-specific legacy testing with JUnit 4/5, Mockito, and seam analysis |
 | [`tcr`](skills/tcr/) | Testing | Test && Commit &#124;&#124; Revert for ultra-short safe commits |
 | [`refactor-java`](skills/refactor-java/) | Code Quality | 62+ refactoring techniques catalog (Fowler + Refactoring Guru) |
 | [`write-ac`](skills/write-ac/) | Agile Workflow | Acceptance criteria in Gherkin format (Given/When/Then) |
@@ -113,13 +117,17 @@ agents-orchestrator/
 │           └── sdd-verifier.md
 ├── skills/                          ← Claude Code skills
 │   ├── adr/                         ← Architecture Decision Records
+│   ├── prd/                         ← Product Requirements Documents
 │   ├── refactor-java/               ← Refactoring techniques catalog
 │   ├── rfc/                         ← RFC document generator
+│   ├── sdd-issue/                   ← Agent-ready GitHub issues for SDD
 │   ├── spike/                       ← Spike ticket generator
 │   ├── summarize/                   ← Book chapter synthesis
 │   ├── tcr/                         ← Test && Commit || Revert
 │   ├── test-legacy/                 ← Legacy code testing
-│   ├── unit-tests/                  ← JUnit 5 + Mockito generator
+│   ├── test-legacy-java/            ← Java-specific legacy testing
+│   ├── unit-tests/                  ← Unit test generator
+│   ├── unit-tests-java/             ← JUnit 5 + Mockito + AssertJ
 │   └── write-ac/                    ← Acceptance criteria (Gherkin)
 ├── CLAUDE.md                        ← Development guidance for this repo
 ├── LICENSE                          ← MIT
@@ -156,6 +164,7 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 | Command | What it does |
 |---------|-------------|
 | `/adr` | Generates Architecture Decision Records with status tracking and RACI matrix |
+| `/prd` | Interactive PRD creation with phase-by-phase validation and complete document output |
 | `/rfc` | Interactive RFC creation with problem statement, proposed solution, and alternatives |
 | `/spike` | Creates structured Jira Spike tickets for technical investigations |
 | `/summarize` | Synthesizes book chapters using Cornell method, key concepts, and reflection questions |
@@ -164,8 +173,10 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 
 | Command | What it does |
 |---------|-------------|
-| `/unit-tests` | Generates JUnit 5 + Mockito tests following your project's naming and assertion conventions |
+| `/unit-tests` | Generates unit tests following your project's naming and assertion conventions |
+| `/unit-tests-java` | JUnit 5 + Mockito + AssertJ test generator for Java projects (Java 8–21+) |
 | `/test-legacy` | Applies techniques from "Working Effectively with Legacy Code" (Feathers) to add test coverage |
+| `/test-legacy-java` | Java-specific legacy testing with seam analysis, JUnit 4/5, Mockito, and dependency-breaking |
 | `/tcr` | Runs the Test && Commit &#124;&#124; Revert loop for safe micro-refactoring commits |
 
 ### Code Quality
@@ -178,6 +189,7 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 
 | Command | What it does |
 |---------|-------------|
+| `/sdd-issue` | Creates agent-ready GitHub issues with all context needed for SDD orchestration |
 | `/write-ac` | Generates acceptance criteria in Gherkin format (Given/When/Then) for Jira tickets |
 
 ---
@@ -194,6 +206,19 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 ---
 
 ## Installation
+
+### Install with skills CLI
+
+The fastest way to install skills using [skills.sh](https://skills.sh):
+
+```bash
+# Install all skills at once
+npx skills add andresnator/agents-orchestrator
+
+# Or install a single skill
+npx skills add andresnator/agents-orchestrator/skills/tcr
+npx skills add andresnator/agents-orchestrator/skills/unit-tests-java
+```
 
 ### Installing Agents
 
