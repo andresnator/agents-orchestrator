@@ -66,12 +66,13 @@ Run Whisper on the provided file. Use the `--output_format json` flag to capture
 timing and text cleanly, and `--output_dir` to control where the raw output goes.
 
 ```bash
-whisper "<file_path>" \
-  --model <model> \
-  --language <language_code_or_auto> \
-  --output_format json \
-  --output_dir /tmp/whisper-extract-temp
+whisper "<file_path>" --model <model> --language <language_code_or_auto> --output_format json --output_dir /tmp/whisper-extract-temp
 ```
+
+> **Important:** Always emit this as a **single line** — never split with `\` continuations.
+> A trailing space after `\` is not a line continuation in zsh; it becomes an escaped space
+> that Whisper receives as a second (empty) file path, causing ffmpeg to fail with
+> `Error opening input file  .`
 
 Language codes: `es` for Spanish, `en` for English, `pt` for Portuguese, `fr` for French, etc.
 For auto-detect, omit `--language` entirely.
