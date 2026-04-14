@@ -5,14 +5,14 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-OpenCode-8A2BE2)](agents/sdd-agent-pack/)
 [![Agents](https://img.shields.io/badge/Agents-6-green)](agents/sdd-agent-pack/)
-[![Skills](https://img.shields.io/badge/Skills-13-orange)](skills/)
+[![Skills](https://img.shields.io/badge/Skills-14-orange)](skills/)
 
 ---
 
 ## Highlights
 
 - **6 coordinated agents** that run a full SDD cycle automatically — from spec to merge commit
-- **13 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile)
+- **14 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile, media transcription)
 - **OpenCode platform**: agent definitions for OpenCode
 - **Zero runtime dependencies** — copy Markdown files into your project and go
 - **Parallel-safe**: multiple SDD cycles can run concurrently on separate worktrees
@@ -56,7 +56,7 @@ All agents use **Opus 4.6** for maximum reasoning quality.
 
 ### Skills
 
-Thirteen Claude Code skills for common development workflows:
+Fourteen Claude Code skills for common development workflows:
 
 | Skill | Category | Description |
 |-------|----------|-------------|
@@ -73,6 +73,7 @@ Thirteen Claude Code skills for common development workflows:
 | [`tcr`](skills/tcr/) | Testing | Test && Commit &#124;&#124; Revert for ultra-short safe commits |
 | [`refactor-java`](skills/refactor-java/) | Code Quality | 62+ refactoring techniques catalog (Fowler + Refactoring Guru) |
 | [`write-ac`](skills/write-ac/) | Agile Workflow | Acceptance criteria in Gherkin format (Given/When/Then) |
+| [`whisper-extract`](skills/whisper-extract/) | Media | Transcribe audio/video with Whisper and generate a `.md` with summary + full transcript |
 
 ---
 
@@ -128,7 +129,8 @@ agents-orchestrator/
 │   ├── test-legacy-java/            ← Java-specific legacy testing
 │   ├── unit-tests/                  ← Unit test generator
 │   ├── unit-tests-java/             ← JUnit 5 + Mockito + AssertJ
-│   └── write-ac/                    ← Acceptance criteria (Gherkin)
+│   ├── write-ac/                    ← Acceptance criteria (Gherkin)
+│   └── whisper-extract/             ← Audio/video transcription with Whisper
 ├── CLAUDE.md                        ← Development guidance for this repo
 ├── LICENSE                          ← MIT
 └── README.md                        ← You are here
@@ -191,6 +193,12 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 |---------|-------------|
 | `/sdd-issue` | Creates agent-ready GitHub issues with all context needed for SDD orchestration |
 | `/write-ac` | Generates acceptance criteria in Gherkin format (Given/When/Then) for Jira tickets |
+
+### Media
+
+| Command | What it does |
+|---------|-------------|
+| `/whisper-extract` | Transcribes audio or video files using OpenAI Whisper and generates a `.md` with an AI summary followed by the full literal transcript |
 
 ---
 
