@@ -5,14 +5,14 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-OpenCode-8A2BE2)](agents/sdd-agent-pack/)
 [![Agents](https://img.shields.io/badge/Agents-6-green)](agents/sdd-agent-pack/)
-[![Skills](https://img.shields.io/badge/Skills-15-orange)](skills/)
+[![Skills](https://img.shields.io/badge/Skills-16-orange)](skills/)
 
 ---
 
 ## Highlights
 
 - **6 coordinated agents** that run a full SDD cycle automatically — from spec to merge commit
-- **14 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile, media transcription)
+- **16 standalone skills** for everyday dev tasks (testing, documentation, refactoring, agile, media transcription)
 - **OpenCode platform**: agent definitions for OpenCode
 - **Zero runtime dependencies** — copy Markdown files into your project and go
 - **Parallel-safe**: multiple SDD cycles can run concurrently on separate worktrees
@@ -56,7 +56,7 @@ All agents use **Opus 4.6** for maximum reasoning quality.
 
 ### Skills
 
-Fifteen Claude Code skills for common development workflows:
+Sixteen Claude Code skills for common development workflows:
 
 | Skill | Category | Description |
 |-------|----------|-------------|
@@ -72,7 +72,8 @@ Fifteen Claude Code skills for common development workflows:
 | [`test-legacy`](skills/test-legacy/) | Testing | Legacy code testing techniques (Feathers methodology) |
 | [`test-legacy-java`](skills/test-legacy-java/) | Testing | Java-specific legacy testing with JUnit 4/5, Mockito, and seam analysis |
 | [`tcr`](skills/tcr/) | Testing | Test && Commit &#124;&#124; Revert for ultra-short safe commits |
-| [`refactor-java`](skills/refactor-java/) | Code Quality | 62+ refactoring techniques catalog (Fowler + Refactoring Guru) |
+| [`refactor`](skills/refactor/) | Code Quality | Cross-language refactoring catalog with 62+ techniques (Fowler + Refactoring Guru) |
+| [`refactor-java`](skills/refactor-java/) | Code Quality | Java-specific 62+ refactoring techniques with Java 8 and Java 11+ examples |
 | [`write-ac`](skills/write-ac/) | Agile Workflow | Acceptance criteria in Gherkin format (Given/When/Then) |
 | [`whisper-extract`](skills/whisper-extract/) | Media | Transcribe audio/video with Whisper and generate a `.md` with summary + full transcript |
 
@@ -120,7 +121,8 @@ agents-orchestrator/
 ├── skills/                          ← Claude Code skills
 │   ├── adr/                         ← Architecture Decision Records
 │   ├── prd/                         ← Product Requirements Documents
-│   ├── refactor-java/               ← Refactoring techniques catalog
+│   ├── refactor/                     ← Cross-language refactoring catalog
+│   ├── refactor-java/               ← Java-specific refactoring techniques
 │   ├── rfc/                         ← RFC document generator
 │   ├── sdd-issue/                   ← Agent-ready GitHub issues for SDD
 │   ├── spike/                       ← Spike ticket generator
@@ -186,7 +188,8 @@ All skills are invoked via slash commands in Claude Code (e.g., `/adr`, `/spike`
 
 | Command | What it does |
 |---------|-------------|
-| `/refactor-java` | Catalog of 62+ refactoring techniques with code smell diagnostics and step-by-step guides |
+| `/refactor` | Cross-language catalog of 62+ refactoring techniques with multi-language examples (Python, TypeScript, Go, Rust) |
+| `/refactor-java` | Java-specific 62+ refactoring techniques with Java 8 and Java 11+ examples |
 
 ### Agile Workflow
 
