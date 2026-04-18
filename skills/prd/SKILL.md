@@ -233,13 +233,11 @@ If the user wants to continue a PRD they started earlier:
 3. Summarize what's already done and pick up from the first incomplete phase
 4. Follow the same validation flow for remaining phases
 
-## Quick Mode
+## Quick Mode → Use PRD Light
 
-If the user says "quick PRD" or "lightweight PRD", adapt the flow:
-- Combine Phases 1-2 (Overview + Goals) into a single question
-- Combine Phases 3-4 (Personas + Requirements) into a single question
-- Skip Phases 7 (API) and 9 (Security) unless the user brings them up
-- Keep Phase 10 (Risks) — it's always valuable
-- Reduce validation strictness — accept less granular answers
+If the user says "quick PRD", "lightweight PRD", "simple PRD", or similar, redirect them to the
+`prd-light` skill instead. PRD Light is a standalone skill with its own 5-phase structure and
+lighter template, purpose-built for MVPs, internal tools, and small-to-medium features.
 
-Even in quick mode, still validate that requirements are specific and measurable.
+Say: "It sounds like PRD Light would be a better fit — it's a dedicated 5-phase flow designed
+for speed. Want me to switch to that?"

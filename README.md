@@ -5,7 +5,7 @@ A distribution pack of multi-agent definitions and Claude Code skills for fully 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-OpenCode-8A2BE2)](agents/sdd-agent-pack/)
 [![Agents](https://img.shields.io/badge/Agents-6-green)](agents/sdd-agent-pack/)
-[![Skills](https://img.shields.io/badge/Skills-14-orange)](skills/)
+[![Skills](https://img.shields.io/badge/Skills-15-orange)](skills/)
 
 ---
 
@@ -56,12 +56,13 @@ All agents use **Opus 4.6** for maximum reasoning quality.
 
 ### Skills
 
-Fourteen Claude Code skills for common development workflows:
+Fifteen Claude Code skills for common development workflows:
 
 | Skill | Category | Description |
 |-------|----------|-------------|
 | [`adr`](skills/adr/) | Documentation | Generate Architecture Decision Records in Markdown |
 | [`prd`](skills/prd/) | Documentation | Interactive PRD generator with phase-by-phase validation |
+| [`prd-light`](skills/prd-light/) | Documentation | Fast 5-phase PRD for MVPs, internal tools, and small features |
 | [`rfc`](skills/rfc/) | Documentation | Interactive RFC document generator |
 | [`sdd-issue`](skills/sdd-issue/) | Agile Workflow | Agent-ready GitHub issues structured for SDD orchestration |
 | [`spike`](skills/spike/) | Documentation | Jira Spike ticket generator for investigations |
