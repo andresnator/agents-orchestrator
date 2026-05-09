@@ -20,4 +20,5 @@ Each scenario should define:
 |---|---|
 | [`buildable-issue`](buildable-issue/) | Validate buildable issue creation, enrichment, and legacy trigger compatibility |
 | [`doc-command`](doc-command/) | Validate `/doc` as a thin documentation shortcut |
+| [`java-refactor-anchor-first`](java-refactor-anchor-first/) | Validate dumb-primary routing, Java refactor gates, TCR slices, and evidence curation |
 | [`prompt-evaluator`](prompt-evaluator/) | Validate prompt-only review behavior |

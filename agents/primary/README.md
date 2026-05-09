@@ -17,4 +17,6 @@ Primary agents coordinate workflows. They may delegate, sequence work, and synth
 
 ## Current agents
 
-None yet.
+| Agent | Purpose |
+|---|---|
+| [`java-refactor-anchor-first`](java-refactor-anchor-first.md) | Dumb orchestrator for safe Java refactors through baseline, test-anchor, TCR, review-size, and evidence gates. |
