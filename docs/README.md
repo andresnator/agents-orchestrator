@@ -11,4 +11,4 @@ Use docs for durable explanations that are too detailed for the top-level README
 | `architecture.md` | Explain how agents, skills, commands, recipes, and scenarios fit together |
 | `naming-conventions.md` | Define naming and file layout rules |
 | `validation-strategy.md` | Explain scenario/golden-case validation |
-| `installation.md` | Explain how to copy tools into host environments |
+| `installation.md` | Install the harness into local agent environments |
