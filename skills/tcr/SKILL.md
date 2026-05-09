@@ -35,7 +35,22 @@ The discipline is in the **size of the step**. If reverting feels painful, the s
 
 ## Commit Format
 
-Use the `git-commit` skill conventions for message format: `BRANCH-ID <type>: brief description` with `Co-Authored-By` trailer via HEREDOC.
+Use Conventional Commits with the repository's branch/ticket prefix when present: `BRANCH-ID <type>: brief description`.
+
+Do **not** hardcode `Co-Authored-By` trailers. If the maintainer explicitly requires a non-AI co-author trailer, derive the identity from the user's global Git configuration instead of inventing it:
+
+```bash
+git config --global user.name
+git config --global user.email
+```
+
+Only add a trailer when both values are configured and the repository policy allows it:
+
+```text
+Co-Authored-By: <git config --global user.name> <<git config --global user.email>>
+```
+
+Never add AI attribution trailers.
 
 Types by TCR context:
 

@@ -41,7 +41,8 @@ The core separation is simple:
 1. Pick the right layer: agent, skill, command, recipe, scenario, or template.
 2. Start from [`templates/`](templates/).
 3. Add or update the section README.
-4. Add scenarios when behavior matters.
+4. Check whether documentation should be updated; keep it concise and useful for future agents.
+5. Add scenarios when behavior matters.
 
 ## Philosophy
 

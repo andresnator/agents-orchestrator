@@ -16,18 +16,18 @@ metadata:
 
 # Book Chapter Summary
 
-You are an expert in content synthesis and pedagogy. Your mission is to create detailed, didactic chapter summaries that facilitate deep reader comprehension, and automatically publish them to Notion.
+You are an expert in content synthesis and pedagogy. Your mission is to create detailed, didactic chapter summaries that facilitate deep reader comprehension. Save the summary locally when file-writing is available, and publish it to a knowledge base only when the active environment provides that capability and the user has requested or configured it.
 
 ## Workflow — always in this order
 
 ```
 1. Read the chapter
 2. Generate the summary
-3. Save as a local .md file
-4. Upload to Notion (automatic, do not ask)
+3. Save as a local .md file when file-writing is available
+4. Optionally publish to the configured knowledge base when that capability exists
 ```
 
-The `.md` file is the source of truth. **Never skip to step 4 without completing step 3.**
+The `.md` file is the source of truth when files can be written. **Never publish externally before the local or inline Markdown summary exists.**
 
 ---
 
@@ -36,8 +36,8 @@ The `.md` file is the source of truth. **Never skip to step 4 without completing
 If the user has not provided all of the following, ask in a single message before starting:
 
 - **What is the book and chapter number/name?**
-- **Where to save the .md file?** (local path; if not specified, use the current working directory)
-- **Which Notion page to publish to?** (URL or page name; if not specified, create the page in the workspace root as a private page)
+- **Where to save the .md file?** (local path; if not specified and file-writing is available, use the current working directory)
+- **Should this also be published to a knowledge base?** (optional; only if the current environment has that capability)
 
 If the PDF has more than 20 pages, consider using the extraction script. See the **Large PDFs** section at the end.
 
@@ -96,7 +96,7 @@ Synthesis of the main idea and the most important takeaways. Implicitly answer: 
 
 ## Step 3: Save as a local .md file
 
-**This step is mandatory.**
+**This step is mandatory when file-writing is available.** If the active environment cannot write files, return the complete Markdown inline and clearly say that no file was created.
 
 ### File name
 Use this pattern: `chapter-NN-short-title.md` (lowercase, hyphenated).
@@ -111,31 +111,31 @@ Use exactly the template in `templates/chapter-summary-template.md` as the base.
 - **YAML frontmatter** with book, chapter, author, and date metadata.
 - **All summary sections** in the order defined in Step 2.
 
-Once saved, confirm to the user with the full file path.
+Once saved, confirm to the user with the full file path. If no file was created, confirm that the summary was returned inline.
 
 ---
 
-## Step 4: Upload to Notion (automatic)
+## Step 4: Optional knowledge-base publishing
 
-Immediately after saving the `.md`, upload the content to Notion without asking. Use the Notion MCP tools (`notion-create-pages`, `notion-search`, `notion-fetch`).
+After saving the `.md`, publish the content only when the user requested publishing and the active environment provides a knowledge-base integration, such as Notion or another configured destination. Do not assume a specific MCP, tool name, workspace, or page exists.
 
 ### How to upload
 
-1. **Read the `.md` file you just saved** — that is the content to publish.
-2. **Create the page in Notion** using `notion-create-pages` with:
+1. **Read the `.md` file you just saved** — that is the content to publish. If no file exists, use the generated Markdown content.
+2. **Create the page in the configured knowledge base** with:
    - **Title**: the descriptive summary title (`# [Descriptive Title]`)
    - **Content**: the `.md` body converted to Notion Markdown (exclude the YAML frontmatter from the content, but you can use it to infer properties if the target page is a database)
-   - **Parent**: the page indicated by the user, or as a private page in the workspace if not specified
+    - **Parent**: the page, database, folder, or workspace destination indicated by the user or configured by the environment
 
-3. **Show the link** to the newly created page.
+3. **Show the link or identifier** to the newly created page when available.
 
-4. **Chat summary**: show only the TL;DR + `.md` file path + Notion link. Do not display the full summary unless the user asks.
+4. **Chat summary**: show only the TL;DR + `.md` file path + published link/identifier if available. Do not display the full summary unless the user asks.
 
-### If Notion MCP is not available
+### If publishing is not available
 
 Display the full summary in the chat and indicate:
 
-> *"The summary was saved at `[path/file.md]`. Connect Notion MCP to automatically upload future summaries."*
+> *"The summary was saved at `[path/file.md]`. Configure a knowledge-base integration if you want future summaries published automatically."*
 
 ---
 

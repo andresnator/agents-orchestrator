@@ -59,6 +59,7 @@ Because this repo has no runtime test framework, validate `prompt-evaluator` wit
 ## Editing Guidance
 
 - Use `apply_patch` or file-edit tools for Markdown changes.
+- After every change, check whether documentation should be updated. Keep updates as concise as possible and only document what future agents need to understand the change.
 - Do not commit unless the user explicitly asks.
 - Do not build; there is no build step for this repo.
 - Before committing, inspect unrelated working-tree changes and keep them out unless requested.

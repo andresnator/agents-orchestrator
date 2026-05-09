@@ -23,7 +23,7 @@ The goal is to make writing an RFC feel like a conversation, not paperwork.
 
 ## Interview Flow
 
-The interview has **7 phases**. Walk the user through them one at a time. After each phase, summarize what you captured and confirm before moving on. Use the `ask_user_input` tool when the question has clear bounded options; use open-ended prose questions for everything else.
+The interview has **7 phases**. Walk the user through them one at a time. After each phase, summarize what you captured and confirm before moving on. When a question has clear bounded options, present those options plainly in chat and ask the user to choose one; use open-ended prose questions for everything else.
 
 **Important behavioral notes:**
 - Ask one phase at a time. Do not dump all questions at once.
@@ -40,7 +40,7 @@ Ask (open-ended):
 - **Feature name**: "What's the name or short identifier for this proposal? (e.g., `async-worker-pool`, `user-auth-v2`SI )"
 - **Author(s)**: "Who are the authors? (names or handles)"
 
-Then ask (using `ask_user_input`):
+Then ask with bounded options:
 - **Type**: single_select from ["Feature", "Enhancement", "Bug Fix", "Deprecation", "Process Change", "Other"]
 - **Status**: single_select from ["Draft", "In Review", "Accepted", "Rejected", "Superseded"]
 
@@ -85,7 +85,7 @@ Encourage specificity, but respect the user's level of detail. Not every RFC nee
 
 ### Phase 6: Trade-offs & Alternatives
 
-Ask (using `ask_user_input` for the first, open-ended for the rest):
+Ask with bounded options for the first question, then open-ended for the rest:
 - **Have you considered alternatives?**: single_select ["Yes, I have specific alternatives", "I have some rough ideas", "No, I haven't thought about it yet"]
 
 Then depending on their answer:
@@ -104,7 +104,7 @@ Ask (open-ended):
 
 ## Generating the RFC
 
-Once all phases are complete (or the user says "that's everything"), generate the RFC as a Markdown file.
+Once all phases are complete (or the user says "that's everything"), generate the RFC as Markdown. Save it as a file when the active environment provides file-writing capability; otherwise return the complete Markdown inline.
 
 ### Output Template
 
@@ -112,9 +112,9 @@ Read the template at `references/template.md` and use that exact structure for t
 
 ### File Generation Rules
 
-1. Save the file as `rfc-[feature-id].md` where `[feature-id]` is the kebab-case version of the feature name.
-2. Write the file to `/mnt/user-data/outputs/`.
-3. Use `present_files` to share it with the user.
+1. Name the file `rfc-[feature-id].md` where `[feature-id]` is the kebab-case version of the feature name.
+2. Write it to the project-approved documentation or output directory when one exists. If no destination is configured, ask for the destination or return the RFC inline.
+3. Share the resulting path or inline Markdown with the user using the current environment's normal file-sharing mechanism.
 4. After presenting, offer: "Want me to adjust anything? I can also add extra sections like Implementation Plan, Timeline, or Security Considerations if you need them."
 
 ### Writing Quality

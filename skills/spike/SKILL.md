@@ -17,8 +17,6 @@ metadata:
 
 A **spike** is a time-boxed investigation ticket whose goal is to reduce uncertainty before committing to a solution. It answers a specific technical question — it does not deliver functionality. When the spike is done, you close it and create follow-up stories based on what you learned.
 
-**spike vs spike-output**: use `spike` to *create the ticket* (the investigation plan). Use `spike-output` to *document the findings* once the investigation is complete.
-
 Generate minimal Jira Spike tickets. Output in **English**, **Jira Markdown**, inside a code block.
 
 ## When to Create a Spike
@@ -61,4 +59,4 @@ Keep all sections brief. No filler text.
 
 ## After the Spike
 
-Once the investigation is done, use the `spike-output` skill to document findings and conclusions in a format ready to paste into the Jira ticket.
+Once the investigation is done, document findings directly in the Jira ticket using the local findings template in [`assets/spike-findings-template.md`](assets/spike-findings-template.md).
