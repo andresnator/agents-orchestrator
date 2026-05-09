@@ -4,7 +4,7 @@ description: "Trigger: Java tests, JUnit, Mockito, AssertJ, legacy code, charact
 license: MIT
 metadata:
   author: andresnator
-  version: "3.1.1"
+  version: "3.1.2"
 ---
 
 # Java Testing Skill
@@ -82,6 +82,7 @@ Before writing tests, inspect or ask for:
 ## References
 
 Load progressively; do not read the full catalog by default.
+Use `references/` to understand when and why to apply a technique. Use `assets/examples/` only as copyable starting points: adapt package names, dependencies, naming, and project conventions before committing.
 
 | Reference | Load when |
 |---|---|

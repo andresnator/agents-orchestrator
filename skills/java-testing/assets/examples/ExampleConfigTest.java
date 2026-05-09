@@ -3,6 +3,8 @@ package com.example.app.config;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.api.WithAssertions;
@@ -93,17 +95,53 @@ class ExampleConfigTest implements WithAssertions {
         private String decimalProperty;
 
         List<ExampleConfigDTO> parseConfiguration() {
-            return List.of();
+            if (configProperty == null || configProperty.trim().isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            List<ExampleConfigDTO> result = new ArrayList<>();
+            String[] entries = configProperty.split(",");
+            for (String entry : entries) {
+                String[] parts = entry.split(":");
+                if (parts.length != 3) {
+                    return Collections.emptyList();
+                }
+                try {
+                    result.add(new ExampleConfigDTO(parts[0], parts[1], Integer.parseInt(parts[2])));
+                } catch (NumberFormatException ex) {
+                    return Collections.emptyList();
+                }
+            }
+            return result;
         }
 
         List<BigDecimal> parseDecimals() {
-            return List.of();
+            if (decimalProperty == null || decimalProperty.trim().isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            List<BigDecimal> result = new ArrayList<>();
+            String[] values = decimalProperty.split(",");
+            for (String value : values) {
+                result.add(new BigDecimal(value));
+            }
+            return result;
         }
     }
 
     static class ExampleConfigDTO {
-        private String key;
-        private String value;
-        private int number;
+        private final String key;
+        private final String value;
+        private final int number;
+
+        ExampleConfigDTO(String key, String value, int number) {
+            this.key = key;
+            this.value = value;
+            this.number = number;
+        }
+
+        String getKey() { return key; }
+        String getValue() { return value; }
+        int getNumber() { return number; }
     }
 }

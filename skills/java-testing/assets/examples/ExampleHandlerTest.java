@@ -93,16 +93,26 @@ class ExampleHandlerTest implements WithAssertions {
     }
 
     static class ProcessedData {
-        private String id;
-        private String data;
+        private final String id;
+        private final String data;
+
+        ProcessedData(String id, String data) {
+            this.id = id;
+            this.data = data;
+        }
 
         String getId() { return id; }
         String getData() { return data; }
     }
 
     static class AuditEvent {
-        private String action;
-        private String entityId;
+        private final String action;
+        private final String entityId;
+
+        AuditEvent(String action, String entityId) {
+            this.action = action;
+            this.entityId = entityId;
+        }
 
         String getAction() { return action; }
         String getEntityId() { return entityId; }
@@ -129,6 +139,9 @@ class ExampleHandlerTest implements WithAssertions {
             if (input.getId() == null) {
                 throw new IllegalArgumentException("id cannot be null");
             }
+            ProcessedData processedData = new ProcessedData(input.getId(), "PROCESSED_" + input.getData());
+            processor.process(processedData);
+            auditLogger.log(new AuditEvent("HANDLE", input.getId()));
         }
     }
 }

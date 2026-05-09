@@ -6,7 +6,6 @@ import static org.mockito.Mockito.when;
 import java.util.stream.Stream;
 
 import org.assertj.core.api.WithAssertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -29,11 +28,6 @@ class ExampleListenerTest implements WithAssertions {
 
     @InjectMocks
     private ExampleListener exampleListener;
-
-    @BeforeEach
-    void setUp() {
-        System.setProperty("lvslogger.enableConsoleLogger", "false");
-    }
 
     static Stream<Arguments> messageTypesProvider() {
         return Stream.of(
@@ -103,16 +97,26 @@ class ExampleListenerTest implements WithAssertions {
     }
 
     static class ProcessedMessage {
-        private MessageType type;
-        private String source;
+        private final MessageType type;
+        private final String source;
+
+        ProcessedMessage(MessageType type, String source) {
+            this.type = type;
+            this.source = source;
+        }
 
         MessageType getType() { return type; }
         String getSource() { return source; }
     }
 
     static class ValidationResult {
-        private boolean valid;
-        private int errorCode;
+        private final boolean valid;
+        private final int errorCode;
+
+        ValidationResult(boolean valid, int errorCode) {
+            this.valid = valid;
+            this.errorCode = errorCode;
+        }
 
         boolean isValid() { return valid; }
         int getErrorCode() { return errorCode; }
@@ -137,10 +141,22 @@ class ExampleListenerTest implements WithAssertions {
         }
 
         void onMessage(String message, String queueName) {
+            ParsedMessage parsedMessage = parser.parse(message);
+            processor.process(new ProcessedMessage(parsedMessage.getType(), "feed_" + queueName));
         }
 
         ValidationResult validate(String message) {
-            return null;
+            boolean valid = parser.isValid(message);
+            if (valid) {
+                return new ValidationResult(true, 0);
+            }
+            if (message == null) {
+                return new ValidationResult(false, 3);
+            }
+            if (message.isEmpty()) {
+                return new ValidationResult(false, 2);
+            }
+            return new ValidationResult(false, 1);
         }
     }
 }
