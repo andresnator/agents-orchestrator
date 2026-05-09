@@ -11,6 +11,7 @@
 .github/copilot-instructions.local.md
 
 # Agent runtime logs, caches, and worktrees
+.atl/
 .sdd-status/
 .opencode/worktrees/
 .Codex/worktrees/

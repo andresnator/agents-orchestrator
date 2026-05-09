@@ -20,6 +20,8 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 
 | Tool | Type | Purpose |
 |---|---|---|
+| [`/doc`](commands/doc.md) | Command | Starts a thin documentation request and routes to the smallest matching documentation skill |
+| [`buildable-issue`](skills/buildable-issue/) | Skill | Creates agent-ready GitHub issues that are ready to build |
 | [`prompt-evaluator`](agents/subagents/prompt-evaluator.md) | Subagent | Reviews and refines prompt text without executing it |
 | [`prompt-evaluator`](skills/prompt-evaluator/) | Skill | Defines the prompt evaluation rubric and output contract |
 

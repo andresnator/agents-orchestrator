@@ -20,7 +20,9 @@ Each command should document:
 
 ## Current commands
 
-None yet.
+| Command | Purpose |
+|---|---|
+| [`/doc`](doc.md) | Start a thin documentation request and hand off to the smallest matching documentation skill |
 
 ## Rule
 

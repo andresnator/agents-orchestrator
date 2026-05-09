@@ -18,4 +18,6 @@ Each scenario should define:
 
 | Suite | Purpose |
 |---|---|
+| [`buildable-issue`](buildable-issue/) | Validate buildable issue creation, enrichment, and legacy trigger compatibility |
+| [`doc-command`](doc-command/) | Validate `/doc` as a thin documentation shortcut |
 | [`prompt-evaluator`](prompt-evaluator/) | Validate prompt-only review behavior |

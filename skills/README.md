@@ -13,13 +13,13 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | Skill | Purpose |
 |---|---|
 | `adr` | Generate Architecture Decision Records |
+| `buildable-issue` | Create agent-ready GitHub issues that are ready to build |
 | `prd` | Create full Product Requirements Documents |
 | `prd-light` | Create lightweight PRDs |
 | `prompt-evaluator` | Evaluate and refine prompts |
 | `refactor` | Cross-language refactoring guidance |
 | `refactor-java` | Java-specific refactoring guidance |
 | `rfc` | Create RFC documents |
-| `sdd-issue` | Create SDD-ready GitHub issues |
 | `spike` | Create Jira spike tickets |
 | `summarize` | Summarize long-form reading material |
 | `tcr` | Apply Test && Commit || Revert workflow |
