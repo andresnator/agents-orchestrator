@@ -16,7 +16,7 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 | [`templates/`](templates/) | Starting points for new harness pieces |
 | [`docs/`](docs/) | Architecture and deeper design notes |
 
-## Current tools
+## Recommended entry points
 
 | Tool | Type | Purpose |
 |---|---|---|
@@ -25,7 +25,7 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 | [`prompt-evaluator`](agents/subagents/prompt-evaluator.md) | Subagent | Reviews and refines prompt text without executing it |
 | [`prompt-evaluator`](skills/prompt-evaluator/) | Skill | Defines the prompt evaluation rubric and output contract |
 
-The repo also includes reusable skills for ADRs, PRDs, RFCs, refactoring, testing, acceptance criteria, transcription, and summarization.
+This is a curated list, not a full inventory. Add only broadly useful entry points.
 
 ## How this harness is organized
 
