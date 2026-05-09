@@ -18,10 +18,23 @@ Issue 2 should be implemented as a **dumb primary orchestrator plus bounded phas
 | Orchestrator file | `agents/primary/java-refactor-anchor-first.md` |
 | Subagent files | `agents/subagents/java-refactor-baseline-auditor.md`, `agents/subagents/java-refactor-test-anchorer.md`, `agents/subagents/java-refactor-tcr-worker.md`, `agents/subagents/java-refactor-evidence-curator.md` |
 | Communication | Engram topic keys; the orchestrator passes references and gate status only. |
-| Related skills | `unit-tests-java`, `test-legacy-java`, `refactor-java`, `tcr`, `chained-pr`; mention `java-testing` if this repo keeps it as canonical local Java testing guidance. |
-| Evidence | Require openspec artifacts for proposal, spec, design, tasks, verification, and final report. |
+| Related skills | `java-testing`, `refactor-java`, `tcr`, `chained-pr`. |
+| Evidence | Engram is the phase communication source of truth; OpenSpec or project evidence files are optional outputs when explicit paths are provided. |
 | Validation | Scenario/golden-case docs, because this repo has no runtime test framework. |
 | Permissions | Start conservative: no autonomous edits until the human confirms baseline build/tests/coverage/mutation are available. |
+
+## Implementation status
+
+Implemented files:
+
+- `agents/primary/java-refactor-anchor-first.md`
+- `agents/subagents/java-refactor-baseline-auditor.md`
+- `agents/subagents/java-refactor-test-anchorer.md`
+- `agents/subagents/java-refactor-tcr-worker.md`
+- `agents/subagents/java-refactor-evidence-curator.md`
+- `scenarios/java-refactor-anchor-first/README.md`
+
+The SDD cycle for this change passed verification and was archived in Engram.
 
 ## Context-saving architecture
 
@@ -35,10 +48,10 @@ java-refactor-anchor-first primary orchestrator
 ├─ java-refactor-tcr-worker
 │  └─ Reads one refactor slice; applies refactor-java + TCR; saves commit/slice evidence to Engram.
 └─ java-refactor-evidence-curator
-   └─ Reads Engram phase summaries only; updates openspec and final report.
+   └─ Reads Engram phase summaries only; updates final evidence, with optional OpenSpec/project files when provided.
 ```
 
-The orchestrator must stay intentionally dumb. It should not ingest source files, build files, test files, coverage reports, mutation reports, or openspec content. It tracks only:
+The orchestrator must stay intentionally dumb. It should not ingest source files, build files, test files, coverage reports, mutation reports, or OpenSpec content. It tracks only:
 
 - target scope,
 - current gate status,
@@ -64,7 +77,7 @@ Engram is the source of truth between phases. The orchestrator passes these topi
 | Refactor slice plan | `java-refactor-anchor-first/{run-id}/slice-plan` |
 | TCR slice progress | `java-refactor-anchor-first/{run-id}/tcr-slice-{n}` |
 | Review-size decision | `java-refactor-anchor-first/{run-id}/review-strategy` |
-| Openspec evidence report | `java-refactor-anchor-first/{run-id}/evidence-report` |
+| Evidence report | `java-refactor-anchor-first/{run-id}/evidence-report` |
 
 Subagents must update their own topic keys and include enough evidence for the next phase to continue without rereading unrelated context.
 
@@ -140,7 +153,7 @@ The agent cannot enter refactor mode until:
 - target-scope coverage is 100%,
 - mutation score is between 80% and 100%,
 - tests are green,
-- any exclusions are justified in openspec.
+- any exclusions are justified in Engram evidence or an explicitly provided evidence document.
 
 ### 5. Refactor with TCR
 
@@ -163,7 +176,7 @@ The orchestrator owns this decision because it is a review strategy gate, not a 
 
 ### 7. Evidence curation
 
-`java-refactor-evidence-curator` updates openspec from Engram phase summaries only. It should not read the full codebase. Its job is to keep traceability durable without polluting the orchestrator context.
+`java-refactor-evidence-curator` updates Engram-first final evidence from phase summaries only. It should not read the full codebase. If an OpenSpec or project evidence path is provided explicitly, it may update that file too. Its job is to keep traceability durable without polluting the orchestrator context.
 
 ## Golden scenarios
 
@@ -179,20 +192,20 @@ Add scenario coverage for these cases:
 | Mutation below 80% | Agent strengthens tests; no refactor. |
 | Gates pass | Agent enters TCR refactor mode. |
 | Diff approaches 400 lines | Agent asks for chained PR strategy. |
-| Evidence curation | Evidence curator updates openspec from compact phase summaries, not raw code context. |
+| Evidence curation | Evidence curator updates Engram-first evidence from compact phase summaries, not raw code context. |
 | Context control | Orchestrator passes Engram topic keys and compact envelopes, not raw source or reports. |
 
 ## Definition of done
 
-- [ ] `agents/primary/java-refactor-anchor-first.md` exists and follows the primary-agent conventions.
-- [ ] Phase subagents exist for baseline audit, test anchoring, TCR refactor slices, and evidence curation.
-- [ ] Orchestrator and subagents state responsibility, boundaries, related skills, input shape, and output contract.
-- [ ] Orchestrator is explicitly forbidden from reading raw code or doing implementation work.
-- [ ] Engram topic-key communication contract is documented in the orchestrator and every phase subagent.
-- [ ] Agent has explicit blocking gates for baseline, tooling, coverage, mutation, and review size.
-- [ ] `scenarios/java-refactor-anchor-first/README.md` validates the important behavioral branches.
-- [ ] `agents/primary/README.md` and `agents/subagents/README.md` list the new agents.
-- [ ] Root `README.md` is updated only if this agent deserves a curated recommended entry.
+- [x] `agents/primary/java-refactor-anchor-first.md` exists and follows the primary-agent conventions.
+- [x] Phase subagents exist for baseline audit, test anchoring, TCR refactor slices, and evidence curation.
+- [x] Orchestrator and subagents state responsibility, boundaries, related skills, input shape, and output contract.
+- [x] Orchestrator is explicitly forbidden from reading raw code or doing implementation work.
+- [x] Engram topic-key communication contract is documented in the orchestrator and every phase subagent.
+- [x] Agent has explicit blocking gates for baseline, tooling, coverage, mutation, and review size.
+- [x] `scenarios/java-refactor-anchor-first/README.md` validates the important behavioral branches.
+- [x] `agents/primary/README.md` and `agents/subagents/README.md` list the new agents.
+- [x] Root `README.md` is updated as a curated recommended entry.
 
 ## Recommendation
 
@@ -200,6 +213,6 @@ Implement this in three reviewable work units:
 
 1. **Dumb orchestrator + baseline auditor**: establish routing, Engram topic keys, pre-flight, tooling gates, and README entries.
 2. **Test anchorer + TCR worker**: add the two code-heavy phase agents and their compact output contracts.
-3. **Evidence curator + scenarios**: add openspec evidence handling and golden cases that prove unsafe refactors are blocked.
+3. **Evidence curator + scenarios**: add Engram-first evidence handling and golden cases that prove unsafe refactors are blocked.
 
 Do not start by writing a giant all-knowing prompt. Start with the dumb orchestrator contract, Engram topic keys, and phase boundaries. The VALUE here is discipline plus context control: make unsafe refactoring impossible without making every agent carry the whole project in memory.

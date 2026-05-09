@@ -44,8 +44,7 @@ The anchorer must not:
 
 ## Related Skills
 
-- `unit-tests-java` — write idiomatic JUnit 5, Mockito, AssertJ, and parameterized tests when the project uses them.
-- `test-legacy-java` — use characterization tests, seams, sensing, separation, and Sprout/Wrap techniques for hard-to-test Java code.
+- `java-testing` — write idiomatic Java tests and use characterization tests, seams, sensing, separation, and Sprout/Wrap techniques for hard-to-test Java code.
 - `chained-pr` — flag review-size risk if anchoring work grows beyond a focused review slice.
 
 ## Inputs

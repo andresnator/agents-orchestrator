@@ -44,8 +44,7 @@ The auditor must not:
 
 ## Related Skills
 
-- `unit-tests-java` — for recognizing Java test stack conventions only; do not write tests in this phase.
-- `test-legacy-java` — for identifying legacy-testability risks only; do not introduce seams in this phase.
+- `java-testing` — for recognizing Java test stack conventions and legacy-testability risks only; do not write tests or introduce seams in this phase.
 - `chained-pr` — for reporting review-size risk when baseline/setup work appears large.
 
 ## Inputs

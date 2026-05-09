@@ -19,7 +19,7 @@ Turn completed anchor-first Java refactor phase summaries into durable evidence.
 
 - Read compact Engram phase summaries and return envelopes for the active run.
 - Confirm required gates have explicit evidence, blockers, waivers, or human decisions.
-- Curate final OpenSpec-ready evidence and reviewer-facing reporting.
+- Curate final Engram-first evidence and reviewer-facing reporting; update OpenSpec or project evidence files only when explicit paths and edit permission are provided.
 - Preserve traceability from baseline through test anchoring, coverage, mutation, TCR slices, review-size decisions, and final outcome.
 - Persist the final evidence report to Engram for the primary to reference by topic key.
 
@@ -46,7 +46,7 @@ The evidence curator must not:
 
 - `chained-pr` — reflect the accepted review-size strategy and PR boundary in final evidence.
 - `cognitive-doc-design` — keep the final report progressive, scannable, and reviewer-friendly.
-- `sdd-archive` — align final evidence with future OpenSpec archival handoff when the workflow is complete.
+- `sdd-archive` — align final evidence with future SDD archival handoff when the workflow is complete.
 
 ## Inputs
 

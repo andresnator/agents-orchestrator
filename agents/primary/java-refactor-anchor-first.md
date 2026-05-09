@@ -55,7 +55,7 @@ The primary decides when to route to these subagents; it does not apply their sk
 | Refactor/TCR | `java-refactor-tcr-worker` | Execute one small refactor slice with TCR discipline. |
 | Evidence | `java-refactor-evidence-curator` | Curate compact phase evidence into durable reporting. |
 
-Related skills used by routed subagents include `unit-tests-java`, `test-legacy-java`, `refactor-java`, `tcr`, and `chained-pr`.
+Related skills used by routed subagents include `java-testing`, `refactor-java`, `tcr`, and `chained-pr`.
 
 ## Workflow Gates
 
