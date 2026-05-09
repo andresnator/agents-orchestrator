@@ -1,1 +1,19 @@
 .DS_Store
+
+# Local AI/agent tool state and generated files
+.claude/
+.codex/
+.cursor/
+.windsurf/
+.opencode/
+.continue/
+.aider*
+.github/copilot-instructions.local.md
+
+# Agent runtime logs, caches, and worktrees
+.sdd-status/
+.opencode/worktrees/
+.Codex/worktrees/
+*.chat.md
+*.session.md
+*.transcript.md
