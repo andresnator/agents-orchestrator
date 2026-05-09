@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Java Refactor Evidence Curator
@@ -70,6 +70,15 @@ artifact_paths:
 human_decisions:
   may_edit_evidence_docs: true | false | unknown
 ```
+
+## Engram Read/Write Protocol
+
+- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when any required topic is absent, stale, contradictory, too detailed to safely ingest, or belongs to another `run_id`.
+- Save the final evidence report with `mem_save`, the exact requested `evidence_report` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
+- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Keep the final artifact reviewer-facing and compact: gate matrix, topic-key references, command result summaries, waivers, rollback boundary, risks, and next action. Do not save raw code, raw reports, full logs, or expanded phase artifacts.
+- Return only the compact envelope; the primary should reference the final report by topic key.
 
 ## Actions
 

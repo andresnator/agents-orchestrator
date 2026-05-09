@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Java Refactor Baseline Auditor
@@ -66,6 +66,14 @@ human_decisions:
   may_run_commands: true | false | unknown
   may_change_build_files: true | false | unknown
 ```
+
+## Engram Read/Write Protocol
+
+- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Save baseline, coverage, and mutation readiness with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
+- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Keep Engram artifacts compact: gate status, commands discovered or run, result summaries, blockers, risks, and next action. Do not save raw build files, full logs, or broad source excerpts.
+- Return only the compact envelope; later subagents must read your evidence from Engram, not from your response body.
 
 ## Actions
 

@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Java Refactor Test Anchorer
@@ -69,6 +69,15 @@ human_decisions:
   coverage_exception: <optional reason>
   mutation_exception: <optional reason>
 ```
+
+## Engram Read/Write Protocol
+
+- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when baseline, target scope, coverage, or mutation topics are absent, stale, contradictory, or belong to another `run_id`.
+- Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
+- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Keep Engram artifacts compact: files touched, tests added or skipped, command status, anchor strength, blockers, risks, and next action. Do not save raw source, full test files, coverage reports, mutation reports, or command logs.
+- Return only the compact envelope; the TCR worker must read your evidence from Engram, not from your response body.
 
 ## Actions
 

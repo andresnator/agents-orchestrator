@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Java Refactor Anchor-First
@@ -86,6 +86,23 @@ Use a stable `run-id` supplied by the human or generated from the request. Pass 
 | Review-size decision | `java-refactor-anchor-first/{run-id}/review-strategy` |
 | Evidence report | `java-refactor-anchor-first/{run-id}/evidence-report` |
 
+## Engram Communication Protocol
+
+Engram is the only communication bus between phase subagents. Subagents do not talk to each other directly, and the primary does not relay artifact content.
+
+| Step | Owner | Required behavior |
+|---|---|---|
+| 1. Reference | Primary | Pass `project`, `run_id`, and exact topic keys only. |
+| 2. Read dependency | Consuming subagent | Call `mem_search` for the exact topic key in project scope, then `mem_get_observation` for the full artifact. A search preview is not enough. |
+| 3. Validate dependency | Consuming subagent | Block if a required topic is missing, stale, contradictory, or from another `run_id`. |
+| 4. Write artifact | Producing subagent | Call `mem_save` with the exact `topic_key`, `scope: project`, structured `**What**/**Why**/**Where**/**Learned**` content, and `capture_prompt: false` when supported. |
+| 5. Return envelope | Producing subagent | Return only compact status, gate, topic keys read/written, one human question if blocked, and risk. Do not include raw code, logs, reports, or expanded evidence. |
+| 6. Advance gate | Primary | Read only the compact envelope, merge gate status into the run-state topic, and launch the next subagent with topic keys. |
+
+When updating `state`, first read the existing `state` topic and merge the new gate status with existing topic references and human decisions. Do not overwrite prior state with a partial snapshot.
+
+Use `mem_save` topic-key upserts for evolving topics such as `state`, `coverage`, `mutation`, `review-strategy`, and `evidence-report`. Use a distinct `tcr-slice-{n}` topic for each refactor slice.
+
 ## Input Shape
 
 ```yaml
@@ -111,8 +128,8 @@ human_decisions:
 ## Actions
 
 1. If baseline verification is `false` or `unknown`, warn that refactoring on an unstable baseline is unsafe, ask one verification question, and stop.
-2. Create or update compact run state with gate status and known topic keys.
-3. Route to the next required subagent using only topic-key references.
+2. Create or update compact run state with gate status and known topic keys using the Engram communication protocol.
+3. Route to the next required subagent using only topic-key references and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, return a compact envelope only.
 4. Read only the subagent's compact return envelope.
 5. Update run state and either route the next phase, ask one human question, or return the final evidence topic key.
 

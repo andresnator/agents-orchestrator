@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Java Refactor TCR Worker
@@ -76,6 +76,15 @@ human_decisions:
   may_commit: true | false | unknown
   review_strategy: chained-prs | size-exception | unknown
 ```
+
+## Engram Read/Write Protocol
+
+- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when baseline, target scope, test-anchor, coverage, mutation, slice-plan, or review-strategy topics are absent, stale, contradictory, or belong to another `run_id`.
+- Save each refactor slice with `mem_save`, the exact requested `tcr_slice` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
+- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Keep Engram artifacts compact: slice id, technique, files changed, approximate review-size impact, verification status, TCR decision, rollback instruction, and next action. Do not save raw diffs, full source, full logs, or report dumps.
+- Return only the compact envelope; the evidence curator must read your slice evidence from Engram, not from your response body.
 
 ## Actions
 
