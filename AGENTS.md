@@ -26,6 +26,7 @@ It has no runtime application, build system, or test framework. Most validation 
 - Do not add prompt dumps. Every tool needs a clear job, boundaries, and expected output.
 - Prefer small composable pieces over one large do-everything agent.
 - A skill explains how to do something; an agent decides when and whether to use it.
+- When modifying a skill, update its `metadata.version` according to SemVer.
 - Commands are only for workflows used often enough to deserve a shortcut.
 - Scenarios are the default validation strategy for prompt-only behavior.
 - Keep READMEs updated when adding, moving, or removing tools.

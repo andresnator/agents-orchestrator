@@ -150,16 +150,7 @@ class TaxCalculatorTest {
 
 When the output is complex (HTML, JSON, reports), using ApprovalTests is more effective.
 
-### Maven Dependency
-
-```xml
-<dependency>
-    <groupId>com.approvaltests</groupId>
-    <artifactId>approvaltests</artifactId>
-    <version>22.3.3</version>
-    <scope>test</scope>
-</dependency>
-```
+**Prerequisite:** Before adding ApprovalTests dependencies or approving Golden Master files, read `approvaltests-setup.md` for reporters, CI behavior, scrubbers, approved vs received files, and baseline review rules. If dependencies are missing or unclear, use `dependency-setup.md` first so setup follows the project's Maven/Gradle conventions.
 
 ### Legacy Code
 

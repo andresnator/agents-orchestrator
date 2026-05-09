@@ -1,28 +1,10 @@
 ---
 name: test-legacy-java
-description: |
-  Java-specific testing techniques for legacy code based on "Working Effectively with Legacy Code" by Michael Feathers.
-  Use this skill when the user needs to write Java tests for existing code without coverage, break
-  dependencies to make Java code testable, apply Characterization Tests with JUnit, use Sprout/Wrap
-  techniques to safely add functionality, deal with Singletons/statics/final classes in Java tests,
-  find Seams in Java code, apply Sensing or Separation to isolate behavior, use TDD in legacy Java
-  contexts, or any situation where legacy Java code hinders testing.
-  Covers JUnit 4, JUnit 5, Mockito, and Java versions from 8 through 21+.
-  This skill is Java-only. For other languages (Python, TypeScript, C#, Go, etc.), use the test-legacy skill instead.
-  Also applies when the user mentions "code without tests", "I can't test this class", "coupled
-  dependencies", "God class", "break dependencies", "characterization test", "Sprout Method",
-  "Wrap Method", "Extract and Override", "Pinch Point", "Seam", "Sensing", "Separation",
-  "Programming by Difference", "Pass Null", "Scratch Refactoring", "Effect Sketch",
-  "Cover and Modify", "Edit and Pray", "Golden Master", "ApprovalTests", or similar techniques.
-  Tambien se activa en castellano: "codigo sin tests", "no puedo testear esta clase", "codigo legado",
-  "romper dependencias", "dependencias acopladas", "clase Dios", "test de caracterizacion",
-  "metodo Sprout", "metodo Wrap", "extraer e implementar", "punto de pellizco", "costura",
-  "cubrir y modificar", "editar y rezar", "codigo heredado", "hacer testeable",
-  "golden master", "prueba de aprobacion", "TDD en codigo legado".
+description: "Trigger: Java legacy code, código legado Java, JUnit, Mockito, characterization tests, seams, ApprovalTests. Test and break dependencies safely."
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0"
+  version: "2.1.0"
 ---
 
 # Legacy Code Testing Skill (Java)
@@ -60,23 +42,15 @@ A **Seam** is a place where you can change the behavior of a program without edi
 
 For detailed examples, see `references/seam-model.md`.
 
-## Java and JUnit Version Selection
+## Test Stack Detection
 
-Before generating code, determine the project's Java and JUnit version:
+Before writing tests, inspect the target project's build tool and existing test dependencies. Detect these as independent facts: Java language level, JUnit family/version, Mockito artifacts/version, build dependency management, and whether ApprovalTests is already present. **Do not infer JUnit or Mockito from Java version alone.**
 
-| Aspect | Java 8 + JUnit 4 | Java 11+ + JUnit 5 | Java 17+ + JUnit 5 |
-|--------|-------------------|---------------------|---------------------|
-| Imports | `org.junit.Test` | `org.junit.jupiter.api.Test` | Same + records, sealed |
-| Assertions | `Assert.assertEquals` | `Assertions.assertEquals` | Same |
-| Setup | `@Before/@After` | `@BeforeEach/@AfterEach` | Same |
-| Runner | `@RunWith` | `@ExtendWith` | Same |
-| Mockito | `@RunWith(MockitoJUnitRunner.class)` | `@ExtendWith(MockitoExtension.class)` | Same |
-| Static mock | PowerMock required | `mockStatic()` (mockito-inline) | Same |
-| Lambdas | Yes | Yes + var | Yes + patterns |
+If dependencies are missing or unclear, read `references/dependency-setup.md` before adding imports, annotations, runners/extensions, or build snippets. For Golden Master or ApprovalTests work, read `references/approvaltests-setup.md` before generating or approving baseline files.
 
 ## How to Use This Skill
 
-1. **Detect** the Java and JUnit version (table above)
+1. **Detect** the Java level, JUnit family, Mockito version, build tool, and dependency management independently
 2. **Apply** the Legacy Code Change Algorithm (5 steps above)
 3. **If stuck** testing something → read `references/quick-decision-flow.md` for the "I can't test X" decision tree with technique-to-file routing
 4. **Select technique** from the reference files below based on your situation
@@ -84,7 +58,7 @@ Before generating code, determine the project's Java and JUnit version:
 
 ## Reference Files
 
-Each reference file contains complete, compilable examples for each Java/JUnit combination:
+Reference files contain technique examples or setup guidance:
 
 | File | Content | Chapters |
 |------|---------|----------|
@@ -99,6 +73,8 @@ Each reference file contains complete, compilable examples for each Java/JUnit c
 | `references/advanced-patterns.md` | Pinch Points, Effect Sketches, God Class clustering, Hot Spots, Scratch Refactoring | Ch 11, 12, 16-17, 20-21 |
 | `references/mockito-patterns.md` | Mockito patterns: verify, captor, spy, static mock, InOrder | Ch 5 |
 | `references/quick-decision-flow.md` | "I can't test X" decision tree with technique-to-file routing | Ch 9, 25 |
+| `references/dependency-setup.md` | Maven/Gradle setup, managed versions, Java/JUnit/Mockito compatibility | Setup |
+| `references/approvaltests-setup.md` | ApprovalTests setup, reporters, scrubbers, CI, baseline safety | Setup |
 
 ## The Four Strategies for Breaking Dependencies
 
@@ -113,13 +89,14 @@ From Chapter 25. Organize your approach by choosing one of these four strategies
 
 ## Rules for Generating Code
 
-1. Always ask or detect the Java and JUnit version before generating examples
-2. Use the compatible Mockito version (Mockito 4+ for JUnit 5, Mockito 2-3 for JUnit 4)
-3. In Java 11+, leverage `var` for local types in tests
-4. In Java 17+, use records for test DTOs and sealed interfaces where applicable
-5. Include comments explaining which Feathers technique is being applied and the chapter reference
-6. Each example must be complete and compilable (imports included)
-7. Name tests descriptively: `testBehavior_whenCondition_thenResult`
-8. When discovering bugs during characterization: document the bug as-is, do NOT fix it yet
-9. Prefer Object Seams over other seam types — they are the cleanest in Java
-10. Always mention whether you're applying Sensing or Separation when breaking a dependency
+1. Always ask or detect Java level, JUnit family, Mockito version, and build tool before generating examples
+2. Preserve the project's detected test stack unless a dependency change is explicitly needed and justified
+3. Use Mockito versions compatible with the Java runtime: Mockito 3 for Java 8, Mockito 5 for Java 11+; check static/final mocking support before recommending it
+4. In Java 11+, leverage `var` for local types in tests only when it matches project style
+5. In Java 17+, use records for test DTOs where applicable and accepted by the project style
+6. Include comments explaining which Feathers technique is being applied and the chapter reference
+7. Each example must be complete and compilable (imports included)
+8. Name tests descriptively: `testBehavior_whenCondition_thenResult`
+9. When discovering bugs during characterization: document the bug as-is, do NOT fix it yet
+10. Prefer Object Seams over other seam types — they are the cleanest in Java
+11. Always mention whether you're applying Sensing or Separation when breaking a dependency
