@@ -29,7 +29,7 @@ It has no runtime application, build system, or test framework. Most validation 
 - When modifying a skill, update its `metadata.version` according to SemVer.
 - Commands are only for workflows used often enough to deserve a shortcut.
 - Scenarios are the default validation strategy for prompt-only behavior.
-- Keep READMEs updated when adding, moving, or removing tools.
+- Keep READMEs updated when adding, moving, or removing tools (ALL READMEs).
 - Keep the root README's “Recommended entry points” section curated and minimal; do not add every new tool, only broadly useful entry points.
 
 ## Agent Rules

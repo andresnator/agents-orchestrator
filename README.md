@@ -9,10 +9,11 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 | Area | What lives there |
 |---|---|
 | [`agents/`](agents/) | Primary agents and focused subagents |
-| [`skills/`](skills/) | Reusable instruction contracts |
+| [`skills/`](skills/) | Reusable instruction contracts and references |
 | [`commands/`](commands/) | Fast entry points for repeated workflows |
 | [`recipes/`](recipes/) | Playbooks that combine tools and judgment |
 | [`scenarios/`](scenarios/) | Golden-case validations for agents and skills |
+| [`scripts/`](scripts/) | Local harness management utilities |
 | [`templates/`](templates/) | Starting points for new harness pieces |
 | [`docs/`](docs/) | Architecture and deeper design notes |
 

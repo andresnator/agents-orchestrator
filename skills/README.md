@@ -14,6 +14,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 |---|---|
 | `adr` | Generate Architecture Decision Records |
 | `buildable-issue` | Create agent-ready GitHub issues that are ready to build |
+| `java-testing` | Canonical Java-specific unit and legacy testing guidance |
 | `prd` | Create full Product Requirements Documents |
 | `prd-light` | Create lightweight PRDs |
 | `prompt-evaluator` | Evaluate and refine prompts |
@@ -23,10 +24,6 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `spike` | Create Jira spike tickets |
 | `summarize` | Summarize long-form reading material |
 | `tcr` | Apply Test && Commit || Revert workflow |
-| `test-legacy` | Test legacy code using Feathers-style techniques |
-| `test-legacy-java` | Java-specific legacy testing |
-| `unit-tests` | Generate unit tests |
-| `unit-tests-java` | Generate Java unit tests |
 | `whisper-extract` | Transcribe and summarize audio/video |
 | `write-ac` | Write acceptance criteria |
 

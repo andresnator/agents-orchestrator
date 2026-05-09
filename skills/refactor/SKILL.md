@@ -16,11 +16,11 @@ description: |
   "mejorar calidad del código", "técnica de refactorización", "extraer método",
   "renombrar variable", "mover método", "eliminar código duplicado",
   "reducir complejidad", "mejorar legibilidad", "reorganizar código".
-  For Java-specific examples with Java 8 and Java 11+ patterns, use refactor-java.
+  Includes general Java detection; Java examples should follow the project's Java version and idioms.
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.0.1"
 ---
 
 # Refactoring Catalog (Multi-Language)
@@ -45,7 +45,7 @@ Before applying any technique, detect the project's stack:
 | `Cargo.toml` | Rust | Ownership, traits, no inheritance |
 | `Package.swift` | Swift | Protocol-oriented |
 
-If the language is **Java**, delegate to the `refactor-java` skill for Java 8/11 specific examples.
+If the language is **Java**, apply techniques with Java OOP, Stream API where appropriate, and the project's detected Java version constraints.
 
 ## Language Support Matrix
 
@@ -77,7 +77,7 @@ For detailed concept-to-language mappings, see `references/language-idioms.md`.
 3. **Check applicability**: See `references/language-applicability.md` for technique availability per language
 4. **Select technique**: Each smell maps to one or more refactoring techniques
 5. **Read the technique file**: Each technique has multi-language examples (Python, TypeScript, Go, Rust)
-6. **For Java**: Delegate to the `refactor-java` skill for Java 8/11 specific examples
+6. **For Java**: Use Java OOP/Stream idioms and honor Java 8 versus Java 11+ API availability
 7. **For language idiom mapping**: See `references/language-idioms.md`
 8. **Apply incrementally**: Small steps, test after each change, commit frequently
 
