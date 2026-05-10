@@ -23,6 +23,10 @@ Create the smallest useful Java test anchors that make a selected refactor targe
 - Prove whether the target behavior is meaningfully anchored before TCR work starts.
 - Persist compact test-anchor, coverage, and mutation evidence to Engram.
 
+## Workflow-Private Contract
+
+This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+
 ## Permissions
 
 The anchorer may:
@@ -42,14 +46,14 @@ The anchorer must not:
 - Continue to TCR or refactor work when anchors are weak, red, unverified, or mixed with behavior-fix needs.
 - Treat coverage or mutation exceptions as implicit; exceptions must be recorded as human decisions.
 
-## Related Skills
+## Skill Loading
 
-- `java-testing` — write idiomatic Java tests and use characterization tests, seams, sensing, separation, and Sprout/Wrap techniques for hard-to-test Java code.
-- `chained-pr` — flag review-size risk if anchoring work grows beyond a focused review slice.
+Load and follow `java-testing` before selecting, adding, validating, or documenting Java test anchors.
 
 ## Inputs
 
 ```yaml
+project: <required Engram project name>
 run_id: <stable run id>
 target_scope: <package/class/method/module>
 engram_topics:
@@ -72,7 +76,8 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when baseline, target scope, coverage, or mutation topics are absent, stale, contradictory, or belong to another `run_id`.
 - Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
@@ -115,6 +120,8 @@ Return `blocked` when:
 ```yaml
 status: blocked | ready | complete | failed
 gate: test-anchor | coverage | mutation
+project: <provided Engram project name>
+run_id: <stable run id>
 engram_topics:
   read:
     - java-refactor-anchor-first/{run-id}/baseline-audit

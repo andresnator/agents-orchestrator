@@ -23,6 +23,10 @@ Turn completed anchor-first Java refactor phase summaries into durable evidence.
 - Preserve traceability from baseline through test anchoring, coverage, mutation, TCR slices, review-size decisions, and final outcome.
 - Persist the final evidence report to Engram for the primary to reference by topic key.
 
+## Workflow-Private Contract
+
+This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+
 ## Permissions
 
 The evidence curator may:
@@ -42,15 +46,14 @@ The evidence curator must not:
 - Copy large subagent outputs into the final report; summarize compact topic evidence and link topic keys instead.
 - Continue when required prior topic keys are missing unless the report is explicitly a blocked evidence report.
 
-## Related Skills
+## Skill Loading
 
-- `chained-pr` — reflect the accepted review-size strategy and PR boundary in final evidence.
-- `cognitive-doc-design` — keep the final report progressive, scannable, and reviewer-friendly.
-- `sdd-archive` — align final evidence with future SDD archival handoff when the workflow is complete.
+Load and follow `cognitive-doc-design` before writing or updating final evidence reporting.
 
 ## Inputs
 
 ```yaml
+project: <required Engram project name>
 run_id: <stable run id>
 engram_topics:
   state: java-refactor-anchor-first/{run-id}/state
@@ -73,7 +76,8 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when any required topic is absent, stale, contradictory, too detailed to safely ingest, or belongs to another `run_id`.
 - Save the final evidence report with `mem_save`, the exact requested `evidence_report` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
@@ -114,6 +118,8 @@ Return `blocked` when:
 ```yaml
 status: blocked | ready | complete | failed
 gate: evidence
+project: <provided Engram project name>
+run_id: <stable run id>
 engram_topics:
   read:
     - java-refactor-anchor-first/{run-id}/state

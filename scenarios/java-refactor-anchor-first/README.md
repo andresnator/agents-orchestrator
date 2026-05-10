@@ -8,6 +8,8 @@ Golden cases for the Java refactor anchor-first workflow. These scenarios valida
 - Subagents own substantive reading, testing, refactoring, and evidence work.
 - Missing or weak gate evidence blocks unsafe refactoring.
 - Final evidence uses compact Engram summaries, not raw source or report content.
+- Missing `project` or stale/mismatched `run_id` blocks before Engram access.
+- Skill-loading contracts are imperative and owned by workflow-private subagents, not the primary.
 
 ## Golden cases
 
@@ -24,10 +26,19 @@ Golden cases for the Java refactor anchor-first workflow. These scenarios valida
 | Gates pass into TCR | Baseline, anchors, coverage, mutation, and review-size strategy are green. | TCR worker executes exactly one small refactor slice. | Slice id, technique, commands/results, rollback boundary. | Expanding into multiple slices or behavior changes. |
 | Review-size risk | Planned or actual diff approaches the 400-line budget. | Workflow requires chained PRs or explicit size exception. | Review-size gate, chosen strategy, PR boundary. | Targeting main directly from child PRs in a feature-branch chain. |
 | Evidence curation | Refactor slices are complete and evidence report is requested. | Evidence curator reads compact Engram summaries only and writes final report topic. | Gate matrix, topic-key references, rollback/risks. | Raw source, raw coverage, mutation report contents, full command logs. |
+| Missing project blocks | Any primary or subagent input omits `project`. | Agent returns `blocked` before any Engram read/write. | `status: blocked`, missing `project`, one question or next action. | Inferred cwd/session project, `mem_search`, `mem_save`. |
+| Wrong or stale run_id blocks | A workflow-private subagent receives topics for a different `run_id` or namespace. | Subagent blocks before phase work and reports the expected namespace. | `run_id` mismatch, `java-refactor-anchor-first/{run_id}/...`, `status: blocked`. | Reading stale artifacts, writing under the wrong run namespace. |
+| Baseline auditor remains skill-free | Baseline auditor starts with valid `project`, `run_id`, and baseline topic keys. | Auditor performs contract validation and baseline audit without loading skills. | “Load no skills” behavior, compact baseline/tooling evidence. | `java-testing`, `chained-pr`, any method skill load. |
+| Test anchorer loads java-testing | Test anchorer starts with valid baseline and target-scope evidence. | Anchorer loads and follows `java-testing` before anchor selection, edits, validation, or documentation. | `java-testing` loaded first, anchor-strength evidence. | Anchor work before skill load, TCR/refactor execution. |
+| TCR worker skill plan | TCR worker starts with valid gates and review-size evidence. | Worker loads `refactor-java` and `tcr`, never loads `work-unit-commits`, and loads `chained-pr` only when evidence shows size risk. | `refactor-java`, `tcr`, conditional `chained-pr` rationale. | `work-unit-commits`, unconditional `chained-pr`, edits before skill checks. |
+| TCR worker blocks without valid diff evidence | TCR worker lacks `allowed_commands.diff_size` and lacks equivalent numeric additions+deletions evidence with source and timestamp. | Worker blocks before edits and requests measurable diff evidence. | `status: blocked`, `diff_size` or equivalent evidence requested. | Reading for edits, code changes, approximate-only size claims. |
+| TCR worker blocks oversized unsliced work | TCR worker evidence shows more than 400 additions+deletions and no chained/stacked PR decision or size exception. | Worker blocks before edits and requests slicing decision or explicit exception. | Changed-line total, required review strategy decision. | Editing under unresolved review-size risk. |
+| Evidence curator loads cognitive-doc-design | Evidence curator begins final reporting with valid compact topics. | Curator loads and follows `cognitive-doc-design` before writing or updating evidence reporting. | `cognitive-doc-design` loaded first, reviewer-facing gate matrix. | Raw report dumps, final curation before skill load. |
 
 ## Manual review notes
 
 - Confirm every agent/subagent output uses the compact envelope shape from the strategy document.
 - Confirm blockers ask at most one human question.
 - Confirm any waiver is tied to a named gate and human decision.
+- Confirm no new scenario file was added; therefore `scenarios/README.md` inventory does not need changes.
 - Confirm root `README.md` remains unchanged unless the maintainer promotes this specialized workflow.

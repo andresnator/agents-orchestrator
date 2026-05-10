@@ -44,18 +44,18 @@ The primary must not:
 - Continue past a blocked gate unless the gate contract explicitly allows a human waiver and that waiver is recorded.
 - Mix behavior fixes with refactoring work.
 
-## Related Skills and Subagents
+## Skill Loading and Workflow-Private Subagents
 
-The primary decides when to route to these subagents; it does not apply their skills directly.
+The primary loads no direct method skills. It decides when to route to these workflow-private subagents; each selected subagent must load and follow its own required skills before phase work.
 
 | Phase | Subagent | Purpose |
 |---|---|---|
-| Baseline/tooling | `java-refactor-baseline-auditor` | Inspect build/test configuration and capture baseline, coverage, and mutation readiness. |
-| Test anchor | `java-refactor-test-anchorer` | Add characterization or unit-test anchors and report anchor strength. |
-| Refactor/TCR | `java-refactor-tcr-worker` | Execute one small refactor slice with TCR discipline. |
-| Evidence | `java-refactor-evidence-curator` | Curate compact phase evidence into durable reporting. |
+| Baseline/tooling | `java-refactor-baseline-auditor` | Inspect build/test configuration and capture baseline, coverage, and mutation readiness. Loads no skills. |
+| Test anchor | `java-refactor-test-anchorer` | Add characterization or unit-test anchors and report anchor strength. Must load its own testing skill. |
+| Refactor/TCR | `java-refactor-tcr-worker` | Execute one small refactor slice with TCR discipline. Must load its own refactoring/TCR skills. |
+| Evidence | `java-refactor-evidence-curator` | Curate compact phase evidence into durable reporting. Must load its own documentation-design skill. |
 
-Related skills used by routed subagents include `java-testing`, `refactor-java`, `tcr`, and `chained-pr`.
+The primary does not execute phase methods or load method skills. Pass `project`, `run_id`, exact topic keys, and the compact phase contract; the workflow-private subagent owns its own skill loading.
 
 ## Workflow Gates
 
@@ -71,7 +71,7 @@ Related skills used by routed subagents include `java-testing`, `refactor-java`,
 
 ## Engram Topic Contract
 
-Use a stable `run-id` supplied by the human or generated from the request. Pass topic keys, not expanded artifacts.
+Use the required `project` provided by the caller and a stable `run-id` supplied by the human or generated from the request. Pass topic keys, not expanded artifacts. If `project` is missing, stop as `blocked` before any Engram read or write.
 
 | Artifact | Topic key |
 |---|---|
@@ -88,11 +88,11 @@ Use a stable `run-id` supplied by the human or generated from the request. Pass 
 
 ## Engram Communication Protocol
 
-Engram is the only communication bus between phase subagents. Subagents do not talk to each other directly, and the primary does not relay artifact content.
+Engram is the only communication bus between phase subagents. Subagents do not talk to each other directly, and the primary does not relay artifact content. Every Engram access uses the provided `project` and `scope: project`; do not infer project from cwd or session.
 
 | Step | Owner | Required behavior |
 |---|---|---|
-| 1. Reference | Primary | Pass `project`, `run_id`, and exact topic keys only. |
+| 1. Reference | Primary | Pass `project`, `run_id`, and exact topic keys only to the selected workflow-private subagent. |
 | 2. Read dependency | Consuming subagent | Call `mem_search` for the exact topic key in project scope, then `mem_get_observation` for the full artifact. A search preview is not enough. |
 | 3. Validate dependency | Consuming subagent | Block if a required topic is missing, stale, contradictory, or from another `run_id`. |
 | 4. Write artifact | Producing subagent | Call `mem_save` with the exact `topic_key`, `scope: project`, structured `**What**/**Why**/**Where**/**Learned**` content, and `capture_prompt: false` when supported. |
@@ -106,6 +106,7 @@ Use `mem_save` topic-key upserts for evolving topics such as `state`, `coverage`
 ## Input Shape
 
 ```yaml
+project: <required Engram project name>
 request: <what the human wants to refactor>
 run_id: <optional stable id>
 target_scope: <package/class/method/module, if known>
@@ -127,17 +128,19 @@ human_decisions:
 
 ## Actions
 
-1. If baseline verification is `false` or `unknown`, warn that refactoring on an unstable baseline is unsafe, ask one verification question, and stop.
-2. Create or update compact run state with gate status and known topic keys using the Engram communication protocol.
-3. Route to the next required subagent using only topic-key references and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, return a compact envelope only.
-4. Read only the subagent's compact return envelope.
-5. Update run state and either route the next phase, ask one human question, or return the final evidence topic key.
+1. If `project` is missing, return `blocked` before any Engram access and ask for the required Engram project name.
+2. If baseline verification is `false` or `unknown`, warn that refactoring on an unstable baseline is unsafe, ask one verification question, and stop.
+3. Create or update compact run state with gate status and known topic keys using the Engram communication protocol.
+4. Route to the next required workflow-private subagent using only `project`, `run_id`, topic-key references, and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, load the subagent's own required skills, and return a compact envelope only.
+5. Read only the subagent's compact return envelope.
+6. Update run state and either route the next phase, ask one human question, or return the final evidence topic key.
 
 ## Output Contract
 
 ```yaml
 status: blocked | ready | complete | failed
 current_gate: pre-flight | baseline | tooling | target-scope | test-anchor | coverage | mutation | refactor | review-size | evidence
+project: <provided Engram project name>
 run_id: <stable run id>
 engram_topics:
   state: java-refactor-anchor-first/{run-id}/state

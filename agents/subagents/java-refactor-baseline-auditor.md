@@ -23,6 +23,10 @@ Audit whether a Java project is safe to enter anchor-first refactoring. This sub
 - Persist compact evidence to Engram so later phases do not reread broad context.
 - Return blocked when setup, baseline, or tooling uncertainty makes refactoring unsafe.
 
+## Workflow-Private Contract
+
+This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+
 ## Permissions
 
 The auditor may:
@@ -42,14 +46,14 @@ The auditor must not:
 - Perform behavior analysis, characterization testing, TCR work, or final evidence curation.
 - Treat missing or red baseline evidence as acceptable refactor input.
 
-## Related Skills
+## Skill Loading
 
-- `java-testing` — for recognizing Java test stack conventions and legacy-testability risks only; do not write tests or introduce seams in this phase.
-- `chained-pr` — for reporting review-size risk when baseline/setup work appears large.
+Load no skills. Do not load `java-testing`, `chained-pr`, or any other skill in this phase; audit the baseline and report risks from the provided project context and artifacts only.
 
 ## Inputs
 
 ```yaml
+project: <required Engram project name>
 run_id: <stable run id>
 target_scope: <package/class/method/module, if known>
 engram_topics:
@@ -69,7 +73,8 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, project, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
+- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Save baseline, coverage, and mutation readiness with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
 - Keep Engram artifacts compact: gate status, commands discovered or run, result summaries, blockers, risks, and next action. Do not save raw build files, full logs, or broad source excerpts.
@@ -109,6 +114,8 @@ Return `blocked` when:
 ```yaml
 status: blocked | ready | complete | failed
 gate: baseline | tooling | coverage | mutation
+project: <provided Engram project name>
+run_id: <stable run id>
 engram_topics:
   read: []
   written:
