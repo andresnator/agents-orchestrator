@@ -53,6 +53,13 @@ If no action is passed, `install` is used so simple usage stays short.
 
 The manager maps these top-level directories when they exist: `agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`.
 
+Install and update use asset-aware filters instead of copying every Markdown file blindly:
+
+- `agents`: installs only agent files under `primary/` and `subagents/`; section READMEs are skipped.
+- `skills`: installs only skill directories that contain `SKILL.md`; the root skills README is skipped.
+- `commands`: installs only command Markdown files; the commands README is skipped.
+- Other harness directories skip top-level `README.md` files so documentation does not become a runnable asset accidentally.
+
 ## Safety model
 
 The script is intentionally conservative.
