@@ -1,17 +1,22 @@
 ---
 description: <One-line purpose and hard boundary.>
 mode: subagent
+# Optional: model, temperature. Claude-compatible copies may also use name/model/tools.
 permission:
   edit: deny
   bash: deny
   webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0"
 ---
 
 # <Subagent Name>
+
+Tier: <Compact|Standard|Critical>
+
+Selection note: choose the highest triggered tier. Compact = one narrow/low-risk job; Standard = meaningful decisions, scoped tools, or evidence handling; Critical = shell/edit/commit risk, destructive potential, human approvals, or recovery requirements.
+
+## Mandatory Core
+
+Complete this core for every tier. Use the Standard Expansion only for Standard/Critical subagents and the Critical Expansion only for Critical subagents.
 
 ## Responsibility
 
@@ -50,6 +55,20 @@ constraints:
 - If required evidence is insufficient, return `blocked` or `failed` according to <domain rule>.
 - Otherwise perform only the bounded task and return the output contract.
 
+## Standard Expansion (use only for Standard/Critical)
+
+- Trigger examples: <3–4 concrete prompts, inputs, or artifact states that should activate this subagent>.
+- Evidence/state: <what compact refs are read, produced, or ignored>.
+- Domain rules: <deterministic rules that map inputs to `ready`, `blocked`, `complete`, or `failed`>.
+
+## Critical Expansion (use only for Critical)
+
+- Tool allowlist/denylist: <least-privilege tools and explicit forbidden tool use>.
+- Quality gates: <checks that must pass before action or handoff>.
+- Failure routing: <how blocked/failed tool or evidence states are reported>.
+- Recovery/rollback: <how side effects are stopped, reverted, or escalated>.
+- Audit evidence: <minimal evidence required for review>.
+
 ## Actions
 
 1. Validate the input shape and constraints.
@@ -71,6 +90,8 @@ handoff: <next action, blocking question, or none>
 ```
 
 ## Validation Scenarios
+
+Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 trigger cases; Critical = full matrix including tool failure and recovery/rollback when relevant.
 
 ### Happy path
 

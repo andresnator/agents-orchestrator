@@ -55,10 +55,12 @@ The manager maps these top-level directories when they exist: `agents`, `skills`
 
 Install and update use asset-aware filters instead of copying every Markdown file blindly:
 
-- `agents`: installs only agent files under `primary/` and `subagents/`; section READMEs are skipped.
+- `agents`: installs only agent files from `primary/` and `subagents/` into a flat `agents/` target, because OpenCode derives the agent name from the Markdown file path; section READMEs are skipped.
 - `skills`: installs only skill directories that contain `SKILL.md`; the root skills README is skipped.
 - `commands`: installs only command Markdown files; the commands README is skipped.
 - Other harness directories skip top-level `README.md` files so documentation does not become a runnable asset accidentally.
+
+Agent Markdown frontmatter is kept OpenCode-compatible. Repository agent templates intentionally avoid skill-only fields such as `metadata`, because OpenCode passes unsupported agent fields to the model request.
 
 ## Safety model
 

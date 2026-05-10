@@ -171,13 +171,13 @@ populate_agents_asset() {
   local dest="$2"
   local role path name
 
+  plan_or_run mkdir -p "$dest"
   for role in primary subagents; do
-    plan_or_run mkdir -p "$dest/$role"
     for path in "$src/$role"/*.md; do
       [[ -f "$path" ]] || continue
       is_readme_file "$path" && continue
       name="$(basename "$path")"
-      copy_or_link_item "$path" "$dest/$role/$name"
+      copy_or_link_item "$path" "$dest/$name"
     done
   done
 }

@@ -1,17 +1,22 @@
 ---
 description: <One-line workflow trigger and hard boundary.>
 mode: primary
+# Optional: model, temperature. Claude-compatible copies may also use name/model/tools.
 permission:
   edit: deny
   bash: deny
   webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0"
 ---
 
 # <Primary Agent Name>
+
+Tier: <Compact|Standard|Critical>
+
+Selection note: choose the highest triggered tier. Compact = narrow/low-risk; Standard = routing or meaningful decisions; Critical = delegation, side effects, shell/edit/commit gates, human approvals, or recovery requirements.
+
+## Mandatory Core
+
+Complete this core for every tier. Use the Standard Expansion only for Standard/Critical agents and the Critical Expansion only for Critical agents.
 
 ## Responsibility
 
@@ -86,12 +91,26 @@ Subagents must return the canonical envelope keys from `templates/subagent.md`: 
 - If a human decision is required, ask at most one question and wait.
 - If all gates pass, continue to the next orchestration step or return the final output contract.
 
+## Standard Expansion (use only for Standard/Critical)
+
+- Trigger examples: <3–4 concrete prompts or events that should activate this agent>.
+- Routing rules: <how the agent chooses phase, skill, subagent, or human gate>.
+- State/evidence: <artifact refs to read, persist, summarize, or ignore>.
+
 ## State and Evidence Handling
 
 - Read compact artifacts before raw logs or broad source context.
 - Persist only artifacts this primary agent explicitly owns.
 - Summarize evidence with file paths, artifact keys, decisions, and risks.
 - Do not copy large logs, prompt dumps, or full templates into the final response unless producing that artifact is the stated goal.
+
+## Critical Expansion (use only for Critical)
+
+- Delegation allowlist/denylist: <named subagents, task targets, or glob rules where supported>.
+- Quality gates: <checks that must pass before continuing>.
+- Failure routing: <what to do when a tool/subagent returns blocked or failed>.
+- Recovery/rollback: <how side effects are stopped, reverted, or escalated>.
+- Audit evidence: <minimal evidence required for review>.
 
 ## Output Contract
 
@@ -112,6 +131,8 @@ handoff: <next step, one blocking question, or none>
 ```
 
 ## Validation Scenarios
+
+Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 trigger cases; Critical = full matrix including delegation/tool failure and recovery/rollback when relevant.
 
 ### Happy path
 

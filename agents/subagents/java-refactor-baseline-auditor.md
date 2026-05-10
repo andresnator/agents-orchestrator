@@ -5,10 +5,6 @@ permission:
   edit: deny
   bash: ask
   webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.1"
 ---
 
 # Java Refactor Baseline Auditor

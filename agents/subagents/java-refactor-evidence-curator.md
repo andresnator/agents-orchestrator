@@ -5,10 +5,6 @@ permission:
   edit: ask
   bash: deny
   webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.1"
 ---
 
 # Java Refactor Evidence Curator
