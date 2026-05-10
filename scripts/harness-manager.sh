@@ -109,6 +109,175 @@ is_same_symlink() {
   [[ "$(readlink "$dest")" == "$src" ]]
 }
 
+is_readme_file() {
+  [[ "$(basename "$1")" == "README.md" ]]
+}
+
+count_installable_items() {
+  local asset="$1"
+  local src="$2"
+  local count=0
+  local path role
+
+  case "$asset" in
+    agents)
+      for role in primary subagents; do
+        for path in "$src/$role"/*.md; do
+          [[ -f "$path" ]] || continue
+          is_readme_file "$path" && continue
+          count=$((count + 1))
+        done
+      done
+      ;;
+    skills)
+      for path in "$src"/*; do
+        [[ -d "$path" ]] || continue
+        [[ -f "$path/SKILL.md" ]] || continue
+        count=$((count + 1))
+      done
+      ;;
+    commands)
+      for path in "$src"/*.md; do
+        [[ -f "$path" ]] || continue
+        is_readme_file "$path" && continue
+        count=$((count + 1))
+      done
+      ;;
+    *)
+      for path in "$src"/*; do
+        [[ -e "$path" || -L "$path" ]] || continue
+        is_readme_file "$path" && continue
+        count=$((count + 1))
+      done
+      ;;
+  esac
+
+  printf '%s\n' "$count"
+}
+
+copy_or_link_item() {
+  local src="$1"
+  local dest="$2"
+
+  if [[ "$MODE" == "copy" ]]; then
+    plan_or_run cp -R "$src" "$dest"
+  else
+    plan_or_run ln -s "$src" "$dest"
+  fi
+}
+
+populate_agents_asset() {
+  local src="$1"
+  local dest="$2"
+  local role path name
+
+  for role in primary subagents; do
+    plan_or_run mkdir -p "$dest/$role"
+    for path in "$src/$role"/*.md; do
+      [[ -f "$path" ]] || continue
+      is_readme_file "$path" && continue
+      name="$(basename "$path")"
+      copy_or_link_item "$path" "$dest/$role/$name"
+    done
+  done
+}
+
+populate_skills_asset() {
+  local src="$1"
+  local dest="$2"
+  local path name
+
+  plan_or_run mkdir -p "$dest"
+  for path in "$src"/*; do
+    [[ -d "$path" ]] || continue
+    [[ -f "$path/SKILL.md" ]] || continue
+    name="$(basename "$path")"
+    copy_or_link_item "$path" "$dest/$name"
+  done
+}
+
+populate_commands_asset() {
+  local src="$1"
+  local dest="$2"
+  local path name
+
+  plan_or_run mkdir -p "$dest"
+  for path in "$src"/*.md; do
+    [[ -f "$path" ]] || continue
+    is_readme_file "$path" && continue
+    name="$(basename "$path")"
+    copy_or_link_item "$path" "$dest/$name"
+  done
+}
+
+populate_filtered_asset() {
+  local asset="$1"
+  local src="$2"
+  local dest="$3"
+  local path name
+
+  case "$asset" in
+    agents) populate_agents_asset "$src" "$dest" ;;
+    skills) populate_skills_asset "$src" "$dest" ;;
+    commands) populate_commands_asset "$src" "$dest" ;;
+    *)
+      plan_or_run mkdir -p "$dest"
+      for path in "$src"/*; do
+        [[ -e "$path" || -L "$path" ]] || continue
+        is_readme_file "$path" && continue
+        name="$(basename "$path")"
+        copy_or_link_item "$path" "$dest/$name"
+      done
+      ;;
+  esac
+}
+
+install_or_update_asset() {
+  local asset="$1"
+  local src="$2"
+  local dest="$3"
+  local count existed=0
+
+  count="$(count_installable_items "$asset" "$src")"
+  if [[ "$count" -eq 0 ]]; then
+    record skipped "$src (no installable items)"
+    return 0
+  fi
+
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    existed=1
+  fi
+
+  if [[ "$ACTION" == "install" ]]; then
+    if ! prepare_install_destination "$dest"; then
+      return 0
+    fi
+  else
+    if ! prepare_update_destination "$src" "$dest"; then
+      return 0
+    fi
+  fi
+
+  populate_filtered_asset "$asset" "$src" "$dest"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    if [[ "$MODE" == "copy" ]]; then
+      record copied "$src -> $dest (filtered planned; $count item(s))"
+    else
+      record linked "$dest -> $src (filtered planned; $count item(s))"
+    fi
+  else
+    if [[ "$existed" -eq 0 ]]; then
+      record created "$dest"
+    fi
+    if [[ "$MODE" == "copy" ]]; then
+      record copied "$src -> $dest (filtered; $count item(s))"
+    else
+      record linked "$dest -> $src (filtered; $count item(s))"
+    fi
+  fi
+}
+
 backup_existing() {
   local dest="$1"
   local backup
@@ -154,102 +323,6 @@ prepare_update_destination() {
 
   backup_existing "$dest"
   return 0
-}
-
-install_copy() {
-  local src="$1"
-  local dest="$2"
-  local existed=0
-
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    existed=1
-  fi
-
-  if ! prepare_install_destination "$dest"; then
-    return 0
-  fi
-
-  plan_or_run cp -R "$src" "$dest"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    record copied "$src -> $dest (planned)"
-  else
-    if [[ "$existed" -eq 0 ]]; then
-      record created "$dest"
-    fi
-    record copied "$src -> $dest"
-  fi
-}
-
-install_symlink() {
-  local src="$1"
-  local dest="$2"
-  local existed=0
-
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    existed=1
-  fi
-
-  if ! prepare_install_destination "$dest"; then
-    return 0
-  fi
-
-  plan_or_run ln -s "$src" "$dest"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    record linked "$dest -> $src (planned)"
-  else
-    if [[ "$existed" -eq 0 ]]; then
-      record created "$dest"
-    fi
-    record linked "$dest -> $src"
-  fi
-}
-
-update_copy() {
-  local src="$1"
-  local dest="$2"
-  local existed=0
-
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    existed=1
-  fi
-
-  if ! prepare_update_destination "$src" "$dest"; then
-    return 0
-  fi
-
-  plan_or_run cp -R "$src" "$dest"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    record copied "$src -> $dest (planned update)"
-  else
-    if [[ "$existed" -eq 0 ]]; then
-      record created "$dest"
-    fi
-    record copied "$src -> $dest"
-  fi
-}
-
-update_symlink() {
-  local src="$1"
-  local dest="$2"
-  local existed=0
-
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    existed=1
-  fi
-
-  if ! prepare_update_destination "$src" "$dest"; then
-    return 0
-  fi
-
-  plan_or_run ln -s "$src" "$dest"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    record linked "$dest -> $src (planned update)"
-  else
-    if [[ "$existed" -eq 0 ]]; then
-      record created "$dest"
-    fi
-    record linked "$dest -> $src"
-  fi
 }
 
 uninstall_asset() {
@@ -388,15 +461,7 @@ run_install_or_update() {
       continue
     fi
 
-    if [[ "$ACTION" == "install" && "$MODE" == "copy" ]]; then
-      install_copy "$src" "$dest"
-    elif [[ "$ACTION" == "install" && "$MODE" == "symlink" ]]; then
-      install_symlink "$src" "$dest"
-    elif [[ "$MODE" == "copy" ]]; then
-      update_copy "$src" "$dest"
-    else
-      update_symlink "$src" "$dest"
-    fi
+    install_or_update_asset "$asset" "$src" "$dest"
   done
 }
 
