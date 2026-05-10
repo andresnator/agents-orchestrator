@@ -107,81 +107,25 @@ Use compact machine-readable envelopes for orchestration-friendly subagents:
 
 ```yaml
 status: ready | blocked | complete | failed
-gate: <current gate or decision point>
 summary: <one short paragraph>
-inputs_read:
-  - <artifact key or file path>
-outputs_written:
-  - <artifact key or file path>
-blocking_question: <one question, only when blocked>
-risk: low | medium | high
+actions_taken:
+  - <action performed>
+artifacts:
+  - <artifact key, file path, or none>
+handoff: <next action, blocking question, or none>
 ```
 
 Avoid returning raw logs, long reports, copied code, or expanded artifacts unless the subagent's whole purpose is to produce that artifact.
 
-## Template
+## Canonical Template
 
-````markdown
----
-description: <Specific trigger, job, and hard boundary.>
-mode: subagent
-permission:
-  edit: deny
-  bash: deny
-  webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0"
----
+Use `templates/subagent.md` as the canonical scaffold. This guide defines the principles, required sections, and evaluation checklist; the template owns the exact copy-paste structure.
 
-# <Subagent Name>
+When changing the subagent contract:
 
-## Responsibility
-
-<One bounded specialist job.>
-
-## Permissions
-
-- May <allowed action>.
-
-## Forbidden Actions
-
-- Do not <unsafe or out-of-scope action>.
-
-## Related Skills
-
-- Load and follow `<skill-name>` when <condition>.
-
-## Input Shape
-
-```yaml
-target: <scope>
-artifact_refs: []
-constraints: []
-```
-
-## Decision Rules
-
-- If <required input missing>, return `blocked`.
-- If <unsafe condition>, stop and report the gate.
-
-## Actions
-
-1. Validate input.
-2. Load required skills.
-3. Perform only the bounded task.
-4. Return the output contract.
-
-## Output Contract
-
-```yaml
-status: ready | blocked | complete | failed
-summary: <compact result>
-evidence: []
-next_recommended: <action or none>
-```
-````
+1. Update `templates/subagent.md` first.
+2. Update this guide only for principles, checklist changes, or contract summaries.
+3. Avoid duplicating the full template here; duplicated scaffolds drift.
 
 ## Evaluation Checklist
 
@@ -193,10 +137,10 @@ next_recommended: <action or none>
 - [ ] Required skills are named and justified.
 - [ ] Decision rules define blocked and failed states.
 - [ ] Output contract is stable and compact.
-- [ ] Scenarios cover happy path, ambiguity, blocked input, and forbidden execution.
+- [ ] Scenarios cover happy path, missing context, blocked input, and forbidden execution.
 
 ## Sources Used
 
 - Context7 Claude Code agent development guidance: frontmatter, examples, tool restrictions, model inheritance, and separate agent context.
 - Context7 OpenCode agent configuration guidance: primary/subagent modes, model selection, prompts, permissions, and task access control.
-- Local harness contracts: `agents/subagents/README.md`, `templates/subagent.md`, and `agents/primary/java-refactor-anchor-first.md`.
+- Local harness contracts: `AGENTS.md`, `agents/subagents/README.md`, and `templates/subagent.md`.
