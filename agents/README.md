@@ -19,6 +19,7 @@ Agents are executable personas with boundaries, permissions, and output contract
 
 | Agent | Type | Purpose |
 |---|---|---|
+| [`english-tutor`](subagents/english-tutor.md) | Subagent | Provides explicit English coaching only, with no passive correction or repo-stored learner data |
 | [`java-refactor-anchor-first`](primary/java-refactor-anchor-first.md) | Primary | Dumb orchestrator for safe Java refactors using Engram topic keys, strict gates, and bounded phase subagents |
 | [`java-refactor-baseline-auditor`](subagents/java-refactor-baseline-auditor.md) | Subagent | Audits Java baseline health and coverage/mutation tooling before refactor work starts |
 | [`java-refactor-evidence-curator`](subagents/java-refactor-evidence-curator.md) | Subagent | Curates compact Java refactor phase evidence into final reporting |

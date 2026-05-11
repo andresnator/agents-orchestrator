@@ -14,6 +14,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 |---|---|
 | `adr` | Generate Architecture Decision Records |
 | `buildable-issue` | Create agent-ready GitHub issues that are ready to build |
+| `english-tutor` | Explicit English coaching with five-field corrections and private Notion memory boundaries |
 | `java-testing` | Canonical Java-specific unit and legacy testing guidance |
 | `prd` | Create full Product Requirements Documents |
 | `prd-light` | Create lightweight PRDs |
@@ -31,3 +32,4 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 ## Rule
 
 A skill explains how to do something. An agent decides when and whether to use it.
+Skill frontmatter `metadata.version` must use strict SemVer (`MAJOR.MINOR.PATCH`, for example `1.0.0`).

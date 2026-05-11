@@ -23,6 +23,7 @@ Each command should document:
 | Command | Purpose |
 |---|---|
 | [`/doc`](doc.md) | Start a thin documentation request and hand off to the smallest matching documentation skill |
+| [`/english`](english.md) | Start explicit English coaching with the five-field correction contract |
 
 ## Rule
 
