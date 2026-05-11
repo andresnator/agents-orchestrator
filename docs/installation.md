@@ -1,6 +1,6 @@
 # Harness Management
 
-Use `scripts/harness-manager.sh` to install, update, or uninstall this Markdown-first agent harness in a local agent configuration directory. The script has no build step and only manages known harness asset directories on disk.
+Use `scripts/harness-manager.sh` to install, update, or uninstall this Markdown-first agent harness in a local agent configuration directory. The script has no build step and only manages known repo-derived harness asset items on disk.
 
 ## Quick start
 
@@ -36,22 +36,22 @@ scripts/harness-manager.sh [install|update|uninstall] [--target PATH] [--mode co
 
 If no action is passed, `install` is used so simple usage stays short.
 
-| Action | Purpose |
-|---|---|
-| `install` | Add harness assets to the target. Existing asset paths are skipped unless `--backup` is used. |
-| `update` | Refresh target assets from this repository. Existing asset paths are replaced only with `--backup`; otherwise they are skipped. Missing assets are installed. |
-| `uninstall` | Remove only known harness asset directories from the target. The target root itself is never removed. |
+| Action      | Purpose                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install`   | Add harness assets to the target. Existing asset paths are skipped unless `--backup` is used.                                                                 |
+| `update`    | Refresh target assets from this repository. Existing asset paths are replaced only with `--backup`; otherwise they are skipped. Missing assets are installed. |
+| `uninstall` | Remove only current repo-managed installable item paths from the target. The target root and shared parent asset directories are never removed.               |
 
-| Option | Purpose |
-|---|---|
-| `--target <path>` | Destination directory. Defaults to `~/.config/opencode`. Leading `~` is expanded. |
-| `--mode copy` | Copies harness directories into the target for install/update. This is the default. |
-| `--mode symlink` | Creates target symlinks back to this repository for install/update. |
-| `--dry-run` | Prints planned operations without creating, moving, copying, linking, or removing paths. |
-| `--backup` | Moves existing target paths to timestamped sibling backups before replacement or removal. |
-| `--help` | Prints usage and exits without touching the target. |
+| Option            | Purpose                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `--target <path>` | Destination directory. Defaults to `~/.config/opencode`. Leading `~` is expanded.         |
+| `--mode copy`     | Copies harness directories into the target for install/update. This is the default.       |
+| `--mode symlink`  | Creates target symlinks back to this repository for install/update.                       |
+| `--dry-run`       | Prints planned operations without creating, moving, copying, linking, or removing paths.  |
+| `--backup`        | Moves existing target paths to timestamped sibling backups before replacement or removal. |
+| `--help`          | Prints usage and exits without touching the target.                                       |
 
-The manager maps these top-level directories when they exist: `agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`.
+The manager maps installable items under these top-level directories when they exist: `agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`.
 
 Install and update use asset-aware filters instead of copying every Markdown file blindly:
 
@@ -69,16 +69,16 @@ The script is intentionally conservative.
 - If a destination path already exists and `--backup` is not set, that path is skipped.
 - `update` replaces existing asset paths only when `--backup` is set. Without a backup it installs missing assets and skips existing ones.
 - If `--backup` is set, the existing path is moved to a timestamped sibling backup before replacement or removal.
-- `uninstall` only targets the known harness asset names under the configured target and never deletes the target root itself.
+- `uninstall` only targets current repo-managed installable item paths under the configured target. It preserves unrelated sibling files/directories and keeps the target root plus parent asset directories (`agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`) in place.
 - Every run ends with a summary of created, copied, linked, removed, skipped, and backed-up paths.
 - `--dry-run` is the recommended first step for install, update, and uninstall.
 
 ## Copy vs symlink
 
-| Mode | Best when | Tradeoff |
-|---|---|---|
-| `copy` | You want an install that survives moving or deleting this repository. | Installed files do not update automatically when the repo changes. Run `update --backup` to refresh them safely. |
-| `symlink` | You want local edits in this repo to be immediately visible to the host agent tool. | Links break if this repository moves, is renamed, or is deleted. |
+| Mode      | Best when                                                                           | Tradeoff                                                                                                         |
+| --------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `copy`    | You want an install that survives moving or deleting this repository.               | Installed files do not update automatically when the repo changes. Run `update --backup` to refresh them safely. |
+| `symlink` | You want local edits in this repo to be immediately visible to the host agent tool. | Links break if this repository moves, is renamed, or is deleted.                                                 |
 
 Copy mode is the safer default. Symlink mode is useful for active harness development.
 
@@ -136,16 +136,17 @@ scripts/harness-manager.sh uninstall --target ~/.config/opencode --dry-run
 scripts/harness-manager.sh uninstall --target ~/.config/opencode
 ```
 
-For a rollback-friendly uninstall, keep backups of removed asset paths:
+For a rollback-friendly uninstall, keep backups of removed item paths:
 
 ```bash
 scripts/harness-manager.sh uninstall --target ~/.config/opencode --backup
 ```
 
-If you used `--backup`, restore a previous path by moving the reported backup path back into place:
+If you used `--backup`, restore a previous item by moving the reported backup path back into place:
 
 ```bash
-mv ~/.config/opencode/skills.backup.YYYYMMDDHHMMSS ~/.config/opencode/skills
+mv ~/.config/opencode/commands/doc.md.backup.YYYYMMDDHHMMSS ~/.config/opencode/commands/doc.md
+mv ~/.config/opencode/skills/prompt-evaluator.backup.YYYYMMDDHHMMSS ~/.config/opencode/skills/prompt-evaluator
 ```
 
-Keep the installation summary from any run that uses `--backup`; it is the rollback map.
+Keep the installation summary from any run that uses `--backup`; the `Backed-up paths` section is the per-item rollback map.

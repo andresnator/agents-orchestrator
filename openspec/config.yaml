@@ -1,0 +1,119 @@
+# SDD/OpenSpec project context for this repository.
+schema: spec-driven
+
+project:
+  name: agents-orchestrator
+  type: markdown-first personal AI agent harness
+  description: >-
+    Repository for designing, organizing, validating, and reusing AI agents,
+    subagents, skills, commands, recipes, scenarios, templates, and local harness
+    management scripts.
+  primary_language: markdown
+  runtime_app: false
+  build_system: none
+  package_manager: none
+  source_paths:
+    - agents/
+    - skills/
+    - commands/
+    - recipes/
+    - scenarios/
+    - templates/
+    - docs/
+    - scripts/
+  conventions:
+    - Keep tools small, composable, and documented with clear boundaries.
+    - Update relevant README files when adding, moving, or removing harness pieces.
+    - Validate prompt-only behavior with scenario/golden-case review.
+    - Do not commit unless explicitly requested.
+
+context: |
+  Repository type: Markdown/instruction harness for agents, skills, commands, recipes, scenarios, and templates.
+  Runtime/build/tests: no runtime application, no build step, no runtime test framework.
+  Validation: documentation review and scenario/golden-case checks.
+
+strict_tdd:
+  enabled: false
+  reason: >-
+    This repository has no runtime application, build system, or automated unit
+    test framework. Changes are validated through documentation review,
+    scenario/golden-case checks, shell syntax checks, dry runs, and safe
+    temporary-target smoke checks.
+  red_green_refactor_required: false
+
+testing:
+  framework: none
+  runner: shell smoke checks and manual documentation/scenario review
+  default_command: null
+  commands:
+    shell_syntax:
+      command: bash -n scripts/harness-manager.sh
+      purpose: Validate harness-manager shell syntax without side effects.
+    help_smoke:
+      command: scripts/harness-manager.sh --help
+      purpose: Confirm CLI usage renders without touching targets.
+    invalid_mode_smoke:
+      command: scripts/harness-manager.sh --mode move
+      expected: non-zero exit before filesystem changes
+      purpose: Confirm argument validation fails safely.
+    dry_run_install:
+      command: target="$(mktemp -d)/opencode"; scripts/harness-manager.sh --dry-run --target "$target"
+      purpose: Preview install operations without filesystem mutations under the target.
+    disposable_install_copy:
+      command: target="$(mktemp -d)/opencode"; scripts/harness-manager.sh install --target "$target" --mode copy
+      purpose: Exercise copy install into an isolated temporary target.
+    dry_run_update_uninstall:
+      command: target="$(mktemp -d)/opencode"; scripts/harness-manager.sh update --target "$target" --backup --dry-run; scripts/harness-manager.sh uninstall --target "$target" --dry-run
+      purpose: Preview update and uninstall plans safely.
+  evidence_expectations:
+    - Record exact commands run and exit status.
+    - For uninstall behavior changes, inspect dry-run output against expected managed installable items.
+    - Use temporary targets for any non-dry-run smoke checks.
+
+rules:
+  explore:
+    - Keep artifacts concise and evidence-backed.
+    - Prefer heuristic, multilingual analysis methods over language-specific AST parsing in v1.
+  specs:
+    - Use RFC 2119 keywords (MUST/SHOULD/MAY).
+    - Use Given/When/Then acceptance scenarios.
+
+phase_rules:
+  init:
+    goal: Maintain accurate project context and validation capability in openspec/config.yaml.
+  explore:
+    goal: Inspect current harness-manager install/update/uninstall behavior and docs.
+    must_not: Implement fixes.
+  proposal:
+    goal: Define the uninstall safety problem, desired behavior, and acceptance criteria.
+  spec:
+    goal: Specify that uninstall removes or backs up only project-managed installable asset items, not entire shared asset directories.
+  design:
+    goal: Design asset manifest/filter reuse so uninstall mirrors installable item selection safely.
+  tasks:
+    goal: Break implementation, docs, and smoke validation into reviewable steps.
+  apply:
+    goal: Implement only after approved spec/design/tasks.
+    constraints:
+      - Keep writes focused on harness-manager behavior and related docs/tests.
+      - Preserve unrelated target content during uninstall.
+  verify:
+    goal: Run shell syntax, dry-run, and temporary-target smoke checks; review docs/scenarios.
+  archive:
+    goal: Record final behavior, evidence, and follow-up risks.
+
+current_change_context:
+  idea: >-
+    Fix scripts/harness-manager.sh so uninstall removes or backs up only
+    project-managed installable asset items instead of whole shared asset
+    directories.
+  status: context-only; fix not implemented
+  relevant_files:
+    - scripts/harness-manager.sh
+    - docs/installation.md
+    - README.md
+    - AGENTS.md
+
+skill_registry:
+  path: .atl/skill-registry.md
+  status: present

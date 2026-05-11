@@ -19,7 +19,7 @@ BACKED_UP=()
 ERRORS=()
 
 usage() {
-  cat <<'USAGE'
+	cat <<'USAGE'
 Usage: scripts/harness-manager.sh [action] [options]
 
 Manage this agent harness in a local agent configuration directory.
@@ -27,7 +27,7 @@ Manage this agent harness in a local agent configuration directory.
 Actions:
   install              Install harness assets. Default when no action is passed.
   update               Refresh harness assets from this repository.
-  uninstall            Remove known harness assets from the target.
+  uninstall            Remove known harness item paths from the target.
 
 Options:
   --target <path>       Target directory. Defaults to ~/.config/opencode
@@ -45,460 +45,461 @@ USAGE
 }
 
 fail() {
-  printf 'Error: %s\n' "$1" >&2
-  exit 1
+	printf 'Error: %s\n' "$1" >&2
+	exit 1
 }
 
 expand_path() {
-  case "$1" in
-    '~') printf '%s\n' "$HOME" ;;
-    '~/'*) printf '%s/%s\n' "$HOME" "${1#~/}" ;;
-    *) printf '%s\n' "$1" ;;
-  esac
+	case "$1" in
+	'~') printf '%s\n' "$HOME" ;;
+	'~/'*) printf '%s/%s\n' "$HOME" "${1#~/}" ;;
+	*) printf '%s\n' "$1" ;;
+	esac
 }
 
 repo_root() {
-  local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  cd "$script_dir/.." && pwd
+	local script_dir
+	script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	cd "$script_dir/.." && pwd
 }
 
 plan_or_run() {
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf '[dry-run] %s\n' "$*"
-  else
-    "$@"
-  fi
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf '[dry-run] %s\n' "$*"
+	else
+		"$@"
+	fi
 }
 
 record() {
-  local bucket="$1"
-  local value="$2"
+	local bucket="$1"
+	local value="$2"
 
-  case "$bucket" in
-    created) CREATED+=("$value") ;;
-    copied) COPIED+=("$value") ;;
-    linked) LINKED+=("$value") ;;
-    removed) REMOVED+=("$value") ;;
-    skipped) SKIPPED+=("$value") ;;
-    backed_up) BACKED_UP+=("$value") ;;
-    errors) ERRORS+=("$value") ;;
-  esac
+	case "$bucket" in
+	created) CREATED+=("$value") ;;
+	copied) COPIED+=("$value") ;;
+	linked) LINKED+=("$value") ;;
+	removed) REMOVED+=("$value") ;;
+	skipped) SKIPPED+=("$value") ;;
+	backed_up) BACKED_UP+=("$value") ;;
+	errors) ERRORS+=("$value") ;;
+	esac
 }
 
 backup_path() {
-  local dest="$1"
-  local stamp
-  stamp="$(date +%Y%m%d%H%M%S)"
-  local candidate="${dest}.backup.${stamp}"
-  local index=1
+	local dest="$1"
+	local stamp
+	stamp="$(date +%Y%m%d%H%M%S)"
+	local candidate="${dest}.backup.${stamp}"
+	local index=1
 
-  while [[ -e "$candidate" || -L "$candidate" ]]; do
-    candidate="${dest}.backup.${stamp}.${index}"
-    index=$((index + 1))
-  done
+	while [[ -e "$candidate" || -L "$candidate" ]]; do
+		candidate="${dest}.backup.${stamp}.${index}"
+		index=$((index + 1))
+	done
 
-  printf '%s\n' "$candidate"
+	printf '%s\n' "$candidate"
 }
 
 is_same_symlink() {
-  local dest="$1"
-  local src="$2"
+	local dest="$1"
+	local src="$2"
 
-  [[ -L "$dest" ]] || return 1
-  [[ "$(readlink "$dest")" == "$src" ]]
+	[[ -L "$dest" ]] || return 1
+	[[ "$(readlink "$dest")" == "$src" ]]
 }
 
 is_readme_file() {
-  [[ "$(basename "$1")" == "README.md" ]]
+	[[ "$(basename "$1")" == "README.md" ]]
+}
+
+for_each_managed_item() {
+	local root="$1"
+	local target="$2"
+	local callback="$3"
+	local asset_filter="${4:-}"
+	local asset src path role name
+
+	asset="agents"
+	if [[ -z "$asset_filter" || "$asset_filter" == "$asset" ]]; then
+		src="$root/$asset"
+		if [[ -d "$src" ]]; then
+			for role in primary subagents; do
+				for path in "$src/$role"/*.md; do
+					[[ -f "$path" ]] || continue
+					is_readme_file "$path" && continue
+					name="$(basename "$path")"
+					"$callback" "$asset" "$path" "$target/$asset/$name"
+				done
+			done
+		fi
+	fi
+
+	asset="skills"
+	if [[ -z "$asset_filter" || "$asset_filter" == "$asset" ]]; then
+		src="$root/$asset"
+		if [[ -d "$src" ]]; then
+			for path in "$src"/*; do
+				[[ -d "$path" ]] || continue
+				[[ -f "$path/SKILL.md" ]] || continue
+				name="$(basename "$path")"
+				"$callback" "$asset" "$path" "$target/$asset/$name"
+			done
+		fi
+	fi
+
+	asset="commands"
+	if [[ -z "$asset_filter" || "$asset_filter" == "$asset" ]]; then
+		src="$root/$asset"
+		if [[ -d "$src" ]]; then
+			for path in "$src"/*.md; do
+				[[ -f "$path" ]] || continue
+				is_readme_file "$path" && continue
+				name="$(basename "$path")"
+				"$callback" "$asset" "$path" "$target/$asset/$name"
+			done
+		fi
+	fi
+
+	for asset in recipes scenarios templates; do
+		if [[ -n "$asset_filter" && "$asset_filter" != "$asset" ]]; then
+			continue
+		fi
+		src="$root/$asset"
+		[[ -d "$src" ]] || continue
+		for path in "$src"/*; do
+			[[ -e "$path" || -L "$path" ]] || continue
+			is_readme_file "$path" && continue
+			name="$(basename "$path")"
+			"$callback" "$asset" "$path" "$target/$asset/$name"
+		done
+	done
+}
+
+COUNT_INSTALLABLE_ITEMS=0
+
+count_managed_item() {
+	COUNT_INSTALLABLE_ITEMS=$((COUNT_INSTALLABLE_ITEMS + 1))
 }
 
 count_installable_items() {
-  local asset="$1"
-  local src="$2"
-  local count=0
-  local path role
+	local asset="$1"
+	local src="$2"
+	local root
+	root="$(dirname "$src")"
 
-  case "$asset" in
-    agents)
-      for role in primary subagents; do
-        for path in "$src/$role"/*.md; do
-          [[ -f "$path" ]] || continue
-          is_readme_file "$path" && continue
-          count=$((count + 1))
-        done
-      done
-      ;;
-    skills)
-      for path in "$src"/*; do
-        [[ -d "$path" ]] || continue
-        [[ -f "$path/SKILL.md" ]] || continue
-        count=$((count + 1))
-      done
-      ;;
-    commands)
-      for path in "$src"/*.md; do
-        [[ -f "$path" ]] || continue
-        is_readme_file "$path" && continue
-        count=$((count + 1))
-      done
-      ;;
-    *)
-      for path in "$src"/*; do
-        [[ -e "$path" || -L "$path" ]] || continue
-        is_readme_file "$path" && continue
-        count=$((count + 1))
-      done
-      ;;
-  esac
-
-  printf '%s\n' "$count"
+	COUNT_INSTALLABLE_ITEMS=0
+	for_each_managed_item "$root" "$TARGET" count_managed_item "$asset"
+	printf '%s\n' "$COUNT_INSTALLABLE_ITEMS"
 }
 
 copy_or_link_item() {
-  local src="$1"
-  local dest="$2"
+	local src="$1"
+	local dest="$2"
 
-  if [[ "$MODE" == "copy" ]]; then
-    plan_or_run cp -R "$src" "$dest"
-  else
-    plan_or_run ln -s "$src" "$dest"
-  fi
+	if [[ "$MODE" == "copy" ]]; then
+		plan_or_run cp -R "$src" "$dest"
+	else
+		plan_or_run ln -s "$src" "$dest"
+	fi
 }
 
-populate_agents_asset() {
-  local src="$1"
-  local dest="$2"
-  local role path name
-
-  plan_or_run mkdir -p "$dest"
-  for role in primary subagents; do
-    for path in "$src/$role"/*.md; do
-      [[ -f "$path" ]] || continue
-      is_readme_file "$path" && continue
-      name="$(basename "$path")"
-      copy_or_link_item "$path" "$dest/$name"
-    done
-  done
-}
-
-populate_skills_asset() {
-  local src="$1"
-  local dest="$2"
-  local path name
-
-  plan_or_run mkdir -p "$dest"
-  for path in "$src"/*; do
-    [[ -d "$path" ]] || continue
-    [[ -f "$path/SKILL.md" ]] || continue
-    name="$(basename "$path")"
-    copy_or_link_item "$path" "$dest/$name"
-  done
-}
-
-populate_commands_asset() {
-  local src="$1"
-  local dest="$2"
-  local path name
-
-  plan_or_run mkdir -p "$dest"
-  for path in "$src"/*.md; do
-    [[ -f "$path" ]] || continue
-    is_readme_file "$path" && continue
-    name="$(basename "$path")"
-    copy_or_link_item "$path" "$dest/$name"
-  done
+populate_managed_item() {
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	copy_or_link_item "$src" "$dest"
 }
 
 populate_filtered_asset() {
-  local asset="$1"
-  local src="$2"
-  local dest="$3"
-  local path name
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	local root
+	root="$(dirname "$src")"
 
-  case "$asset" in
-    agents) populate_agents_asset "$src" "$dest" ;;
-    skills) populate_skills_asset "$src" "$dest" ;;
-    commands) populate_commands_asset "$src" "$dest" ;;
-    *)
-      plan_or_run mkdir -p "$dest"
-      for path in "$src"/*; do
-        [[ -e "$path" || -L "$path" ]] || continue
-        is_readme_file "$path" && continue
-        name="$(basename "$path")"
-        copy_or_link_item "$path" "$dest/$name"
-      done
-      ;;
-  esac
+	plan_or_run mkdir -p "$dest"
+	for_each_managed_item "$root" "$TARGET" populate_managed_item "$asset"
 }
 
 install_or_update_asset() {
-  local asset="$1"
-  local src="$2"
-  local dest="$3"
-  local count existed=0
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	local count existed=0
 
-  count="$(count_installable_items "$asset" "$src")"
-  if [[ "$count" -eq 0 ]]; then
-    record skipped "$src (no installable items)"
-    return 0
-  fi
+	count="$(count_installable_items "$asset" "$src")"
+	if [[ "$count" -eq 0 ]]; then
+		record skipped "$src (no installable items)"
+		return 0
+	fi
 
-  if [[ -e "$dest" || -L "$dest" ]]; then
-    existed=1
-  fi
+	if [[ -e "$dest" || -L "$dest" ]]; then
+		existed=1
+	fi
 
-  if [[ "$ACTION" == "install" ]]; then
-    if ! prepare_install_destination "$dest"; then
-      return 0
-    fi
-  else
-    if ! prepare_update_destination "$src" "$dest"; then
-      return 0
-    fi
-  fi
+	if [[ "$ACTION" == "install" ]]; then
+		if ! prepare_install_destination "$dest"; then
+			return 0
+		fi
+	else
+		if ! prepare_update_destination "$src" "$dest"; then
+			return 0
+		fi
+	fi
 
-  populate_filtered_asset "$asset" "$src" "$dest"
+	populate_filtered_asset "$asset" "$src" "$dest"
 
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    if [[ "$MODE" == "copy" ]]; then
-      record copied "$src -> $dest (filtered planned; $count item(s))"
-    else
-      record linked "$dest -> $src (filtered planned; $count item(s))"
-    fi
-  else
-    if [[ "$existed" -eq 0 ]]; then
-      record created "$dest"
-    fi
-    if [[ "$MODE" == "copy" ]]; then
-      record copied "$src -> $dest (filtered; $count item(s))"
-    else
-      record linked "$dest -> $src (filtered; $count item(s))"
-    fi
-  fi
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		if [[ "$MODE" == "copy" ]]; then
+			record copied "$src -> $dest (filtered planned; $count item(s))"
+		else
+			record linked "$dest -> $src (filtered planned; $count item(s))"
+		fi
+	else
+		if [[ "$existed" -eq 0 ]]; then
+			record created "$dest"
+		fi
+		if [[ "$MODE" == "copy" ]]; then
+			record copied "$src -> $dest (filtered; $count item(s))"
+		else
+			record linked "$dest -> $src (filtered; $count item(s))"
+		fi
+	fi
 }
 
 backup_existing() {
-  local dest="$1"
-  local backup
-  backup="$(backup_path "$dest")"
+	local dest="$1"
+	local backup
+	backup="$(backup_path "$dest")"
 
-  plan_or_run mv "$dest" "$backup"
-  record backed_up "$dest -> $backup"
+	plan_or_run mv "$dest" "$backup"
+	record backed_up "$dest -> $backup"
 }
 
 prepare_install_destination() {
-  local dest="$1"
+	local dest="$1"
 
-  if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-    return 0
-  fi
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		return 0
+	fi
 
-  if [[ "$BACKUP" -ne 1 ]]; then
-    record skipped "$dest (already exists; use --backup to replace)"
-    return 1
-  fi
+	if [[ "$BACKUP" -ne 1 ]]; then
+		record skipped "$dest (already exists; use --backup to replace)"
+		return 1
+	fi
 
-  backup_existing "$dest"
-  return 0
+	backup_existing "$dest"
+	return 0
 }
 
 prepare_update_destination() {
-  local src="$1"
-  local dest="$2"
+	local src="$1"
+	local dest="$2"
 
-  if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-    return 0
-  fi
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		return 0
+	fi
 
-  if [[ "$MODE" == "symlink" ]] && is_same_symlink "$dest" "$src"; then
-    record skipped "$dest (already linked to $src)"
-    return 1
-  fi
+	if [[ "$MODE" == "symlink" ]] && is_same_symlink "$dest" "$src"; then
+		record skipped "$dest (already linked to $src)"
+		return 1
+	fi
 
-  if [[ "$BACKUP" -ne 1 ]]; then
-    record skipped "$dest (update would replace existing content; rerun with --backup)"
-    return 1
-  fi
+	if [[ "$BACKUP" -ne 1 ]]; then
+		record skipped "$dest (update would replace existing content; rerun with --backup)"
+		return 1
+	fi
 
-  backup_existing "$dest"
-  return 0
+	backup_existing "$dest"
+	return 0
 }
 
 uninstall_asset() {
-  local dest="$1"
+	local dest="$1"
 
-  if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-    record skipped "$dest (not installed)"
-    return 0
-  fi
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		record skipped "$dest (not installed)"
+		return 0
+	fi
 
-  if [[ "$BACKUP" -eq 1 ]]; then
-    backup_existing "$dest"
-  else
-    plan_or_run rm -rf "$dest"
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-      record removed "$dest (planned)"
-    else
-      record removed "$dest"
-    fi
-  fi
+	if [[ "$BACKUP" -eq 1 ]]; then
+		backup_existing "$dest"
+	else
+		plan_or_run rm -rf "$dest"
+		if [[ "$DRY_RUN" -eq 1 ]]; then
+			record removed "$dest (planned)"
+		else
+			record removed "$dest"
+		fi
+	fi
 }
 
 print_group() {
-  local title="$1"
-  shift
-  local items=("$@")
+	local title="$1"
+	shift
+	local items=("$@")
 
-  printf '\n%s (%d)\n' "$title" "${#items[@]}"
-  if [[ ${#items[@]} -eq 0 ]]; then
-    printf '  - none\n'
-    return 0
-  fi
+	printf '\n%s (%d)\n' "$title" "${#items[@]}"
+	if [[ ${#items[@]} -eq 0 ]]; then
+		printf '  - none\n'
+		return 0
+	fi
 
-  local item
-  for item in "${items[@]}"; do
-    printf '  - %s\n' "$item"
-  done
+	local item
+	for item in "${items[@]}"; do
+		printf '  - %s\n' "$item"
+	done
 }
 
 summary() {
-  printf '\nHarness manager summary\n'
-  printf 'Action: %s\n' "$ACTION"
-  printf 'Target: %s\n' "$TARGET"
-  printf 'Mode: %s\n' "$MODE"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'Dry run: yes; no filesystem changes were made.\n'
-  else
-    printf 'Dry run: no\n'
-  fi
+	printf '\nHarness manager summary\n'
+	printf 'Action: %s\n' "$ACTION"
+	printf 'Target: %s\n' "$TARGET"
+	printf 'Mode: %s\n' "$MODE"
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf 'Dry run: yes; no filesystem changes were made.\n'
+	else
+		printf 'Dry run: no\n'
+	fi
 
-  # macOS ships Bash 3.2, where expanding an empty array under `set -u`
-  # can be treated as an unbound variable. Disable nounset only while
-  # rendering summary groups so zero-count groups remain safe and explicit.
-  set +u
-  print_group 'Created paths' "${CREATED[@]}"
-  print_group 'Copied paths' "${COPIED[@]}"
-  print_group 'Linked paths' "${LINKED[@]}"
-  print_group 'Removed paths' "${REMOVED[@]}"
-  print_group 'Backed-up paths' "${BACKED_UP[@]}"
-  print_group 'Skipped paths' "${SKIPPED[@]}"
-  print_group 'Errors' "${ERRORS[@]}"
-  set -u
+	# macOS ships Bash 3.2, where expanding an empty array under `set -u`
+	# can be treated as an unbound variable. Disable nounset only while
+	# rendering summary groups so zero-count groups remain safe and explicit.
+	set +u
+	print_group 'Created paths' "${CREATED[@]}"
+	print_group 'Copied paths' "${COPIED[@]}"
+	print_group 'Linked paths' "${LINKED[@]}"
+	print_group 'Removed paths' "${REMOVED[@]}"
+	print_group 'Backed-up paths' "${BACKED_UP[@]}"
+	print_group 'Skipped paths' "${SKIPPED[@]}"
+	print_group 'Errors' "${ERRORS[@]}"
+	set -u
 }
 
 parse_args() {
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      install|update|uninstall)
-        [[ "$ACTION_SET" -eq 0 ]] || fail "multiple actions provided: $ACTION and $1"
-        ACTION="$1"
-        ACTION_SET=1
-        shift
-        ;;
-      --target)
-        [[ $# -ge 2 ]] || fail '--target requires a path'
-        TARGET="$2"
-        shift 2
-        ;;
-      --mode)
-        [[ $# -ge 2 ]] || fail '--mode requires copy or symlink'
-        MODE="$2"
-        shift 2
-        ;;
-      --dry-run)
-        DRY_RUN=1
-        shift
-        ;;
-      --backup)
-        BACKUP=1
-        shift
-        ;;
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        fail "unknown option or action: $1"
-        ;;
-    esac
-  done
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		install | update | uninstall)
+			[[ "$ACTION_SET" -eq 0 ]] || fail "multiple actions provided: $ACTION and $1"
+			ACTION="$1"
+			ACTION_SET=1
+			shift
+			;;
+		--target)
+			[[ $# -ge 2 ]] || fail '--target requires a path'
+			TARGET="$2"
+			shift 2
+			;;
+		--mode)
+			[[ $# -ge 2 ]] || fail '--mode requires copy or symlink'
+			MODE="$2"
+			shift 2
+			;;
+		--dry-run)
+			DRY_RUN=1
+			shift
+			;;
+		--backup)
+			BACKUP=1
+			shift
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			fail "unknown option or action: $1"
+			;;
+		esac
+	done
 }
 
 ensure_safe_target() {
-  [[ -n "$TARGET" ]] || fail 'target cannot be empty'
-  [[ "$TARGET" != "/" ]] || fail 'target cannot be the filesystem root'
+	[[ -n "$TARGET" ]] || fail 'target cannot be empty'
+	[[ "$TARGET" != "/" ]] || fail 'target cannot be the filesystem root'
 }
 
 ensure_target_root() {
-  local target_exists=0
-  if [[ -e "$TARGET" || -L "$TARGET" ]]; then
-    target_exists=1
-  fi
+	local target_exists=0
+	if [[ -e "$TARGET" || -L "$TARGET" ]]; then
+		target_exists=1
+	fi
 
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf '[dry-run] mkdir -p %s\n' "$TARGET"
-  else
-    mkdir -p "$TARGET"
-    if [[ "$target_exists" -eq 0 ]]; then
-      record created "$TARGET"
-    fi
-  fi
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf '[dry-run] mkdir -p %s\n' "$TARGET"
+	else
+		mkdir -p "$TARGET"
+		if [[ "$target_exists" -eq 0 ]]; then
+			record created "$TARGET"
+		fi
+	fi
 }
 
 run_install_or_update() {
-  local root="$1"
-  local asset src dest
+	local root="$1"
+	local asset src dest
 
-  ensure_target_root
+	ensure_target_root
 
-  for asset in "${ASSETS[@]}"; do
-    src="$root/$asset"
-    dest="$TARGET/$asset"
+	for asset in "${ASSETS[@]}"; do
+		src="$root/$asset"
+		dest="$TARGET/$asset"
 
-    if [[ ! -d "$src" ]]; then
-      record skipped "$src (source directory not present)"
-      continue
-    fi
+		if [[ ! -d "$src" ]]; then
+			record skipped "$src (source directory not present)"
+			continue
+		fi
 
-    install_or_update_asset "$asset" "$src" "$dest"
-  done
+		install_or_update_asset "$asset" "$src" "$dest"
+	done
+}
+
+uninstall_managed_item() {
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	local parent
+	parent="$(dirname "$dest")"
+
+	if [[ -L "$parent" ]]; then
+		record skipped "$parent (asset directory is a symlink; preserved to avoid traversing external content)"
+		return 0
+	fi
+
+	uninstall_asset "$dest"
 }
 
 run_uninstall() {
-  local asset dest
-
-  for asset in "${ASSETS[@]}"; do
-    dest="$TARGET/$asset"
-    uninstall_asset "$dest"
-  done
+	local root="$1"
+	for_each_managed_item "$root" "$TARGET" uninstall_managed_item
 }
 
 main() {
-  parse_args "$@"
+	parse_args "$@"
 
-  case "$MODE" in
-    copy|symlink) ;;
-    *) fail "invalid --mode '$MODE'; expected copy or symlink" ;;
-  esac
+	case "$MODE" in
+	copy | symlink) ;;
+	*) fail "invalid --mode '$MODE'; expected copy or symlink" ;;
+	esac
 
-  TARGET="$(expand_path "$TARGET")"
-  ensure_safe_target
+	TARGET="$(expand_path "$TARGET")"
+	ensure_safe_target
 
-  local root
-  root="$(repo_root)"
+	local root
+	root="$(repo_root)"
 
-  case "$ACTION" in
-    install|update) run_install_or_update "$root" ;;
-    uninstall) run_uninstall ;;
-    *) fail "invalid action '$ACTION'; expected install, update, or uninstall" ;;
-  esac
+	case "$ACTION" in
+	install | update) run_install_or_update "$root" ;;
+	uninstall) run_uninstall "$root" ;;
+	*) fail "invalid action '$ACTION'; expected install, update, or uninstall" ;;
+	esac
 
-  summary
+	summary
 
-  if [[ ${#ERRORS[@]} -gt 0 ]]; then
-    exit 1
-  fi
+	if [[ ${#ERRORS[@]} -gt 0 ]]; then
+		exit 1
+	fi
 }
 
 main "$@"

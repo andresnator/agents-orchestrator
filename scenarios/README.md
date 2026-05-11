@@ -22,3 +22,4 @@ Each scenario should define:
 | [`doc-command`](doc-command/) | Validate `/doc` as a thin documentation shortcut |
 | [`java-refactor-anchor-first`](java-refactor-anchor-first/) | Validate dumb-primary routing, Java refactor gates, TCR slices, and evidence curation |
 | [`prompt-evaluator`](prompt-evaluator/) | Validate prompt-only review behavior |
+| [`service-boundary-analysis`](service-boundary-analysis/) | Validate service boundary input/output classification, evidence, confidence, and uncertainty handling |
