@@ -23,4 +23,5 @@ Each scenario should define:
 | [`english-tutor-agent`](english-tutor-agent/) | Validate explicit English coaching, five-field corrections, `/english`, privacy boundaries, and passive limitation disclosure |
 | [`java-refactor-anchor-first`](java-refactor-anchor-first/) | Validate dumb-primary routing, Java refactor gates, TCR slices, and evidence curation |
 | [`prompt-evaluator`](prompt-evaluator/) | Validate prompt-only review behavior |
+| [`programming-practices-skills`](programming-practices-skills/) | Validate autonomous programming-practice skills for Clean Code, Java design, secure coding, and pragmatic patterns |
 | [`service-boundary-analysis`](service-boundary-analysis/) | Validate service boundary input/output classification, evidence, confidence, and uncertainty handling |
