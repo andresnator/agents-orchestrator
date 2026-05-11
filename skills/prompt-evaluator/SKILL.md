@@ -4,7 +4,7 @@ description: "Trigger: prompt review, prompt evaluation, improve prompt, evaluar
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "1.0"
+  version: "1.0.0"
 ---
 
 # Skill: prompt-evaluator

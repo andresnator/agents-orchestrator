@@ -4,7 +4,7 @@ description: "Trigger: service boundary analysis, microservice inputs/outputs, A
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0"
+  version: "1.0.0"
 ---
 
 # Skill: service-boundary-analysis

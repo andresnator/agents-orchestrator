@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1"
+  version: "2.1.0"
 ---
 
 # Skill: buildable-issue

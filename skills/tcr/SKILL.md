@@ -13,7 +13,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1"
+  version: "1.1.0"
 ---
 
 # TCR Commit Skill
