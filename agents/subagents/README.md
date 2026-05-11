@@ -27,3 +27,4 @@ Every subagent should declare:
 | [`java-refactor-test-anchorer`](java-refactor-test-anchorer.md) | `java-testing` | Adds or verifies Java test anchors before refactoring and blocks on weak anchors or bugs |
 | [`java-refactor-tcr-worker`](java-refactor-tcr-worker.md) | `refactor-java`, `tcr`, conditional `chained-pr` | Executes one small Java refactor slice with TCR discipline and review-size guardrails |
 | [`prompt-evaluator`](prompt-evaluator.md) | [`prompt-evaluator`](../../skills/prompt-evaluator/) | Evaluates and rewrites prompt text without executing it |
+| [`service-boundary-inspector`](service-boundary-inspector.md) | [`service-boundary-analysis`](../../skills/service-boundary-analysis/) | Inspects backend service inputs and outputs with evidence and confidence |
