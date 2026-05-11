@@ -48,7 +48,7 @@ The primary loads no direct method skills. It decides when to route to these wor
 |---|---|---|
 | Baseline/tooling | `java-refactor-baseline-auditor` | Inspect build/test configuration and capture baseline, coverage, and mutation readiness. Loads no skills. |
 | Test anchor | `java-refactor-test-anchorer` | Add characterization or unit-test anchors and report anchor strength. Must load its own testing skill. |
-| Refactor/TCR | `java-refactor-tcr-worker` | Execute one small refactor slice with TCR discipline. Must load its own refactoring/TCR skills. |
+| Refactor quality | `java-refactor-tcr-worker` | Execute one small Java refactor slice with mandatory Java quality gates and optional TCR discipline. Must load its own Java quality/refactoring skills and `tcr` only when enabled. |
 | Evidence | `java-refactor-evidence-curator` | Curate compact phase evidence into durable reporting. Must load its own documentation-design skill. |
 
 The primary does not execute phase methods or load method skills. Pass `project`, `run_id`, exact topic keys, and the compact phase contract; the workflow-private subagent owns its own skill loading.
@@ -61,7 +61,7 @@ The primary does not execute phase methods or load method skills. Pass `project`
 4. **Test anchor** — require meaningful characterization or unit tests for the target behavior.
 5. **Coverage** — require 100% target-scope coverage or a recorded human decision for any explicit exception.
 6. **Mutation** — require accepted mutation readiness, with an 80-100% target score where tooling is available.
-7. **Refactor/TCR** — route one small refactor slice at a time.
+7. **Refactor quality** — route one small refactor slice at a time, with explicit optional TCR mode.
 8. **Review-size** — stop near the 400 changed-line budget unless chained PRs or a size exception are recorded.
 9. **Evidence** — route final reporting to the evidence curator.
 
@@ -78,7 +78,7 @@ Use the required `project` provided by the caller and a stable `run-id` supplied
 | Coverage evidence | `java-refactor-anchor-first/{run-id}/coverage` |
 | Mutation evidence | `java-refactor-anchor-first/{run-id}/mutation` |
 | Refactor slice plan | `java-refactor-anchor-first/{run-id}/slice-plan` |
-| TCR slice progress | `java-refactor-anchor-first/{run-id}/tcr-slice-{n}` |
+| Refactor slice progress | `java-refactor-anchor-first/{run-id}/tcr-slice-{n}` |
 | Review-size decision | `java-refactor-anchor-first/{run-id}/review-strategy` |
 | Evidence report | `java-refactor-anchor-first/{run-id}/evidence-report` |
 
@@ -97,7 +97,7 @@ Engram is the only communication bus between phase subagents. Subagents do not t
 
 When updating `state`, first read the existing `state` topic and merge the new gate status with existing topic references and human decisions. Do not overwrite prior state with a partial snapshot.
 
-Use `mem_save` topic-key upserts for evolving topics such as `state`, `coverage`, `mutation`, `review-strategy`, and `evidence-report`. Use a distinct `tcr-slice-{n}` topic for each refactor slice.
+Use `mem_save` topic-key upserts for evolving topics such as `state`, `coverage`, `mutation`, `review-strategy`, and `evidence-report`. Use a distinct compatibility topic `tcr-slice-{n}` for each refactor slice.
 
 ## Input Shape
 
@@ -120,6 +120,9 @@ human_decisions:
   coverage_exception: <optional>
   mutation_exception: <optional>
   review_strategy: chained-prs | size-exception | unknown
+refactor_mode:
+  tcr: enabled | disabled | ask
+  selected_by: primary-orchestrator | human | worker-question
 ```
 
 ## Actions
@@ -127,7 +130,7 @@ human_decisions:
 1. If `project` is missing, return `blocked` before any Engram access and ask for the required Engram project name.
 2. If baseline verification is `false` or `unknown`, warn that refactoring on an unstable baseline is unsafe, ask one verification question, and stop.
 3. Create or update compact run state with gate status and known topic keys using the Engram communication protocol.
-4. Route to the next required workflow-private subagent using only `project`, `run_id`, topic-key references, and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, load the subagent's own required skills, and return a compact envelope only.
+4. Route to the next required workflow-private subagent using only `project`, `run_id`, topic-key references, resolved `refactor_mode` when entering the refactor quality phase, and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, load the subagent's own required skills, and return a compact envelope only.
 5. Read only the subagent's compact return envelope.
 6. Update run state and either route the next phase, ask one human question, or return the final evidence topic key.
 
