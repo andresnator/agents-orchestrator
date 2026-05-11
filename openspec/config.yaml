@@ -1,0 +1,14 @@
+schema: spec-driven
+
+context: |
+  Repository type: Markdown/instruction harness for agents, skills, commands, recipes, scenarios, and templates.
+  Runtime/build/tests: no runtime application, no build step, no runtime test framework.
+  Validation: documentation review and scenario/golden-case checks.
+
+rules:
+  explore:
+    - Keep artifacts concise and evidence-backed.
+    - Prefer heuristic, multilingual analysis methods over language-specific AST parsing in v1.
+  specs:
+    - Use RFC 2119 keywords (MUST/SHOULD/MAY).
+    - Use Given/When/Then acceptance scenarios.

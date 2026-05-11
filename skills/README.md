@@ -21,6 +21,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `refactor` | Cross-language refactoring guidance |
 | `refactor-java` | Java-specific refactoring guidance |
 | `rfc` | Create RFC documents |
+| `service-boundary-analysis` | Inspect backend service inputs and outputs with evidence and confidence |
 | `spike` | Create Jira spike tickets |
 | `summarize` | Summarize long-form reading material |
 | `tcr` | Apply Test && Commit || Revert workflow |
