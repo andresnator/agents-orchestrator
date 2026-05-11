@@ -1,3 +1,8 @@
+---
+description: Route documentation work to the right skill
+argument-hint: [what to document]
+---
+
 # /doc
 
 ## Purpose

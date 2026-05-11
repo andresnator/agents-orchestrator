@@ -40,7 +40,7 @@ If no action is passed, `install` is used so simple usage stays short.
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `install`   | Add harness assets to the target. Existing asset paths are skipped unless `--backup` is used.                                                                 |
 | `update`    | Refresh target assets from this repository. Existing asset paths are replaced only with `--backup`; otherwise they are skipped. Missing assets are installed. |
-| `uninstall` | Remove only current repo-managed installable item paths from the target. The target root and shared parent asset directories are never removed.               |
+| `uninstall` | Remove only manifest-proven installable item paths from the target. The target root and shared parent asset directories are never removed.                   |
 
 | Option            | Purpose                                                                                   |
 | ----------------- | ----------------------------------------------------------------------------------------- |
@@ -69,7 +69,11 @@ The script is intentionally conservative.
 - If a destination path already exists and `--backup` is not set, that path is skipped.
 - `update` replaces existing asset paths only when `--backup` is set. Without a backup it installs missing assets and skips existing ones.
 - If `--backup` is set, the existing path is moved to a timestamped sibling backup before replacement or removal.
-- `uninstall` only targets current repo-managed installable item paths under the configured target. It preserves unrelated sibling files/directories and keeps the target root plus parent asset directories (`agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`) in place.
+- `install` and `update` maintain a repo-specific manifest at `<target>/.harness-manager/agents-orchestrator-manifest.tsv` for successfully managed paths.
+- `uninstall` uses that manifest as the ownership source of truth. Same relative paths are not ownership proof.
+- If the manifest is missing or unreadable, uninstall preserves the target and reports that ownership could not be proven. Running `install` or `update` records missing items and adopts existing items only when they already match the requested mode; use `--backup` to replace non-matching legacy paths, or clean them up manually after review.
+- Manifest entries are verified before removal or backup. Missing, unsafe, outside-target, unverifiable, or user-modified paths are skipped and reported.
+- `uninstall` preserves unrelated sibling files/directories and keeps the target root plus parent asset directories (`agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`) in place.
 - Every run ends with a summary of created, copied, linked, removed, skipped, and backed-up paths.
 - `--dry-run` is the recommended first step for install, update, and uninstall.
 
@@ -108,6 +112,7 @@ Run a disposable copy install:
 ```bash
 target="$(mktemp -d)/opencode"
 scripts/harness-manager.sh install --target "$target" --mode copy
+test -f "$target/.harness-manager/agents-orchestrator-manifest.tsv"
 ```
 
 Run a disposable symlink install:
@@ -115,9 +120,10 @@ Run a disposable symlink install:
 ```bash
 target="$(mktemp -d)/opencode"
 scripts/harness-manager.sh install --target "$target" --mode symlink
+test -f "$target/.harness-manager/agents-orchestrator-manifest.tsv"
 ```
 
-Preview update and uninstall operations:
+Preview update and uninstall operations. Dry-run uninstall uses the manifest but does not remove, back up, or rewrite anything:
 
 ```bash
 target="$(mktemp -d)/opencode"
@@ -125,11 +131,31 @@ scripts/harness-manager.sh update --target "$target" --backup --dry-run
 scripts/harness-manager.sh uninstall --target "$target" --dry-run
 ```
 
+Confirm a same-name legacy path is preserved when no manifest exists:
+
+```bash
+target="$(mktemp -d)/opencode"
+mkdir -p "$target/commands"
+printf 'user owned\n' > "$target/commands/doc.md"
+scripts/harness-manager.sh uninstall --target "$target"
+test -f "$target/commands/doc.md"
+```
+
+Confirm mismatched manifest entries are skipped conservatively:
+
+```bash
+target="$(mktemp -d)/opencode"
+scripts/harness-manager.sh install --target "$target" --mode copy
+printf 'user edit\n' >> "$target/commands/doc.md"
+scripts/harness-manager.sh uninstall --target "$target" --dry-run
+test -f "$target/commands/doc.md"
+```
+
 This repository has no runtime application, build system, or automated test framework. Validation is script smoke checks, dry-run review, safe temporary-target checks, and documentation review.
 
 ## Rollback and uninstall
 
-To remove installed harness assets, use the `uninstall` action:
+To remove installed harness assets, use the `uninstall` action. It only acts on paths recorded in this repository's target manifest and verified against their recorded copy checksum or symlink target:
 
 ```bash
 scripts/harness-manager.sh uninstall --target ~/.config/opencode --dry-run
@@ -150,3 +176,5 @@ mv ~/.config/opencode/skills/prompt-evaluator.backup.YYYYMMDDHHMMSS ~/.config/op
 ```
 
 Keep the installation summary from any run that uses `--backup`; the `Backed-up paths` section is the per-item rollback map.
+
+If uninstall reports a missing manifest, no destructive action was taken. Run `install` or `update` into that target to create provenance for missing or already-matching items. Non-matching legacy paths are preserved unless you rerun with `--backup` after reviewing the planned replacements.

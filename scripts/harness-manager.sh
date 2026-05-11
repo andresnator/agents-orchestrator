@@ -2,6 +2,8 @@
 set -euo pipefail
 
 DEFAULT_TARGET="${HOME}/.config/opencode"
+MANIFEST_VERSION="1"
+MANIFEST_REPO="agents-orchestrator"
 ACTION="install"
 ACTION_SET=0
 MODE="copy"
@@ -17,6 +19,9 @@ REMOVED=()
 SKIPPED=()
 BACKED_UP=()
 ERRORS=()
+MANIFEST_NEW_ENTRIES=()
+MANIFEST_CURRENT_RELPATHS=()
+MANIFEST_REMOVED_RELPATHS=()
 
 usage() {
 	cat <<'USAGE'
@@ -27,7 +32,7 @@ Manage this agent harness in a local agent configuration directory.
 Actions:
   install              Install harness assets. Default when no action is passed.
   update               Refresh harness assets from this repository.
-  uninstall            Remove known harness item paths from the target.
+  uninstall            Remove only manifest-proven harness item paths from the target.
 
 Options:
   --target <path>       Target directory. Defaults to ~/.config/opencode
@@ -42,6 +47,216 @@ Examples:
   scripts/harness-manager.sh update --target ~/.config/opencode --backup
   scripts/harness-manager.sh uninstall --target ~/.config/opencode --dry-run
 USAGE
+}
+
+manifest_dir() {
+	printf '%s/.harness-manager\n' "$TARGET"
+}
+
+manifest_path() {
+	printf '%s/%s-manifest.tsv\n' "$(manifest_dir)" "$MANIFEST_REPO"
+}
+
+timestamp() {
+	date +%Y%m%d%H%M%S
+}
+
+relative_path_for_dest() {
+	local dest="$1"
+	case "$dest" in
+	"$TARGET"/*) printf '%s\n' "${dest#"$TARGET/"}" ;;
+	*) return 1 ;;
+	esac
+}
+
+is_valid_relative_path() {
+	local rel="$1"
+	[[ -n "$rel" ]] || return 1
+	[[ "$rel" != /* ]] || return 1
+	case "$rel" in
+	.* | */.. | ../* | */../* | *$'\t'* | *$'\n'*) return 1 ;;
+	esac
+	return 0
+}
+
+manifest_target_path() {
+	local rel="$1"
+	is_valid_relative_path "$rel" || return 1
+	printf '%s/%s\n' "$TARGET" "$rel"
+}
+
+manifest_field_safe() {
+	local value="$1"
+	case "$value" in
+	*$'\t'* | *$'\n'*) return 1 ;;
+	esac
+	return 0
+}
+
+manifest_current_has_relpath() {
+	local needle="$1"
+	local rel
+	set +u
+	for rel in "${MANIFEST_CURRENT_RELPATHS[@]}"; do
+		if [[ "$rel" == "$needle" ]]; then
+			set -u
+			return 0
+		fi
+	done
+	set -u
+	return 1
+}
+
+manifest_removed_has_relpath() {
+	local needle="$1"
+	local rel
+	set +u
+	for rel in "${MANIFEST_REMOVED_RELPATHS[@]}"; do
+		if [[ "$rel" == "$needle" ]]; then
+			set -u
+			return 0
+		fi
+	done
+	set -u
+	return 1
+}
+
+manifest_record_current_relpath() {
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	local rel
+	if rel="$(relative_path_for_dest "$dest")" && is_valid_relative_path "$rel"; then
+		MANIFEST_CURRENT_RELPATHS+=("$rel")
+	fi
+}
+
+copy_evidence() {
+	local path="$1"
+	local checksum unused
+
+	if ! command -v shasum >/dev/null 2>&1; then
+		printf 'unverifiable:no-shasum\n'
+		return 0
+	fi
+
+	if [[ -f "$path" ]]; then
+		read -r checksum unused < <(shasum -a 256 "$path")
+		printf 'sha256:file:%s\n' "$checksum"
+		return 0
+	fi
+
+	if [[ -d "$path" ]]; then
+		read -r checksum unused < <(
+			cd "$path" && find . -type f -print | LC_ALL=C sort | while IFS= read -r item; do
+				shasum -a 256 "$item"
+			done | shasum -a 256
+		)
+		printf 'sha256:dir:%s\n' "$checksum"
+		return 0
+	fi
+
+	printf 'unverifiable:unsupported-type\n'
+}
+
+evidence_for_path() {
+	local mode="$1"
+	local path="$2"
+
+	if [[ "$mode" == "symlink" ]]; then
+		[[ -L "$path" ]] || return 1
+		readlink "$path"
+		return 0
+	fi
+
+	[[ ! -L "$path" ]] || return 1
+	copy_evidence "$path"
+}
+
+verify_manifest_entry() {
+	local mode="$1"
+	local dest="$2"
+	local evidence="$3"
+	local current
+
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		return 2
+	fi
+
+	if [[ "$mode" == "symlink" ]]; then
+		[[ -L "$dest" ]] || return 3
+		current="$(readlink "$dest")"
+		[[ "$current" == "$evidence" ]] || return 3
+		return 0
+	fi
+
+	[[ "$mode" == "copy" ]] || return 3
+	[[ ! -L "$dest" ]] || return 3
+	case "$evidence" in
+	unverifiable:*) return 3 ;;
+	esac
+	current="$(copy_evidence "$dest")"
+	[[ "$current" == "$evidence" ]] || return 3
+}
+
+record_manifest_entry() {
+	local asset="$1"
+	local src="$2"
+	local dest="$3"
+	local rel evidence installed_at entry
+
+	rel="$(relative_path_for_dest "$dest")" || {
+		record skipped "$dest (manifest skipped: outside target)"
+		return 0
+	}
+	is_valid_relative_path "$rel" || {
+		record skipped "$dest (manifest skipped: unsafe relative path)"
+		return 0
+	}
+	manifest_field_safe "$asset" && manifest_field_safe "$MODE" && manifest_field_safe "$rel" && manifest_field_safe "$src" || {
+		record skipped "$dest (manifest skipped: unsupported tab/newline in path)"
+		return 0
+	}
+
+	evidence="$(evidence_for_path "$MODE" "$dest")" || {
+		record skipped "$dest (manifest skipped: evidence unavailable)"
+		return 0
+	}
+	installed_at="$(timestamp)"
+	printf -v entry '%s\t%s\t%s\t%s\t%s\t%s\t%s' "$MANIFEST_VERSION" "$asset" "$MODE" "$rel" "$src" "$evidence" "$installed_at"
+	MANIFEST_NEW_ENTRIES+=("$entry")
+}
+
+rewrite_manifest() {
+	local manifest dir tmp line version asset mode rel src evidence installed_at
+	manifest="$(manifest_path)"
+	dir="$(manifest_dir)"
+
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf '[dry-run] update manifest %s\n' "$manifest"
+		return 0
+	fi
+
+	mkdir -p "$dir"
+	tmp="${manifest}.tmp.$$"
+	: >"$tmp"
+
+	if [[ -f "$manifest" ]]; then
+		while IFS=$'\t' read -r version asset mode rel src evidence installed_at; do
+			[[ -n "${version:-}" ]] || continue
+			manifest_current_has_relpath "$rel" && continue
+			manifest_removed_has_relpath "$rel" && continue
+			printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$version" "$asset" "$mode" "$rel" "$src" "$evidence" "$installed_at" >>"$tmp"
+		done <"$manifest"
+	fi
+
+	set +u
+	for line in "${MANIFEST_NEW_ENTRIES[@]}"; do
+		printf '%s\n' "$line" >>"$tmp"
+	done
+	set -u
+
+	mv "$tmp" "$manifest"
 }
 
 fail() {
@@ -204,11 +419,99 @@ copy_or_link_item() {
 	fi
 }
 
+existing_item_matches_desired_state() {
+	local src="$1"
+	local dest="$2"
+	local src_evidence dest_evidence
+
+	if [[ "$MODE" == "symlink" ]]; then
+		is_same_symlink "$dest" "$src"
+		return $?
+	fi
+
+	[[ -e "$dest" && ! -L "$dest" ]] || return 1
+	src_evidence="$(copy_evidence "$src")"
+	dest_evidence="$(copy_evidence "$dest")"
+	case "$src_evidence" in
+	unverifiable:*) return 1 ;;
+	esac
+	[[ "$src_evidence" == "$dest_evidence" ]]
+}
+
+prepare_asset_container() {
+	local dest="$1"
+
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		plan_or_run mkdir -p "$dest"
+		if [[ "$DRY_RUN" -eq 0 ]]; then
+			record created "$dest"
+		fi
+		return 0
+	fi
+
+	if [[ -d "$dest" && ! -L "$dest" ]]; then
+		return 0
+	fi
+
+	if [[ "$BACKUP" -ne 1 ]]; then
+		record skipped "$dest (asset container exists but is not a directory; use --backup to replace)"
+		return 1
+	fi
+
+	backup_existing "$dest"
+	plan_or_run mkdir -p "$dest"
+	if [[ "$DRY_RUN" -eq 0 ]]; then
+		record created "$dest"
+	fi
+	return 0
+}
+
+prepare_item_destination() {
+	local src="$1"
+	local dest="$2"
+
+	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+		return 0
+	fi
+
+	if existing_item_matches_desired_state "$src" "$dest"; then
+		if [[ "$DRY_RUN" -eq 1 ]]; then
+			record skipped "$dest (already matches $MODE install; manifest write planned)"
+		else
+			record_manifest_entry "${CURRENT_ASSET:?}" "$src" "$dest"
+			record skipped "$dest (already matches $MODE install; manifest recorded)"
+		fi
+		return 1
+	fi
+
+	if [[ "$BACKUP" -ne 1 ]]; then
+		if [[ "$ACTION" == "install" ]]; then
+			record skipped "$dest (already exists; use --backup to replace)"
+		else
+			record skipped "$dest (update would replace existing content; rerun with --backup)"
+		fi
+		return 1
+	fi
+
+	backup_existing "$dest"
+	return 0
+}
+
 populate_managed_item() {
 	local asset="$1"
 	local src="$2"
 	local dest="$3"
+
+	if ! prepare_item_destination "$src" "$dest"; then
+		return 0
+	fi
+
 	copy_or_link_item "$src" "$dest"
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		record skipped "$dest (manifest write planned)"
+	else
+		record_manifest_entry "$asset" "$src" "$dest"
+	fi
 }
 
 populate_filtered_asset() {
@@ -218,8 +521,9 @@ populate_filtered_asset() {
 	local root
 	root="$(dirname "$src")"
 
-	plan_or_run mkdir -p "$dest"
+	CURRENT_ASSET="$asset"
 	for_each_managed_item "$root" "$TARGET" populate_managed_item "$asset"
+	CURRENT_ASSET=""
 }
 
 install_or_update_asset() {
@@ -238,14 +542,8 @@ install_or_update_asset() {
 		existed=1
 	fi
 
-	if [[ "$ACTION" == "install" ]]; then
-		if ! prepare_install_destination "$dest"; then
-			return 0
-		fi
-	else
-		if ! prepare_update_destination "$src" "$dest"; then
-			return 0
-		fi
+	if ! prepare_asset_container "$dest"; then
+		return 0
 	fi
 
 	populate_filtered_asset "$asset" "$src" "$dest"
@@ -257,9 +555,6 @@ install_or_update_asset() {
 			record linked "$dest -> $src (filtered planned; $count item(s))"
 		fi
 	else
-		if [[ "$existed" -eq 0 ]]; then
-			record created "$dest"
-		fi
 		if [[ "$MODE" == "copy" ]]; then
 			record copied "$src -> $dest (filtered; $count item(s))"
 		else
@@ -275,44 +570,6 @@ backup_existing() {
 
 	plan_or_run mv "$dest" "$backup"
 	record backed_up "$dest -> $backup"
-}
-
-prepare_install_destination() {
-	local dest="$1"
-
-	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-		return 0
-	fi
-
-	if [[ "$BACKUP" -ne 1 ]]; then
-		record skipped "$dest (already exists; use --backup to replace)"
-		return 1
-	fi
-
-	backup_existing "$dest"
-	return 0
-}
-
-prepare_update_destination() {
-	local src="$1"
-	local dest="$2"
-
-	if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-		return 0
-	fi
-
-	if [[ "$MODE" == "symlink" ]] && is_same_symlink "$dest" "$src"; then
-		record skipped "$dest (already linked to $src)"
-		return 1
-	fi
-
-	if [[ "$BACKUP" -ne 1 ]]; then
-		record skipped "$dest (update would replace existing content; rerun with --backup)"
-		return 1
-	fi
-
-	backup_existing "$dest"
-	return 0
 }
 
 uninstall_asset() {
@@ -441,6 +698,7 @@ run_install_or_update() {
 	local asset src dest
 
 	ensure_target_root
+	for_each_managed_item "$root" "$TARGET" manifest_record_current_relpath
 
 	for asset in "${ASSETS[@]}"; do
 		src="$root/$asset"
@@ -453,26 +711,84 @@ run_install_or_update() {
 
 		install_or_update_asset "$asset" "$src" "$dest"
 	done
+
+	if [[ "$DRY_RUN" -ne 1 ]]; then
+		rewrite_manifest
+	else
+		record skipped "$(manifest_path) (manifest update planned; dry-run preserved filesystem)"
+	fi
 }
 
-uninstall_managed_item() {
-	local asset="$1"
-	local src="$2"
-	local dest="$3"
-	local parent
-	parent="$(dirname "$dest")"
+uninstall_manifest_entry() {
+	local version="$1"
+	local asset="$2"
+	local mode="$3"
+	local rel="$4"
+	local src="$5"
+	local evidence="$6"
+	local installed_at="$7"
+	local dest parent verify_status
 
+	if [[ "$version" != "$MANIFEST_VERSION" ]]; then
+		record skipped "$rel (manifest version $version unsupported)"
+		return 0
+	fi
+
+	if ! dest="$(manifest_target_path "$rel")"; then
+		record skipped "$rel (manifest entry rejected: unsafe or outside target)"
+		return 0
+	fi
+
+	parent="$(dirname "$dest")"
 	if [[ -L "$parent" ]]; then
 		record skipped "$parent (asset directory is a symlink; preserved to avoid traversing external content)"
 		return 0
 	fi
 
+	if verify_manifest_entry "$mode" "$dest" "$evidence"; then
+		:
+	else
+		verify_status=$?
+		case "$verify_status" in
+		2)
+			record skipped "$dest (manifest entry stale: target path missing)"
+			return 0
+			;;
+		*)
+			record skipped "$dest (manifest evidence mismatch; preserved)"
+			return 0
+			;;
+		esac
+	fi
+
 	uninstall_asset "$dest"
+	if [[ "$DRY_RUN" -eq 0 ]]; then
+		MANIFEST_REMOVED_RELPATHS+=("$rel")
+	fi
 }
 
 run_uninstall() {
-	local root="$1"
-	for_each_managed_item "$root" "$TARGET" uninstall_managed_item
+	local manifest version asset mode rel src evidence installed_at extra line_count=0
+	manifest="$(manifest_path)"
+
+	if [[ ! -f "$manifest" || ! -r "$manifest" ]]; then
+		record skipped "$manifest (missing or unreadable; ownership could not be proven, so uninstall preserved target. Re-run install/update to adopt or clean up manually.)"
+		return 0
+	fi
+
+	while IFS=$'\t' read -r version asset mode rel src evidence installed_at extra; do
+		[[ -n "${version:-}" ]] || continue
+		line_count=$((line_count + 1))
+		if [[ -n "${extra:-}" ]]; then
+			record skipped "$manifest line $line_count (invalid manifest entry: too many fields)"
+			continue
+		fi
+		uninstall_manifest_entry "$version" "$asset" "$mode" "$rel" "$src" "$evidence" "$installed_at"
+	done <"$manifest"
+
+	if [[ "$DRY_RUN" -eq 0 ]]; then
+		rewrite_manifest
+	fi
 }
 
 main() {

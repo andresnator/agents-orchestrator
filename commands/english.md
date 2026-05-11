@@ -1,3 +1,8 @@
+---
+description: Coach English with corrections and practice
+argument-hint: [text or coaching request]
+---
+
 # /english
 
 ## Purpose
