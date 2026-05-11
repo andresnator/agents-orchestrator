@@ -32,3 +32,12 @@ For every skill response:
 - Must not say “load/call/use another skill.”
 - Must not assume another skill exists.
 - Must be useful when copied into another runtime alone.
+
+## Required validation cases
+
+| Case | Input | Expected behavior | Must include | Must not include |
+|---|---|---|---|---|
+| Skill works alone | Load any one programming-practice skill with only code/context relevant to that skill. | The response completes using that skill contract and its local references only. | Trigger fit, bounded workflow, output contract fields. | Dependency on another skill, agent, or hosted URL. |
+| Dependency is requested | A draft skill says “load another skill before continuing.” | Reviewer rejects the draft until the needed guidance is embedded locally or removed. | Failure reason and remediation. | Approval of cross-skill dependency. |
+| Source status is explicit | Java guidance cites Oracle Code Conventions, dev.java, or Oracle Secure Coding Guidelines. | The response names source status carefully. | Oracle Code Conventions as archived; dev.java and Oracle Secure Coding Guidelines as current/relevant guidance sources. | Certification, endorsement, or exhaustive compliance claim. |
+| Refactoring overlap found | A clean-code or SOLID request asks for a large behavior-preserving code transformation/catalog. | The skill narrows scope to design/readability guidance and names the boundary. | Why the request is broader than this skill. | Duplicating the refactoring catalog or acting as a hidden refactor agent. |
