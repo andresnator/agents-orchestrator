@@ -1,6 +1,5 @@
 ---
 name: refactor-java
-subagent_type: dev-senior-java
 description: |
   Comprehensive catalog of 60+ Java refactoring techniques for behavior-preserving code improvements. Trigger when the task is Java refactoring, code-smell cleanup, restructuring, API-compatible design improvement, or a named refactoring technique. This skill is the right lazy-load signal when the worker must preserve observable behavior, check public-contract compatibility, apply useful-only JavaDoc, and produce one Java Refactor Quality Gate verdict. Covers Java 8 and Java 11+ examples for every technique. Even if the user just pastes Java code and asks for improvement suggestions, use this skill to identify applicable techniques.
   También se activa en castellano: "refactorizar", "refactorizar código Java",
@@ -13,7 +12,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Java Refactoring Catalog Skill
