@@ -29,6 +29,6 @@ The Java refactor anchor-first workflow is the reference example:
 primary orchestrator
 ├─ baseline auditor
 ├─ test anchorer
-├─ TCR worker
+├─ Java refactor quality worker
 └─ evidence curator
 ```

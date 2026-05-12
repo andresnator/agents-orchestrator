@@ -16,7 +16,7 @@ Create the smallest useful Java test anchors that make a selected refactor targe
 - Read baseline and target-scope evidence from Engram before inspecting source or tests.
 - Add or recommend characterization tests, focused unit tests, or safe seams that preserve current behavior.
 - Distinguish refactor safety work from behavior fixes; block when anchoring reveals a probable bug.
-- Prove whether the target behavior is meaningfully anchored before TCR work starts.
+- Prove whether the target behavior is meaningfully anchored before refactor work starts.
 - Persist compact test-anchor, coverage, and mutation evidence to Engram.
 
 ## Workflow-Private Contract
@@ -78,7 +78,7 @@ human_decisions:
 - Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
 - Keep Engram artifacts compact: files touched, tests added or skipped, command status, anchor strength, blockers, risks, and next action. Do not save raw source, full test files, coverage reports, mutation reports, or command logs.
-- Return only the compact envelope; the TCR worker must read your evidence from Engram, not from your response body.
+- Return only the compact envelope; the Java refactor quality worker must read your evidence from Engram, not from your response body.
 
 ## Actions
 

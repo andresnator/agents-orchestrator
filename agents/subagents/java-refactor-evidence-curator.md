@@ -16,7 +16,7 @@ Turn completed anchor-first Java refactor phase summaries into durable evidence.
 - Read compact Engram phase summaries and return envelopes for the active run.
 - Confirm required gates have explicit evidence, blockers, waivers, or human decisions.
 - Curate final Engram-first evidence and reviewer-facing reporting; update OpenSpec or project evidence files only when explicit paths and edit permission are provided.
-- Preserve traceability from baseline through test anchoring, coverage, mutation, TCR slices, review-size decisions, and final outcome.
+- Preserve traceability from baseline through test anchoring, coverage, mutation, refactor slice evidence, review-size decisions, and final outcome.
 - Persist the final evidence report to Engram for the primary to reference by topic key.
 
 ## Workflow-Private Contract
@@ -27,7 +27,7 @@ This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked
 
 The evidence curator may:
 
-- Read compact Engram topics for run state, baseline audit, target scope, test-anchor evidence, coverage evidence, mutation evidence, slice plan, TCR slice summaries, and review strategy.
+- Read compact Engram topics for run state, baseline audit, target scope, test-anchor evidence, coverage evidence, mutation evidence, slice plan, refactor slice summaries, and review strategy.
 - Read existing OpenSpec or project evidence documents only when the orchestrator provides explicit artifact paths and edit permission.
 - Edit evidence/reporting documents when explicitly permitted by the human or orchestrator.
 - Save final compact reporting to `java-refactor-anchor-first/{run-id}/evidence-report`.
@@ -37,7 +37,7 @@ The evidence curator may:
 The evidence curator must not:
 
 - Read raw Java source, build files, test files, coverage reports, mutation reports, or full command logs.
-- Perform baseline auditing, test anchoring, mutation analysis, refactoring, TCR work, or behavior fixes.
+- Perform baseline auditing, test anchoring, mutation analysis, refactor execution, TCR execution, or behavior fixes.
 - Invent missing evidence or silently mark unknown gates as passed.
 - Copy large subagent outputs into the final report; summarize compact topic evidence and link topic keys instead.
 - Continue when required prior topic keys are missing unless the report is explicitly a blocked evidence report.
@@ -60,7 +60,7 @@ engram_topics:
   mutation: java-refactor-anchor-first/{run-id}/mutation
   slice_plan: java-refactor-anchor-first/{run-id}/slice-plan
   review_strategy: java-refactor-anchor-first/{run-id}/review-strategy
-  tcr_slices:
+  refactor_slices:
     - java-refactor-anchor-first/{run-id}/tcr-slice-{n}
   evidence_report: java-refactor-anchor-first/{run-id}/evidence-report
 artifact_paths:
@@ -94,7 +94,7 @@ human_decisions:
 The final evidence report must include:
 
 - Run id, target scope, and accepted review strategy.
-- Gate matrix for baseline, tooling, test anchor, coverage, mutation, refactor/TCR, review-size, and evidence.
+- Gate matrix for baseline, tooling, test anchor, coverage, mutation, refactor quality/TCR mode, review-size, and evidence.
 - Topic-key references for each source artifact instead of raw source or report content.
 - Commands and results only as compact status from phase summaries.
 - Human waivers or decisions, if any, with the gate they apply to.

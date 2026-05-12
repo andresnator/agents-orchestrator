@@ -39,7 +39,7 @@ The auditor must not:
 - Refactor, edit, rename, reformat, or otherwise change production or test code.
 - Add coverage, mutation, build, or test dependencies without explicit human approval.
 - Read broad Java source files unless needed to confirm test target naming from a provided scope.
-- Perform behavior analysis, characterization testing, TCR work, or final evidence curation.
+- Perform behavior analysis, characterization testing, refactor execution, TCR execution, or final evidence curation.
 - Treat missing or red baseline evidence as acceptable refactor input.
 
 ## Skill Loading
