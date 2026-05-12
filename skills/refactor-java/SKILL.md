@@ -2,7 +2,7 @@
 name: refactor-java
 subagent_type: dev-senior-java
 description: |
-  Comprehensive catalog of 60+ refactoring techniques for Java code based on Martin Fowler's "Refactoring" and Alexander Shvets' "Refactoring Guru". Use this skill whenever the user asks to refactor Java code, improve code quality, eliminate code smells, simplify conditionals, restructure classes, improve API design, or apply any named refactoring technique. Also trigger when the user mentions code smells, legacy code improvement, clean code practices, SOLID principles in Java, or asks "how can I improve this code". Covers Java 8 and Java 11+ examples for every technique. Even if the user just pastes Java code and asks for improvement suggestions, use this skill to identify applicable techniques.
+  Comprehensive catalog of 60+ Java refactoring techniques for behavior-preserving code improvements. Trigger when the task is Java refactoring, code-smell cleanup, restructuring, API-compatible design improvement, or a named refactoring technique. This skill is the right lazy-load signal when the worker must preserve observable behavior, check public-contract compatibility, apply useful-only JavaDoc, and produce one Java Refactor Quality Gate verdict. Covers Java 8 and Java 11+ examples for every technique. Even if the user just pastes Java code and asks for improvement suggestions, use this skill to identify applicable techniques.
   También se activa en castellano: "refactorizar", "refactorizar código Java",
   "mejorar este código", "malos olores del código", "olores de código",
   "código sucio", "limpiar código", "simplificar condicionales", "principios SOLID",
@@ -13,7 +13,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Java Refactoring Catalog Skill

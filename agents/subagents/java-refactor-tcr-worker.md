@@ -48,20 +48,22 @@ The Java refactor quality worker must not:
 
 ## Skill Loading
 
-Always load and follow the Java quality/refactor guidance before reading for edits or changing Java code:
+Load and follow the worker's skills before reading for edits or changing Java code.
 
-- `refactor-java`
-- `programming-practices-core`
-- `java-clean-code`
-- `java-solid-design`
-- `design-patterns-pragmatic`
-- `java-api-design`
-- `java-exception-robustness`
-- `java-immutability-modeling`
+`java-refactor-tcr-worker` consumes the `refactor-java` Java Refactor Quality Gate and records one consolidated verdict for the slice. Companion skills inform specific dimensions of that gate; they do not produce competing gate reports or separate completion verdicts.
 
-Load and follow `tcr` only when resolved `refactor_mode.tcr` is `enabled`. When TCR is disabled, skip TCR commits/reverts but still run approved verification and Java quality gates. Do not load `work-unit-commits`.
-
-Load and follow `chained-pr` only when valid review-size evidence shows size risk that requires a chained or stacked PR slice. Do not load `chained-pr` when the evidence is within budget and no slicing decision is needed.
+| Skill / group | When it loads | Why it loads | Boundary |
+|---|---|---|---|
+| `refactor-java` | Always, before any edit-oriented reading or code change. | It defines the Java refactor catalog, behavior-preservation discipline, API compatibility expectations, useful-only JavaDoc rule, and the authoritative Java Refactor Quality Gate consumed by this worker. | Primary quality-gate source. This worker records one consolidated pass/fail/waived verdict from it. |
+| `programming-practices-core` | Always with `refactor-java`. | It reinforces language-agnostic readability, cohesion, duplication, simplicity, and safe-evolution checks that support the final slice judgment. | Supports general quality dimensions only; no separate gate output. |
+| `java-clean-code` | Always with `refactor-java`. | It sharpens readability, naming, structure, and comment hygiene decisions while the slice stays behavior-preserving. | Supports readability/naming and JavaDoc usefulness only; no separate gate output. |
+| `java-solid-design` | Always with `refactor-java`. | It keeps SOLID usage tied to real change pressure instead of mechanical abstraction. | Supports SOLID-restraint and cohesion dimensions only; no separate gate output. |
+| `design-patterns-pragmatic` | Always with `refactor-java`. | It prevents pattern shopping and keeps indirection justified by real variation forces. | Supports pragmatic-patterns dimension only; no separate gate output. |
+| `java-api-design` | Always with `refactor-java`. | It protects public signatures, visibility, mutability, and contract compatibility during refactors. | Supports API-compatibility dimension only; no separate gate output. |
+| `java-exception-robustness` | Always with `refactor-java`. | It keeps failure boundaries, wrapping, cleanup, and exception semantics safe during refactors. | Supports exception-robustness dimension only; no separate gate output. |
+| `java-immutability-modeling` | Always with `refactor-java`. | It guides ownership, defensive copies, and invariant-preserving modeling decisions when the slice touches state. | Supports immutability/modeling dimension only; no separate gate output. |
+| `tcr` | Only when resolved `refactor_mode.tcr` is `enabled`. | It adds Test && Commit \|\| Revert discipline for the approved slice. | Optional workflow discipline only. When disabled, skip TCR commit/revert behavior but still run verification and the Java quality gate. Do not load `work-unit-commits`. |
+| `chained-pr` | Only when valid review-size evidence shows size risk that requires a chained or stacked PR slice. | It keeps the slice inside the chosen review boundary and PR strategy when a single diff would be unsafe. | Conditional review-boundary guidance only. Do not load it when evidence is within budget and no slicing decision is needed. |
 
 ## Inputs
 
