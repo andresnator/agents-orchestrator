@@ -24,4 +24,5 @@ Each scenario should define:
 | [`java-refactor-anchor-first`](java-refactor-anchor-first/) | Validate dumb-primary routing, Java refactor gates, optional TCR mode, and evidence curation |
 | [`prompt-evaluator`](prompt-evaluator/) | Validate prompt-only review behavior |
 | [`programming-practices-skills`](programming-practices-skills/) | Validate autonomous programming-practice skills for Clean Code, Java design, secure coding, and pragmatic patterns |
+| [`refactor-safety-gates`](refactor-safety-gates/) | Validate refactor readiness boundaries, compact gate evidence, blockers, and human-only waivers |
 | [`service-boundary-analysis`](service-boundary-analysis/) | Validate service boundary input/output classification, evidence, confidence, and uncertainty handling |
