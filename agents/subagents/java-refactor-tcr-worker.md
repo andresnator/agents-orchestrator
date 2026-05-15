@@ -9,7 +9,7 @@ permission:
 
 # Java Refactor Quality Worker
 
-Perform exactly one safe Java refactor slice after baseline, anchor, coverage, mutation, and review-size gates are satisfied. This subagent owns Java refactor quality first, uses TCR only when explicitly selected, and writes compact slice evidence for the primary and evidence curator.
+Perform exactly one safe Java refactor slice after baseline, anchor, coverage, mutation, and review-size gates are satisfied. This subagent owns Java refactor quality first, uses TCR only when explicitly selected, and writes compact slice evidence for caller-readable artifact topics.
 
 ## Responsibility
 
@@ -20,9 +20,9 @@ Perform exactly one safe Java refactor slice after baseline, anchor, coverage, m
 - Enforce review-size limits before and during the slice.
 - Persist slice evidence, revert decisions, and next-slice recommendations to Engram.
 
-## Workflow-Private Contract
+## Namespace and Input Contract
 
-This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
 
 ## Permissions
 
@@ -84,7 +84,7 @@ engram_topics:
   tcr_slice: java-refactor-anchor-first/{run-id}/tcr-slice-{n}
 refactor_mode:
   tcr: enabled | disabled | ask
-  selected_by: primary-orchestrator | human | worker-question
+  selected_by: caller | human | worker_question
 allowed_commands:
   tests: <required command when TCR is active>
   coverage: <optional command>
@@ -106,7 +106,7 @@ human_decisions:
 
 - If `refactor_mode.tcr` is `enabled` or `disabled`, proceed without asking and record the provided `selected_by` value.
 - If `refactor_mode.tcr` is `ask`, missing, or unknown, ask exactly one human question: “Should this slice use TCR discipline (`enabled`) or standard refactor verification (`disabled`)?”.
-- After the answer, record `selected_by: worker-question` unless the caller provides a more specific human-selection value.
+- After the answer, record `selected_by: worker_question` unless the caller provides a more specific human-selection value.
 - Do not ask additional TCR preference questions.
 
 ## Engram Read/Write Protocol
@@ -115,9 +115,9 @@ human_decisions:
 - Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when baseline, target scope, test-anchor, coverage, mutation, slice-plan, or review-strategy topics are absent, stale, contradictory, or belong to another `run_id`.
 - Save each refactor slice with `mem_save`, the exact requested `tcr_slice` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
 - Keep Engram artifacts compact: slice id, technique, files changed, measurable review-size impact, resolved TCR mode, Java quality verdict, verification status, rollback instruction, and next action. Do not save raw diffs, full source, full logs, or report dumps.
-- Return only the compact envelope; the evidence curator must read your slice evidence from Engram, not from your response body.
+- Return only the compact envelope; later review must read your slice evidence from Engram, not from your response body.
 
 ## Actions
 
@@ -189,7 +189,7 @@ project: <provided Engram project name>
 run_id: <stable run id>
 refactor_mode:
   tcr: enabled | disabled
-  selected_by: primary-orchestrator | human | worker-question
+  selected_by: caller | human | worker_question
 skills_loaded:
   base: [refactor-java, programming-practices-core, java-clean-code, java-solid-design, design-patterns-pragmatic, java-api-design, java-exception-robustness, java-immutability-modeling]
   conditional: [tcr? chained-pr?]
@@ -216,7 +216,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/review-strategy
   written:
     - java-refactor-anchor-first/{run-id}/tcr-slice-{n}
-next_recommended: next refactor slice | java-refactor-evidence-curator | human decision needed | none
+next_recommended: next_task | caller_decides | human_decision | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```

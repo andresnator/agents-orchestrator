@@ -31,6 +31,7 @@ Complete this core for every tier. Use the Standard Expansion only for Standard/
 
 - Do not <unsafe or out-of-scope action>.
 - Do not coordinate multi-phase workflows or delegate work.
+- Do not name peer subagents, primary agents, orchestrator roles, workflow phase labels, or global workflow topology in the contract.
 - Do not edit, run shell commands, or fetch web content unless permissions explicitly allow it.
 
 ## Related Skills
@@ -46,6 +47,8 @@ artifact_refs:
   - <artifact key or file path>
 constraints:
   - <boundary, standard, or reviewer constraint>
+caller_context: <task-scoped context from any caller>
+namespace_contract: <optional stable namespace for validation only, not caller identity>
 ```
 
 ## Decision Rules
@@ -89,6 +92,8 @@ artifacts:
 handoff: <next action, blocking question, or none>
 ```
 
+Use caller-generic `handoff` values such as `caller_decides`, `next_task`, `human_decision`, or `none`. Do not encode peer names, primary-agent names, orchestrator roles, workflow phase labels, or topology.
+
 ## Validation Scenarios
 
 Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 trigger cases; Critical = full matrix including tool failure and recovery/rollback when relevant.
@@ -116,6 +121,13 @@ Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 tr
 - GIVEN the request asks for a forbidden action or work outside the target scope
 - WHEN boundary checks run
 - THEN it refuses that action and returns the gate in `handoff` without side effects.
+
+### Isolation boundary
+
+- GIVEN a reviewer checks Responsibility, Forbidden Actions, and Output Contract
+- WHEN the contract is validated
+- THEN it uses caller-generic wording and handoff values
+- AND it does not name peer subagents, primary agents, orchestrator roles, workflow phase labels, or topology.
 
 ### Contract parity
 
