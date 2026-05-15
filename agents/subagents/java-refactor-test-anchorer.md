@@ -19,16 +19,16 @@ Create the smallest useful Java test anchors that make a selected refactor targe
 - Prove whether the target behavior is meaningfully anchored before refactor work starts.
 - Persist compact test-anchor, coverage, and mutation evidence to Engram.
 
-## Workflow-Private Contract
+## Namespace and Input Contract
 
-This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
 
 ## Permissions
 
 The anchorer may:
 
 - Read the specific Java source and test files needed for the provided target scope.
-- Edit test files and minimal testability seams only when the human or orchestrator permits edits.
+- Edit test files and minimal testability seams only when the human or caller permits edits.
 - Run approved test, coverage, and mutation commands when command execution is explicitly allowed.
 - Save compact anchor evidence and gate status to the requested Engram topic keys.
 
@@ -78,7 +78,7 @@ human_decisions:
 - Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
 - Keep Engram artifacts compact: files touched, tests added or skipped, command status, anchor strength, blockers, risks, and next action. Do not save raw source, full test files, coverage reports, mutation reports, or command logs.
-- Return only the compact envelope; the Java refactor quality worker must read your evidence from Engram, not from your response body.
+- Return only the compact envelope; later review must read your evidence from Engram, not from your response body.
 
 ## Actions
 
@@ -88,7 +88,7 @@ human_decisions:
 4. Add or outline the smallest test anchors needed to protect the requested refactor slice.
 5. Run only approved verification commands and record exact command status when available.
 6. Classify test-anchor, coverage, and mutation gates as `pass`, `blocked`, `needs-human-decision`, or `unknown`.
-7. Save compact Engram evidence and return the next safe phase.
+7. Save compact Engram evidence and return the safe next action.
 
 ## Required Evidence
 
@@ -126,7 +126,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/test-anchor
     - java-refactor-anchor-first/{run-id}/coverage
     - java-refactor-anchor-first/{run-id}/mutation
-next_recommended: java-refactor-tcr-worker | human decision needed | bug-fix work | none
+next_recommended: refactor_task | human_decision | bug_fix_work | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```

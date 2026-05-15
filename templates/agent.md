@@ -83,6 +83,8 @@ expected_envelope:
 
 Subagents must return the canonical envelope keys from `templates/subagent.md`: `status`, `summary`, `actions_taken`, `artifacts`, and `handoff`. Use `status` for routing, `summary` for synthesis, `actions_taken` for auditability, `artifacts` for follow-up reads, and `handoff` for the next gate.
 
+Require caller-agnostic subagent contracts: delegated outputs must avoid peer subagent names, primary-agent names, orchestrator roles, SDD phase labels, or topology language. Primaries own the mapping from generic handoff values to concrete routing.
+
 ## Decision Rules and Gates
 
 - If required input is missing, return `blocked` with one blocking question.

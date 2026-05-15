@@ -16,19 +16,19 @@ Audit whether a Java project is safe to enter anchor-first refactoring. This sub
 - Inspect only the minimum project artifacts needed to identify Java build and test setup.
 - Determine whether the baseline is healthy enough for test anchoring work.
 - Record tooling readiness for coverage and mutation gates.
-- Persist compact evidence to Engram so later phases do not reread broad context.
+- Persist compact evidence to Engram without exposing raw files or large outputs to the caller.
 - Return blocked when setup, baseline, or tooling uncertainty makes refactoring unsafe.
 
-## Workflow-Private Contract
+## Namespace and Input Contract
 
-This subagent is workflow-private to `java-refactor-anchor-first`. It is invoked only with `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace. Do not treat this subagent as reusable or caller-agnostic.
+This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
 
 ## Permissions
 
 The auditor may:
 
 - Read Java build and test configuration such as `pom.xml`, `build.gradle`, `build.gradle.kts`, wrapper files, test framework configuration, coverage plugin configuration, mutation plugin configuration, and existing command documentation.
-- Run read-only or verification commands only after the user or orchestrator permits them.
+- Run read-only or verification commands only after the user or caller permits them.
 - Save baseline/tooling findings to the requested Engram topic keys.
 - Recommend setup work when coverage or mutation tooling is missing.
 
@@ -74,7 +74,7 @@ human_decisions:
 - Save baseline, coverage, and mutation readiness with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
 - Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
 - Keep Engram artifacts compact: gate status, commands discovered or run, result summaries, blockers, risks, and next action. Do not save raw build files, full logs, or broad source excerpts.
-- Return only the compact envelope; later subagents must read your evidence from Engram, not from your response body.
+- Return only the compact envelope so follow-up review can rely on compact evidence without rereading full files.
 
 ## Actions
 
@@ -83,7 +83,7 @@ human_decisions:
 3. If command execution is permitted, run only the approved baseline verification commands.
 4. Classify each gate as `pass`, `blocked`, `needs-human-decision`, or `unknown`.
 5. Save compact baseline, coverage, and mutation readiness evidence to Engram.
-6. Return a compact envelope naming missing evidence and the next safe phase.
+6. Return a compact envelope naming missing evidence and the safe next action.
 
 ## Required Evidence
 
@@ -118,7 +118,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/baseline-audit
     - java-refactor-anchor-first/{run-id}/coverage
     - java-refactor-anchor-first/{run-id}/mutation
-next_recommended: java-refactor-test-anchorer | human decision needed | setup work | none
+next_recommended: test_anchor_task | human_decision | setup_work | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```

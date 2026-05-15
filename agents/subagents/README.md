@@ -18,6 +18,8 @@ Every subagent should declare:
 - input shape
 - output contract
 
+Subagent contracts must stay caller-agnostic: use generic caller/handoff language and keep routing/topology ownership in primary agents.
+
 ## Current subagents
 
 | Subagent | Related skill | Purpose |

@@ -32,6 +32,7 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Principle | Rule |
 |---|---|
 | Coordinate, do not specialize | Own routing, sequencing, gates, and synthesis; do not become the specialist executor. |
+| Coordination stays in the primary | Primary agents may know topology and phase order; subagent contracts must stay caller-generic and task-scoped. |
 | Human gates are first-class | Ask one blocking question when a decision is needed instead of guessing. |
 | Delegation is bounded | Delegate only a clear specialist task with input, constraints, and expected envelope. |
 | Least privilege | Start read-only; allow edit, shell, web, or task access only when the workflow requires it. |
@@ -115,8 +116,9 @@ A primary agent should:
 2. Load only required skills or compact project standards.
 3. Choose the next phase, subagent, or human gate.
 4. Pass bounded inputs and constraints to any subagent.
-5. Verify returned envelopes before continuing.
-6. Synthesize decisions, artifacts, and risks into the final output.
+5. Keep subagent outputs caller-agnostic (`caller_decides`, `next_task`, `human_decision`, `none`) and map them to concrete routing inside the primary.
+6. Verify returned envelopes before continuing.
+7. Synthesize decisions, artifacts, and risks into the final output.
 
 It should stop when required inputs are missing, the requested action crosses a forbidden boundary, a quality gate fails, or a human decision is required.
 
@@ -135,6 +137,8 @@ handoff: <next action, blocking question, or none>
 ```
 
 Use `status` for routing, `summary` for synthesis, `actions_taken` for auditability, `artifacts` for follow-up reads, and `handoff` for the next gate. Do not ask subagents to coordinate unrelated phases.
+
+Primaries may retain private mapping tables from generic subagent `handoff` values to concrete subagents/phases. Keep that mapping out of subagent contracts.
 
 ## Output Contract Pattern
 
@@ -169,6 +173,7 @@ Use the tier count as the minimum: Compact requires happy path plus blocked/unsa
 - [ ] Related skills are loaded only when they define the method.
 - [ ] Input shape includes artifact refs, constraints, and decision inputs.
 - [ ] Delegation requires `status`, `summary`, `actions_taken`, `artifacts`, and `handoff`.
+- [ ] Subagent contracts remain caller-agnostic: no peer names, orchestrator roles, SDD phases, or topology language.
 - [ ] Quality gates and stop conditions are explicit.
 - [ ] Output contract is stable and compact.
 - [ ] Scenario count matches the tier: Compact 2, Standard 3–4, Critical full matrix.

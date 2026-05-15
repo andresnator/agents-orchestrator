@@ -31,7 +31,7 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Principle | Rule |
 |---|---|
 | Single responsibility | A subagent should do one job well, not coordinate a workflow. |
-| Caller agnostic | Do not depend on a specific primary agent unless the subagent is explicitly workflow-private. |
+| Caller agnostic | Keep contracts caller-generic. Do not name peer subagents, primary agents, orchestrator roles, SDD phases, or workflow topology in subagent responsibilities, instructions, or output fields. |
 | Domain specific | Be specific about the domain when that expertise is the value, such as Java refactoring or prompt evaluation. |
 | Deterministic by contract | Use explicit decision rules, blocking conditions, and output schemas. |
 | Least privilege | Deny editing, shell, web, or MCP access unless the task truly needs them. |
@@ -46,6 +46,45 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Subagent | One bounded specialist task | Multi-phase orchestration |
 | Skill | The method or rubric the agent follows | Agent identity, routing, broad workflow ownership |
 | Scenario | Expected behavior examples and regressions | Hidden implementation details |
+
+## Isolation Boundary (Normative)
+
+Subagents MUST stay caller-agnostic by contract.
+
+Allowed:
+
+- Generic caller language (`caller`, `requester`, `return_to_caller`, `caller_decides`).
+- Caller-provided task context needed to perform one bounded specialist task.
+- Narrow namespace contracts when required for stable artifact/topic-key validation.
+
+Not allowed in subagent contracts:
+
+- Naming peer subagents as required next steps.
+- Naming primary agents or orchestrator roles as output consumers.
+- Encoding SDD phase sequencing in `next_recommended`.
+- Describing global workflow lifecycle or topology.
+
+### Narrow namespace-contract exception
+
+When a subagent must emit workflow-private identifiers (for example topic-key namespaces), the contract must keep that exception narrow:
+
+- Explain only the validation need (namespace integrity, run isolation, stable filtering).
+- Avoid naming caller identity or peer lifecycle.
+- Keep output routing generic; concrete routing belongs to the primary agent.
+
+Good:
+
+```yaml
+selected_by: caller | human | worker_question
+next_recommended: next_task | caller_decides | human_decision | none
+```
+
+Bad:
+
+```yaml
+selected_by: primary-orchestrator | evidence-curator
+next_recommended: java-refactor-test-anchorer | sdd-verify
+```
 
 ## Tier Expansion Rules
 
@@ -152,6 +191,7 @@ When changing the subagent contract:
 - [ ] Tier is declared and justified by the rubric.
 - [ ] Description includes trigger and hard boundary.
 - [ ] The subagent is caller-agnostic unless intentionally private.
+- [ ] Output fields use caller-generic handoff values; no peer/primary/phase/topology leakage.
 - [ ] Domain specificity is explicit where needed.
 - [ ] Permissions follow least privilege.
 - [ ] Required skills are named and justified.
