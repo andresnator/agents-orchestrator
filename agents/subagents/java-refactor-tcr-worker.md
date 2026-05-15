@@ -9,7 +9,7 @@ permission:
 
 # Java Refactor Quality Worker
 
-Perform exactly one safe Java refactor slice after baseline, anchor, coverage, mutation, and review-size gates are satisfied. This subagent owns Java refactor quality first, uses TCR only when explicitly selected, and writes compact slice evidence for the caller and final evidence task.
+Perform exactly one safe Java refactor slice after baseline, anchor, coverage, mutation, and review-size gates are satisfied. This subagent owns Java refactor quality first, uses TCR only when explicitly selected, and writes compact slice evidence for caller-readable artifact topics.
 
 ## Responsibility
 
@@ -115,7 +115,7 @@ human_decisions:
 - Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when baseline, target scope, test-anchor, coverage, mutation, slice-plan, or review-strategy topics are absent, stale, contradictory, or belong to another `run_id`.
 - Save each refactor slice with `mem_save`, the exact requested `tcr_slice` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
 - Keep Engram artifacts compact: slice id, technique, files changed, measurable review-size impact, resolved TCR mode, Java quality verdict, verification status, rollback instruction, and next action. Do not save raw diffs, full source, full logs, or report dumps.
 - Return only the compact envelope; later review must read your slice evidence from Engram, not from your response body.
 
@@ -216,7 +216,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/review-strategy
   written:
     - java-refactor-anchor-first/{run-id}/tcr-slice-{n}
-next_recommended: next_slice | final_evidence_task | human_decision | none
+next_recommended: next_task | caller_decides | human_decision | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```

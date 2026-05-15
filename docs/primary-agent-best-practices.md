@@ -85,7 +85,7 @@ When changing the primary-agent contract:
 Good:
 
 ```markdown
-Coordinates SDD phases from proposal through archive; delegates phase execution and stops for unresolved human decisions.
+Coordinates a proposal-to-archive workflow; delegates bounded execution and stops for unresolved human decisions.
 ```
 
 Bad:
@@ -173,7 +173,7 @@ Use the tier count as the minimum: Compact requires happy path plus blocked/unsa
 - [ ] Related skills are loaded only when they define the method.
 - [ ] Input shape includes artifact refs, constraints, and decision inputs.
 - [ ] Delegation requires `status`, `summary`, `actions_taken`, `artifacts`, and `handoff`.
-- [ ] Subagent contracts remain caller-agnostic: no peer names, orchestrator roles, SDD phases, or topology language.
+- [ ] Subagent contracts remain caller-agnostic: no peer names, orchestrator roles, workflow phase labels, or topology language.
 - [ ] Quality gates and stop conditions are explicit.
 - [ ] Output contract is stable and compact.
 - [ ] Scenario count matches the tier: Compact 2, Standard 3–4, Critical full matrix.

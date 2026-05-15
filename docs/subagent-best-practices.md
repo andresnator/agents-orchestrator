@@ -31,7 +31,7 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Principle | Rule |
 |---|---|
 | Single responsibility | A subagent should do one job well, not coordinate a workflow. |
-| Caller agnostic | Keep contracts caller-generic. Do not name peer subagents, primary agents, orchestrator roles, SDD phases, or workflow topology in subagent responsibilities, instructions, or output fields. |
+| Caller agnostic | Keep contracts caller-generic. Do not name peer subagents, primary agents, orchestrator roles, workflow phase labels, or topology in subagent responsibilities, instructions, or output fields. |
 | Domain specific | Be specific about the domain when that expertise is the value, such as Java refactoring or prompt evaluation. |
 | Deterministic by contract | Use explicit decision rules, blocking conditions, and output schemas. |
 | Least privilege | Deny editing, shell, web, or MCP access unless the task truly needs them. |
@@ -61,7 +61,7 @@ Not allowed in subagent contracts:
 
 - Naming peer subagents as required next steps.
 - Naming primary agents or orchestrator roles as output consumers.
-- Encoding SDD phase sequencing in `next_recommended`.
+- Encoding workflow phase sequencing in `next_recommended`.
 - Describing global workflow lifecycle or topology.
 
 ### Narrow namespace-contract exception
@@ -82,8 +82,8 @@ next_recommended: next_task | caller_decides | human_decision | none
 Bad:
 
 ```yaml
-selected_by: primary-orchestrator | evidence-curator
-next_recommended: java-refactor-test-anchorer | sdd-verify
+selected_by: primary-agent-name | downstream-consumer
+next_recommended: peer-subagent-name | workflow-stage-name
 ```
 
 ## Tier Expansion Rules
@@ -175,6 +175,8 @@ handoff: <next action, blocking question, or none>
 
 Avoid returning raw logs, long reports, copied code, or expanded artifacts unless the subagent's whole purpose is to produce that artifact.
 
+Existing evidence-gate envelopes may keep `next_recommended` when the values use the same caller-generic vocabulary; prefer `handoff` for new contracts.
+
 ## Canonical Template
 
 Use `templates/subagent.md` as the canonical scaffold. This guide defines the principles, required sections, and evaluation checklist; the template owns the exact copy-paste structure.
@@ -190,8 +192,8 @@ When changing the subagent contract:
 - [ ] Responsibility is one sentence and one job.
 - [ ] Tier is declared and justified by the rubric.
 - [ ] Description includes trigger and hard boundary.
-- [ ] The subagent is caller-agnostic unless intentionally private.
-- [ ] Output fields use caller-generic handoff values; no peer/primary/phase/topology leakage.
+- [ ] The subagent is caller-agnostic; private workflow identifiers are limited to namespace or artifact validation.
+- [ ] Output fields use caller-generic handoff values; no peer/primary/workflow-phase/topology leakage.
 - [ ] Domain specificity is explicit where needed.
 - [ ] Permissions follow least privilege.
 - [ ] Required skills are named and justified.

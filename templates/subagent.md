@@ -31,7 +31,7 @@ Complete this core for every tier. Use the Standard Expansion only for Standard/
 
 - Do not <unsafe or out-of-scope action>.
 - Do not coordinate multi-phase workflows or delegate work.
-- Do not name peer subagents, primary agents, orchestrator roles, SDD phases, or global workflow topology in the contract.
+- Do not name peer subagents, primary agents, orchestrator roles, workflow phase labels, or global workflow topology in the contract.
 - Do not edit, run shell commands, or fetch web content unless permissions explicitly allow it.
 
 ## Related Skills
@@ -92,7 +92,7 @@ artifacts:
 handoff: <next action, blocking question, or none>
 ```
 
-Use caller-generic `handoff` values such as `caller_decides`, `next_task`, `human_decision`, or `none`. Do not encode peer names, primary-agent names, orchestrator roles, or SDD phase names.
+Use caller-generic `handoff` values such as `caller_decides`, `next_task`, `human_decision`, or `none`. Do not encode peer names, primary-agent names, orchestrator roles, workflow phase labels, or topology.
 
 ## Validation Scenarios
 
@@ -127,7 +127,7 @@ Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 tr
 - GIVEN a reviewer checks Responsibility, Forbidden Actions, and Output Contract
 - WHEN the contract is validated
 - THEN it uses caller-generic wording and handoff values
-- AND it does not name peer subagents, primary agents, orchestrator roles, SDD phases, or workflow topology.
+- AND it does not name peer subagents, primary agents, orchestrator roles, workflow phase labels, or topology.
 
 ### Contract parity
 

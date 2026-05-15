@@ -1,5 +1,5 @@
 ---
-description: Curates compact Java refactor phase evidence into final reporting without reading raw source, reports, or broad project context.
+description: Curates compact Java refactor evidence summaries into final reporting without reading raw source, reports, or broad project context.
 mode: subagent
 permission:
   edit: ask
@@ -76,8 +76,8 @@ human_decisions:
 - Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when any required topic is absent, stale, contradictory, too detailed to safely ingest, or belongs to another `run_id`.
 - Save the final evidence report with `mem_save`, the exact requested `evidence_report` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
-- Keep the final artifact reviewer-facing and compact: gate matrix, topic-key references, command result summaries, waivers, rollback boundary, risks, and next action. Do not save raw code, raw reports, full logs, or expanded phase artifacts.
+- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
+- Keep the final artifact reviewer-facing and compact: gate matrix, topic-key references, command result summaries, waivers, rollback boundary, risks, and next action. Do not save raw code, raw reports, full logs, or expanded upstream outputs.
 - Return only the compact envelope; the caller should reference the final report by topic key.
 
 ## Actions

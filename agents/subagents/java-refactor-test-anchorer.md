@@ -76,7 +76,7 @@ human_decisions:
 - Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Block when baseline, target scope, coverage, or mutation topics are absent, stale, contradictory, or belong to another `run_id`.
 - Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
 - Keep Engram artifacts compact: files touched, tests added or skipped, command status, anchor strength, blockers, risks, and next action. Do not save raw source, full test files, coverage reports, mutation reports, or command logs.
 - Return only the compact envelope; later review must read your evidence from Engram, not from your response body.
 
@@ -126,7 +126,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/test-anchor
     - java-refactor-anchor-first/{run-id}/coverage
     - java-refactor-anchor-first/{run-id}/mutation
-next_recommended: refactor_task | human_decision | bug_fix_work | none
+next_recommended: next_task | human_decision | caller_decides | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```

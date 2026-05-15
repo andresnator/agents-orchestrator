@@ -44,7 +44,7 @@ The auditor must not:
 
 ## Skill Loading
 
-Load no skills. Do not load `java-testing`, `chained-pr`, or any other skill in this phase; audit the baseline and report risks from the provided project context and artifacts only.
+Load no skills. Do not load `java-testing`, `chained-pr`, or any other skill for this task; audit the baseline and report risks from the provided project context and artifacts only.
 
 ## Inputs
 
@@ -72,7 +72,7 @@ human_decisions:
 - Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
 - Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
 - Save baseline, coverage, and mutation readiness with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because phase artifacts are generated evidence, not a new human prompt.
+- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
 - Keep Engram artifacts compact: gate status, commands discovered or run, result summaries, blockers, risks, and next action. Do not save raw build files, full logs, or broad source excerpts.
 - Return only the compact envelope so follow-up review can rely on compact evidence without rereading full files.
 
@@ -118,7 +118,7 @@ engram_topics:
     - java-refactor-anchor-first/{run-id}/baseline-audit
     - java-refactor-anchor-first/{run-id}/coverage
     - java-refactor-anchor-first/{run-id}/mutation
-next_recommended: test_anchor_task | human_decision | setup_work | none
+next_recommended: next_task | human_decision | caller_decides | none
 human_question: <one question only, when blocked>
 risk: low | medium | high
 ```
