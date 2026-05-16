@@ -94,8 +94,8 @@ Skills are not managed by `harness-manager.sh`. The manager only handles agents 
 # Install a local skill directory
 npx skills add .
 
-# Install from a repository URI (owner/repo)
-npx skills add vercel-labs/agent-skills
+# Install from this repository URI (owner/repo)
+npx skills add andresnator/agents-orchestrator
 ```
 
 Refer to the `npx skills` documentation for all supported sources and platform-specific options. If your agent platform provides its own skill installer, follow that platform's guidance after installing the skill package.
