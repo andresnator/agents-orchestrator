@@ -51,14 +51,14 @@ If no action is passed, `install` is used so simple usage stays short.
 | `--backup`        | Moves existing target paths to timestamped sibling backups before replacement or removal. |
 | `--help`          | Prints usage and exits without touching the target.                                       |
 
-The manager maps installable items under these top-level directories when they exist: `agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`.
+The manager manages only two top-level asset types: `agents` and `commands`.
 
 Install and update use asset-aware filters instead of copying every Markdown file blindly:
 
 - `agents`: installs only agent files from `primary/` and `subagents/` into a flat `agents/` target, because OpenCode derives the agent name from the Markdown file path; section READMEs are skipped.
-- `skills`: installs only skill directories that contain `SKILL.md`; the root skills README is skipped.
 - `commands`: installs only command Markdown files; the commands README is skipped.
-- Other harness directories skip top-level `README.md` files so documentation does not become a runnable asset accidentally.
+
+Skills, recipes, scenarios, and templates are not managed by this installer. See [Installing skills separately](#installing-skills-separately) for the recommended skill-installation path.
 
 Agent Markdown frontmatter is kept OpenCode-compatible. Repository agent templates intentionally avoid skill-only fields such as `metadata`, because OpenCode passes unsupported agent fields to the model request.
 
@@ -73,7 +73,7 @@ The script is intentionally conservative.
 - `uninstall` uses that manifest as the ownership source of truth. Same relative paths are not ownership proof.
 - If the manifest is missing or unreadable, uninstall preserves the target and reports that ownership could not be proven. Running `install` or `update` records missing items and adopts existing items only when they already match the requested mode; use `--backup` to replace non-matching legacy paths, or clean them up manually after review.
 - Manifest entries are verified before removal or backup. Missing, unsafe, outside-target, unverifiable, or user-modified paths are skipped and reported.
-- `uninstall` preserves unrelated sibling files/directories and keeps the target root plus parent asset directories (`agents`, `skills`, `commands`, `recipes`, `scenarios`, and `templates`) in place.
+- `uninstall` preserves unrelated sibling files/directories and keeps the target root plus parent asset directories (`agents` and `commands`) in place.
 - Every run ends with a summary of created, copied, linked, removed, skipped, and backed-up paths.
 - `--dry-run` is the recommended first step for install, update, and uninstall.
 
@@ -85,6 +85,20 @@ The script is intentionally conservative.
 | `symlink` | You want local edits in this repo to be immediately visible to the host agent tool. | Links break if this repository moves, is renamed, or is deleted.                                                 |
 
 Copy mode is the safer default. Symlink mode is useful for active harness development.
+
+## Installing skills separately
+
+Skills are not managed by `harness-manager.sh`. The manager only handles agents and commands. Install skills separately using the external skills CLI:
+
+```bash
+# Install a specific skill from a local checkout
+npx skills add . --skill <skill-name>
+
+# Install a specific skill from this repository URI
+npx skills add https://github.com/andresnator/agents-orchestrator --skill <skill-name>
+```
+
+Refer to the `npx skills` documentation for all supported sources and platform-specific options. If your agent platform provides its own skill installer, follow that platform's guidance after installing the skill package.
 
 ## Validation examples
 
@@ -172,7 +186,6 @@ If you used `--backup`, restore a previous item by moving the reported backup pa
 
 ```bash
 mv ~/.config/opencode/commands/doc.md.backup.YYYYMMDDHHMMSS ~/.config/opencode/commands/doc.md
-mv ~/.config/opencode/skills/prompt-evaluator.backup.YYYYMMDDHHMMSS ~/.config/opencode/skills/prompt-evaluator
 ```
 
 Keep the installation summary from any run that uses `--backup`; the `Backed-up paths` section is the per-item rollback map.
