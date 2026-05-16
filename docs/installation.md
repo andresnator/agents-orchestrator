@@ -91,11 +91,11 @@ Copy mode is the safer default. Symlink mode is useful for active harness develo
 Skills are not managed by `harness-manager.sh`. The manager only handles agents and commands. Install skills separately using the external skills CLI:
 
 ```bash
-# Install a local skill directory
-npx skills add .
+# Install a specific skill from a local checkout
+npx skills add . --skill <skill-name>
 
-# Install from this repository URI (owner/repo)
-npx skills add andresnator/agents-orchestrator
+# Install a specific skill from this repository URI
+npx skills add https://github.com/andresnator/agents-orchestrator --skill <skill-name>
 ```
 
 Refer to the `npx skills` documentation for all supported sources and platform-specific options. If your agent platform provides its own skill installer, follow that platform's guidance after installing the skill package.
