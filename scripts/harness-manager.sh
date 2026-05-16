@@ -11,7 +11,7 @@ TARGET="$DEFAULT_TARGET"
 DRY_RUN=0
 BACKUP=0
 
-ASSETS=(agents skills commands recipes scenarios templates)
+ASSETS=(agents commands)
 CREATED=()
 COPIED=()
 LINKED=()
@@ -27,7 +27,7 @@ usage() {
 	cat <<'USAGE'
 Usage: scripts/harness-manager.sh [action] [options]
 
-Manage this agent harness in a local agent configuration directory.
+Install, update, or uninstall the agents-and-commands harness assets in a local agent configuration directory. Only agents and commands are managed; skills, recipes, scenarios, and templates are not within scope.
 
 Actions:
   install              Install harness assets. Default when no action is passed.
@@ -350,19 +350,6 @@ for_each_managed_item() {
 		fi
 	fi
 
-	asset="skills"
-	if [[ -z "$asset_filter" || "$asset_filter" == "$asset" ]]; then
-		src="$root/$asset"
-		if [[ -d "$src" ]]; then
-			for path in "$src"/*; do
-				[[ -d "$path" ]] || continue
-				[[ -f "$path/SKILL.md" ]] || continue
-				name="$(basename "$path")"
-				"$callback" "$asset" "$path" "$target/$asset/$name"
-			done
-		fi
-	fi
-
 	asset="commands"
 	if [[ -z "$asset_filter" || "$asset_filter" == "$asset" ]]; then
 		src="$root/$asset"
@@ -376,19 +363,6 @@ for_each_managed_item() {
 		fi
 	fi
 
-	for asset in recipes scenarios templates; do
-		if [[ -n "$asset_filter" && "$asset_filter" != "$asset" ]]; then
-			continue
-		fi
-		src="$root/$asset"
-		[[ -d "$src" ]] || continue
-		for path in "$src"/*; do
-			[[ -e "$path" || -L "$path" ]] || continue
-			is_readme_file "$path" && continue
-			name="$(basename "$path")"
-			"$callback" "$asset" "$path" "$target/$asset/$name"
-		done
-	done
 }
 
 COUNT_INSTALLABLE_ITEMS=0
@@ -783,6 +757,13 @@ run_uninstall() {
 			record skipped "$manifest line $line_count (invalid manifest entry: too many fields)"
 			continue
 		fi
+		case "$asset" in
+			agents|commands) ;;
+			*)
+				record skipped "$rel (asset type '$asset' no longer managed by this installer version; preserved)"
+				continue
+				;;
+		esac
 		uninstall_manifest_entry "$version" "$asset" "$mode" "$rel" "$src" "$evidence" "$installed_at"
 	done <"$manifest"
 
