@@ -88,13 +88,17 @@ Copy mode is the safer default. Symlink mode is useful for active harness develo
 
 ## Installing skills separately
 
-Skills are not managed by `harness-manager.sh`. The manager only handles agents and commands. To install skills, copy skill directories directly into your agent configuration directory:
+Skills are not managed by `harness-manager.sh`. The manager only handles agents and commands. Install skills separately using the external skills CLI:
 
 ```bash
-cp -R path/to/skill-directory ~/.config/opencode/skills/
+# Install a local skill directory
+npx skills add .
+
+# Install from a repository URI (owner/repo)
+npx skills add vercel-labs/agent-skills
 ```
 
-Refer to your agent platform's documentation for the recommended skill-installation workflow. Some platforms provide a built-in skill installer (e.g., `opencode skill install`).
+Refer to the `npx skills` documentation for all supported sources and platform-specific options. If your agent platform provides its own skill installer, follow that platform's guidance after installing the skill package.
 
 ## Validation examples
 
