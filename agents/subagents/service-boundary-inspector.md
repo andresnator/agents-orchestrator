@@ -90,7 +90,7 @@ handoff: <next action, blocking question, or none>
 
 When `status: complete`, `artifacts` MUST include a Markdown report using the `service-boundary-analysis` output contract with exactly one `Inputs` table and one `Outputs` table.
 
-## Validation Scenarios
+## Validation Notes
 
 ### Happy path
 
@@ -120,4 +120,4 @@ When `status: complete`, `artifacts` MUST include a Markdown report using the `s
 
 - GIVEN this subagent is reviewed against repository subagent standards
 - WHEN required headings are compared
-- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Decision Rules, Actions, Output Contract, and Validation Scenarios are present exactly once.
+- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Decision Rules, Actions, Output Contract, and Validation Notes are present exactly once.

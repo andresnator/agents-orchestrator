@@ -4,7 +4,7 @@ description: "Trigger: Java clean code, Java naming, Java readability, Java styl
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Skill: java-clean-code
@@ -69,9 +69,9 @@ Return:
 - Java version assumptions.
 - Risks or behavior-preservation notes.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | Happy path | Improve Java naming/structure with behavior-preserving suggestions. | Rewrite architecture unnecessarily. |
 | Ambiguous input | Ask for Java version or state assumption. | Use features unsupported by the project. |

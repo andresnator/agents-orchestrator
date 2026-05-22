@@ -58,7 +58,7 @@ Install and update use asset-aware filters instead of copying every Markdown fil
 - `agents`: installs only agent files from `primary/` and `subagents/` into a flat `agents/` target, because OpenCode derives the agent name from the Markdown file path; section READMEs are skipped.
 - `commands`: installs only command Markdown files; the commands README is skipped.
 
-Skills, recipes, scenarios, and templates are not managed by this installer. See [Installing skills separately](#installing-skills-separately) for the recommended skill-installation path.
+Skills, recipes, and templates are not managed by this installer. See [Installing skills separately](#installing-skills-separately) for the recommended skill-installation path.
 
 Agent Markdown frontmatter is kept OpenCode-compatible. Repository agent templates intentionally avoid skill-only fields such as `metadata`, because OpenCode passes unsupported agent fields to the model request.
 

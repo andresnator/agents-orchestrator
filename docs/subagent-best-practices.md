@@ -8,21 +8,21 @@ Subagents are bounded specialists. Create one when a repeated task needs isolati
 2. Select the lowest tier that fits the risk; if multiple signals apply, the highest-risk tier wins.
 3. Make it caller-agnostic but domain-specific when the job requires expertise.
 4. Grant the minimum permissions and tools needed for the job.
-5. Validate with the tier's required scenarios or golden cases.
+5. Validate with the tier's required review cases.
 
 ## Tier Selection
 
 | Tier | Use when | Required validation |
 |---|---|---|
-| Compact | One narrow job, no delegation, low-risk tools, simple inputs, and low blast radius. | 2 cases: happy path + blocked/unsafe input. |
-| Standard | Repeated workflow or specialist task with meaningful decisions, scoped edits/tools, state/evidence handling, or 3–4 trigger examples. | 3–4 concrete trigger cases, including one blocked gate. |
-| Critical | Orchestration, delegation, commits, shell/web/MCP risk, cross-artifact state, destructive potential, or human approvals. | Full matrix: happy, blocked, unsafe, delegation/tool failure if relevant, recovery/rollback. |
+| Compact | One narrow job, no delegation, low-risk tools, simple inputs, and low blast radius. | Happy path + blocked/unsafe input. |
+| Standard | Repeated workflow or specialist task with meaningful decisions, scoped edits/tools, state/evidence handling, or 3–4 trigger examples. | Concrete trigger cases, including one blocked gate. |
+| Critical | Orchestration, delegation, commits, shell/web/MCP risk, cross-artifact state, destructive potential, or human approvals. | Full review matrix: happy, blocked, unsafe, delegation/tool failure if relevant, recovery/rollback. |
 
 Selection rule: choose the highest triggered tier. Delegation or multi-phase routing makes an agent at least Standard; unsafe delegation, side-effectful tools, shell/edit/commit gates, or recovery requirements make it Critical.
 
 ## Mandatory Deterministic Core
 
-Every tier must include: explicit responsibility and hard boundary, forbidden actions, least-privilege permissions/tools, related skills or `None`, input shape, blocked-gate behavior with at most one blocking question, bounded output `status` values, and validation scenarios.
+Every tier must include: explicit responsibility and hard boundary, forbidden actions, least-privilege permissions/tools, related skills or `None`, input shape, blocked-gate behavior with at most one blocking question, bounded output `status` values, and validation notes.
 
 Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, `model`, optional `temperature`, and `permission`; Claude-compatible agents need `name`, concrete triggerable `description` with examples, `model`, optional least-privilege `tools`, structured steps, and explicit output.
 
@@ -45,7 +45,7 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Primary agent | Routing, phase sequencing, human decisions, synthesis | Deep implementation, raw evidence analysis |
 | Subagent | One bounded specialist task | Multi-phase orchestration |
 | Skill | The method or rubric the agent follows | Agent identity, routing, broad workflow ownership |
-| Scenario | Expected behavior examples and regressions | Hidden implementation details |
+| Validation notes | Expected behavior examples and regressions | Hidden implementation details |
 
 ## Isolation Boundary (Normative)
 
@@ -100,7 +100,7 @@ All subagents should declare:
 - **Decision Rules**: deterministic gates, tier-specific stop rules, and blocking behavior.
 - **Actions**: the happy-path execution steps.
 - **Output Contract**: exact response schema.
-- **Validation Scenarios**: the tier's required golden cases.
+- **Validation Notes**: the tier's required review cases.
 
 ## Agnostic but Not Generic
 
@@ -199,7 +199,7 @@ When changing the subagent contract:
 - [ ] Required skills are named and justified.
 - [ ] Decision rules define blocked and failed states.
 - [ ] Output contract is stable and compact.
-- [ ] Scenario count matches the tier: Compact 2, Standard 3–4, Critical full matrix.
+- [ ] Validation notes match the tier: Compact happy/blocked, Standard trigger cases, Critical full matrix.
 
 ## Migration Notes
 

@@ -49,9 +49,9 @@ Return:
 
 - <Output item>
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | Happy path | <Expected output or decision> | <Forbidden behavior> |
 | Ambiguous input | <Question or safe fallback> | <Over-assume> |

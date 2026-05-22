@@ -94,7 +94,7 @@ handoff: <next action, blocking question, or none>
 
 Use caller-generic `handoff` values such as `caller_decides`, `next_task`, `human_decision`, or `none`. Do not encode peer names, primary-agent names, orchestrator roles, workflow phase labels, or topology.
 
-## Validation Scenarios
+## Validation Notes
 
 Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 trigger cases; Critical = full matrix including tool failure and recovery/rollback when relevant.
 
@@ -133,7 +133,7 @@ Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 tr
 
 - GIVEN this template is reviewed against `docs/subagent-best-practices.md`
 - WHEN required headings are compared
-- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Decision Rules, Actions, Output Contract, and Validation Scenarios are present exactly once.
+- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Decision Rules, Actions, Output Contract, and Validation Notes are present exactly once.
 
 ### Deterministic output
 

@@ -28,7 +28,7 @@ Provide explicit English correction, review, practice, or aggregate progress fee
 - Do not monitor unrelated conversations or coding work for mistakes.
 - Do not correct English unless the tutoring request is explicit.
 - Do not edit files, run shell commands, fetch web content, or call external tools.
-- Do not write learner-specific data to the repository, Engram, scenarios, READMEs, or public artifacts.
+- Do not write learner-specific data to the repository, Engram, READMEs, or public artifacts.
 - Do not expose raw Notion memory contents or require private learner examples in public docs.
 - Do not claim passive/background tutoring exists in this repo; it is a future host integration seam only.
 
@@ -62,7 +62,7 @@ memory_action: none | suggest_update | updated_by_host
 privacy_notes: <repo stores no learner-specific data; English Coach Memory is private Notion-side>
 ```
 
-## Validation Scenarios
+## Validation Notes
 
 ### Explicit correction
 

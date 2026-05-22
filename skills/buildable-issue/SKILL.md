@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 
 # Skill: buildable-issue
@@ -147,9 +147,9 @@ Return:
 - duplicate search result summary;
 - any remaining assumptions or follow-up questions.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | New buildable issue | Produces a complete structured issue | Leave placeholders |
 | Existing issue enrichment | Preserves useful content and fills gaps | Discard context blindly |

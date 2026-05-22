@@ -4,9 +4,9 @@ This file provides guidance to AI coding assistants when working in this reposit
 
 ## What This Repo Is
 
-This repo is a **personal AI agent harness**: a place to design, organize, validate, and reuse agents, subagents, skills, commands, recipes, scenarios, and templates for day-to-day software work.
+This repo is a **personal AI agent harness**: a place to design, organize, validate, and reuse agents, subagents, skills, commands, recipes, and templates for day-to-day software work.
 
-It has no runtime application, build system, or test framework. Most validation is documentation review plus scenario/golden-case checks.
+It has no runtime application, build system, or test framework. Most validation is documentation review plus focused checklist/golden-case review inside the relevant artifact docs.
 
 ## Project Structure
 
@@ -17,7 +17,6 @@ It has no runtime application, build system, or test framework. Most validation 
 | `skills/` | Reusable instruction contracts |
 | `commands/` | Fast invocation wrappers for repeated workflows |
 | `recipes/` | Playbooks combining agents, skills, commands, and human judgment |
-| `scenarios/` | Golden-case validations |
 | `templates/` | Starter templates for new harness pieces |
 | `docs/` | Deeper architecture and conventions |
 
@@ -28,7 +27,7 @@ It has no runtime application, build system, or test framework. Most validation 
 - A skill explains how to do something; an agent decides when and whether to use it.
 - When modifying a skill, update its `metadata.version` according to strict SemVer (`MAJOR.MINOR.PATCH`, for example `1.0.0`).
 - Commands are only for workflows used often enough to deserve a shortcut.
-- Scenarios are the default validation strategy for prompt-only behavior.
+- Prompt-only behavior is validated with focused review checklists and golden-case notes in the relevant artifact docs.
 - Keep READMEs updated when adding, moving, or removing tools (ALL READMEs).
 - Keep the root README's “Recommended entry points” section curated and minimal; do not add every new tool, only broadly useful entry points.
 
@@ -49,7 +48,7 @@ Every agent should state:
 
 ## Prompt Evaluator Validation
 
-Because this repo has no runtime test framework, validate the `/promt-checker` command and `prompt-evaluator` skill with scenario/golden cases rather than unit tests:
+Because this repo has no runtime test framework, validate the `/promt-checker` command and `prompt-evaluator` skill with focused review cases rather than unit tests:
 
 - clear prompt → verdict `READY`, minor polish only
 - vague prompt → verdict `NEEDS_REFINEMENT`, detects missing goal/context/output

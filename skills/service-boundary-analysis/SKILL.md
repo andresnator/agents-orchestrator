@@ -4,7 +4,7 @@ description: "Trigger: service boundary analysis, microservice inputs/outputs, A
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Skill: service-boundary-analysis
@@ -153,9 +153,9 @@ Return a Markdown report with this structure:
 
 The `Inputs` and `Outputs` tables are mandatory even when no findings are found. If empty, include one row with `none found` in `category`, `unavailable` for unavailable fields, `low` confidence, and notes explaining the inspected scope.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | HTTP route and DB write | Classifies the route as `HTTP/API` input and the write as `database writes` output with evidence. | Claim unrelated consumers exist. |
 | Queue listener and event publishing | Classifies listener as `messaging consumers` input and publisher as `event publishing` output. | Hide topic/queue uncertainty. |

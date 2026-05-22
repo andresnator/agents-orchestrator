@@ -12,7 +12,6 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 | [`skills/`](skills/) | Reusable instruction contracts and references |
 | [`commands/`](commands/) | Fast entry points for repeated workflows |
 | [`recipes/`](recipes/) | Playbooks that combine tools and judgment |
-| [`scenarios/`](scenarios/) | Golden-case validations for agents and skills |
 | [`scripts/`](scripts/) | Local harness management utilities |
 | [`templates/`](templates/) | Starting points for new harness pieces |
 | [`docs/`](docs/) | Architecture and deeper design notes |
@@ -37,16 +36,16 @@ The core separation is simple:
 - **Skills** define how a capability is performed.
 - **Commands** provide quick invocation paths.
 - **Recipes** document workflows across multiple tools.
-- **Scenarios** validate behavior without needing a runtime test framework.
+- **Review checklists** embedded in docs validate behavior without needing a runtime test framework.
 - **Templates** keep future additions consistent.
 
 ## Add something new
 
-1. Pick the right layer: agent, skill, command, recipe, scenario, or template.
+1. Pick the right layer: agent, skill, command, recipe, or template.
 2. Start from [`templates/`](templates/).
 3. Add or update the section README.
 4. Check whether documentation should be updated; keep it concise and useful for future agents.
-5. Add scenarios when behavior matters.
+5. Add concise review notes or checklist items when behavior matters.
 
 ## Philosophy
 

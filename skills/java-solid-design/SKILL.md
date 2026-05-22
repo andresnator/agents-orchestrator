@@ -4,7 +4,7 @@ description: "Trigger: Java SOLID, Java OO design, SRP, OCP, LSP, ISP, DIP, comp
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Skill: java-solid-design
@@ -68,9 +68,9 @@ Return:
 - Tradeoffs and compatibility concerns.
 - Minimal next step.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | Happy path | Diagnose actual SOLID pressure and recommend focused change. | Recite all SOLID principles generically. |
 | Ambiguous input | Ask for change scenario or infer with clear assumptions. | Create abstractions without reason. |

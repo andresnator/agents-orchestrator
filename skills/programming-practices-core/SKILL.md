@@ -4,7 +4,7 @@ description: "Trigger: programming best practices, clean code, DRY, KISS, YAGNI,
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Skill: programming-practices-core
@@ -68,9 +68,9 @@ Return:
 - Tradeoffs and risks.
 - One next step.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | Happy path | Identify concrete maintainability issues and propose small improvements. | Produce a generic essay. |
 | Ambiguous input | Ask one clarifying question or provide labeled assumptions. | Invent domain intent. |

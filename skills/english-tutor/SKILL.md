@@ -4,7 +4,7 @@ description: "Trigger: explicit English tutoring, correction, practice, or /engl
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Skill: english-tutor
@@ -92,9 +92,9 @@ For progress summaries, return:
 
 Public repository artifacts must not contain raw learner history, private examples, personal identifiers, or Notion page contents.
 
-## Validation Scenarios
+## Validation Notes
 
-| Scenario | Expected behavior | Must not do |
+| Case | Expected behavior | Must not do |
 |---|---|---|
 | Explicit correction | Returns all five fields in order and preserves meaning | Add unrelated coaching or long grammar lectures |
 | Ambiguous or missing input | Asks one question for the text to review | Invent text or continue with assumptions |

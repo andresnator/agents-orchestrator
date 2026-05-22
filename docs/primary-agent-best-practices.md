@@ -9,21 +9,21 @@ Primary agents coordinate workflows. Use one when the work needs routing, phase 
 3. Keep specialist execution in skills or subagents; the primary agent coordinates.
 4. Declare least-privilege permissions and the exact delegation boundary.
 5. Return a compact final envelope with status, evidence, artifacts, and handoff.
-6. Validate with the tier's required scenarios or golden cases.
+6. Validate with the tier's required review cases.
 
 ## Tier Selection
 
 | Tier | Use when | Required validation |
 |---|---|---|
-| Compact | One narrow job, no delegation, low-risk tools, simple inputs, and low blast radius. | 2 cases: happy path + blocked/unsafe input. |
-| Standard | Repeated workflow or specialist task with meaningful decisions, scoped edits/tools, state/evidence handling, or 3–4 trigger examples. | 3–4 concrete trigger cases, including one blocked gate. |
-| Critical | Orchestration, delegation, commits, shell/web/MCP risk, cross-artifact state, destructive potential, or human approvals. | Full matrix: happy, blocked, unsafe, delegation/tool failure if relevant, recovery/rollback. |
+| Compact | One narrow job, no delegation, low-risk tools, simple inputs, and low blast radius. | Happy path + blocked/unsafe input. |
+| Standard | Repeated workflow or specialist task with meaningful decisions, scoped edits/tools, state/evidence handling, or 3–4 trigger examples. | Concrete trigger cases, including one blocked gate. |
+| Critical | Orchestration, delegation, commits, shell/web/MCP risk, cross-artifact state, destructive potential, or human approvals. | Full review matrix: happy, blocked, unsafe, delegation/tool failure if relevant, recovery/rollback. |
 
 Selection rule: choose the highest triggered tier. Delegation or multi-phase routing makes an agent at least Standard; unsafe delegation, side-effectful tools, shell/edit/commit gates, or recovery requirements make it Critical.
 
 ## Mandatory Deterministic Core
 
-Every tier must include: explicit responsibility and hard boundary, forbidden actions, least-privilege permissions/tools, related skills or `None`, input shape, blocked-gate behavior with at most one blocking question, bounded output `status` values, and validation scenarios.
+Every tier must include: explicit responsibility and hard boundary, forbidden actions, least-privilege permissions/tools, related skills or `None`, input shape, blocked-gate behavior with at most one blocking question, bounded output `status` values, and validation notes.
 
 Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, `model`, optional `temperature`, and `permission`; Claude-compatible agents need `name`, concrete triggerable `description` with examples, `model`, optional least-privilege `tools`, structured steps, and explicit output.
 
@@ -46,7 +46,7 @@ Frontmatter should stay runtime-aware: OpenCode supports `description`, `mode`, 
 | Primary agent | Routing, phase sequencing, human decisions, delegation boundaries, synthesis, quality gates | Deep specialist execution or broad prompt dumps |
 | Subagent | One bounded specialist task with a stable envelope | Multi-phase orchestration or deciding unrelated next steps |
 | Skill | The method, rubric, or workflow discipline an agent follows | Agent identity or broad routing ownership |
-| Scenario | Expected behavior and regressions | Hidden implementation details |
+| Validation notes | Expected behavior and regressions | Hidden implementation details |
 
 ## Tier Expansion Rules
 
@@ -64,7 +64,7 @@ Every primary agent should declare:
 - **Decision Rules and Gates**: human approvals, blockers, and safety checks.
 - **State and Evidence Handling**: what is read, persisted, summarized, or ignored.
 - **Output Contract**: final response schema.
-- **Validation Scenarios**: the tier's required golden cases.
+- **Validation Notes**: the tier's required review cases.
 
 ## Canonical Template
 
@@ -154,9 +154,9 @@ artifacts: []
 handoff: <next step, one blocking question, or none>
 ```
 
-## Validation Scenarios
+## Validation Notes
 
-Use the tier count as the minimum: Compact requires happy path plus blocked/unsafe input; Standard requires 3–4 concrete trigger cases; Critical requires the full matrix below, including delegation failures and recovery/rollback when side effects are possible.
+Use the tier as the minimum: Compact requires happy path plus blocked/unsafe input; Standard requires concrete trigger cases; Critical requires the full matrix below, including delegation failures and recovery/rollback when side effects are possible.
 
 - **Happy path**: valid input moves through phases, delegates bounded work, and returns `complete` with artifacts and handoff.
 - **Missing input**: required context is absent, so the agent returns `blocked` with one question.
@@ -176,7 +176,7 @@ Use the tier count as the minimum: Compact requires happy path plus blocked/unsa
 - [ ] Subagent contracts remain caller-agnostic: no peer names, orchestrator roles, workflow phase labels, or topology language.
 - [ ] Quality gates and stop conditions are explicit.
 - [ ] Output contract is stable and compact.
-- [ ] Scenario count matches the tier: Compact 2, Standard 3–4, Critical full matrix.
+- [ ] Validation notes match the tier: Compact happy/blocked, Standard trigger cases, Critical full matrix.
 
 ## Non-Normative Existing Agents
 

@@ -132,7 +132,7 @@ artifacts:
 handoff: <next step, one blocking question, or none>
 ```
 
-## Validation Scenarios
+## Validation Notes
 
 Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 trigger cases; Critical = full matrix including delegation/tool failure and recovery/rollback when relevant.
 
@@ -170,4 +170,4 @@ Minimum by tier: Compact = 2 cases (happy + blocked/unsafe); Standard = 3–4 tr
 
 - GIVEN this template is reviewed against `docs/primary-agent-best-practices.md`
 - WHEN required headings are compared
-- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Orchestration Flow, Delegation Contract, Decision Rules and Gates, State and Evidence Handling, Output Contract, and Validation Scenarios are present exactly once.
+- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Orchestration Flow, Delegation Contract, Decision Rules and Gates, State and Evidence Handling, Output Contract, and Validation Notes are present exactly once.

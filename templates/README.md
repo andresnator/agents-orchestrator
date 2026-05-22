@@ -10,5 +10,4 @@ Templates keep new harness pieces consistent.
 | [`subagent.md`](subagent.md) | Focused specialist agents |
 | [`skill.md`](skill.md) | Reusable skills |
 | [`command.md`](command.md) | Slash-style commands or shortcuts |
-| [`scenario.md`](scenario.md) | Golden-case validations |
 | [`recipe.md`](recipe.md) | Multi-step workflows |
