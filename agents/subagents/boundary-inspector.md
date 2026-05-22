@@ -7,7 +7,7 @@ permission:
   webfetch: deny
 ---
 
-# Service Boundary Inspector
+# Boundary Inspector
 
 Tier: Standard
 

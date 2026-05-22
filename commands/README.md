@@ -25,6 +25,7 @@ Each command should document:
 | [`/doc`](doc.md) | Start a thin documentation request and hand off to the smallest matching documentation skill |
 | [`/english`](english.md) | Start explicit English coaching with the five-field correction contract |
 | [`/promt-checker`](promt-checker.md) | Evaluate and refine prompt text without executing it |
+| [`/boundary-inspector`](boundary-inspector.md) | Inspect backend service inputs and outputs with evidence |
 
 ## Rule
 

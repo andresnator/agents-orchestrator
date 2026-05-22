@@ -19,10 +19,10 @@ If the text or coaching target is missing, ask one question for the text to revi
 
 ## Uses
 
-| Agent/Skill | Purpose |
+| Layer | Purpose |
 |---|---|
-| `english-tutor` skill | Applies the correction method, silence rules, five-field output, and privacy boundary |
-| `english-tutor` subagent | Handles bounded correction/review/progress-summary requests |
+| `english-tutor` subagent | Executes bounded correction, review, or progress-summary requests |
+| `english-tutor` skill | Method loaded by the subagent for correction format, silence rules, and privacy boundaries |
 
 ## Output
 
@@ -39,6 +39,7 @@ For progress feedback, summarize aggregate recurring gap categories and recommen
 ## Boundaries
 
 - This command is opt-in only; it must not trigger unsolicited English coaching outside `/english` or another explicit tutoring request.
+- Delegate to the `english-tutor` subagent; do not duplicate the skill contract here.
 - Do not edit files, run commands, fetch web content, or store learner-specific data.
 - Keep learner-specific history out of the public repo. Use private Notion-side `English Coach Memory` only when the host/user explicitly opts in.
 - Passive/background tutoring is not implemented by this repository; it is a future host/orchestrator integration seam.
