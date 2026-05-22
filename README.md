@@ -24,7 +24,7 @@ My personal workbench for designing, organizing, validating, and reusing AI agen
 | [`/doc`](commands/doc.md) | Command | Starts a thin documentation request and routes to the smallest matching documentation skill |
 | [`buildable-issue`](skills/buildable-issue/) | Skill | Creates agent-ready GitHub issues that are ready to build |
 | [`java-refactor-anchor-first`](agents/primary/java-refactor-anchor-first.md) | Primary agent | Coordinates safe Java refactors through Engram-backed gates without loading the full codebase into the orchestrator |
-| [`prompt-evaluator`](agents/subagents/prompt-evaluator.md) | Subagent | Reviews and refines prompt text without executing it |
+| [`/promt-checker`](commands/promt-checker.md) | Command | Evaluate and refine prompt text without executing it |
 | [`prompt-evaluator`](skills/prompt-evaluator/) | Skill | Defines the prompt evaluation rubric and output contract |
 
 This is a curated list, not a full inventory. Add only broadly useful entry points.

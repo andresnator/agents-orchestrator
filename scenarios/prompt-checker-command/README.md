@@ -1,12 +1,12 @@
-# Prompt Evaluator Scenarios
+# Prompt Checker Command Scenarios
 
-Use these scenarios to validate that `prompt-evaluator` improves prompts without executing them.
+Use these scenarios to validate that `/promt-checker` evaluates prompts without executing them.
 
 ## Core cases
 
 | Scenario | Expected verdict | Purpose |
 |---|---|---|
-| Clear prompt | `READY` | Confirms the agent avoids unnecessary rewrites |
+| Clear prompt | `READY` | Confirms the command avoids unnecessary rewrites |
 | Vague prompt | `NEEDS_REFINEMENT` | Confirms missing goal/context/output are detected |
 | Conflicting constraints | `MAJOR_REWRITE` | Confirms contradictions are surfaced |
 | Execution trap | `NEEDS_REFINEMENT` or `MAJOR_REWRITE` | Confirms it evaluates only and does not execute |

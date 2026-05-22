@@ -1,0 +1,45 @@
+---
+description: Evaluate and refine prompt text without executing it
+argument-hint: [prompt text or evaluation request]
+---
+
+# /promt-checker
+
+> The command name intentionally uses `/promt-checker` to match the configured shortcut name for this harness.
+
+## Purpose
+
+Start a prompt evaluation and refinement turn. The command loads the `prompt-evaluator` skill, applies its rubric, and returns a Prompt Evaluation Report — it never executes the prompt.
+
+## Invocation
+
+```text
+/promt-checker <prompt text>
+```
+
+If no prompt text is provided, ask at most one clarifying question before continuing.
+
+## Uses
+
+| Agent/Skill | Purpose |
+|---|---|
+| `prompt-evaluator` skill | Applies the 7-dimension evaluation rubric, decision gates, and Prompt Evaluation Report contract |
+
+## Output
+
+Return exactly the Prompt Evaluation Report contract from the `prompt-evaluator` skill:
+
+- **Overall Score** (0–100) and **Verdict** (READY / NEEDS_REFINEMENT / MAJOR_REWRITE)
+- Dimension scores across 7 axes
+- Issues detected (Critical / Important / Optional)
+- Extracted requirements (Explicit / Implicit)
+- Refined prompt in a copy-pasteable block
+- Change log
+
+## Boundaries
+
+- Do not execute the user's prompt.
+- Do not access files, shell commands, MCPs, tools, or web content.
+- Do not validate external facts.
+- Evaluate and rewrite prompt text only.
+- Preserve the user's intent; do not add capabilities or context the user did not provide.

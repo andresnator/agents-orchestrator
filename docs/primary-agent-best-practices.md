@@ -182,7 +182,7 @@ Use the tier count as the minimum: Compact requires happy path plus blocked/unsa
 
 Existing primary-agent files are not standards references for this guide. That includes `agents/primary/java-refactor-anchor-first.md`, which should be evaluated separately before any future alignment work.
 
-No existing primary agent must be rewritten just because this guide changed. Add a tier declaration and align section names opportunistically during future edits. `prompt-evaluator`-style prompt-only agents are usually Compact; Java refactor orchestrators are Critical because they coordinate gates, state, and side-effectful workers.
+No existing primary agent must be rewritten just because this guide changed. Add a tier declaration and align section names opportunistically during future edits. Prompt-only evaluation entrypoints are usually Compact; Java refactor orchestrators are Critical because they coordinate gates, state, and side-effectful workers.
 
 ## Sources Used
 

@@ -25,7 +25,6 @@ Agents are executable personas with boundaries, permissions, and output contract
 | [`java-refactor-evidence-curator`](subagents/java-refactor-evidence-curator.md) | Subagent | Curates compact Java refactor evidence summaries into final reporting |
 | [`java-refactor-test-anchorer`](subagents/java-refactor-test-anchorer.md) | Subagent | Adds or verifies Java characterization and unit-test anchors before refactoring |
 | [`java-refactor-tcr-worker`](subagents/java-refactor-tcr-worker.md) | Subagent | Executes one small Java refactor slice with TCR and review-size guardrails |
-| `prompt-evaluator` | Subagent | Reviews and refines prompt text only |
 | [`service-boundary-inspector`](subagents/service-boundary-inspector.md) | Subagent | Inspects backend service inputs and outputs with evidence and confidence |
 
 ## Rule

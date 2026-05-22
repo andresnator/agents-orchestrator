@@ -49,7 +49,7 @@ Every agent should state:
 
 ## Prompt Evaluator Validation
 
-Because this repo has no runtime test framework, validate `prompt-evaluator` with scenario/golden cases rather than unit tests:
+Because this repo has no runtime test framework, validate the `/promt-checker` command and `prompt-evaluator` skill with scenario/golden cases rather than unit tests:
 
 - clear prompt → verdict `READY`, minor polish only
 - vague prompt → verdict `NEEDS_REFINEMENT`, detects missing goal/context/output
