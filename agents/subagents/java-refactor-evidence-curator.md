@@ -19,9 +19,9 @@ Turn completed anchor-first Java refactor summaries into durable evidence. This 
 - Preserve traceability from baseline through test anchoring, coverage, mutation, refactor slice evidence, review-size decisions, and final outcome.
 - Persist the final evidence report to Engram for the caller to reference by topic key.
 
-## Namespace and Input Contract
+## Shared Engram Contract
 
-This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
+This subagent follows the `java-refactor-engram-contract` skill for namespace validation, topic-key catalog defaults, read/write protocol, compact evidence rules, and shared output envelope fields. The skill defines the transport layer; this agent owns final evidence curation, gate-matrix reporting, and phase-specific outputs.
 
 ## Permissions
 
@@ -44,7 +44,7 @@ The evidence curator must not:
 
 ## Skill Loading
 
-Load and follow `cognitive-doc-design` before writing or updating final evidence reporting.
+Load and follow `java-refactor-engram-contract` for the shared Engram transport contract. Load and follow `cognitive-doc-design` before writing or updating final evidence reporting.
 
 ## Inputs
 
@@ -52,17 +52,18 @@ Load and follow `cognitive-doc-design` before writing or updating final evidence
 project: <required Engram project name>
 run_id: <stable run id>
 engram_topics:
-  state: java-refactor-anchor-first/{run-id}/state
-  baseline_audit: java-refactor-anchor-first/{run-id}/baseline-audit
-  target_scope: java-refactor-anchor-first/{run-id}/target-scope
-  test_anchor: java-refactor-anchor-first/{run-id}/test-anchor
-  coverage: java-refactor-anchor-first/{run-id}/coverage
-  mutation: java-refactor-anchor-first/{run-id}/mutation
-  slice_plan: java-refactor-anchor-first/{run-id}/slice-plan
-  review_strategy: java-refactor-anchor-first/{run-id}/review-strategy
+  # Default keys from java-refactor-engram-contract topic catalog.
+  state: <caller-provided state topic key>
+  baseline_audit: <caller-provided baseline audit topic key>
+  target_scope: <caller-provided target-scope topic key>
+  test_anchor: <caller-provided test-anchor topic key>
+  coverage: <caller-provided coverage topic key>
+  mutation: <caller-provided mutation topic key>
+  slice_plan: <caller-provided slice-plan topic key>
+  review_strategy: <caller-provided review-strategy topic key>
   refactor_slices:
-    - java-refactor-anchor-first/{run-id}/tcr-slice-{n}
-  evidence_report: java-refactor-anchor-first/{run-id}/evidence-report
+    - <caller-provided tcr-slice-{n} topic key>
+  evidence_report: <caller-provided evidence-report topic key>
 artifact_paths:
   openspec_change: <optional path>
   final_report: <optional path>
@@ -72,13 +73,7 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
-- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
-- Block when any required topic is absent, stale, contradictory, too detailed to safely ingest, or belongs to another `run_id`.
-- Save the final evidence report with `mem_save`, the exact requested `evidence_report` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
-- Keep the final artifact reviewer-facing and compact: gate matrix, topic-key references, command result summaries, waivers, rollback boundary, risks, and next action. Do not save raw code, raw reports, full logs, or expanded upstream outputs.
-- Return only the compact envelope; the caller should reference the final report by topic key.
+Follow the `java-refactor-engram-contract` skill: read with `mem_search` → `mem_get_observation`; block on missing/stale/mismatched topics. Write the final evidence report with `mem_save` using exact `evidence_report` `topic_key`, `scope: project`, `capture_prompt: false`, and structured content. Keep the report compact (gate matrix, topic-key references, waiver summary, rollback boundary, risks, next action). Return only the compact envelope.
 
 ## Actions
 

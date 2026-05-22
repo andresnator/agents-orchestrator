@@ -45,7 +45,7 @@ The primary must not:
 
 ## Skill Loading and Workflow-Private Subagents
 
-The primary loads no direct method skills. It decides when to route to these workflow-private subagents; each selected subagent must load and follow its own required skills before phase work.
+Load or reference `java-refactor-engram-contract` for the shared Engram transport contract. The primary loads no direct method skills. It decides when to route to these workflow-private subagents; each selected subagent must load and follow its own required skills before phase work.
 
 | Phase | Subagent | Purpose |
 |---|---|---|
@@ -68,40 +68,20 @@ The primary does not execute phase methods or load method skills. Pass `project`
 8. **Review-size** — stop near the 400 changed-line budget unless chained PRs or a size exception are recorded.
 9. **Evidence** — route final reporting to the evidence curator.
 
-## Engram Topic Contract
+## Shared Engram Contract
 
-Use the required `project` provided by the caller and a stable `run-id` supplied by the human or generated from the request. Pass topic keys, not expanded artifacts. If `project` is missing, stop as `blocked` before any Engram read or write. Caller-provided topic keys override defaults; default keys are only generated when the caller does not provide them.
+This agent follows the `java-refactor-engram-contract` skill for all transport-layer rules. The skill defines:
 
-| Artifact | Default topic key |
-|---|---|
-| Run state | `java-refactor-anchor-first/{run-id}/state` |
-| Baseline audit | `java-refactor-anchor-first/{run-id}/baseline-audit` |
-| Target scope | `java-refactor-anchor-first/{run-id}/target-scope` |
-| Test anchor evidence | `java-refactor-anchor-first/{run-id}/test-anchor` |
-| Coverage evidence | `java-refactor-anchor-first/{run-id}/coverage` |
-| Mutation evidence | `java-refactor-anchor-first/{run-id}/mutation` |
-| Test-anchor attempt history | Stored compactly in resolved state topic `anchor_attempts[]` with immutable compact evidence snapshots, `topics_read`, `topics_written`, and decisions. |
-| Refactor slice plan | `java-refactor-anchor-first/{run-id}/slice-plan` |
-| Refactor slice progress | `java-refactor-anchor-first/{run-id}/tcr-slice-{n}` |
-| Review-size decision | `java-refactor-anchor-first/{run-id}/review-strategy` |
-| Evidence report | `java-refactor-anchor-first/{run-id}/evidence-report` |
+- Namespace validation: `project` and `run_id` are required; topic keys must be in `java-refactor-anchor-first/{run-id}/...`.
+- Topic-key catalog with defaults (state, baseline-audit, target-scope, test-anchor, coverage, mutation, slice-plan, review-strategy, tcr-slice-{n}, evidence-report).
+- Read protocol: `mem_search` → `mem_get_observation` (search previews are not sufficient).
+- Write protocol: `mem_save` with exact `topic_key`, `scope: project`, `capture_prompt: false`, and structured content.
+- State merge rule: read existing state before updating; merge, do not overwrite.
+- Compact evidence rules: gate status, summaries, blockers, risks, next action only. No raw source, logs, diffs, or reports.
+- Communication protocol: subagents do not talk directly; the primary passes topic keys, not expanded artifacts.
+- Shared output envelope: `status`, `project`, `run_id`, `engram_topics`, `next_recommended`, `human_question`, `risk`.
 
-## Engram Communication Protocol
-
-Engram is the only communication bus between phase subagents. Subagents do not talk to each other directly, and the primary does not relay artifact content. Every Engram access uses the provided `project` and `scope: project`; do not infer project from cwd or session.
-
-| Step | Owner | Required behavior |
-|---|---|---|
-| 1. Reference | Primary | Pass `project`, `run_id`, and exact topic keys only to the selected workflow-private subagent. |
-| 2. Read dependency | Consuming subagent | Call `mem_search` for the exact topic key in project scope, then `mem_get_observation` for the full artifact. A search preview is not enough. |
-| 3. Validate dependency | Consuming subagent | Block if a required topic is missing, stale, contradictory, or from another `run_id`. |
-| 4. Write artifact | Producing subagent | Call `mem_save` with the exact `topic_key`, `scope: project`, structured `**What**/**Why**/**Where**/**Learned**` content, and `capture_prompt: false` when supported. |
-| 5. Return envelope | Producing subagent | Return only compact status, gate, topic keys read/written, one human question if blocked, and risk. Do not include raw code, logs, reports, or expanded evidence. |
-| 6. Advance gate | Primary | Read only the compact envelope and allowed compact gate evidence, merge gate status into the run-state topic, decide retry/stop/pass, and launch the next bounded task with topic keys. |
-
-When updating `state`, first read the existing `state` topic and merge the new gate status with existing topic references, `anchor_attempts[]`, retry decisions, and human decisions. Do not overwrite prior state with a partial snapshot.
-
-Use `mem_save` topic-key upserts for evolving topics such as `state`, `coverage`, `mutation`, `review-strategy`, and `evidence-report`. Use a distinct compatibility topic `tcr-slice-{n}` for each refactor slice.
+This agent owns workflow gates, retry decisions, and phase-specific output fields (defined in Output Contract below).
 
 ## Test-Anchor Retry Contract
 
@@ -136,12 +116,13 @@ The primary must preserve evidence continuity in `anchor_attempts[]`. Because te
 ```yaml
 project: <required Engram project name>
 request: <what the human wants to refactor>
-run_id: <optional stable id>
+run_id: <optional stable id, supplied by user or generated from request>
 target_scope: <package/class/method/module, if known>
 baseline_verified: true | false | unknown
 known_topic_keys:
-  active_run_topic_prefix: <optional prefix for validating generated/read-write topic keys>
-  allowed_topic_keys: <optional exact allowlist for all read/write topic keys>
+  # Overrides for java-refactor-engram-contract topic-key catalog defaults.
+  active_run_topic_prefix: <optional prefix for namespace validation>
+  allowed_topic_keys: <optional exact allowlist for namespace validation>
   state: <optional>
   baseline_audit: <optional>
   target_scope: <optional>
@@ -167,7 +148,7 @@ refactor_mode:
 
 1. If `project` is missing, return `blocked` before any Engram access and ask for the required Engram project name.
 2. If baseline verification is `false` or `unknown`, warn that refactoring on an unstable baseline is unsafe, ask one verification question, and stop.
-3. Create or update compact run state with gate status and known topic keys using the Engram communication protocol.
+3. Create or update compact run state with gate status and known topic keys following the `java-refactor-engram-contract` read/write and state-merge rules.
 4. Route to the next required workflow-private subagent using only `project`, `run_id`, topic-key references, resolved `refactor_mode` when entering the refactor quality phase, and the protocol reminder: read dependencies with `mem_search` + `mem_get_observation`, write artifacts with `mem_save` using exact topic keys, load the subagent's own required skills, and return a compact envelope only.
 5. For the test-anchor gate, pass `retry_context` with `attempt`, `max_attempts`, optional compact `retry_feedback`, prior attempt summaries or a caller-provided prior-attempt topic key, and either `active_run_topic_prefix` or `allowed_topic_keys` covering all read/write topic keys. Do not include peer-agent names, primary topology, downstream phases, raw reports, or source excerpts.
 6. Read only the subagent's compact return envelope. For retry classification, also read only the compact `test_anchor`, `coverage`, and `mutation` evidence topics named in the run state.

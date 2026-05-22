@@ -20,6 +20,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `java-clean-code` | Improve Java readability, naming, structure, and maintainability |
 | `java-exception-robustness` | Design Java exception handling, resource cleanup, and failure boundaries |
 | `java-immutability-modeling` | Model Java data safely with records, value objects, defensive copies, and immutable state |
+| `java-refactor-engram-contract` | Shared Engram contract for the Java refactor anchor-first workflow: namespace, topic keys, read/write protocol, and evidence-size rules |
 | `java-secure-coding` | Review Java code against secure-coding concerns and Oracle guidance themes |
 | `java-solid-design` | Evaluate Java OO design with SOLID, composition, interfaces, and dependency direction |
 | `java-testing` | Canonical Java-specific unit and legacy testing guidance |

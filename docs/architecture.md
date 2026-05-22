@@ -31,3 +31,5 @@ primary orchestrator
 ├─ Java refactor quality worker
 └─ evidence curator
 ```
+
+This workflow uses a shared `skills/java-refactor-engram-contract/SKILL.md` contract that centralizes namespace validation, topic-key catalog defaults, Engram read/write protocol, compact evidence rules, and the shared output envelope. Agents keep only phase-specific behavior and fields, referencing the shared skill for transport rules.

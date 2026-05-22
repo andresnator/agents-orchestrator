@@ -19,9 +19,9 @@ Audit whether a Java project is safe to enter anchor-first refactoring. This sub
 - Persist compact evidence to Engram without exposing raw files or large outputs to the caller.
 - Return blocked when setup, baseline, or tooling uncertainty makes refactoring unsafe.
 
-## Namespace and Input Contract
+## Shared Engram Contract
 
-This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
+This subagent follows the `java-refactor-engram-contract` skill for namespace validation, topic-key catalog defaults, read/write protocol, compact evidence rules, and shared output envelope fields. The skill defines the transport layer; this agent owns baseline audit behavior and phase-specific outputs.
 
 ## Permissions
 
@@ -44,7 +44,7 @@ The auditor must not:
 
 ## Skill Loading
 
-Load no skills. Do not load `java-testing`, `chained-pr`, or any other skill for this task; audit the baseline and report risks from the provided project context and artifacts only.
+Load and follow `java-refactor-engram-contract` for the shared Engram transport contract. Load no method skills. Do not load `java-testing`, `chained-pr`, or any other method skill for this task; audit the baseline and report risks from the provided project context and artifacts only.
 
 ## Inputs
 
@@ -53,10 +53,11 @@ project: <required Engram project name>
 run_id: <stable run id>
 target_scope: <package/class/method/module, if known>
 engram_topics:
-  state: java-refactor-anchor-first/{run-id}/state
-  baseline_audit: java-refactor-anchor-first/{run-id}/baseline-audit
-  coverage: java-refactor-anchor-first/{run-id}/coverage
-  mutation: java-refactor-anchor-first/{run-id}/mutation
+  # Default keys from java-refactor-engram-contract topic catalog.
+  state: <caller-provided state topic key>
+  baseline_audit: <caller-provided baseline audit topic key>
+  coverage: <caller-provided coverage topic key>
+  mutation: <caller-provided mutation topic key>
 allowed_commands:
   build: <optional command>
   tests: <optional command>
@@ -69,12 +70,7 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
-- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
-- Save baseline, coverage, and mutation readiness with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
-- Keep Engram artifacts compact: gate status, commands discovered or run, result summaries, blockers, risks, and next action. Do not save raw build files, full logs, or broad source excerpts.
-- Return only the compact envelope so follow-up review can rely on compact evidence without rereading full files.
+Follow the `java-refactor-engram-contract` skill: read with `mem_search` → `mem_get_observation`, write with `mem_save` using exact `topic_key`, `scope: project`, `capture_prompt: false`, and structured content. Keep artifacts compact (gate status, result summaries, blockers, risks, next action). Return only the compact envelope.
 
 ## Actions
 

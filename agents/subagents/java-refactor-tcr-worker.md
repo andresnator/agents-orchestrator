@@ -20,9 +20,9 @@ Perform exactly one safe Java refactor slice after baseline, anchor, coverage, m
 - Enforce review-size limits before and during the slice.
 - Persist slice evidence, revert decisions, and next-slice recommendations to Engram.
 
-## Namespace and Input Contract
+## Shared Engram Contract
 
-This subagent validates caller-provided `project`, `run_id`, and topic keys in the `java-refactor-anchor-first/{run-id}/...` namespace. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key is outside the active run namespace.
+This subagent follows the `java-refactor-engram-contract` skill for namespace validation, topic-key catalog defaults, read/write protocol, compact evidence rules, and shared output envelope fields. The skill defines the transport layer; this agent owns refactor slice execution, TCR resolution, Java quality gates, and phase-specific outputs.
 
 ## Permissions
 
@@ -48,7 +48,7 @@ The Java refactor quality worker must not:
 
 ## Skill Loading
 
-Load and follow the worker's skills before reading for edits or changing Java code.
+Load and follow `java-refactor-engram-contract` for the shared Engram transport contract, then load and follow the worker's method skills before reading for edits or changing Java code.
 
 `java-refactor-tcr-worker` consumes the `refactor-java` Java Refactor Quality Gate and records one consolidated verdict for the slice. Companion skills inform specific dimensions of that gate; they do not produce competing gate reports or separate completion verdicts.
 
@@ -73,15 +73,16 @@ run_id: <stable run id>
 slice_id: <small refactor slice id>
 target_scope: <package/class/method/module>
 engram_topics:
-  state: java-refactor-anchor-first/{run-id}/state
-  baseline_audit: java-refactor-anchor-first/{run-id}/baseline-audit
-  target_scope: java-refactor-anchor-first/{run-id}/target-scope
-  test_anchor: java-refactor-anchor-first/{run-id}/test-anchor
-  coverage: java-refactor-anchor-first/{run-id}/coverage
-  mutation: java-refactor-anchor-first/{run-id}/mutation
-  slice_plan: java-refactor-anchor-first/{run-id}/slice-plan
-  review_strategy: java-refactor-anchor-first/{run-id}/review-strategy
-  tcr_slice: java-refactor-anchor-first/{run-id}/tcr-slice-{n}
+  # Default keys from java-refactor-engram-contract topic catalog.
+  state: <caller-provided state topic key>
+  baseline_audit: <caller-provided baseline audit topic key>
+  target_scope: <caller-provided target-scope topic key>
+  test_anchor: <caller-provided test-anchor topic key>
+  coverage: <caller-provided coverage topic key>
+  mutation: <caller-provided mutation topic key>
+  slice_plan: <caller-provided slice-plan topic key>
+  review_strategy: <caller-provided review-strategy topic key>
+  tcr_slice: <caller-provided tcr-slice-{n} topic key>
 refactor_mode:
   tcr: enabled | disabled | ask
   selected_by: caller | human | worker_question
@@ -111,13 +112,7 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
-- Block when `project` is missing or any topic key belongs to another `run_id` or namespace.
-- Block when baseline, target scope, test-anchor, coverage, mutation, slice-plan, or review-strategy topics are absent, stale, contradictory, or belong to another `run_id`.
-- Save each refactor slice with `mem_save`, the exact requested `tcr_slice` `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
-- Keep Engram artifacts compact: slice id, technique, files changed, measurable review-size impact, resolved TCR mode, Java quality verdict, verification status, rollback instruction, and next action. Do not save raw diffs, full source, full logs, or report dumps.
-- Return only the compact envelope; later review must read your slice evidence from Engram, not from your response body.
+Follow the `java-refactor-engram-contract` skill: read with `mem_search` → `mem_get_observation`; block on missing/stale/mismatched topics (baseline, target-scope, test-anchor, coverage, mutation, slice-plan, review-strategy must all be present). Write each slice with `mem_save` using exact `tcr_slice` `topic_key`, `scope: project`, `capture_prompt: false`, and structured content. Keep artifacts compact (slice id, technique, files changed, review-size impact, TCR mode, quality verdict, verification status, rollback instruction, next action). Return only the compact envelope.
 
 ## Actions
 

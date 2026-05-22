@@ -19,9 +19,9 @@ Create the smallest useful Java test anchors that make a selected refactor targe
 - Prove whether the target behavior is meaningfully anchored before refactor work starts.
 - Persist compact test-anchor, coverage, and mutation evidence to Engram.
 
-## Namespace and Input Contract
+## Shared Engram Contract
 
-This subagent validates caller-provided `project`, `run_id`, and exact topic keys for active-run consistency. Block before any Engram access if `project` is missing. Block if `run_id` is missing, stale, mismatched, or any topic key cannot be validated against the caller-provided active-run contract. Do not require, infer, or name a primary-specific namespace; topic keys are owned by the caller.
+This subagent follows the `java-refactor-engram-contract` skill for namespace validation, topic-key catalog defaults, read/write protocol, compact evidence rules, and shared output envelope fields. The skill defines the transport layer; this agent owns test-anchor behavior, retry-context handling, and phase-specific outputs.
 
 ## Permissions
 
@@ -45,7 +45,7 @@ The anchorer must not:
 
 ## Skill Loading
 
-Load and follow `java-testing` before selecting, adding, validating, or documenting Java test anchors.
+Load and follow `java-refactor-engram-contract` for the shared Engram transport contract. Load and follow `java-testing` before selecting, adding, validating, or documenting Java test anchors.
 
 ## Inputs
 
@@ -54,6 +54,8 @@ project: <required Engram project name>
 run_id: <stable run id>
 target_scope: <package/class/method/module>
 engram_topics:
+  # Default keys from java-refactor-engram-contract topic catalog.
+  # active_run_topic_prefix or allowed_topic_keys required for namespace validation.
   active_run_topic_prefix: <required unless allowed_topic_keys covers every read/write key>
   allowed_topic_keys: <required unless active_run_topic_prefix validates every read/write key>
   state: <caller-provided state topic key>
@@ -80,14 +82,7 @@ human_decisions:
 
 ## Engram Read/Write Protocol
 
-- Read required prior topics with `mem_search` using the exact topic key, provided `project`, and `scope: project`, then call `mem_get_observation` before trusting the content.
-- Block when `project` is missing, `retry_context.attempt` or `retry_context.max_attempts` is missing/invalid, or any topic key cannot be validated by the caller-provided `active_run_topic_prefix` or `allowed_topic_keys`. Retrieved artifact `run_id` may further validate existing read topics, but new output topics must be validated by prefix or allowlist before writing.
-- Block when required prior baseline or target-scope topics are absent, stale, contradictory, or belong to another `run_id`.
-- Require caller-provided coverage and mutation output topic keys, but do not require prior coverage or mutation evidence to exist on the first attempt. Read prior coverage or mutation evidence only when intentionally provided or already available; otherwise write `not-run` or `unavailable` evidence with a reason.
-- Save test-anchor, coverage, and mutation evidence with `mem_save`, the exact requested `topic_key`, `scope: project`, and structured `**What**/**Why**/**Where**/**Learned**` content.
-- Use `capture_prompt: false` when supported because generated evidence artifacts are not a new human prompt.
-- Keep Engram artifacts compact and attempt-aware: attempt number, files touched or inspected, tests added/proposed/skipped, command status, anchor strength, coverage result or unavailable reason, mutation result or unavailable reason, blockers, remaining gaps, risks, and next action. Do not save raw source, full test files, coverage reports, mutation reports, or command logs.
-- Return only the compact envelope; later review must read your evidence from Engram, not from your response body.
+Follow the `java-refactor-engram-contract` skill: read with `mem_search` → `mem_get_observation`; block on missing/stale/mismatched topics. Write with `mem_save` using exact `topic_key`, `scope: project`, `capture_prompt: false`, and structured content. Keep artifacts compact and attempt-aware (attempt number, files touched, tests added, command status, anchor strength, coverage/mutation results, blockers, gaps, next action). Return only the compact envelope; later review reads evidence from Engram, not from the response body.
 
 ## Actions
 
