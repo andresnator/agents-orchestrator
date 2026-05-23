@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1.1"
+  version: "2.1.2"
 ---
 
 # Skill: buildable-issue
@@ -146,12 +146,3 @@ Return:
 - labels applied;
 - duplicate search result summary;
 - any remaining assumptions or follow-up questions.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| New buildable issue | Produces a complete structured issue | Leave placeholders |
-| Existing issue enrichment | Preserves useful content and fills gaps | Discard context blindly |
-| Legacy SDD-ready wording | Treats it as `buildable-issue` | Create a duplicate alias skill |
-| Missing acceptance scenarios | Interviews or drafts observable scenarios | Mark issue ready with vague criteria |

@@ -4,7 +4,7 @@ description: "Trigger: Java exceptions, error handling, try-with-resources, reso
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: java-exception-robustness
@@ -68,14 +68,6 @@ Return:
 - Resource cleanup requirements.
 - Message/logging sensitivity notes.
 - Example handling shape when useful.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | Recommend cleanup and propagation/translation strategy. | Catch and ignore exceptions. |
-| Ambiguous input | Ask who can recover or state assumption. | Invent retry policy. |
-| Out of scope | Decline non-Java error-model specifics. | Apply Java checked-exception rules elsewhere. |
 
 ## References
 

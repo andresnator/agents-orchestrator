@@ -14,7 +14,7 @@ This repo is a personal AI agent harness: a place to design, store, validate, an
 
 ## Design rule
 
-Keep each piece small and composable. If one file tries to be agent, skill, command, and recipe at once, split it. Keep validation notes close to the artifact they validate.
+Keep each piece small and composable. If one file tries to be agent, skill, command, and recipe at once, split it. Keep review guidance close to the artifact it validates.
 
 ## Context-saving orchestration
 

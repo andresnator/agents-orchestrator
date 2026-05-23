@@ -4,7 +4,7 @@ description: "Trigger: Java API design, public API, encapsulation, modules, visi
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: java-api-design
@@ -68,14 +68,6 @@ Return:
 - Contract documentation needed.
 - Compatibility risks.
 - Minimal API design proposal.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | Reduce public surface and clarify Java API contract. | Expose internals for convenience. |
-| Ambiguous input | Ask who consumes the API. | Assume all classes are public API. |
-| Out of scope | State when request is product/API-spec work rather than Java API design. | Design unrelated HTTP contracts. |
 
 ## References
 

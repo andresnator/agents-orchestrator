@@ -4,7 +4,7 @@ description: "Trigger: Java secure coding, Oracle Secure Coding Guidelines, inpu
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: java-secure-coding
@@ -70,14 +70,6 @@ Return:
 - Recommended remediation.
 - Residual risks and assumptions.
 - Areas requiring formal security review, if any.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | Identify Java secure-coding risks and concrete remediations. | Claim code is secure with no caveats. |
-| Ambiguous input | Ask for trust boundary or state assumption. | Treat all input as trusted. |
-| Out of scope | Decline compliance/crypto/infrastructure audit scope. | Pretend to certify security. |
 
 ## References
 

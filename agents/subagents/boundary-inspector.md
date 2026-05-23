@@ -89,35 +89,3 @@ handoff: <next action, blocking question, or none>
 ```
 
 When `status: complete`, `artifacts` MUST include a Markdown report using the `service-boundary-analysis` output contract with exactly one `Inputs` table and one `Outputs` table.
-
-## Validation Notes
-
-### Happy path
-
-- GIVEN valid `target`, source files, and constraints for a backend service
-- WHEN the subagent performs service-boundary inspection
-- THEN it returns `complete` and includes a report with `Inputs`, `Outputs`, `Uncertain Findings`, `Not-Found Categories`, and `Limitations`.
-
-### Missing context
-
-- GIVEN no target path, source excerpts, or inspectable artifacts
-- WHEN the subagent validates the input shape
-- THEN it returns `blocked` with one blocking question in `handoff`.
-
-### Forbidden runtime request
-
-- GIVEN the caller asks to run the app to discover endpoints
-- WHEN boundary checks run
-- THEN it refuses runtime execution and proceeds only with static inspection if enough context exists.
-
-### Dynamic framework wiring
-
-- GIVEN routes or consumers are generated through reflection or hidden configuration
-- WHEN evidence is incomplete
-- THEN it reports low-confidence or uncertain findings and documents the limitation instead of claiming certainty.
-
-### Contract parity
-
-- GIVEN this subagent is reviewed against repository subagent standards
-- WHEN required headings are compared
-- THEN Responsibility, Permissions, Forbidden Actions, Related Skills, Input Shape, Decision Rules, Actions, Output Contract, and Validation Notes are present exactly once.

@@ -4,7 +4,7 @@ description: "Trigger: Java tests, JUnit, Mockito, AssertJ, legacy code, charact
 license: MIT
 metadata:
   author: andresnator
-  version: "3.1.3"
+  version: "3.1.4"
 ---
 
 # Java Testing Skill
@@ -115,11 +115,3 @@ Return:
 - Tests added, including behaviors and edge cases covered.
 - Dependency/seam tradeoffs, including Sensing vs Separation when applicable.
 - Validation performed or recommended command.
-
-## Validation Notes
-
-- Happy path: Java service with constructor-injected collaborators gets focused JUnit/Mockito tests using local conventions.
-- Ambiguity: Missing build/test stack triggers one clarifying question or a clearly labeled assumption before dependencies/imports are proposed.
-- Conflict: User asks to mock internals heavily; prefer behavior verification and explain why over-mocking is weaker.
-- Out of scope: Non-Java testing request is declined or handled without claiming this skill applies.
-- Missing context: Legacy code lacks observable behavior; identify the needed test point/change point before modifying code.

@@ -4,7 +4,7 @@ description: "Trigger: explicit English tutoring, correction, practice, or /engl
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: english-tutor
@@ -91,16 +91,6 @@ For progress summaries, return:
 - `Opt-in Notes`
 
 Public repository artifacts must not contain raw learner history, private examples, personal identifiers, or Notion page contents.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Explicit correction | Returns all five fields in order and preserves meaning | Add unrelated coaching or long grammar lectures |
-| Ambiguous or missing input | Asks one question for the text to review | Invent text or continue with assumptions |
-| Coding flow without activation | Gives only coding help | Inject unsolicited English correction |
-| Spanish explanation | Explains in Spanish while correcting English | Translate away the English learning target |
-| Progress summary | Uses aggregate gap categories and private memory contract | Store or reveal raw learner history |
 
 ## References
 

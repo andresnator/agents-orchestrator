@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants when working in this reposit
 
 This repo is a **personal AI agent harness**: a place to design, organize, validate, and reuse agents, subagents, skills, commands, recipes, and templates for day-to-day software work.
 
-It has no runtime application, build system, or test framework. Most validation is documentation review plus focused checklist/golden-case review inside the relevant artifact docs.
+It has no runtime application, build system, or test framework. Most validation is documentation review plus focused static checks inside the relevant artifact docs.
 
 ## Project Structure
 
@@ -27,7 +27,8 @@ It has no runtime application, build system, or test framework. Most validation 
 - A skill explains how to do something; an agent decides when and whether to use it.
 - When modifying a skill, update its `metadata.version` according to strict SemVer (`MAJOR.MINOR.PATCH`, for example `1.0.0`).
 - Commands are only for workflows used often enough to deserve a shortcut.
-- Prompt-only behavior is validated with focused review checklists and golden-case notes in the relevant artifact docs.
+- Prompt-only behavior is validated with focused documentation review and static content checks in the relevant artifact docs.
+- Do not create case, golden-case, review-case, validation-case, or case-matrix artifacts unless the user explicitly requests them.
 - Keep READMEs updated when adding, moving, or removing tools (ALL READMEs).
 - Keep the root README's “Recommended entry points” section curated and minimal; do not add every new tool, only broadly useful entry points.
 
@@ -46,9 +47,11 @@ Every agent should state:
 - input shape
 - output contract
 
+Exception: an intentionally thin platform wrapper may keep only platform metadata plus a redirect to a named skill when the skill owns the full operational contract. Document that exception in the relevant README or design doc.
+
 ## Prompt Evaluator Validation
 
-Because this repo has no runtime test framework, validate the `/promt-checker` command and `prompt-evaluator` skill with focused review cases rather than unit tests:
+Because this repo has no runtime test framework, validate the `/promt-checker` command and `prompt-evaluator` skill by reviewing these expected behaviors rather than running unit tests:
 
 - clear prompt → verdict `READY`, minor polish only
 - vague prompt → verdict `NEEDS_REFINEMENT`, detects missing goal/context/output

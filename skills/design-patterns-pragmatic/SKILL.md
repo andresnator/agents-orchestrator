@@ -4,7 +4,7 @@ description: "Trigger: design patterns, GoF patterns, Java patterns, strategy, a
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: design-patterns-pragmatic
@@ -68,14 +68,6 @@ Return:
 - Chosen pattern or simpler alternative.
 - Tradeoffs.
 - Minimal implementation sketch or next step.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | Recommend a pattern tied to real variation/integration force. | Add pattern jargon with no reason. |
-| Ambiguous input | Ask what variation/change is expected. | Assume future extensibility. |
-| Out of scope | Decline broad architecture request without pattern decision context. | Produce a pattern catalog dump. |
 
 ## References
 

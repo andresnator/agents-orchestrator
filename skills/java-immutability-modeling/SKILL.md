@@ -4,7 +4,7 @@ description: "Trigger: Java immutability, records, value objects, defensive copi
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Skill: java-immutability-modeling
@@ -67,14 +67,6 @@ Return:
 - Mutability/ownership policy.
 - Equality/hashCode implications.
 - Example shape when useful.
-
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | Recommend record/value object with defensive copies where needed. | Expose mutable lists directly. |
-| Ambiguous input | Ask whether type has identity or lifecycle mutation. | Assume records fit all DTOs/entities. |
-| Out of scope | Decline non-Java modeling specifics. | Apply Java record advice to another language. |
 
 ## References
 

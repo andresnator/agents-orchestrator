@@ -30,3 +30,4 @@ Subagent contracts must stay caller-agnostic: use generic caller/handoff languag
 | [`java-refactor-test-anchorer`](java-refactor-test-anchorer.md) | `java-testing` | Adds or verifies Java test anchors using caller-provided topic keys, caller-generic retry context, and attempt-aware compact evidence |
 | [`java-refactor-tcr-worker`](java-refactor-tcr-worker.md) | `refactor-java`, Java quality skills, optional `tcr`, conditional `chained-pr` | Executes one small Java refactor slice as a quality-first worker, owns the consolidated Java refactor gate verdict, and applies optional TCR discipline with mandatory evidence gates |
 | [`boundary-inspector`](boundary-inspector.md) | [`service-boundary-analysis`](../../skills/service-boundary-analysis/) | Inspects backend service inputs and outputs with evidence and confidence |
+| [`scout`](scout.md) | `scout` | Thin wrapper that preserves platform metadata and redirects Project Profile behavior to the named skill `scout` |

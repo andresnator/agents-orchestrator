@@ -8,7 +8,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 2. Keep `SKILL.md` short and executable.
 3. Move deep material to `references/` and reusable files to `assets/`.
 4. Declare the output contract.
-5. Validate behavior with focused review cases.
+5. Validate behavior with focused documentation review or static checks.
 
 ## What Belongs Where
 
@@ -17,7 +17,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `SKILL.md` | Activation, hard rules, decision gates, execution steps, output contract | Long catalogs, full tutorials, large examples |
 | `references/` | Local docs, extended explanations, decision tables, technique catalogs | Web-only links, templates meant to be copied |
 | `assets/` | Templates, schemas, sample files, reusable snippets | Conceptual documentation |
-| Skill README or review notes | Golden cases and expected behavior | Implementation notes |
+| Skill README or review notes | Expected behavior and operational review notes | Implementation notes |
 
 ## Required Sections
 
@@ -29,7 +29,6 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 - **Execution Steps**: the happy path.
 - **Output Contract**: exact format the agent must return.
 - **References / Assets**: local supporting material.
-- **Validation Notes**: happy path, ambiguity, conflict, out-of-scope, and missing context.
 
 ## Context Budget
 
@@ -80,7 +79,6 @@ This keeps the skill portable across OpenCode, Claude Code, local agents, and fu
 - [ ] `references/` points to local documentation only.
 - [ ] `assets/` contains templates or reusable artifacts, not prose docs.
 - [ ] Output contract is explicit.
-- [ ] Validation notes cover happy path, ambiguity, conflict, out-of-scope, and missing context.
 
 ## Repository Remediation Plan
 
@@ -89,5 +87,5 @@ This keeps the skill portable across OpenCode, Claude Code, local agents, and fu
 | P0 | Align TCR commit trailer rules with repository policy and global Git identity handling | `skills/tcr/SKILL.md` |
 | P0 | Remove the broken `spike-output` reference and replace it with a local findings template | `skills/spike/` |
 | P1 | Strengthen the base skill template with context budget, negative triggers, references/assets, and validation | `templates/skill.md` |
-| P1 | Add focused review cases for high-impact skills | Relevant skill docs |
+| P1 | Strengthen static review notes for high-impact skills when needed | Relevant skill docs |
 | P2 | Replace runtime-specific assumptions with capability-based wording | `skills/rfc/`, `skills/summarize/` |

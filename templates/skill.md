@@ -49,14 +49,6 @@ Return:
 
 - <Output item>
 
-## Validation Notes
-
-| Case | Expected behavior | Must not do |
-|---|---|---|
-| Happy path | <Expected output or decision> | <Forbidden behavior> |
-| Ambiguous input | <Question or safe fallback> | <Over-assume> |
-| Out of scope | <Decline or redirect> | <Execute unrelated work> |
-
 ## References
 
 - `references/<file>.md` — <local documentation, extended guidance, examples, or decision tables>

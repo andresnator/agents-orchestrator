@@ -61,29 +61,3 @@ coaching: <five-field correction, review, or aggregate summary>
 memory_action: none | suggest_update | updated_by_host
 privacy_notes: <repo stores no learner-specific data; English Coach Memory is private Notion-side>
 ```
-
-## Validation Notes
-
-### Explicit correction
-
-- GIVEN `target_text` contains a learner sentence and `mode: correction`
-- WHEN the subagent responds
-- THEN `coaching` includes `Original`, `Improved`, `Explanation`, `Learning gap`, and `Practice suggestion` in order.
-
-### Missing text
-
-- GIVEN `mode: correction` and no `target_text`
-- WHEN the subagent validates input
-- THEN it returns `status: blocked` with one question asking for the text to review.
-
-### Privacy boundary
-
-- GIVEN `memory_ref: English Coach Memory`
-- WHEN memory is useful
-- THEN `memory_action` is `suggest_update` unless a host explicitly updates private Notion memory, and no learner text is written to repo artifacts.
-
-### Forbidden passive correction
-
-- GIVEN a normal coding request without explicit tutoring
-- WHEN this subagent is considered
-- THEN it must not activate or provide English correction.

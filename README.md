@@ -34,9 +34,10 @@ The core separation is simple:
 
 - **Agents** decide who acts and with what boundaries.
 - **Skills** define how a capability is performed.
+- **Thin wrappers** such as [`scout`](agents/subagents/scout.md) preserve platform boundaries while named skills like [`refactorch-phases`](skills/refactorch-phases/) and [`scout`](skills/scout/) own workflow details.
 - **Commands** provide quick invocation paths.
 - **Recipes** document workflows across multiple tools.
-- **Review checklists** embedded in docs validate behavior without needing a runtime test framework.
+- **Static documentation review** validates prompt-only behavior without needing a runtime test framework.
 - **Templates** keep future additions consistent.
 
 ## Add something new
