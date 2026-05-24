@@ -56,17 +56,17 @@ This follows the repository convention for primary and subagent definitions.
 
 The Project Profile is reusable technical context for the current repository. It should be produced once by `scout`, stored in Engram, and reused by later phases instead of rediscovering the same information.
 
-The reusable topic key is owned by the named skill `refactorch-phases`; the Project Profile document shape and refresh workflow are owned by the named skill `scout` and its references so agent files and this RFC do not drift from executable contracts.
+The reusable topic key is owned by the named skill `refactorch-phases`; the Project Profile document shape and refresh workflow are owned by the `scout` subagent contract at `agents/subagents/scout.md` so agent files and this RFC do not drift from executable contracts.
 
 ### Shared Contract Skill
 
 `refactorch` should copy the useful part of the Gentle SDD Engram flow: agents create durable Markdown artifacts in Engram, and the orchestrator passes artifact references between phases instead of copying large documents through the primary context.
 
-The shared communication rules and Scout-specific profile workflow should live in separate skill artifacts:
+The shared communication rules live in a skill artifact; the Scout-specific profile workflow lives directly in the `scout` subagent contract:
 
 ```txt
 skills/refactorch-phases/SKILL.md
-skills/scout/SKILL.md
+agents/subagents/scout.md
 ```
 
 The shared phase skill owns:
@@ -78,14 +78,14 @@ The shared phase skill owns:
 - `target-brief` ownership, timing, and minimal document shape
 - artifact reference format
 
-The dedicated `scout` skill owns:
+The `scout` subagent owns:
 
 - Project Profile document shape
 - Project Profile create/refresh workflow
 - refresh triggers
 - output details
 
-Agent files should not duplicate those contracts. Agents should use named skills such as `refactorch-phases` and `scout` for operational behavior. `agents/subagents/scout.md` is an intentional minimal-wrapper exception: it preserves platform metadata and redirects to the named skill `scout` instead of owning a separate subagent workflow.
+Agent files should not duplicate those contracts. Agents should use the named skill `refactorch-phases` for shared phase rules and the `scout` subagent contract for Project Profile workflow.
 
 The artifact remains the real contract. The routing envelope only tells the caller where the document lives, what happened, and what should happen next.
 
@@ -152,5 +152,5 @@ A third alternative is to skip a Project Profile and let each subagent inspect t
 
 ## Unresolved Questions
 
-- Should `scout` use age-based freshness thresholds in addition to the structural refresh triggers defined by the `scout` skill?
+- Should `scout` use age-based freshness thresholds in addition to the structural refresh triggers defined in the `scout` subagent contract?
 - Should `gatekeeper` be allowed to block execution automatically, or should it only recommend blocking to the user?

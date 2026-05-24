@@ -30,7 +30,6 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `prompt-evaluator` | Evaluate and refine prompts |
 | `refactor` | Cross-language refactoring guidance |
 | `refactorch-phases` | Shared RefactorCh phase contracts: topic keys, Engram protocol, artifact references, target brief, and result envelopes |
-| `scout` | Project Profile creation and refresh workflow, templates, refresh triggers, and output contract for RefactorCh setup |
 | `refactor-java` | Java-specific refactoring guidance |
 | `rfc` | Create RFC documents |
 | `service-boundary-analysis` | Inspect backend service inputs and outputs with evidence and confidence |

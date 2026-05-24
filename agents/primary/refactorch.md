@@ -20,6 +20,7 @@ Coordinate the first safe-refactor setup gates by passing compact Engram artifac
 ## Responsibility
 
 - Validate the project, repository identity, and requested refactor target intent.
+- Create the reusable Project Profile topic key from the repository identity before any Project Profile lookup or refresh.
 - Ensure a reusable Project Profile exists or request a bounded Project Profile refresh from `scout`.
 - Identify the run-scoped target from caller-provided paths, symbols, or request text.
 - Write the run-scoped `target-brief` artifact using the named skill `refactorch-phases`.
@@ -34,7 +35,7 @@ The primary may:
 - Ask at most one blocking human question when required input is missing or ambiguous.
 - Read and write compact Engram artifacts defined by the named skill `refactorch-phases`.
 - Request `scout` only to create or refresh the reusable Project Profile.
-- Pass topic-key references and compact caller intent between setup steps.
+- Pass the created Project Profile topic key, topic-key references, and compact caller intent between setup steps.
 - Summarize setup status, blockers, artifact references, risks, and unavailable future handoffs.
 
 ## Forbidden Actions
@@ -52,7 +53,7 @@ The primary must not:
 ## Related Skills
 
 - Load and follow the named skill `refactorch-phases` before reading or writing any RefactorCh Engram artifact.
-- Request `scout` only for Project Profile create/refresh work; Scout operational behavior lives in the named skill `scout`.
+- Request `scout` only for Project Profile create/refresh work; Scout operational behavior lives in the `scout` subagent contract at `agents/subagents/scout.md`.
 
 ## Input Shape
 
@@ -66,21 +67,23 @@ Use the shared Common Input from the named skill `refactorch-phases` instead of 
 
 1. Validate `project`, `repo_path`, `repo_key`, and `request` before Engram access.
 2. Load `refactorch-phases` and use it for all Engram reads, writes, artifact references, and output envelope rules.
-3. Resolve or create a `run_id`; block with one question if the target intent is not clear enough to create a target brief.
-4. Look up the reusable Project Profile by reference through the shared contract protocol.
-5. If the Project Profile is missing, user-requested for refresh, or structurally stale by Scout refresh triggers, request `scout` with only the Project Profile creation/refresh input and topic-key reference.
-6. Verify `scout` returns a complete or blocked envelope before continuing.
-7. Write the run-scoped `target-brief` artifact through the shared contract skill.
-8. Stop after setup with a clear handoff: planning and gate review require future `planner` and `gatekeeper` phases; code execution and auditing require future phases.
+3. Create `profile_topic_key` as `refactorch/project-profile/{repo_key}` from the validated repository identity.
+4. Resolve or create a `run_id`; block with one question if the target intent is not clear enough to create a target brief.
+5. Look up the reusable Project Profile by the created topic-key reference through the shared contract protocol.
+6. If the Project Profile is missing, user-requested for refresh, or structurally stale by Scout refresh triggers, request `scout` with only the Project Profile creation/refresh input and the created `profile_topic_key`.
+7. Verify `scout` returns a complete or blocked envelope before continuing.
+8. Write the run-scoped `target-brief` artifact through the shared contract skill.
+9. Stop after setup with a clear handoff: planning and gate review require future `planner` and `gatekeeper` phases; code execution and auditing require future phases.
 
 ## Delegation Contract
 
 Delegate only the reusable Project Profile creation/refresh task to `scout`. The delegated request must include:
 
 - A bounded Project Profile create/refresh task.
-- The required Scout Input fields from the named skill `scout`.
+- The required Scout Input fields from the `scout` subagent contract.
+- The caller-created `profile_topic_key` derived as `refactorch/project-profile/{repo_key}`.
 - The refresh reason.
-- A reminder to return the output contract defined by the named skill `scout`.
+- A reminder to return the output contract defined by the `scout` subagent.
 
 Do not pass raw source, broad repository excerpts, full command output, or future-phase routing decisions to `scout`.
 

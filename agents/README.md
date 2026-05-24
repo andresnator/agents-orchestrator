@@ -26,7 +26,7 @@ Agents are executable personas with boundaries, permissions, and output contract
 | [`java-refactor-test-anchorer`](subagents/java-refactor-test-anchorer.md) | Subagent | Adds or verifies Java characterization and unit-test anchors before refactoring |
 | [`java-refactor-tcr-worker`](subagents/java-refactor-tcr-worker.md) | Subagent | Executes one small Java refactor slice with TCR and review-size guardrails |
 | [`refactorch`](primary/refactorch.md) | Primary | Coordinates Project Profile lookup/refresh and target-brief setup for safe refactor planning without code execution |
-| [`scout`](subagents/scout.md) | Subagent | Thin wrapper that redirects Project Profile behavior to the named skill `scout` |
+| [`scout`](subagents/scout.md) | Subagent | Builds or refreshes the reusable RefactorCh Project Profile for a repository |
 | [`boundary-inspector`](subagents/boundary-inspector.md) | Subagent | Inspects backend service inputs and outputs with evidence and confidence |
 
 ## Rule
