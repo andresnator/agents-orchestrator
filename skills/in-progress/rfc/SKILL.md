@@ -22,6 +22,7 @@ Default to interview mode unless the user already supplied enough information to
 ## Hard Rules
 
 - Ask one question at a time in interview mode.
+- After asking each interview question or challenge, stop and wait for the user's answer before continuing.
 - State once at the start of the interview that the user may skip, stop, or revise answers at any time.
 - Keep a dynamic estimated remaining-question counter; update it when dependencies appear or disappear.
 - Recommend short example answers when they help the user respond.

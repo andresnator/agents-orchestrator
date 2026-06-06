@@ -20,7 +20,11 @@
 
 ## Detailed Design
 
-[How the proposal works. Include important flows, APIs, data model changes, examples, code snippets, edge cases, and rollout details when relevant.]
+[How the proposal works. Include important flows, APIs, data model changes, examples, code snippets, and edge cases.]
+
+## Impact and Rollout
+
+[Compatibility, migration, adoption path, operational impact, user impact, and rollout or rollback notes when relevant.]
 
 ## Drawbacks
 
