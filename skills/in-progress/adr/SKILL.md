@@ -17,7 +17,7 @@ Create concise Architecture Decision Records that explain a decision, the contex
 
 Use this skill when the user asks for an ADR, architecture decision record, technical decision record, or any formal record of why a technical or architectural choice was made.
 
-Default to interview mode unless the user already supplied enough information to draft a complete ADR. ADR artifact language is English unless the user explicitly asks for another language.
+Default to interview mode unless the user already supplied enough information to draft a complete ADR. Ask interview questions in the user's language. ADR artifact language is English unless the user explicitly asks for another language.
 
 ## Hard Rules
 
