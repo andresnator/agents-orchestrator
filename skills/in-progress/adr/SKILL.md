@@ -22,9 +22,10 @@ Default to interview mode unless the user already supplied enough information to
 ## Hard Rules
 
 - Ask one question at a time in interview mode.
-- State that the user may skip questions or stop the interview at any time.
+- State once at the start of the interview that the user may skip questions or stop the interview at any time.
 - Keep a dynamic estimated remaining-question counter; update it when dependencies appear or disappear.
 - Recommend short example answers when they help the user respond.
+- Format interview questions as readable Markdown, not plain text.
 - Constructively challenge vague, contradictory, or rationale-free answers before drafting; proceed if the user explicitly says to continue anyway.
 - Do not invent alternatives, pros, cons, or rationale. Ask when alternatives are missing.
 - Use `Accepted` when the decision is already made; use `Proposed` for proposals, evaluations, or unclear status.
@@ -43,18 +44,26 @@ Gather only what is needed, dependency-first:
 
 Question format:
 
-```text
-Question N — [focused question]
-Estimated remaining questions: ~M. You can skip or stop the interview at any time.
-Recommended answer: [short example when useful]
+```markdown
+### Question N — [focused question]
+
+**Why this matters:** [brief reason]
+
+**Estimated remaining questions:** ~M
+
+**Recommended answer:** [short example when useful]
 ```
 
 Mini example:
 
-```text
-Question 1 — Is this decision already made or still being proposed?
-Estimated remaining questions: ~5. You can skip or stop the interview at any time.
-Recommended answer: "Accepted — we already chose PostgreSQL for billing data."
+```markdown
+### Question 1 — Is this decision already made or still being proposed?
+
+**Why this matters:** The status changes whether the ADR records a final choice or a proposal under review.
+
+**Estimated remaining questions:** ~5
+
+**Recommended answer:** "Accepted — we already chose PostgreSQL for billing data."
 ```
 
 ## Output Contract
