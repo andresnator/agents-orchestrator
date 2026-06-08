@@ -31,6 +31,22 @@ Always read `references/prd-light-template.md` at the start of the session and u
 - Use the reference template for the final artifact.
 - Ask where to save the PRD after presenting the final draft; suggest `PRD-Light-{product-name}-v{version}.md` if the user wants a default.
 
+## Question Format
+
+Every interview question must use this exact structure:
+
+```markdown
+### Question N — [focused PRD Light question]
+
+**Why this matters:** [why this decision affects the PRD Light]
+
+**Estimated remaining questions in this phase:** ~M
+
+**Recommended answer:** [short recommended/default answer when useful]
+```
+
+Keep N sequential across the whole interview. Keep M adaptive within the current phase.
+
 ## Decision Gates
 
 | Situation | Action |
