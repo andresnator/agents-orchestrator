@@ -24,6 +24,7 @@ If the subject is missing, ask at most one clarifying question before continuing
 | Architecture or technical decision | `adr` | Record why a decision was made |
 | Technical proposal, design doc, or RFC | `rfc` | Propose a technical change for review |
 | Product requirements, whether full or lightweight | `/prd` selector | Recommend `prd` or `prd-light`, ask confirmation, then hand off |
+| User Story Mapping, USM, story map, MVP slice, or release slicing | `usm` | Create an interactive journey-first User Story Map |
 | Research or feasibility task | `spike` | Create a Jira spike for investigation |
 | Agent-ready implementation issue | `buildable-issue` | Create or enrich a buildable GitHub issue |
 | Acceptance criteria | `write-ac` | Write testable Given/When/Then criteria |

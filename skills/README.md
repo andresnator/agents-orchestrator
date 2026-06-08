@@ -36,6 +36,7 @@ Skills are reusable instruction contracts. They teach an agent how to perform a 
 | `spike` | Create Jira spike tickets |
 | `summarize` | Summarize long-form reading material |
 | `tcr` | Apply Test && Commit || Revert workflow |
+| `usm` | Create interactive User Story Maps with MVP slicing |
 | `whisper-extract` | Transcribe and summarize audio/video |
 | `write-ac` | Write acceptance criteria |
 

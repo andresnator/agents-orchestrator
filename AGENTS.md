@@ -4,7 +4,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 ## Repo Shape
 
-- Work areas are staged under `agents/`, `commands/`, and `skills/` with `backlog/`, `in-progress/`, and `done/` subdirectories.
+- Work areas are staged under `agents/`, `commands/`, and `skills/` with `backlog/`, `in-progress/`, `testing/`, and `done/` subdirectories; `testing/` is for artifacts under validation before `done/`.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
 - `.atl/` is ignored local tool state; if `.atl/skill-registry.md` exists, treat it as a generated index. `SKILL.md` remains the source of truth.
