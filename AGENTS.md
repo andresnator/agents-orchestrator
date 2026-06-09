@@ -13,7 +13,9 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 - Skills live as one directory per skill with the runtime contract in `SKILL.md`.
 - Skill frontmatter uses `name`, `description`, `license`, and `metadata` with `author` plus strict SemVer `version` such as `1.0.0`.
+- When a skill changes, bump `metadata.version` in the same change: patch for wording/path/template/internal contract fixes, minor for new capabilities or optional flows, and major for breaking activation/output behavior.
 - Keep `SKILL.md` concise; move long examples/templates to `references/` or `assets/`.
+- Put concrete generated templates, schemas, fixtures, and generated examples in `assets/`; keep `references/` for conceptual guidance, edge cases, and longer explanatory docs.
 - To refresh the generated skill registry when needed, use `gentle-ai skill-registry refresh --force`.
 
 ## Agent And Command Files

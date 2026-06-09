@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # PRD Light
@@ -17,7 +17,7 @@ metadata:
 
 Use this skill to create a useful, lightweight PRD quickly. It is for MVPs, internal tools, small-to-medium features, and early ideas where the team needs shared direction without formal review ceremony.
 
-Always read `references/prd-light-template.md` at the start of the session and use it as the final document skeleton.
+Always read `assets/prd-light-template.md` at the start of the session and use it as the final document skeleton.
 
 ## Hard Rules
 
@@ -61,7 +61,7 @@ Keep N sequential across the whole interview. Keep M adaptive within the current
 
 ## Execution Steps
 
-1. Read `references/prd-light-template.md`.
+1. Read `assets/prd-light-template.md`.
 2. Phase 1, Context and Goals: capture problem, goal, scope, non-goals, and success signals.
 3. Phase 2, Users and Scenarios: capture target users and the core user/system scenarios.
 4. Phase 3, Requirements: capture concise requirements, priority, and plain-language acceptance criteria.
@@ -84,7 +84,7 @@ Keep N sequential across the whole interview. Keep M adaptive within the current
 
 ## Output Contract
 
-Return a concise PRD Light document in Markdown using `references/prd-light-template.md`.
+Return a concise PRD Light document in Markdown using `assets/prd-light-template.md`.
 
 After the draft, include a brief final review request covering:
 
@@ -94,4 +94,4 @@ After the draft, include a brief final review request covering:
 
 ## References
 
-- `references/prd-light-template.md` — lightweight PRD template.
+- `assets/prd-light-template.md` — lightweight PRD template.

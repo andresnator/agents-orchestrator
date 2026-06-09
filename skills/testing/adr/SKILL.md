@@ -6,7 +6,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # ADR Creator
@@ -68,7 +68,7 @@ Mini example:
 
 ## Output Contract
 
-Read `references/template-markdown.md` before drafting and fill that structure.
+Read `assets/template-markdown.md` before drafting and fill that structure.
 
 By default, return the final ADR as exactly one Markdown code block and do not create files. If the user explicitly requested a file/path, save the ADR there and summarize the saved path in chat.
 
@@ -76,4 +76,4 @@ Never leave placeholder instructions in the final ADR. If the user intentionally
 
 ## Reference
 
-- Template: `references/template-markdown.md`
+- Template: `assets/template-markdown.md`

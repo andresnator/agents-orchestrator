@@ -5,7 +5,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Jira Ticket Interview
@@ -16,9 +16,9 @@ Use this skill to help create a Jira ticket through an interview. The final arti
 
 Always load the template matching the selected ticket type before generating:
 
-- `references/user-story-template.md`
-- `references/task-template.md`
-- `references/spike-template.md`
+- `assets/user-story-template.md`
+- `assets/task-template.md`
+- `assets/spike-template.md`
 
 ## Hard Rules
 
@@ -57,7 +57,7 @@ Keep `N` sequential across the whole interview. Keep `M` adaptive across the rem
 ## Execution Steps
 
 1. Ask the ticket type first: User Story, Task, or Spike.
-2. Read the matching template from `references/`.
+2. Read the matching template from `assets/`.
 3. Gather only the context needed to complete required sections and any useful optional sections.
 4. For User Story and Task acceptance criteria, use Given/When/Then.
 5. For Spike acceptance criteria, use simple bullets by default; Given/When/Then is allowed only when it fits naturally.
@@ -75,6 +75,6 @@ Keep `N` sequential across the whole interview. Keep `M` adaptive across the rem
 
 ## References
 
-- `references/user-story-template.md` — Jira Markup template for User Story tickets.
-- `references/task-template.md` — Jira Markup template for Task tickets.
-- `references/spike-template.md` — Jira Markup template for Spike tickets.
+- `assets/user-story-template.md` — Jira Markup template for User Story tickets.
+- `assets/task-template.md` — Jira Markup template for Task tickets.
+- `assets/spike-template.md` — Jira Markup template for Spike tickets.

@@ -6,7 +6,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # User Story Mapping
@@ -15,7 +15,7 @@ metadata:
 
 Use this skill to interactively create a User Story Map for a raw idea, PRD, PRD Light, RFC, issue, notes, or other product context. Raw ideas are first-class input. Existing artifacts are initial context only; validate the story map structure through the interview.
 
-Always read `references/usm-template.md` at the start of the session and use it as the final artifact skeleton.
+Always read `assets/usm-template.md` at the start of the session and use it as the final artifact skeleton.
 
 ## Hard Rules
 
@@ -74,7 +74,7 @@ Keep `N` sequential across the whole interview. Keep `M` adaptive within the cur
 4. User Tasks: capture concise user tasks under each main activity.
 5. Slice Planning: select the mandatory MVP Slice across the full journey; add later release slices only when useful.
 6. Review: briefly review open questions, risks, assumptions, and structural completeness.
-7. Closure: generate one final Markdown artifact using `references/usm-template.md`, with Mermaid embedded inline.
+7. Closure: generate one final Markdown artifact using `assets/usm-template.md`, with Mermaid embedded inline.
 
 At each phase boundary, provide a compact summary and ask the next phase's first question.
 
@@ -114,4 +114,4 @@ Never leave placeholder instructions in the final artifact. Use `TBD` only for i
 
 ## References
 
-- `references/usm-template.md` — User Story Map output template.
+- `assets/usm-template.md` — User Story Map output template.

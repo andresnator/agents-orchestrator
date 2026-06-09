@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Technical PRD
@@ -17,7 +17,7 @@ metadata:
 
 Use this skill to build a full technical PRD through an interactive, phase-by-phase conversation. A full PRD is appropriate when the work needs strong alignment, explicit tradeoffs, measurable outcomes, quality/security coverage, dependency mapping, risks, acceptance criteria, and traceability from goals to delivery.
 
-Always read `references/prd-template.md` at the start of the session and use it as the final document skeleton.
+Always read `assets/prd-template.md` at the start of the session and use it as the final document skeleton.
 
 ## Hard Rules
 
@@ -62,7 +62,7 @@ Keep N sequential across the whole interview. Keep M adaptive within the current
 
 ## Execution Steps
 
-1. Read `references/prd-template.md`.
+1. Read `assets/prd-template.md`.
 2. Establish document metadata: product/feature name, version, author, date, status.
 3. Phase 1, Overview: capture problem, context, scope, out-of-scope, stakeholders, and assumptions.
 4. Phase 2, Goals and Success: capture goals, non-goals, measurable metrics, and how success will be checked.
@@ -90,7 +90,7 @@ Keep N sequential across the whole interview. Keep M adaptive within the current
 
 ## Output Contract
 
-Return the complete PRD document in Markdown using `references/prd-template.md`.
+Return the complete PRD document in Markdown using `assets/prd-template.md`.
 
 After the draft, include a short final review request covering:
 
@@ -100,4 +100,4 @@ After the draft, include a short final review request covering:
 
 ## References
 
-- `references/prd-template.md` — full technical PRD template.
+- `assets/prd-template.md` — full technical PRD template.

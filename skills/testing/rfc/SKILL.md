@@ -6,7 +6,7 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # RFC Creator
@@ -74,7 +74,7 @@ Optional extended sections may be included only when requested or naturally disc
 
 ## Output Contract
 
-Read `references/template.md` before drafting and fill that structure.
+Read `assets/template.md` before drafting and fill that structure.
 
 By default, return the final RFC as exactly one Markdown code block and do not create files. If the user explicitly requested a file/path, save the RFC there and summarize the saved path in chat.
 
@@ -82,4 +82,4 @@ Never leave placeholder instructions in the final RFC. If the user intentionally
 
 ## Reference
 
-- Template: `references/template.md`
+- Template: `assets/template.md`
