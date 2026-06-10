@@ -25,9 +25,11 @@ This skill outputs Jira Markup in chat only. It does not create Jira issues thro
 - Omit empty sections and placeholders.
 - Use `Assumptions and TBD` only for real unresolved non-blocking gaps.
 - Quick Creation may ask only when missing information blocks Title, Description, or Objective.
+- Quick Creation blocking questions must be direct interrogative questions ending with `?` or using Spanish `¿...?` when the conversation language is Spanish.
 - In Quick Creation, include Acceptance Criteria or Implementation Notes only if the user explicitly provided useful content for those sections.
 - Refinement asks one question at a time, waits for the user, and does not generate until an explicit generation request.
 - Refinement questions must include: sequential question number, why this matters, estimated remaining questions, recommended answer.
+- Refinement question headings must be actual interrogative questions, not labels like `Focused User Story question`.
 - If refining an existing ticket, preserve useful existing content and improve only missing/unclear parts.
 - When refining an existing ticket, include a brief change summary before the final ticket, outside the Jira block.
 - Codebase exploration applies only to Refinement / SDD-ready when it can answer factual questions or validate assumptions; not to Quick Creation by default unless explicitly requested.
@@ -58,7 +60,7 @@ Use SDD-ready Refinement when the user explicitly asks for listo para SDD, prepa
 Load `assets/refinement-template.md` before generating. Ask one question at a time using this structure:
 
 ```markdown
-### Question N - Focused User Story question
+### Question N — [direct interrogative question?]
 
 **Why this matters:** Explain why this answer affects the User Story.
 
