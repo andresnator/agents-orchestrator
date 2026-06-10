@@ -1,12 +1,10 @@
 ---
 name: rfc
-description: |
-  Creates Request for Comments (RFC) documents in Markdown for technical proposals, feature designs, and engineering changes.
-  Use when the user wants to draft, refine, or formalize a proposal with motivation, design, trade-offs, alternatives, and open questions.
+description: "Trigger: RFC, request for comments, technical proposal. Create RFCs for feature designs, engineering changes, trade-offs, alternatives, and open questions."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # RFC Creator
@@ -63,11 +61,11 @@ Mini example:
 ```markdown
 ### Question 1 — What proposal should this RFC document?
 
+**Recommended answer:** "Introduce a background job worker for asynchronous email delivery."
+
 **Why this matters:** The title and scope anchor every later design, trade-off, and review question.
 
 **Estimated remaining questions:** ~6
-
-**Recommended answer:** "Introduce a background job worker for asynchronous email delivery."
 ```
 
 Optional extended sections may be included only when requested or naturally discovered: Security Considerations, Testing Strategy, Rollback Plan, Migration Plan, Timeline, or Implementation Plan.

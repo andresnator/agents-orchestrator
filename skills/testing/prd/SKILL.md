@@ -1,14 +1,10 @@
 ---
 name: prd
-description: >
-  Create rigorous technical Product Requirements Documents for high-stakes, cross-team,
-  regulated, security-sensitive, or complex work requiring traceability. Trigger on "PRD",
-  "product requirements", "formal requirements", "technical product spec", "feature spec",
-  "approval requirements", "security requirements", or "compliance requirements".
+description: "Trigger: PRD, product requirements, technical product spec. Create rigorous PRDs for high-stakes, cross-team, regulated, or security-sensitive work."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Technical PRD
@@ -39,11 +35,11 @@ Every interview question must use this exact structure:
 ```markdown
 ### Question N — [focused PRD question]
 
+**Recommended answer:** [short recommended/default answer when useful]
+
 **Why this matters:** [why this decision affects the PRD]
 
 **Estimated remaining questions in this phase:** ~M
-
-**Recommended answer:** [short recommended/default answer when useful]
 ```
 
 Keep N sequential across the whole interview. Keep M adaptive within the current phase.

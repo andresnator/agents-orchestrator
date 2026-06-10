@@ -1,10 +1,10 @@
 ---
 name: jira-spike
-description: Create or refine Jira Spike tickets in Jira Markup. Use when the user wants a Spike, research ticket, investigation ticket, technical exploration, discovery work, research question, or SDD-ready Spike input.
+description: "Create or refine Jira Spike tickets in Jira Markup. Use when the user wants a Spike, research ticket, investigation ticket, technical exploration, discovery work, research question, or SDD-ready Spike input."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Jira Spike
@@ -66,11 +66,11 @@ Load `assets/refinement-template.md` before generating. Ask one question at a ti
 ```markdown
 ### Question N — [direct interrogative question?]
 
+**Recommended answer:** Provide a short suggested answer.
+
 **Why this matters:** Explain why this answer affects the Spike.
 
 **Estimated remaining questions:** ~M
-
-**Recommended answer:** Provide a short suggested answer.
 ```
 
 Do not generate until the user explicitly asks to generate, create, print, or finalize the ticket.

@@ -1,14 +1,10 @@
 ---
 name: prd-light
-description: >
-  Create lightweight Product Requirements Documents for MVPs, internal tools, small or medium
-  features, and early ideas that need alignment without ceremony. Trigger on "PRD light",
-  "quick PRD", "lightweight PRD", "simple PRD", "mini PRD", "short PRD", "brief PRD",
-  "MVP requirements", "internal requirements", "quick requirements", or "rough PRD".
+description: "Trigger: PRD light, quick PRD, lightweight PRD, MVP requirements. Create lightweight PRDs for small features, internal tools, and early ideas."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # PRD Light
@@ -38,11 +34,11 @@ Every interview question must use this exact structure:
 ```markdown
 ### Question N — [focused PRD Light question]
 
+**Recommended answer:** [short recommended/default answer when useful]
+
 **Why this matters:** [why this decision affects the PRD Light]
 
 **Estimated remaining questions in this phase:** ~M
-
-**Recommended answer:** [short recommended/default answer when useful]
 ```
 
 Keep N sequential across the whole interview. Keep M adaptive within the current phase.

@@ -1,10 +1,10 @@
 ---
 name: jira-user-story
-description: Create or refine Jira User Story tickets in Jira Markup. Use when the user wants a user story, story ticket, product capability, end-user outcome, acceptance criteria for a story, developer-ready story, or SDD-ready User Story input.
+description: "Create or refine Jira User Story tickets in Jira Markup. Use when the user wants a user story, story ticket, product capability, end-user outcome, acceptance criteria for a story, developer-ready story, or SDD-ready User Story input."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Jira User Story
@@ -66,11 +66,11 @@ Load `assets/refinement-template.md` before generating. Ask one question at a ti
 ```markdown
 ### Question N — [direct interrogative question?]
 
+**Recommended answer:** Provide a short suggested answer.
+
 **Why this matters:** Explain why this answer affects the User Story.
 
 **Estimated remaining questions:** ~M
-
-**Recommended answer:** Provide a short suggested answer.
 ```
 
 Do not generate until the user explicitly asks to generate, create, print, or finalize the ticket.

@@ -1,12 +1,10 @@
 ---
 name: usm
-description: |
-  Interactively creates User Story Maps with a journey-first structure, mandatory MVP slice, and inline Mermaid output.
-  Trigger on "USM", "usm", "User Story Mapping", "user story map", "story map", "mapear historias", "mapa de historias", "planificación de producto", "MVP slice", or "release slicing".
+description: "Trigger: USM, user story map, story map, mapa de historias, MVP slice. Create journey-first story maps with MVP slicing and Mermaid output."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # User Story Mapping
@@ -43,11 +41,11 @@ Every interview question must use this exact structure:
 ```markdown
 ### Question N — [focused USM question]
 
+**Recommended answer:** [short recommended/default answer when useful]
+
 **Why this matters:** [why this decision affects the User Story Map]
 
 **Estimated remaining questions in this phase:** ~M
-
-**Recommended answer:** [short recommended/default answer when useful]
 ```
 
 Keep `N` sequential across the whole interview. Keep `M` adaptive within the current phase.

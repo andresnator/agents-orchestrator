@@ -1,12 +1,10 @@
 ---
 name: adr
-description: |
-  Creates Architecture Decision Records (ADRs) in Markdown when users ask to document an architectural, technical, or product-shaping decision.
-  It applies to ADR requests, decision records, technical decision documentation, or prompts that need to capture why one option was chosen over alternatives.
+description: "Trigger: ADR, architecture decision record, technical decision. Create ADRs that document context, options, rationale, consequences, and trade-offs."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # ADR Creator
@@ -47,11 +45,11 @@ Question format:
 ```markdown
 ### Question N — [focused question]
 
+**Recommended answer:** [short example when useful]
+
 **Why this matters:** [brief reason]
 
 **Estimated remaining questions:** ~M
-
-**Recommended answer:** [short example when useful]
 ```
 
 Mini example:
@@ -59,11 +57,11 @@ Mini example:
 ```markdown
 ### Question 1 — Is this decision already made or still being proposed?
 
+**Recommended answer:** "Accepted — we already chose PostgreSQL for billing data."
+
 **Why this matters:** The status changes whether the ADR records a final choice or a proposal under review.
 
 **Estimated remaining questions:** ~5
-
-**Recommended answer:** "Accepted — we already chose PostgreSQL for billing data."
 ```
 
 ## Output Contract

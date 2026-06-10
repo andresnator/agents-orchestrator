@@ -1,10 +1,10 @@
 ---
 name: jira-task
-description: Create or refine Jira Task tickets in Jira Markup. Use when the user wants a Jira Task, technical task, implementation task, maintenance task, operational work item, developer-ready task, acceptance criteria for a task, or SDD-ready Task input.
+description: "Create or refine Jira Task tickets in Jira Markup. Use when the user wants a Jira Task, technical task, implementation task, maintenance task, operational work item, developer-ready task, acceptance criteria for a task, or SDD-ready Task input."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Jira Task
@@ -66,11 +66,11 @@ Load `assets/refinement-template.md` before generating. Ask one question at a ti
 ```markdown
 ### Question N — [direct interrogative question?]
 
+**Recommended answer:** Provide a short suggested answer.
+
 **Why this matters:** Explain why this answer affects the Task.
 
 **Estimated remaining questions:** ~M
-
-**Recommended answer:** Provide a short suggested answer.
 ```
 
 Do not generate until the user explicitly asks to generate, create, print, or finalize the ticket.
