@@ -1,6 +1,10 @@
 ---
 name: jira-task
 description: Create or refine Jira Task tickets in Jira Markup. Use when the user wants a Jira Task, technical task, implementation task, maintenance task, operational work item, developer-ready task, acceptance criteria for a task, or SDD-ready Task input.
+license: MIT
+metadata:
+  author: andresnator
+  version: "1.0.1"
 ---
 
 # Jira Task
