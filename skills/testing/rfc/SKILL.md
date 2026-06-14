@@ -4,7 +4,7 @@ description: "Trigger: RFC, request for comments, technical proposal. Create RFC
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # RFC Creator
@@ -49,11 +49,12 @@ Question format:
 ```markdown
 ### Question N — [focused question]
 
+**Recommended answer:** [short example when useful]
+
 **Why this matters:** [brief reason]
 
 **Estimated remaining questions:** ~M
 
-**Recommended answer:** [short example when useful]
 ```
 
 Mini example:
