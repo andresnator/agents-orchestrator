@@ -1,10 +1,10 @@
 ---
 name: cognitive-output-refiner
 description: "Trigger: refine output, summarize output, compact logs, reduce cognitive load, remove duplicates. Refines heavy textual output into a concise, faithful, non-duplicative version."
-license: Apache-2.0
+license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.4"
 ---
 
 # Cognitive Output Refiner
@@ -18,7 +18,9 @@ Do not activate automatically just because output is long. If the input is alrea
 ## Hard Rules
 
 - Preserve the input language. Do not translate unless asked.
-- Preserve exact errors, relevant stack frames, commands, file paths, IDs, decisions, trade-offs, critical warnings, verification steps, and actionable next steps.
+- Redaction takes precedence over all exact-preservation requirements, including this output template. Never include credential material, including secrets, credentials, inline credentials, connection strings, URL-embedded credentials, API keys, access tokens, cookies, passwords, private keys, session identifiers, or authorization headers, in whole or in part; replace the full credential value with a placeholder such as `[REDACTED_TOKEN]`.
+- Preserve useful diagnostic detail from errors, relevant stack frames, commands, paths, public/non-sensitive IDs, decisions, trade-offs, critical warnings, verification steps, and actionable next steps. When preserving stack frames, commands, or paths, redact usernames, local/private path prefixes, internal hostnames, credentials, and other sensitive identifiers while keeping non-sensitive filenames, function names, line numbers, error codes, and public IDs.
+- When an ID's sensitivity is ambiguous, redact it. Preserve only clearly public identifiers.
 - Be faithful by default. Label inferences as `Inference`, `Likely cause`, or `Possible next step`; never present them as input facts.
 - Deduplicate by keeping one canonical version. Preserve meaningful differences explicitly.
 - Target 30–50% of the original size by default; use 10–20% only for explicit ultra-compact requests. Fidelity beats size.
@@ -48,7 +50,7 @@ Return this shape, omitting optional sections when empty. Optional sections are 
 <clean, grouped, non-duplicative output>
 
 ## Preserved Details
-<errors, commands, paths, IDs, decisions, or other must-preserve facts>
+<errors, redacted commands/paths, public/non-sensitive IDs, decisions, redacted placeholders, or other must-preserve facts; never include credential material or ambiguous sensitive identifiers>
 
 ## Information Loss
 <Low/Medium/High only when compression risk exists>
@@ -61,6 +63,7 @@ Return this shape, omitting optional sections when empty. Optional sections are 
 - [ ] Removes duplicated/noisy content.
 - [ ] Is easier to scan.
 - [ ] Does not invent conclusions.
+- [ ] Fully replaces credential material and redacts sensitive identifiers before rendering.
 
 Are you satisfied with this refined version?
 ```
