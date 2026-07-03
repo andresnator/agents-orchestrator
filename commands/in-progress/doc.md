@@ -1,6 +1,10 @@
 ---
 description: Route documentation work to the right skill
 argument-hint: [what to document]
+permission:
+  question: allow
+  edit: ask
+  bash: ask
 ---
 
 # /doc
