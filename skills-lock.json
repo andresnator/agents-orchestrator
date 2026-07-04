@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "cognitive-doc-design": {
+      "source": "gentleman-programming/gentle-ai",
+      "sourceType": "github",
+      "skillPath": "skills/cognitive-doc-design/SKILL.md",
+      "computedHash": "d98729eb87e91e341e853149b69ccd5b0f83759171c0f6f561d846fd9619245a"
+    },
+    "judgment-day": {
+      "source": "gentleman-programming/sdd-agent-team",
+      "sourceType": "github",
+      "skillPath": "skills/judgment-day/SKILL.md",
+      "computedHash": "991c829e5cd8222cd207512347c2027479d2242bd4bc7f2c9241a92e7c2e9520"
+    },
+    "skill-creator": {
+      "source": "gentleman-programming/sdd-agent-team",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "433a0217838cc282cd117731665ed3e94ad0dc1e6a8500b816d7ca2dc24f1d13"
+    },
+    "skill-registry": {
+      "source": "gentleman-programming/sdd-agent-team",
+      "sourceType": "github",
+      "skillPath": "skills/skill-registry/SKILL.md",
+      "computedHash": "dbcb5bf0eaf3f7077bba7456b3efcf1e3d7f30e65390665ea76cd987ca399afc"
+    },
+    "work-unit-commits": {
+      "source": "gentleman-programming/gentle-ai",
+      "sourceType": "github",
+      "skillPath": "skills/work-unit-commits/SKILL.md",
+      "computedHash": "427aa830e47cc260485d81d9c1221c7f70126e0ffd2f66706a4e44b43bac1175"
+    }
+  }
+}
