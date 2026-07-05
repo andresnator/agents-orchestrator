@@ -6,8 +6,8 @@ metadata:
   author: Matt Pocock
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
-  status: in-progress
-  version: "1.0.3"
+  status: testing
+  version: "1.0.4"
 ---
 
 ## Activation Contract

@@ -6,6 +6,6 @@ argument-hint: "[what to document]"
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
-  status: in-progress
+  version: "1.0.3"
+  status: testing
 ---

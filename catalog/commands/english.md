@@ -6,6 +6,6 @@ argument-hint: "[text or coaching request]"
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
-  status: backlog
+  version: "1.0.3"
+  status: testing
 ---

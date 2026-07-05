@@ -20,8 +20,8 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "1.1.0"
+  status: testing
+  version: "1.1.1"
 ---
 
 # Refactoring Catalog (Multi-Language)

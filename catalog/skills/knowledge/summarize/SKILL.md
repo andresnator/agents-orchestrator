@@ -10,8 +10,8 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.0.2"
+  status: testing
+  version: "1.0.3"
 ---
 
 # Book Chapter Summary

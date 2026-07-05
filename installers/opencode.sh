@@ -832,8 +832,8 @@ discover_components() {
   while IFS= read -r file; do
     dir="$(dirname "$file")"
     expected="$(basename "$dir")"
-	    name="$(frontmatter_value "$file" name)"
-	    status="$(frontmatter_status "$file")"
+    name="$(frontmatter_value "$file" name)"
+    status="$(frontmatter_status "$file")"
 
     validate_skill_frontmatter "$file"
     validate_common_stub_fields "$file"
@@ -859,9 +859,9 @@ discover_components() {
     status="$(frontmatter_status "$file")"
     prompt_rel="$(frontmatter_value "$file" prompt)"
 
-	    validate_stub_frontmatter_only "$file"
-	    validate_agent_stub_fields "$file"
-	    [ -n "$name" ] || append_error "$file: missing name"
+    validate_stub_frontmatter_only "$file"
+    validate_agent_stub_fields "$file"
+    [ -n "$name" ] || append_error "$file: missing name"
     [ -n "$status" ] || append_error "$file: missing metadata.status"
     [ -n "$prompt_rel" ] || append_error "$file: missing prompt"
     if [ -n "$name" ] && [ "$name" != "$base" ]; then
@@ -875,7 +875,7 @@ discover_components() {
     fi
 
     [ -n "$name" ] && printf '%s\n' "$name" >> "$agent_names"
-    if [ -n "$name" ] && [ -n "$status" ] && [ -n "$prompt_rel" ] && status_valid "$status" ]; then
+    if [ -n "$name" ] && [ -n "$status" ] && [ -n "$prompt_rel" ] && status_valid "$status"; then
       if [ -n "$build_out" ]; then
         printf 'agent\t%s\t%s\t%s\t%s\n' "$name" "$status" "$file" "$REPO_ROOT/$prompt_rel" >> "$build_out"
       fi
@@ -892,9 +892,9 @@ discover_components() {
     status="$(frontmatter_status "$file")"
     prompt_rel="$(frontmatter_value "$file" prompt)"
 
-	    validate_stub_frontmatter_only "$file"
-	    validate_command_stub_fields "$file"
-	    [ -n "$name" ] || append_error "$file: missing name"
+    validate_stub_frontmatter_only "$file"
+    validate_command_stub_fields "$file"
+    [ -n "$name" ] || append_error "$file: missing name"
     [ -n "$status" ] || append_error "$file: missing metadata.status"
     [ -n "$prompt_rel" ] || append_error "$file: missing prompt"
     if [ -n "$name" ] && [ "$name" != "$base" ]; then
@@ -908,7 +908,7 @@ discover_components() {
     fi
 
     [ -n "$name" ] && printf '%s\n' "$name" >> "$command_names"
-    if [ -n "$name" ] && [ -n "$status" ] && [ -n "$prompt_rel" ] && status_valid "$status" ]; then
+    if [ -n "$name" ] && [ -n "$status" ] && [ -n "$prompt_rel" ] && status_valid "$status"; then
       if [ -n "$build_out" ]; then
         printf 'command\t%s\t%s\t%s\t%s\n' "$name" "$status" "$file" "$REPO_ROOT/$prompt_rel" >> "$build_out"
       fi
@@ -1148,16 +1148,16 @@ manifest_owns_link_path() {
   [ -L "$dest" ] || return 1
   current="$(readlink "$dest")" || return 1
 
-	  while IFS="$(printf '\t')" read -r kind col2 col3; do
-	    [ "$kind" = "link" ] || continue
-	    if [ -n "${col3:-}" ]; then
-	      manifest_paths_equal "$col3" "$dest" || continue
-	      [ "$current" = "$col2" ] && return 0
-	      return 1
-	    fi
+  while IFS="$(printf '\t')" read -r kind col2 col3; do
+    [ "$kind" = "link" ] || continue
+    if [ -n "${col3:-}" ]; then
+      manifest_paths_equal "$col3" "$dest" || continue
+      [ "$current" = "$col2" ] && return 0
+      return 1
+    fi
 
-	    manifest_paths_equal "$col2" "$dest" || continue
-	    legacy_link_target_allowed "$current" && return 0
+    manifest_paths_equal "$col2" "$dest" || continue
+    legacy_link_target_allowed "$current" && return 0
     return 1
   done < "$manifest"
 
@@ -1695,8 +1695,6 @@ run_uninstall() {
         remaining="$(first_entry_after_uninstall "$path" || true)"
         if [ -n "$remaining" ]; then
           warn "keep directory with remaining path after planned uninstall: $remaining"
-          append_manifest_dir "$path" "$new_manifest"
-          leftovers=1
         else
           record_uninstall_removed_dir "$path"
         fi
@@ -1704,8 +1702,13 @@ run_uninstall() {
       fi
       rmdir "$path" 2>/dev/null || true
       if [ -d "$path" ]; then
-        append_manifest_dir "$path" "$new_manifest"
-        leftovers=1
+        remaining="$(first_entry_after_uninstall "$path" || true)"
+        if [ -n "$remaining" ]; then
+          warn "keep directory with remaining path after planned uninstall: $remaining"
+        else
+          append_manifest_dir "$path" "$new_manifest"
+          leftovers=1
+        fi
       else
         record_uninstall_removed_dir "$path"
       fi
@@ -1717,8 +1720,6 @@ run_uninstall() {
     remaining="$(first_entry_after_uninstall "$target" || true)"
     if [ -n "$remaining" ]; then
       warn "keep directory with remaining path after planned uninstall: $remaining"
-      append_manifest_dir "$target" "$new_manifest"
-      leftovers=1
     fi
   fi
 

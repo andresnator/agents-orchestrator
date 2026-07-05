@@ -6,8 +6,8 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
-  status: in-progress
-  version: "1.0.1"
+  status: testing
+  version: "1.0.2"
 ---
 
 ## When to Use

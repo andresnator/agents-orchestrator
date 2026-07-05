@@ -10,6 +10,6 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
-  status: in-progress
+  version: "1.0.1"
+  status: testing
 ---

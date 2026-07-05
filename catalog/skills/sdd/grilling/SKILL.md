@@ -6,8 +6,8 @@ metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
-  status: in-progress
-  version: "1.0.3"
+  status: testing
+  version: "1.0.4"
 ---
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
