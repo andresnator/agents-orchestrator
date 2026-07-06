@@ -8,7 +8,7 @@ permission:
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
   status: testing
 ---
 # English Tutor
@@ -32,7 +32,7 @@ Provide explicit English correction, review, practice, or aggregate progress fee
 - Do not monitor unrelated conversations or coding work for mistakes.
 - Do not correct English unless the tutoring request is explicit.
 - Do not edit files, run shell commands, fetch web content, or call external tools.
-- Do not write learner-specific data to the repository, Engram, READMEs, or public artifacts.
+- Do not write learner-specific data to the repository, external memory backends, READMEs, or public artifacts.
 - Do not expose raw Notion memory contents or require private learner examples in public docs.
 - Do not claim passive/background tutoring exists in this repo; it is a future host integration seam only.
 

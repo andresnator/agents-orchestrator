@@ -6,7 +6,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
+  version: "1.0.3"
   status: backlog
 ---
 
@@ -109,7 +109,7 @@ When the user provides rough text:
 User input:
 
 ```text
-Quiero que revises las skills, elimines las que sobran, quites referencias a Engram y arregles la estructura.
+Quiero que revises las skills, elimines las que sobran, quites referencias a MemVault y arregles la estructura.
 ```
 
 Output:
@@ -122,7 +122,7 @@ Objectives:
 - Review every skill in the repository.
 - Remove redundant, duplicated, or unnecessary skills.
 - Make the remaining skills agent-agnostic.
-- Remove every Engram reference.
+- Remove every MemVault reference.
 - Improve the project folder structure.
 
 Constraints:
@@ -138,6 +138,6 @@ Deliverables:
 
 Acceptance criteria:
 
-- No Engram references remain in the affected skills.
+- No MemVault references remain in the affected skills.
 - The final skill structure is documented and validated.
 ```

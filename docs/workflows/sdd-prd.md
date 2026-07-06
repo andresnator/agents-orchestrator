@@ -28,7 +28,7 @@ Profile constraints: solo developer, no team features, **no context persistence*
 ### Non-goals
 
 - No multi-CLI adapters, no `sync` compiler, no product to maintain. This is *my* config, versioned in a dotfiles-style repo.
-- No Engram/memory backend. State lives in files inside each project.
+- No external memory backend. State lives in files inside each project.
 - No heavyweight process for trivial work — the harness must scale ceremony DOWN, not just up.
 
 ## 2. Best practices adopted (what was taken from each harness)
@@ -39,7 +39,7 @@ Profile constraints: solo developer, no team features, **no context persistence*
 | **gentle-ai / agent-teams-lite** | SDD Orchestrator = coordinator, never executor; 4-file rule (4+ files to understand → delegate exploration); structured result envelope (`status, executive_summary, artifacts, next, risks`); lazy-loaded workflow doc; phase → model table; judgment-day blind dual review (max 2 fix rounds, then escalate); review lenses with the >400-line trigger |
 | **Hermes** | Fresh subagent per task + **two-stage review** (stage 1: spec compliance; stage 2: code quality); elicitation only at the top level (subagents return questions, never ask) |
 | **CodeGraph** | Index-first exploration: one `codegraph_explore` call instead of grep/read fan-out (−58% tool calls); `.codegraph/` per project |
-| **Engram** (pattern only) | Deterministic artifact keys (`sdd/{change}/{artifact}`) — reused as **file paths** instead of memory keys, since persistence is excluded |
+| **External memory pattern** | Deterministic artifact keys (`sdd/{change}/{artifact}`) — reused as **file paths** instead of memory keys, since persistence is excluded |
 | **OpenCode native** | Per-agent `model`/`tools`/`permission` frontmatter; `question` tool + permission; `subtask: true` commands for context isolation; `compaction { auto, prune }`; primary/subagent split |
 
 ## 3. The daily flow (core of the design)
@@ -90,7 +90,7 @@ explore ──► propose ──[GATE]──► spec ∥ design ──[GATE]─�
 ├── agents/*.md                  # subagents with per-agent model frontmatter
 ├── commands/*.md                # /sdd-quick /sdd-new /sdd-continue /sdd-status /sdd-review /sdd-ship
 ├── skills/<name>/SKILL.md       # lazy-loaded procedures (SDD phases, judgment-day, elicit…)
-└── plugins/                     # existing TS plugins (keep skill-registry; drop engram)
+└── plugins/                     # existing TS plugins (keep skill-registry; no memory backend)
 
 <project>/.arnes/changes/<name>/ # per-change ephemeral state (gitignored or committed, my call per repo)
 ├── state.yaml                   # tier, phase, gates passed — single source of truth
@@ -140,7 +140,7 @@ Aliases resolved once in frontmatter (e.g. `strong` = opus-class, `balanced` = s
 
 | Step | Deliverable |
 |---|---|
-| **S1 — Wiring** | Register CodeGraph MCP; set compaction; strip Engram from the daily flow; define `.arnes/changes/` state contract (`state.yaml` schema + handoff format) |
+| **S1 — Wiring** | Register CodeGraph MCP; set compaction; keep the daily flow file-backed; define `.arnes/changes/` state contract (`state.yaml` schema + handoff format) |
 | **S2 — Agents & models** | Write the 13 agent files with per-agent model frontmatter and permission blocks |
 | **S3 — Flow commands** | `/sdd-quick`, `/sdd-new`, `/sdd-continue`, `/sdd-status`, `/sdd-ship` + the `sdd-workflow` skill (triage table + gates encoded here) |
 | **S4 — Review layer** | Lenses + judgment-day + escalation triggers (hot paths, >400 lines) |
@@ -156,4 +156,4 @@ Aliases resolved once in frontmatter (e.g. `strong` = opus-class, `balanced` = s
 
 ## 9. References
 
-- Research notes: NousResearch/hermes-agent (delegation, two-stage review) · anomalyco/opencode + opencode.ai/docs (agents, question, compaction) · Gentleman-Programming/gentle-ai (sdd-orchestrator, judgment-day, lenses) · Gentleman-Programming/engram (excluded; key-scheme pattern reused as paths) · colbymchenry/codegraph (index-first exploration) · Claude Code (plan gate, question UX, subagent discipline)
+- Research notes: NousResearch/hermes-agent (delegation, two-stage review) · anomalyco/opencode + opencode.ai/docs (agents, question, compaction) · Gentleman-Programming/gentle-ai (sdd-orchestrator, judgment-day, lenses) · an external memory harness (excluded; key-scheme pattern reused as paths) · colbymchenry/codegraph (index-first exploration) · Claude Code (plan gate, question UX, subagent discipline)
