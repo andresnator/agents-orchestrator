@@ -1,7 +1,6 @@
 .DS_Store
 
 # Local AI/agent tool state and generated files
-build/
 .claude/
 .codex/
 .cursor/
