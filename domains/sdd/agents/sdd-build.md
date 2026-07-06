@@ -1,15 +1,9 @@
 ---
 description: "T0 direct-edit agent for trivial, single-file, mechanical changes"
 mode: primary
-model: "anthropic/claude-sonnet-5"
 temperature: 0.3
 permission:
   question: allow
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # Build
 

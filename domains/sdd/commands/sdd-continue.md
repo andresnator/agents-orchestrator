@@ -2,11 +2,6 @@
 description: "Advance the active SDD change to its next phase, stopping at the next gate"
 agent: sdd-orchestrator
 argument-hint: "[change slug (optional)]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Continue the SDD change: $ARGUMENTS
 1. Resolve the change: use the change named in the arguments; if none, list `.arnes/changes/*/state.yaml` and pick the single active (non-archived) change — if several are active, ask the user which one via the `question` tool.

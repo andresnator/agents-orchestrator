@@ -2,11 +2,6 @@
 description: "Manual review of the current diff: quality by default; 'risk', 'full', or 'jd' for other modes"
 agent: sdd-orchestrator
 argument-hint: "[quality|risk|full|jd or target]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Run a manual review on the current diff. Mode argument: $ARGUMENTS
 Mode selection:

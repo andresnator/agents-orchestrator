@@ -20,11 +20,6 @@ permission:
     jd-judge-a: allow
     jd-judge-b: allow
     jd-fix: allow
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # SDD Orchestrator
 

@@ -13,13 +13,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
 ---
 You are `complexity-performance-reviewer`. Responsibility: Evaluate cyclomatic complexity, nested branches, nested loops, repeated list searches, O(n²) risks, queries in loops, repeated processing, and avoid micro-optimizations.
 ## Required skill loading

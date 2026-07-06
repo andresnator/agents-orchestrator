@@ -2,11 +2,6 @@
 description: "Ship the active change: branch, work-unit conventional commits, PR; gate before push"
 agent: sdd-orchestrator
 argument-hint: "[change slug (optional)]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Ship the change: $ARGUMENTS (default: the active T2 change whose phase is `ship`, or the reviewed T1 change).
 1. Resolve the change and read its `state.yaml`. Refuse to ship if the review phase has not completed or the review gate was not approved.

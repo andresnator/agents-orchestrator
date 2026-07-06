@@ -1,15 +1,9 @@
 ---
 description: "Judgment-day fix agent - applies confirmed findings only, minimal diffs"
 mode: subagent
-model: "anthropic/claude-sonnet-5"
 temperature: 0.3
 permission:
   question: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # Judgment-Day Fix
 

@@ -38,8 +38,11 @@ Filters:
   --domain    Comma-separated domains, or all.
               Current domains: common, docs, meta, refactor, sdd.
               Domain skills are symlinks to the top-level skills/ directory.
-  --status    Comma-separated lifecycle states, or all.
+  --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
+              Agents, commands, and plugins are not status-filtered because
+              OpenCode frontmatter for executable components cannot carry
+              repository-only metadata.
 
 Defaults:
   --domain all
@@ -183,11 +186,7 @@ discover_components() {
       [ -d "$dir" ] || continue
       find "$dir" -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r file; do
         name="$(basename "$file")"
-        status="$(status_from_file "$file")"
-        if ! status_allowed "$status"; then
-          valid_status "$status" || warn "$file: missing or invalid metadata.status; skipped"
-          continue
-        fi
+        status="-"
         src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
         dest="$target/$type/$name"
         printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$type" "$name" "$domain_name" "$status" "$src" "$dest" >> "$out"

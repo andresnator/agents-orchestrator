@@ -1,18 +1,12 @@
 ---
 description: "Review lens - security and resilience; T2 default and hot-path reviews"
 mode: subagent
-model: "anthropic/claude-sonnet-5"
 temperature: 0.1
 permission:
   edit: deny
   write: deny
   question: deny
   bash: allow
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # Review Risk
 

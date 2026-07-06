@@ -1,16 +1,10 @@
 ---
 description: "SDD spec phase - delta requirements with Given/When/Then scenarios"
 mode: subagent
-model: "anthropic/claude-sonnet-5"
 temperature: 0.3
 permission:
   question: deny
   task: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # SDD Spec
 

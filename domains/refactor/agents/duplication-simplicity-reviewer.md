@@ -13,13 +13,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
 ---
 You are `duplication-simplicity-reviewer`. Responsibility: Evaluate duplicated business rules, validations, queries, mappers, accidental duplication, overengineering, premature generalization, and speculative code.
 ## Required skill loading

@@ -1,16 +1,10 @@
 ---
 description: "SDD design phase - architecture decisions, rationale, integration points, test strategy"
 mode: subagent
-model: "anthropic/claude-opus-4-8"
 temperature: 0.3
 permission:
   question: deny
   task: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # SDD Design
 

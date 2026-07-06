@@ -1,11 +1,6 @@
 ---
 description: Evaluate and refine prompt text without executing it
 argument-hint: "[prompt text or evaluation request]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.5"
-  status: testing
 ---
 # /prompt-checker
 

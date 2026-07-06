@@ -1,18 +1,12 @@
 ---
 description: "SDD verify phase - spec-compliance matrix plus real test run; read-only for source"
 mode: subagent
-model: "anthropic/claude-sonnet-5"
 temperature: 0.1
 permission:
   edit: deny
   write: allow
   question: deny
   bash: allow
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # SDD Verify
 

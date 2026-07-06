@@ -3,13 +3,6 @@ description: "Generate one risk-gated OpenSpec-style refactor plan for a code cl
 agent: refactor-planner
 subtask: false
 argument-hint: "[target class, package, or module path]"
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "2.0.0"
-  status: in-progress
 ---
 You are running `/refactor-plan` with raw arguments:
 `$ARGUMENTS`

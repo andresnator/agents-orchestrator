@@ -2,11 +2,6 @@
 description: "T1 quick-change pipeline: explore-lite, apply, advisory review"
 agent: sdd-orchestrator
 argument-hint: "[task description]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Run the T1 quick pipeline for: $ARGUMENTS
 1. Derive a short slug from the task description. Create or update `.arnes/changes/<slug>/state.yaml` with `tier: T1`, `phase: explore` (schema in the `sdd-workflow` skill; the sdd-orchestrator owns this file).

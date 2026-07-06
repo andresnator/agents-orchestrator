@@ -1,11 +1,6 @@
 ---
 description: Route documentation work to the right skill
 argument-hint: "[what to document]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.3"
-  status: testing
 ---
 # /doc
 

@@ -3,11 +3,6 @@ description: "Show a compact status table for all SDD changes, from state files 
 agent: sdd-orchestrator
 subtask: true
 argument-hint: "[change slug (optional)]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Report SDD harness status. Read-only; delegate nothing; modify nothing.
 1. Read every `.arnes/changes/*/state.yaml` in the project (bash: list the glob, then read each file). If none exist, report "No active changes" and stop.

@@ -1,16 +1,10 @@
 ---
 description: "SDD propose phase - intent, scope, approach options, rollback, blast radius"
 mode: subagent
-model: "anthropic/claude-opus-4-8"
 temperature: 0.3
 permission:
   question: deny
   task: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # SDD Propose
 

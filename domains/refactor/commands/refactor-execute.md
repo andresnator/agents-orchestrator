@@ -3,11 +3,6 @@ description: "Execute an approved refactor plan task-by-task with TCR commits an
 agent: refactor-executor
 subtask: false
 argument-hint: "[plan path | empty = latest]"
-license: Apache-2.0
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 You are running `/refactor-execute` with raw arguments:
 `$ARGUMENTS`

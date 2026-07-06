@@ -2,11 +2,6 @@
 description: "Start a T2 full-SDD change: triage, explore, propose, first gate"
 agent: sdd-orchestrator
 argument-hint: "[idea or change description]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 Start a new T2 SDD change for: $ARGUMENTS
 1. Triage confirmation: check the request against the triage table (sdd-workflow skill). If it does not warrant T2 (no new feature, known area, no hot path, under 400 estimated lines), say so and recommend `/sdd-quick` or the `sdd-build` agent instead; only continue on T2 signals or explicit user insistence.
