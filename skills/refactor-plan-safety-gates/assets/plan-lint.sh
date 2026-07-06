@@ -106,6 +106,13 @@ function flush_task(line_number) {
   task_rollback_seen = 0
 }
 
+function flush_yaml_block(line_number) {
+  if (!yaml_block_key) return
+  if (!yaml_block_has_item) add_error(line_number, "Final safety " yaml_block_key " block array must contain list items")
+  yaml_block_key = ""
+  yaml_block_has_item = 0
+}
+
 {
   line = $0
 
@@ -206,12 +213,19 @@ function flush_task(line_number) {
   if (current_section == 17) {
     if (!final_section_started) final_section_started = 1
     if (line ~ /^```ya?ml[[:space:]]*$/ || line ~ /^```[[:space:]]*$/) {
+      if (in_final_fence) flush_yaml_block(NR - 1)
       final_section_code_fences++
       in_final_fence = !in_final_fence
       next
     }
     if (!in_final_fence && !is_blank(line)) final_section_outside_text++
     if (in_final_fence) {
+      if (yaml_block_key && line ~ /^  [A-Za-z_]+:/) flush_yaml_block(NR - 1)
+      if (yaml_block_key && line !~ /^  [A-Za-z_]+:/) {
+        if (line ~ /^[[:space:]]*-[[:space:]]+/) yaml_block_has_item = 1
+        else if (!is_blank(line)) add_error(NR, "Final safety " yaml_block_key " block array must use list items")
+      }
+
       if (line ~ /^[[:space:]]*safety_review:/) final_section_root++
       if (line ~ /^[[:space:]]*status:/) {
         final_section_status++
@@ -224,10 +238,18 @@ function flush_task(line_number) {
       if (line ~ /^[[:space:]]*blockers:/) {
         final_section_blockers++
         if (line !~ /^[[:space:]]*blockers:[[:space:]]*(\[.*\])?[[:space:]]*$/) add_error(NR, "Final safety blockers must be an array")
+        if (line ~ /^[[:space:]]*blockers:[[:space:]]*$/) {
+          yaml_block_key = "blockers"
+          yaml_block_has_item = 0
+        }
       }
       if (line ~ /^[[:space:]]*required_fixes:/) {
         final_section_required_fixes++
         if (line !~ /^[[:space:]]*required_fixes:[[:space:]]*(\[.*\])?[[:space:]]*$/) add_error(NR, "Final safety required_fixes must be an array")
+        if (line ~ /^[[:space:]]*required_fixes:[[:space:]]*$/) {
+          yaml_block_key = "required_fixes"
+          yaml_block_has_item = 0
+        }
       }
       if (line ~ /^[[:space:]]*final_safety_level:/) {
         final_section_final_safety_level++
