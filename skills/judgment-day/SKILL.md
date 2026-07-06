@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.2.0"
+  version: "1.2.1"
   status: in-progress
 ---
 
@@ -21,7 +21,7 @@ metadata:
 
 ### Pattern 0: Skill Resolution (BEFORE launching judges)
 
-Resolve project standards before launching ANY sub-agent:
+Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates this file on session start; the read path stays the same.
 
 1. Read `.atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
 2. Identify the target files/scope: what code will the judges review?
@@ -33,7 +33,7 @@ Resolve project standards before launching ANY sub-agent:
 
 This ensures judges review against project-specific standards, not just generic best practices.
 
-**If no registry exists**: warn the user ("No skill registry found — judges will review without project-specific standards. Run `skill-registry` to fix this.") and proceed with generic review only.
+**If no registry exists**: warn the user ("No skill registry found — judges will review without project-specific standards. Ensure the skill-registry plugin is installed or wait for startup generation.") and proceed with generic review only.
 
 ### Pattern 1: Parallel Blind Review
 

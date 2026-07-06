@@ -16,7 +16,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - `installers/opencode.sh` symlinks selected domain components into OpenCode.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
-- `.atl/` is ignored local tool state; if `.atl/skill-registry.md` exists, treat it as a generated index. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
+- `.atl/` is ignored local tool state; if `.atl/skill-registry.md` exists, treat it as a generated index produced by the meta `skill-registry` plugin. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
 
 ## Domains
 
