@@ -57,6 +57,7 @@ BEGIN {
   output_file_seen = 0
   risk_seen = 0
   depth_seen = 0
+  depth_value = ""
   plan_target_seen = 0
   placeholder8_seen = 0
   placeholder9_seen = 0
@@ -81,6 +82,8 @@ BEGIN {
   final_section_blockers = 0
   final_section_required_fixes = 0
   final_section_final_safety_level = 0
+  expected_task_number = 1
+  in_task_block = 0
 }
 
 function add_error(line, message) {
@@ -91,14 +94,31 @@ function is_blank(value) {
   return value ~ /^[[:space:]]*$/
 }
 
+function flush_task(line_number) {
+  if (!in_task_block) return
+  if (!task_evidence_seen) add_error(line_number, "tasks.md task missing Evidence")
+  if (!task_validation_seen) add_error(line_number, "tasks.md task missing Validation")
+  if (!task_rollback_seen) add_error(line_number, "tasks.md task missing Rollback")
+  in_task_block = 0
+  task_evidence_seen = 0
+  task_validation_seen = 0
+  task_rollback_seen = 0
+}
+
 {
   line = $0
 
   if (line ~ /^Output file:[[:space:]]*`\.ia-refactor\/plan\/[0-9]{8}\/[^`]+\.md`[[:space:]]*$/) output_file_seen = 1
   if (line ~ /^Risk:[[:space:]]*(low|medium|high|critical)[[:space:]]*$/) risk_seen = 1
-  if (line ~ /^Depth:[[:space:]]*(light|standard|deep|smoke)[[:space:]]*$/) depth_seen = 1
+  if (line ~ /^Depth:[[:space:]]*(light|standard|deep|smoke)[[:space:]]*$/) {
+    depth_seen = 1
+    depth_value = line
+    sub(/^Depth:[[:space:]]*/, "", depth_value)
+    sub(/[[:space:]]*$/, "", depth_value)
+  }
 
   if (line ~ /^## [0-9]+\./) {
+    if (in_tasks) flush_task(NR - 1)
     in_tasks = 0
     heading_count++
     if (heading_count > expected_count) {
@@ -135,7 +155,26 @@ function is_blank(value) {
   }
 
   if (in_tasks) {
-    if (!is_blank(line) && line !~ /^- \[ \] Task [0-9]+:/ && line !~ /^  - (Evidence|Validation|Rollback):/) {
+    if (line ~ /^- \[ \] Task [0-9]+:/) {
+      flush_task(NR - 1)
+      task_number = line
+      sub(/^- \[ \] Task /, "", task_number)
+      sub(/:.*/, "", task_number)
+      if ((task_number + 0) != expected_task_number) {
+        add_error(NR, "tasks.md task numbers must be sequential starting at 1")
+      }
+      expected_task_number++
+      in_task_block = 1
+      task_evidence_seen = 0
+      task_validation_seen = 0
+      task_rollback_seen = 0
+    } else if (line ~ /^  - Evidence:/) {
+      task_evidence_seen = 1
+    } else if (line ~ /^  - Validation:/) {
+      task_validation_seen = 1
+    } else if (line ~ /^  - Rollback:/) {
+      task_rollback_seen = 1
+    } else if (!is_blank(line)) {
       add_error(NR, "tasks.md contains a non-contract line")
     }
   }
@@ -169,15 +208,37 @@ function is_blank(value) {
     if (!in_final_fence && !is_blank(line)) final_section_outside_text++
     if (in_final_fence) {
       if (line ~ /^[[:space:]]*safety_review:/) final_section_root++
-      if (line ~ /^[[:space:]]*status:/) final_section_status++
-      if (line ~ /^[[:space:]]*blockers:/) final_section_blockers++
-      if (line ~ /^[[:space:]]*required_fixes:/) final_section_required_fixes++
-      if (line ~ /^[[:space:]]*final_safety_level:/) final_section_final_safety_level++
+      if (line ~ /^[[:space:]]*status:/) {
+        final_section_status++
+        status_value = line
+        sub(/^[[:space:]]*status:[[:space:]]*/, "", status_value)
+        gsub(/"/, "", status_value)
+        gsub(/\047/, "", status_value)
+        if (status_value !~ /^(approved|needs_changes)$/) add_error(NR, "Final safety status must be approved or needs_changes")
+      }
+      if (line ~ /^[[:space:]]*blockers:/) {
+        final_section_blockers++
+        if (line !~ /^[[:space:]]*blockers:[[:space:]]*\[/) add_error(NR, "Final safety blockers must be an array")
+      }
+      if (line ~ /^[[:space:]]*required_fixes:/) {
+        final_section_required_fixes++
+        if (line !~ /^[[:space:]]*required_fixes:[[:space:]]*\[/) add_error(NR, "Final safety required_fixes must be an array")
+      }
+      if (line ~ /^[[:space:]]*final_safety_level:/) {
+        final_section_final_safety_level++
+        safety_value = line
+        sub(/^[[:space:]]*final_safety_level:[[:space:]]*/, "", safety_value)
+        gsub(/"/, "", safety_value)
+        gsub(/\047/, "", safety_value)
+        if (safety_value !~ /^(low|medium|high)$/) add_error(NR, "Final safety level must be low, medium, or high")
+      }
     }
   }
 }
 
 END {
+  if (in_tasks) flush_task(NR)
+
   if (!output_file_seen) add_error(1, "Missing exact Output file: label")
   if (!risk_seen) add_error(1, "Missing Risk: prelude")
   if (!depth_seen) add_error(1, "Missing Depth: prelude")
@@ -188,11 +249,9 @@ END {
     if (category_seen[i] != 1) add_error(1, "Missing or duplicate findings subsection: " category[i])
   }
 
-  if (placeholder8_seen == 0 && placeholder9_seen == 1) {
-    add_error(1, "Section 8 missing depth placeholder while Section 9 has one")
-  }
-  if (placeholder8_seen == 1 && placeholder9_seen == 0) {
-    add_error(1, "Section 9 missing depth placeholder while Section 8 has one")
+  if (depth_value == "light" || depth_value == "standard" || depth_value == "smoke") {
+    if (!placeholder8_seen) add_error(1, "Section 8 missing required depth placeholder")
+    if (!placeholder9_seen) add_error(1, "Section 9 missing required depth placeholder")
   }
 
   if (proposal_seen != 1 || design_seen != 1 || spec_seen != 1 || tasks_seen != 1) {

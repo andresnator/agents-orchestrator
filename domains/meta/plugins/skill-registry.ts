@@ -99,23 +99,47 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
 
 async function listSkillFiles(dir: string) {
   const out: string[] = []
+  const seenDirs = new Set<string>()
+
   async function walk(current: string) {
+    let realCurrent: string
+    try {
+      realCurrent = await fs.realpath(current)
+    } catch {
+      return
+    }
+    if (seenDirs.has(realCurrent)) return
+    seenDirs.add(realCurrent)
+
     let entries
     try {
-      entries = await fs.readdir(current, { withFileTypes: true })
+      entries = await fs.readdir(realCurrent, { withFileTypes: true })
     } catch {
       return
     }
 
     for (const entry of entries) {
-      const full = path.join(current, entry.name)
+      const full = path.join(realCurrent, entry.name)
       if (entry.isDirectory()) await walk(full)
       else if (entry.isFile() && entry.name === "SKILL.md") out.push(await fs.realpath(full))
+      else if (entry.isSymbolicLink()) {
+        let targetStat
+        let target
+        try {
+          target = await fs.realpath(full)
+          targetStat = await fs.stat(target)
+        } catch {
+          continue
+        }
+
+        if (targetStat.isDirectory()) await walk(target)
+        else if (targetStat.isFile() && path.basename(target) === "SKILL.md") out.push(target)
+      }
     }
   }
 
   await walk(dir)
-  return out
+  return [...new Set(out)]
 }
 
 async function discoverSkills(worktree: string) {
@@ -141,23 +165,37 @@ async function discoverSkills(worktree: string) {
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-async function conventionRows(worktree: string) {
+type ConventionData = {
+  rows: string
+  hashInput: string
+}
+
+async function collectConventions(worktree: string): Promise<ConventionData> {
   const conventionFiles = ["AGENTS.md", "CLAUDE.md", ".cursorrules", "GEMINI.md", "copilot-instructions.md"]
     .map((file) => path.join(worktree, file))
     .filter(fileExistsSync)
 
   const rows: string[] = []
   const seen = new Set<string>()
+  const hashParts: string[] = []
+
+  async function addHash(file: string) {
+    try {
+      const text = await fs.readFile(file, "utf8")
+      const digest = crypto.createHash("sha256").update(text).digest("hex")
+      hashParts.push(`${file}@${digest}`)
+      return text
+    } catch {
+      return ""
+    }
+  }
+
   for (const file of conventionFiles) {
     rows.push(`| ${path.basename(file)} | ${file} | Project convention file |`)
     seen.add(file)
 
-    let text = ""
-    try {
-      text = await fs.readFile(file, "utf8")
-    } catch {
-      continue
-    }
+    const text = await addHash(file)
+    if (!text) continue
 
     for (const match of text.matchAll(/`([^`]+)`/g)) {
       const candidate = match[1]
@@ -165,13 +203,14 @@ async function conventionRows(worktree: string) {
       const resolved = path.resolve(worktree, candidate)
       if (!resolved.startsWith(worktree) || seen.has(resolved) || !fileExistsSync(resolved)) continue
       seen.add(resolved)
+      await addHash(resolved)
       rows.push(`| ${path.basename(resolved)} | ${resolved} | Referenced by ${path.basename(file)} |`)
     }
   }
-  return rows.join("\n")
+  return { rows: rows.join("\n"), hashInput: hashParts.sort().join("\n") }
 }
 
-async function renderRegistry(skills: SkillEntry[], worktree: string) {
+async function renderRegistry(skills: SkillEntry[], conventions: ConventionData) {
   const userRows = skills
     .map((skill) => `| ${triggerFrom(skill.description) || "-"} | ${skill.name} | ${skill.path} |`)
     .join("\n")
@@ -182,8 +221,6 @@ async function renderRegistry(skills: SkillEntry[], worktree: string) {
       return `### ${skill.name}\n${rules || "- No compact rules found."}`
     })
     .join("\n\n")
-
-  const conventions = await conventionRows(worktree)
 
   return `# Skill Registry
 
@@ -203,7 +240,7 @@ ${compactRules || "_No skills found._"}
 
 | File | Path | Notes |
 |---|---|---|
-${conventions || "| - | - | - |"}
+${conventions.rows || "| - | - | - |"}
 `
 }
 
@@ -224,11 +261,12 @@ async function ensureInfoExclude(worktree: string) {
 
 async function generateRegistry(worktree: string) {
   const skills = await discoverSkills(worktree)
+  const conventions = await collectConventions(worktree)
   const orderedHashInput = skills
     .map((skill) => `${skill.name}@${skill.version}@${skill.mtimeMs}`)
     .sort()
     .join("\n")
-  const hash = crypto.createHash("sha256").update(orderedHashInput).digest("hex")
+  const hash = crypto.createHash("sha256").update(`${orderedHashInput}\n${conventions.hashInput}`).digest("hex")
   const atlDir = path.join(worktree, ".atl")
   const hashFile = path.join(atlDir, "skill-registry.hash")
   const registryFile = path.join(atlDir, "skill-registry.md")
@@ -240,7 +278,7 @@ async function generateRegistry(worktree: string) {
     // Missing hash means the registry should be written.
   }
 
-  await fs.writeFile(registryFile, await renderRegistry(skills, worktree), "utf8")
+  await fs.writeFile(registryFile, await renderRegistry(skills, conventions), "utf8")
   await fs.writeFile(hashFile, `${hash}\n`, "utf8")
   await ensureInfoExclude(worktree)
 }
