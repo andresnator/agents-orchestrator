@@ -2,9 +2,9 @@
 
 Refactor planning, risk-gated legacy safety analysis, Java refactor guidance, and reviewer agents.
 
-Primary entries: `refactor-planner`.
+Primary entries: `refactor-planner`, `refactor-executor`.
 
-Commands: `refactor-plan`.
+Commands: `refactor-plan`, `refactor-execute`.
 
 ```mermaid
 graph TD
@@ -15,6 +15,8 @@ graph TD
   reviewers --> composer[refactor-openspec-composer]
   composer --> safety[refactor-safety-gate-reviewer]
   safety --> plan[17-section plan]
+  plan --> executor[refactor-executor]
+  executor --> report[execution report and commits]
   planner -. permission .-> boundary[.ia-refactor/plan only]
   reviewers -.-> skills[quality and safety skills]
 ```

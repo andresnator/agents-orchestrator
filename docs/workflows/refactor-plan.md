@@ -1,6 +1,6 @@
 # OpenCode Refactor Plan Harness
 
-This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow that analyzes a code class, package, or module and writes one risk-gated OpenSpec-style Markdown refactor plan.
+This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow that analyzes a code class, package, or module and writes one risk-gated OpenSpec-style Markdown refactor plan. Approved plans can then be executed with `/refactor-execute`.
 
 ## Quick path
 
@@ -8,6 +8,7 @@ This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow 
 opencode run "/refactor-plan src/main/java/com/acme/billing/InvoiceService.java"
 opencode run "/refactor-plan src/main/java/com/acme/billing"
 opencode run "/refactor-plan mode=smoke src/main/java/com/acme/billing/LegacyOrderProcessor.java"
+opencode run "/refactor-execute .ia-refactor/plan/20260706/InvoiceService.md"
 ```
 
 The `mode=smoke` flag writes a stub 17-section plan through lint for fast harness validation. Smoke output is not executable by `/refactor-execute`.
@@ -41,6 +42,8 @@ The generated plan is saved to:
 |---|---|
 | Command | `domains/refactor/commands/refactor-plan.md` receives `$ARGUMENTS` and routes to `refactor-planner`. |
 | Primary agent | `domains/refactor/agents/refactor-planner.md` orchestrates scope, risk, reviewer fan-out, composition, safety, lint, and saving. |
+| Executor command | `domains/refactor/commands/refactor-execute.md` receives an approved plan path, or resolves the latest plan. |
+| Executor agent | `domains/refactor/agents/refactor-executor.md` validates the plan, checks baseline, executes tasks with TCR, commits each green task, and writes an execution report. |
 | Analysis workers | `scope-analyzer`, `risk-assessor`, `behavior-characterizer`, `dependency-seam-finder`, `test-planner`, `architecture-reviewer`, and `tooling-auditor` provide locked, read-only safety analysis. |
 | Reviewer subagents | Nine focused lenses load `reviewer-output-contract` and return compact YAML findings or `nf: "<reason>"`. |
 | Composer subagent | `refactor-openspec-composer` creates the unified 17-section plan. |
@@ -97,7 +100,7 @@ Sections:
 
 ## Execution Contract
 
-Section 15 is the producer-to-executor handoff. It must tell a future executor how to:
+Section 15 is the producer-to-executor handoff. It must tell `/refactor-execute` how to:
 
 - confirm Section 17 has `safety_review.status: "approved"`;
 - establish the baseline validation from Section 13;
@@ -106,6 +109,14 @@ Section 15 is the producer-to-executor handoff. It must tell a future executor h
 - log deviations as `{task, status, reason, evidence}`;
 - use TCR: commit green task validations and revert red validations;
 - stop after repeated reverts, baseline failure, or target drift.
+
+`/refactor-execute` rejects plans when Section 17 is not approved, when `Depth: smoke`, when the output path does not match, or when `tasks.md` cannot be executed in order. During execution it records deviations instead of improvising outside the plan.
+
+Execution reports are written to:
+
+```text
+.ia-refactor/execute/YYYYMMDD/<target>-execution.md
+```
 
 ## Validation
 
