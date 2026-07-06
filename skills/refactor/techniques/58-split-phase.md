@@ -29,7 +29,7 @@ When code has two phases that operate on different conceptual levels (e.g., pars
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

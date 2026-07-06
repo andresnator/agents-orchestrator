@@ -28,7 +28,7 @@ Calculated values should be computed on demand rather than cached in mutable sta
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

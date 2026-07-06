@@ -28,7 +28,7 @@ Data and behavior should be co-located. When a field is primarily read or writte
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

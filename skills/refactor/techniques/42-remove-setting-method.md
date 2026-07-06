@@ -28,7 +28,7 @@ If a field should not change after an object is created, making it settable via 
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

@@ -29,7 +29,7 @@ When the skeleton of an algorithm is the same across types but individual steps 
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

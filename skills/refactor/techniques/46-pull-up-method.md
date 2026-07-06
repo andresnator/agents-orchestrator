@@ -27,7 +27,7 @@ When sibling classes implement the same method body, the duplication is a mainte
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

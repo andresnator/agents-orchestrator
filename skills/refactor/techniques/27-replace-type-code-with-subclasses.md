@@ -29,7 +29,7 @@ Subclasses (or interface implementations, or enum variants with data) let you re
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

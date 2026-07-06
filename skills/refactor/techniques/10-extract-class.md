@@ -29,7 +29,7 @@ A class should have a single, well-defined responsibility. When a class grows to
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

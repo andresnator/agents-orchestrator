@@ -28,7 +28,7 @@ Removing a parameter that the function can compute itself simplifies the API. Ea
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

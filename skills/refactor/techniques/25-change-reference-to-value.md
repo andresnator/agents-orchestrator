@@ -27,7 +27,7 @@ Value objects are simpler to reason about: they are immutable, compared by their
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

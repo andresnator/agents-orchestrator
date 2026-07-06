@@ -28,7 +28,7 @@ Assertions make assumptions explicit and fail loudly when violated. They serve a
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

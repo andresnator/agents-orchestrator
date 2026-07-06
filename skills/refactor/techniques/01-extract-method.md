@@ -31,7 +31,7 @@ Short, well-named functions are easier to read, reuse, and override. When you se
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

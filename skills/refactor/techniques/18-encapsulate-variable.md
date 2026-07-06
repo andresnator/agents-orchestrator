@@ -29,7 +29,7 @@ Encapsulation provides a clear point of access for data. By routing all access t
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

@@ -27,7 +27,7 @@ When a class inherits from another solely to reuse a few of its methods — not 
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

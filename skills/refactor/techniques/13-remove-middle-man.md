@@ -27,7 +27,7 @@ Hide Delegate is valuable, but it can be overdone. If a server class grows a for
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

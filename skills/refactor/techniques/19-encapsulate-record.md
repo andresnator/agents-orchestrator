@@ -28,7 +28,7 @@ Records (dicts/maps/hashes) are convenient for quick prototyping but dangerous a
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

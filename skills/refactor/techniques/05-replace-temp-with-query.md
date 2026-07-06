@@ -27,7 +27,7 @@ Replacing a temporary variable with a query (a function call) removes a barrier 
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

@@ -28,7 +28,7 @@ When a method in a parent class is only used by one subtype, it belongs in that 
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

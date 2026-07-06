@@ -28,7 +28,7 @@ When a library class is missing a method you need, you cannot add it directly. A
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

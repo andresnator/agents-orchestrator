@@ -27,7 +27,7 @@ Extract Class's inverse. Sometimes after refactoring, a class shrinks until it n
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

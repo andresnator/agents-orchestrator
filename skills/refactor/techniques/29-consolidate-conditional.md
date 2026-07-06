@@ -26,7 +26,7 @@ Combining guards that produce the same outcome into a single conditional makes t
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

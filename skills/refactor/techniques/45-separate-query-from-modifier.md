@@ -29,7 +29,7 @@ When a function that appears to be a query also modifies state, callers cannot s
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

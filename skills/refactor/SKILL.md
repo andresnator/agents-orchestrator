@@ -21,7 +21,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.2"
+  version: "1.2.0"
 ---
 
 # Refactoring Catalog (Multi-Language)
@@ -46,7 +46,7 @@ Before applying any technique, detect the project's stack:
 | `Cargo.toml` | Rust | Ownership, traits, no inheritance |
 | `Package.swift` | Swift | Protocol-oriented |
 
-If the language is **Java**, apply techniques with Java OOP, Stream API where appropriate, and the project's detected Java version constraints. Use `references/java/` for Java-specific examples and apply `references/java/java-quality-gate.md` before declaring completion.
+If the language is **Java**, apply techniques with Java OOP, Stream API where appropriate, and the project's detected Java version constraints. Use `references/java-notes.md` for Java-specific constraints and the Java completion gate.
 
 ## Language Support Matrix
 
@@ -78,7 +78,7 @@ For detailed concept-to-language mappings, see `references/language-idioms.md`.
 3. **Check applicability**: See `references/language-applicability.md` for technique availability per language
 4. **Select technique**: Each smell maps to one or more refactoring techniques
 5. **Read the technique file**: Each technique has multi-language examples (Python, TypeScript, Go, Rust)
-6. **For Java**: Read the matching file under `references/java/`, use Java OOP/Stream idioms, honor Java 8 versus Java 11+ API availability, and finish with the Java quality gate
+6. **For Java**: Read `references/java-notes.md`, use Java OOP/Stream idioms, honor Java 8 versus Java 11+ API availability, and finish with the Java completion gate
 7. **For language idiom mapping**: See `references/language-idioms.md`
 8. **Apply incrementally**: Small steps, test after each change, commit frequently
 
@@ -184,7 +184,7 @@ When given code to refactor:
 5. Apply techniques in small steps, always testing between changes
 6. Provide idiomatic examples for the detected language
 7. Explain WHY each refactoring improves the code, not just HOW to do it
-8. For Java, report the `references/java/java-quality-gate.md` verdict
+8. For Java, report the `references/java-notes.md` Java completion gate verdict
 9. For language-specific idiom translations, consult `references/language-idioms.md`
 
 ## Key Principles
@@ -205,5 +205,4 @@ These principles underpin every technique in the catalog:
 |---|---|
 | `references/language-idioms.md` | Refactoring concept → {Python, TypeScript, Go, Rust} equivalents |
 | `references/language-applicability.md` | 62-technique × language applicability matrix with alternatives |
-| `references/java/` | Java-specific technique examples migrated from the former Java-only refactor skill |
-| `references/java/java-quality-gate.md` | Completion gate for Java refactors |
+| `references/java-notes.md` | Java-specific constraints, Java 8 vs 11+ notes, and the Java completion gate |

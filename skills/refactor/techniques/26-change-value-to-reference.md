@@ -28,7 +28,7 @@ When an object has identity (a customer, a user, a product), it should exist onc
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 

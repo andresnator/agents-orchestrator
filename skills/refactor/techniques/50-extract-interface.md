@@ -28,7 +28,7 @@ When a client only needs a subset of a type's methods, defining an interface (or
 
 ## Multi-Language Examples
 
-> For Java examples, see `../references/java/` and apply `../references/java/java-quality-gate.md` before completion.
+> Java specifics: see `../references/java-notes.md`.
 
 ### Python
 
