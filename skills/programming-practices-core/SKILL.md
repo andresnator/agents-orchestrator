@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Skill: programming-practices-core
@@ -24,7 +24,7 @@ This skill teaches a bounded code-quality review workflow. It does not choose to
 
 - Target language and code snippet/files, if available.
 - Intended behavior and current pain point.
-- Constraints: legacy safety, public API compatibility, deadline, or team conventions.
+- Constraints: legacy-code safety, public API compatibility, deadline, or team conventions.
 - Whether the user wants diagnosis only or an improvement plan.
 
 ## Context Budget

@@ -59,8 +59,12 @@ BEGIN {
   depth_seen = 0
   depth_value = ""
   plan_target_seen = 0
+  risk3_seen = 0
+  depth3_seen = 0
   placeholder8_seen = 0
   placeholder9_seen = 0
+  content8_lines = 0
+  content9_lines = 0
   proposal_seen = 0
   design_seen = 0
   spec_seen = 0
@@ -74,6 +78,8 @@ BEGIN {
   contract_tcr_seen = 0
   contract_revert_seen = 0
   contract_drift_seen = 0
+  contract_target_seen = 0
+  contract_depth_seen = 0
   final_section_started = 0
   final_section_code_fences = 0
   final_section_outside_text = 0
@@ -142,14 +148,25 @@ function flush_yaml_block(line_number) {
 
   if (current_section == 2 && line ~ /^[[:space:]]*plan_target:/) plan_target_seen = 1
 
+  if (current_section == 3) {
+    if (line ~ /^[[:space:]]*risk:[[:space:]]*(low|medium|high|critical)[[:space:]]*$/) risk3_seen = 1
+    if (line ~ /^[[:space:]]*depth:[[:space:]]*(light|standard|deep|smoke)[[:space:]]*$/) depth3_seen = 1
+  }
+
   if (current_section == 7) {
     for (i = 1; i <= category_count; i++) {
       if (line == category[i]) category_seen[i]++
     }
   }
 
-  if (current_section == 8 && line == "Not required at depth: " depth_value ".") placeholder8_seen = 1
-  if (current_section == 9 && line == "Not required at depth: " depth_value ".") placeholder9_seen = 1
+  if (current_section == 8) {
+    if (line == "Not required at depth: " depth_value ".") placeholder8_seen = 1
+    else if (!is_blank(line)) content8_lines++
+  }
+  if (current_section == 9) {
+    if (line == "Not required at depth: " depth_value ".") placeholder9_seen = 1
+    else if (!is_blank(line)) content9_lines++
+  }
 
   if (current_section == 12) {
     if (line ~ /^### proposal\.md[[:space:]]*$/) proposal_seen++
@@ -192,14 +209,17 @@ function flush_yaml_block(line_number) {
   }
 
   if (current_section == 15) {
-    if (line ~ /(approved|Section 17)/) contract_approved_seen = 1
-    if (line ~ /Validation/) contract_validation_seen = 1
-    if (line ~ /tasks\.md/) contract_tasks_seen = 1
-    if (line ~ /Evidence/) contract_evidence_seen = 1
-    if (line ~ /deviation/) contract_deviation_seen = 1
-    if (line ~ /TCR/) contract_tcr_seen = 1
-    if (line ~ /revert/) contract_revert_seen = 1
-    if (line ~ /drift/) contract_drift_seen = 1
+    contract_line = tolower(line)
+    if (contract_line ~ /(approved|section 17)/) contract_approved_seen = 1
+    if (contract_line ~ /validation/) contract_validation_seen = 1
+    if (contract_line ~ /tasks\.md/) contract_tasks_seen = 1
+    if (contract_line ~ /evidence/) contract_evidence_seen = 1
+    if (contract_line ~ /deviation/) contract_deviation_seen = 1
+    if (contract_line ~ /tcr/) contract_tcr_seen = 1
+    if (contract_line ~ /revert/) contract_revert_seen = 1
+    if (contract_line ~ /drift/) contract_drift_seen = 1
+    if (contract_line ~ /plan_target/) contract_target_seen = 1
+    if (contract_line ~ /depth/) contract_depth_seen = 1
   }
 
   if (current_section != 16 && current_section != 17) {
@@ -271,6 +291,8 @@ END {
   if (!depth_seen) add_error(1, "Missing Depth: prelude")
   if (heading_count != expected_count) add_error(1, "Expected 17 exact top-level headings, found " heading_count)
   if (!plan_target_seen) add_error(1, "Missing plan_target: echo in Section 2")
+  if (!risk3_seen) add_error(1, "Section 3 missing risk: entry matching the prelude")
+  if (!depth3_seen) add_error(1, "Section 3 missing depth: entry matching the prelude")
 
   for (i = 1; i <= category_count; i++) {
     if (category_seen[i] != 1) add_error(1, "Missing or duplicate findings subsection: " category[i])
@@ -281,6 +303,11 @@ END {
     if (!placeholder9_seen) add_error(1, "Section 9 missing required depth placeholder")
   }
 
+  if (depth_value == "deep") {
+    if (placeholder8_seen || content8_lines == 0) add_error(1, "Section 8 must contain concrete content at depth deep")
+    if (placeholder9_seen || content9_lines == 0) add_error(1, "Section 9 must contain concrete content at depth deep")
+  }
+
   if (proposal_seen != 1 || design_seen != 1 || spec_seen != 1 || tasks_seen != 1) {
     add_error(1, "Section 12 must contain proposal.md/design.md/specs/<capability>/spec.md/tasks.md exactly once")
   }
@@ -288,7 +315,7 @@ END {
     add_error(1, "tasks.md must contain at least one task")
   }
 
-  if (contract_approved_seen + contract_validation_seen + contract_tasks_seen + contract_evidence_seen + contract_deviation_seen + contract_tcr_seen + contract_revert_seen + contract_drift_seen < 8) {
+  if (contract_approved_seen + contract_validation_seen + contract_tasks_seen + contract_evidence_seen + contract_deviation_seen + contract_tcr_seen + contract_revert_seen + contract_drift_seen + contract_target_seen + contract_depth_seen < 10) {
     add_error(1, "Section 15 execution contract is missing required executor constraints")
   }
 

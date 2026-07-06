@@ -81,9 +81,7 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
   const name = scalar(frontmatter, "name") || path.basename(path.dirname(file))
   if (name === "skill-registry") return undefined
 
-  const compactRules =
-    firstSection(body, ["## Rules", "## Hard Rules", "## Critical Patterns"]) ??
-    fallbackRules(body)
+  const sectionRules = firstSection(body, ["## Rules", "## Hard Rules", "## Critical Patterns"])
 
   return {
     name,
@@ -93,7 +91,7 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
     path: file,
     mtimeMs: stat.mtimeMs,
     project,
-    compactRules: compactRules.length > 0 ? compactRules : fallbackRules(body),
+    compactRules: sectionRules.length > 0 ? sectionRules : fallbackRules(body),
   }
 }
 
@@ -201,7 +199,7 @@ async function collectConventions(worktree: string): Promise<ConventionData> {
       const candidate = match[1]
       if (!candidate || candidate.includes("*") || candidate.includes("{")) continue
       const resolved = path.resolve(worktree, candidate)
-      if (!resolved.startsWith(worktree) || seen.has(resolved) || !fileExistsSync(resolved)) continue
+      if (!resolved.startsWith(worktree + path.sep) || seen.has(resolved) || !fileExistsSync(resolved)) continue
       seen.add(resolved)
       await addHash(resolved)
       rows.push(`| ${path.basename(resolved)} | ${resolved} | Referenced by ${path.basename(file)} |`)

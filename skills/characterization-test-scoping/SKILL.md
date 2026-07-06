@@ -1,17 +1,17 @@
 ---
 name: characterization-test-scoping
-description: "Trigger: characterization tests, seams, legacy safety plan, test safety planning. Scope legacy safety work around tests, seams, containment, and rollback."
+description: "Trigger: characterization tests, seams, deep-depth refactor planning, test safety planning. Scope high-risk refactor work around tests, seams, containment, and rollback."
 license: Apache-2.0
 metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.1"
+  version: "2.0.2"
   status: in-progress
 ---
 
 ## Activation Contract
-Load this skill when building a legacy safety plan or scoping work around characterization coverage, seams, and the test safety net.
+Load this skill when a refactor plan runs at deep depth or when scoping work around characterization coverage, seams, and the test safety net.
 
 ## Hard Rules
 
