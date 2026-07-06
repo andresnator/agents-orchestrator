@@ -17,4 +17,4 @@ The system MUST {observable behavior}.
 - **WHEN** {edge trigger/action}
 - **THEN** {safe observable outcome}
 
-<!-- Use this for new capabilities inside openspec/changes/{change}/specs/{capability}/spec.md. -->
+<!-- Use this for new capabilities inside .orchestraitor/changes/{change}/specs/{capability}/spec.md. -->

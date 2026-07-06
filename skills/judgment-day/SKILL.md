@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.3.0"
+  version: "1.3.1"
   status: in-progress
 ---
 
@@ -42,7 +42,7 @@ Only the orchestrator runs this protocol. Judge agents and the fix agent review 
 When a runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate to those agents while preserving the same blindness, synthesis buckets, confirmed-only fix rule, and two-round escalation limit.
 
 
-- Launch **TWO** sub-agents with the runtime's sub-agent mechanism, such as OpenCode `delegate` or Claude Code `Task`.
+- Launch **TWO** sub-agents with the runtime's sub-agent mechanism, such as the OpenCode `task` tool or Claude Code `Task`.
 - Prefer parallel execution. If the runtime cannot run sub-agents in parallel, run the two judges sequentially with isolated blind prompts.
 - Each agent receives the **same target** but works **independently**
 - **Neither agent knows about the other** — no cross-contamination
@@ -51,7 +51,7 @@ When a runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate 
 
 ### Pattern 2: Verdict Synthesis
 
-The **orchestrator** (NOT a sub-agent) compares results after both judge sub-agents return their results (e.g., OpenCode `delegation_read`, or the runtime's equivalent):
+The **orchestrator** (NOT a sub-agent) compares results after both judge sub-agents return their results (each sub-agent call returns its result directly — e.g., the OpenCode `task` tool's return value, or the runtime's equivalent):
 
 ```
 Confirmed   → found by BOTH agents          → high confidence, fix immediately
@@ -256,7 +256,7 @@ Recommend: human review of the remaining issues above before re-running judgment
 ## Rules
 
 - The **orchestrator NEVER reviews code itself** — it only launches judges, reads results, and synthesizes
-- Judges use the active runtime's sub-agent mechanism; examples include OpenCode `delegate` and Claude Code `Task`
+- Judges use the active runtime's sub-agent mechanism; examples include the OpenCode `task` tool and Claude Code `Task`
 - Judges should run in parallel when available; otherwise run them sequentially with separate blind contexts
 - The **Fix Agent is a separate sub-agent** — never use one of the judges as the fixer
 - If user provides **custom review criteria**, include them in BOTH judge prompts (identical)
@@ -272,5 +272,5 @@ Recommend: human review of the remaining issues above before re-running judgment
 ```bash
 # No CLI commands — this is a pure orchestration protocol.
 # Execution happens via the runtime's sub-agent mechanism.
-# Examples: OpenCode delegate/delegation_read, Claude Code Task.
+# Examples: the OpenCode task tool, Claude Code Task.
 ```
