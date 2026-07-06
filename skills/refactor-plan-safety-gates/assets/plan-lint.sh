@@ -83,6 +83,7 @@ BEGIN {
   final_section_required_fixes = 0
   final_section_final_safety_level = 0
   expected_task_number = 1
+  task_count = 0
   in_task_block = 0
 }
 
@@ -140,8 +141,8 @@ function flush_task(line_number) {
     }
   }
 
-  if (current_section == 8 && line ~ /^Not required at depth: (light|standard|smoke)\.[[:space:]]*$/) placeholder8_seen = 1
-  if (current_section == 9 && line ~ /^Not required at depth: (light|standard|smoke)\.[[:space:]]*$/) placeholder9_seen = 1
+  if (current_section == 8 && line == "Not required at depth: " depth_value ".") placeholder8_seen = 1
+  if (current_section == 9 && line == "Not required at depth: " depth_value ".") placeholder9_seen = 1
 
   if (current_section == 12) {
     if (line ~ /^### proposal\.md[[:space:]]*$/) proposal_seen++
@@ -164,15 +165,19 @@ function flush_task(line_number) {
         add_error(NR, "tasks.md task numbers must be sequential starting at 1")
       }
       expected_task_number++
+      task_count++
       in_task_block = 1
       task_evidence_seen = 0
       task_validation_seen = 0
       task_rollback_seen = 0
     } else if (line ~ /^  - Evidence:/) {
+      if (!in_task_block) add_error(NR, "tasks.md Evidence appears before a task")
       task_evidence_seen = 1
     } else if (line ~ /^  - Validation:/) {
+      if (!in_task_block) add_error(NR, "tasks.md Validation appears before a task")
       task_validation_seen = 1
     } else if (line ~ /^  - Rollback:/) {
+      if (!in_task_block) add_error(NR, "tasks.md Rollback appears before a task")
       task_rollback_seen = 1
     } else if (!is_blank(line)) {
       add_error(NR, "tasks.md contains a non-contract line")
@@ -218,11 +223,11 @@ function flush_task(line_number) {
       }
       if (line ~ /^[[:space:]]*blockers:/) {
         final_section_blockers++
-        if (line !~ /^[[:space:]]*blockers:[[:space:]]*\[/) add_error(NR, "Final safety blockers must be an array")
+        if (line !~ /^[[:space:]]*blockers:[[:space:]]*(\[.*\])?[[:space:]]*$/) add_error(NR, "Final safety blockers must be an array")
       }
       if (line ~ /^[[:space:]]*required_fixes:/) {
         final_section_required_fixes++
-        if (line !~ /^[[:space:]]*required_fixes:[[:space:]]*\[/) add_error(NR, "Final safety required_fixes must be an array")
+        if (line !~ /^[[:space:]]*required_fixes:[[:space:]]*(\[.*\])?[[:space:]]*$/) add_error(NR, "Final safety required_fixes must be an array")
       }
       if (line ~ /^[[:space:]]*final_safety_level:/) {
         final_section_final_safety_level++
@@ -256,6 +261,9 @@ END {
 
   if (proposal_seen != 1 || design_seen != 1 || spec_seen != 1 || tasks_seen != 1) {
     add_error(1, "Section 12 must contain proposal.md/design.md/specs/<capability>/spec.md/tasks.md exactly once")
+  }
+  if (tasks_seen == 1 && task_count == 0) {
+    add_error(1, "tasks.md must contain at least one task")
   }
 
   if (contract_approved_seen + contract_validation_seen + contract_tasks_seen + contract_evidence_seen + contract_deviation_seen + contract_tcr_seen + contract_revert_seen + contract_drift_seen < 8) {
