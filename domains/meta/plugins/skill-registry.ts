@@ -281,10 +281,18 @@ async function generateRegistry(worktree: string) {
   await ensureInfoExclude(worktree)
 }
 
+function projectRoot(input: { worktree?: string; directory: string }) {
+  const worktree = input.worktree ?? ""
+  // Non-git projects report the filesystem root as worktree; fall back to the session directory.
+  if (!worktree || worktree === path.parse(worktree).root) return input.directory
+  return worktree
+}
+
 export const SkillRegistryPlugin: Plugin = async (input) => {
+  const root = projectRoot(input)
   let failed = false
   const run = () =>
-    generateRegistry(input.worktree).catch((error) => {
+    generateRegistry(root).catch((error) => {
       failed = true
       console.error(`[skill-registry] ${error instanceof Error ? error.message : String(error)}`)
     })
