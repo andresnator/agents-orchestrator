@@ -1,5 +1,5 @@
 import crypto from "node:crypto"
-import { existsSync } from "node:fs"
+import { statSync } from "node:fs"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -13,11 +13,10 @@ type SkillEntry = {
   path: string
   mtimeMs: number
   project: boolean
-  compactRules: string[]
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
-const MAX_RULE_LINES = 15
+const FORMAT_VERSION = "3"
 
 function scalar(frontmatter: string, key: string) {
   const lines = frontmatter.split(/\r?\n/)
@@ -42,46 +41,21 @@ function scalar(frontmatter: string, key: string) {
 
 function triggerFrom(description: string) {
   const match = description.match(/Trigger:\s*([^.\n]+)/i)
-  return (match?.[1] ?? description).replace(/\s+/g, " ").trim()
+  const trigger = (match?.[1] ?? description).replace(/\s+/g, " ").trim()
+  if (trigger.length <= 120) return trigger
+  return `${trigger.slice(0, 119)}…`
 }
 
-function firstSection(body: string, headings: string[]) {
-  const lines = body.split(/\r?\n/)
-  for (let index = 0; index < lines.length; index++) {
-    const heading = lines[index].trim().toLowerCase()
-    if (!headings.some((candidate) => heading === candidate.toLowerCase())) continue
-
-    const out: string[] = []
-    for (let next = index + 1; next < lines.length && out.length < MAX_RULE_LINES; next++) {
-      if (/^##\s+/.test(lines[next])) break
-      const value = lines[next].trim()
-      if (value) out.push(value)
-    }
-    return out
-  }
-  return []
-}
-
-function fallbackRules(body: string) {
-  const lines = body.split(/\r?\n/)
-  const start = lines.findIndex((line) => /^#\s+/.test(line))
-  return lines
-    .slice(start >= 0 ? start + 1 : 0)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 10)
+function tableCell(value: string) {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim()
 }
 
 async function parseSkill(file: string, project: boolean): Promise<SkillEntry | undefined> {
-  const text = await fs.readFile(file, "utf8")
   const stat = await fs.stat(file)
-  const match = text.match(FRONTMATTER_RE)
-  const frontmatter = match?.[1] ?? ""
-  const body = text.slice(match?.[0].length ?? 0)
+  const text = await fs.readFile(file, "utf8")
+  const frontmatter = text.match(FRONTMATTER_RE)?.[1] ?? ""
   const name = scalar(frontmatter, "name") || path.basename(path.dirname(file))
   if (name === "skill-registry") return undefined
-
-  const sectionRules = firstSection(body, ["## Rules", "## Hard Rules", "## Critical Patterns"])
 
   return {
     name,
@@ -91,7 +65,6 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
     path: file,
     mtimeMs: stat.mtimeMs,
     project,
-    compactRules: sectionRules.length > 0 ? sectionRules : fallbackRules(body),
   }
 }
 
@@ -99,6 +72,8 @@ async function listSkillFiles(dir: string) {
   const out: string[] = []
   const seenDirs = new Set<string>()
 
+  // Report paths as discovered under the scanned root (e.g. ~/.config/opencode/skills/...),
+  // not their symlink targets; realpath is used only for cycle detection.
   async function walk(current: string) {
     let realCurrent: string
     try {
@@ -111,28 +86,22 @@ async function listSkillFiles(dir: string) {
 
     let entries
     try {
-      entries = await fs.readdir(realCurrent, { withFileTypes: true })
+      entries = await fs.readdir(current, { withFileTypes: true })
     } catch {
       return
     }
 
     for (const entry of entries) {
-      const full = path.join(realCurrent, entry.name)
-      if (entry.isDirectory()) await walk(full)
-      else if (entry.isFile() && entry.name === "SKILL.md") out.push(await fs.realpath(full))
-      else if (entry.isSymbolicLink()) {
-        let targetStat
-        let target
-        try {
-          target = await fs.realpath(full)
-          targetStat = await fs.stat(target)
-        } catch {
-          continue
-        }
-
-        if (targetStat.isDirectory()) await walk(target)
-        else if (targetStat.isFile() && path.basename(target) === "SKILL.md") out.push(target)
+      const full = path.join(current, entry.name)
+      let entryStat
+      try {
+        entryStat = await fs.stat(full)
+      } catch {
+        continue
       }
+
+      if (entryStat.isDirectory()) await walk(full)
+      else if (entryStat.isFile() && entry.name === "SKILL.md") out.push(full)
     }
   }
 
@@ -169,9 +138,17 @@ type ConventionData = {
 }
 
 async function collectConventions(worktree: string): Promise<ConventionData> {
-  const conventionFiles = ["AGENTS.md", "CLAUDE.md", ".cursorrules", "GEMINI.md", "copilot-instructions.md"]
+  // Case-insensitive filesystems and symlinked convention files resolve several
+  // candidates to the same on-disk file; dedupe by inode, keeping the first.
+  const seenInodes = new Set<string>()
+  const conventionFiles = ["AGENTS.md", "agents.md", "CLAUDE.md", ".cursorrules", "GEMINI.md", "copilot-instructions.md"]
     .map((file) => path.join(worktree, file))
-    .filter(fileExistsSync)
+    .filter((file) => {
+      const inode = inodeKeySync(file)
+      if (!inode || seenInodes.has(inode)) return false
+      seenInodes.add(inode)
+      return true
+    })
 
   const rows: string[] = []
   const seen = new Set<string>()
@@ -189,7 +166,7 @@ async function collectConventions(worktree: string): Promise<ConventionData> {
   }
 
   for (const file of conventionFiles) {
-    rows.push(`| ${path.basename(file)} | ${file} | Project convention file |`)
+    rows.push(`| ${tableCell(path.basename(file))} | ${tableCell(file)} | Project convention file |`)
     seen.add(file)
 
     const text = await addHash(file)
@@ -199,10 +176,12 @@ async function collectConventions(worktree: string): Promise<ConventionData> {
       const candidate = match[1]
       if (!candidate || candidate.includes("*") || candidate.includes("{")) continue
       const resolved = path.resolve(worktree, candidate)
-      if (!resolved.startsWith(worktree + path.sep) || seen.has(resolved) || !fileExistsSync(resolved)) continue
+      const relative = path.relative(worktree, resolved)
+      if (relative === ".atl" || relative.startsWith(`.atl${path.sep}`)) continue
+      if (!resolved.startsWith(worktree + path.sep) || seen.has(resolved) || !regularFileSync(resolved)) continue
       seen.add(resolved)
       await addHash(resolved)
-      rows.push(`| ${path.basename(resolved)} | ${resolved} | Referenced by ${path.basename(file)} |`)
+      rows.push(`| ${tableCell(path.basename(resolved))} | ${tableCell(resolved)} | Referenced by ${tableCell(path.basename(file))} |`)
     }
   }
   return { rows: rows.join("\n"), hashInput: hashParts.sort().join("\n") }
@@ -210,29 +189,18 @@ async function collectConventions(worktree: string): Promise<ConventionData> {
 
 async function renderRegistry(skills: SkillEntry[], conventions: ConventionData) {
   const userRows = skills
-    .map((skill) => `| ${triggerFrom(skill.description) || "-"} | ${skill.name} | ${skill.path} |`)
+    .map((skill) => `| ${tableCell(triggerFrom(skill.description) || "-")} | ${tableCell(skill.name)} | ${tableCell(skill.path)} |`)
     .join("\n")
-
-  const compactRules = skills
-    .map((skill) => {
-      const rules = skill.compactRules.map((rule) => `- ${rule.replace(/^[-*]\s*/, "")}`).join("\n")
-      return `### ${skill.name}\n${rules || "- No compact rules found."}`
-    })
-    .join("\n\n")
 
   return `# Skill Registry
 
-Auto-generated — do not edit.
+Auto-generated — do not edit. Discovery index only: match a trigger, then read the skill's SKILL.md at the listed path for its full contract.
 
-## User Skills
+## Skills
 
 | Trigger | Skill | Path |
 |---|---|---|
 ${userRows || "| - | - | - |"}
-
-## Compact Rules
-
-${compactRules || "_No skills found._"}
 
 ## Project Conventions
 
@@ -242,8 +210,21 @@ ${conventions.rows || "| - | - | - |"}
 `
 }
 
-function fileExistsSync(file: string) {
-  return existsSync(file)
+function regularFileSync(file: string) {
+  try {
+    return statSync(file).isFile()
+  } catch {
+    return false
+  }
+}
+
+function inodeKeySync(file: string) {
+  try {
+    const stat = statSync(file)
+    return stat.isFile() ? `${stat.dev}:${stat.ino}` : ""
+  } catch {
+    return ""
+  }
 }
 
 async function ensureInfoExclude(worktree: string) {
@@ -264,7 +245,7 @@ async function generateRegistry(worktree: string) {
     .map((skill) => `${skill.name}@${skill.version}@${skill.mtimeMs}`)
     .sort()
     .join("\n")
-  const hash = crypto.createHash("sha256").update(`${orderedHashInput}\n${conventions.hashInput}`).digest("hex")
+  const hash = crypto.createHash("sha256").update(`${FORMAT_VERSION}\n${orderedHashInput}\n${conventions.hashInput}`).digest("hex")
   const atlDir = path.join(worktree, ".atl")
   const hashFile = path.join(atlDir, "skill-registry.hash")
   const registryFile = path.join(atlDir, "skill-registry.md")

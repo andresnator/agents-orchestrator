@@ -2,6 +2,8 @@
 
 This repo stores reusable OpenCode agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
 
+**This repo targets OpenCode only.** Do not add Claude Code (or other runtime) artifacts, and do not manage `~/.claude/**` state from this repo.
+
 ## Repo Shape
 
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
@@ -12,6 +14,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
+- `global/AGENTS.md` is the installable global OpenCode rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores workflow notes and migration records.
 - `installers/opencode.sh` symlinks selected domain components into OpenCode.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
@@ -65,6 +68,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 - Default filter is `--domain all --status all`.
 - Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, and plugins are not status-filtered.
 - The installer discovers agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
+- `install` always links `global/AGENTS.md` to `$TARGET/AGENTS.md` regardless of `--domain`/`--status` filters. A pre-existing foreign `AGENTS.md` in the target is skipped with a warning unless `--force`.
 - The installer writes `$TARGET/.agents-orchestrator-manifest` with `link<TAB>dest` and `dir<TAB>path` lines.
 - `install` is a sync: links from the previous manifest that are no longer selected are removed.
 - `uninstall` removes manifest-owned symlinks and empty created directories.

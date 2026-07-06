@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.2.1"
+  version: "1.3.0"
   status: in-progress
 ---
 
@@ -25,10 +25,10 @@ Resolve project standards before launching ANY sub-agent. In OpenCode installs, 
 
 1. Read `.atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
 2. Identify the target files/scope: what code will the judges review?
-3. Match relevant skills from the registry's **Compact Rules** by:
+3. Match relevant skills from the registry's `## Skills` table by:
    - **Code context**: file extensions/paths of the target (e.g., `.tsx` → react-19, typescript)
    - **Task context**: "review code" → framework/language skills; "create PR" → branch-pr skill
-4. Build a `## Project Standards (auto-resolved)` block with the matching compact rules
+4. Read the matched skills' `SKILL.md` files, cap the set to the 3-5 most relevant skills, and distill their actionable rules into a `## Project Standards (auto-resolved)` block.
 5. Inject this block into BOTH Judge prompts AND the Fix Agent prompt (identical for all)
 
 This ensures judges review against project-specific standards, not just generic best practices.
@@ -124,9 +124,9 @@ You are an adversarial code reviewer. Your ONLY job is to find problems.
 ## Target
 {describe target: files, feature, architecture, component}
 
-{if compact rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
+{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
 ## Project Standards (auto-resolved)
-{paste matching compact rules blocks from the skill registry}
+{paste distilled actionable rules from the matched SKILL.md files}
 
 ## Review Criteria
 - Correctness: Does the code do what it claims? Are there logical errors?
@@ -164,9 +164,9 @@ You are a surgical fix agent. You apply ONLY the confirmed issues listed below.
 ## Confirmed Issues to Fix
 {paste the confirmed findings table from the verdict synthesis}
 
-{if compact rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
+{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
 ## Project Standards (auto-resolved)
-{paste matching compact rules blocks from the skill registry}
+{paste distilled actionable rules from the matched SKILL.md files}
 
 ## Context
 - Original review criteria: {paste same criteria used for judges}

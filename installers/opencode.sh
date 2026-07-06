@@ -26,6 +26,9 @@ Usage:
 
 Actions:
   install     Sync selected domain components into an OpenCode target as symlinks.
+              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
+              regardless of --domain/--status filters. A pre-existing foreign
+              AGENTS.md in the target is skipped with a warning unless --force.
   uninstall   Remove symlinks recorded in the target manifest, then remove the manifest.
   status      List selected components and whether each target link is linked, not linked, or foreign.
 
@@ -337,6 +340,8 @@ install_action() {
     link_component "$src" "$dest" "$new_manifest"
   done < "$selected"
 
+  link_component "$REPO_ROOT/global/AGENTS.md" "$target/AGENTS.md" "$new_manifest"
+
   manifest="$target/$MANIFEST_NAME"
   remove_stale_links "$manifest" "$new_manifest"
 
@@ -401,6 +406,8 @@ status_action() {
     state="$(link_state "$src" "$dest")"
     printf '%s\t%s\t%s\t%s\t%s\n' "$domain" "$type" "$name" "$status" "$state"
   done < "$selected"
+  state="$(link_state "$REPO_ROOT/global/AGENTS.md" "$target/AGENTS.md")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "AGENTS.md" "-" "$state"
   rm -f "$selected"
 }
 
