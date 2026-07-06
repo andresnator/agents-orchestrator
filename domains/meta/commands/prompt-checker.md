@@ -4,14 +4,14 @@ argument-hint: "[prompt text or evaluation request]"
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.4"
+  version: "1.0.5"
   status: testing
 ---
 # /prompt-checker
 
 ## Purpose
 
-Start a prompt evaluation and refinement turn. The command loads the `prompt-evaluator` skill, applies its rubric, and returns a Prompt Evaluation Report. It never executes the prompt.
+Start a prompt evaluation and refinement turn. The command loads the `prompt-structure-writer` skill in Evaluation Mode, applies its rubric, and returns a Prompt Evaluation Report. It never executes the prompt.
 
 ## Invocation
 
@@ -25,11 +25,11 @@ If no prompt text is provided, ask at most one clarifying question before contin
 
 | Agent/Skill | Purpose |
 |---|---|
-| `prompt-evaluator` skill | Applies the 7-dimension evaluation rubric, decision gates, and Prompt Evaluation Report contract |
+| `prompt-structure-writer` skill, Evaluation Mode | Applies the 7-dimension evaluation rubric, decision gates, and Prompt Evaluation Report contract |
 
 ## Output
 
-Return exactly the Prompt Evaluation Report contract from the `prompt-evaluator` skill:
+Return exactly the Prompt Evaluation Report contract from `prompt-structure-writer` Evaluation Mode:
 
 - **Overall Score** (0-100) and **Verdict** (READY / NEEDS_REFINEMENT / MAJOR_REWRITE)
 - Dimension scores across 7 axes

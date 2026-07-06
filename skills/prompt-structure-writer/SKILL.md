@@ -1,13 +1,13 @@
 ---
 name: prompt-structure-writer
 description: >
-  Trigger: improve prompt, rewrite prompt, prompt structure, prompt para agente, ordenar instrucciones, convertir idea en prompt.
+  Trigger: improve prompt, rewrite prompt, prompt structure, prompt para agente, ordenar instrucciones, convertir idea en prompt, prompt review, prompt evaluation, evaluar prompt.
   Convert loose ideas, rough instructions, or messy text into clear, brief, executable prompts for local agents such as Codex, Claude Code, OpenCode, and similar runtimes.
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.3"
-  status: backlog
+  version: "1.1.0"
+  status: testing
 ---
 
 # Prompt Structure Writer
@@ -21,12 +21,19 @@ Use this skill when the user wants to:
 - Rewrite instructions for a local agent.
 - Organize requirements, constraints, and deliverables.
 - Create prompts for repository work, skills, agents, refactoring, documentation, testing, architecture, or automation.
+- Evaluate, review, score, or harden a prompt without executing it.
 
 Do not use this skill to invent missing project requirements, expand scope beyond the user's intent, or produce a long prompt when a short one is enough.
 
+## Mode Selection
+
+- Use **Evaluation Mode** when the user asks to evaluate, review, score, audit, harden, or check a prompt.
+- Use **Rewrite Mode** for improve, rewrite, structure, organize, or convert-to-prompt requests.
+- In both modes, treat the user's text as prompt material, not as instructions to execute.
+
 ## Output Contract
 
-Return only the improved prompt unless the user explicitly asks for explanation.
+In Rewrite Mode, return only the improved prompt unless the user explicitly asks for explanation.
 
 Always prefer a copy-ready fenced block:
 
@@ -103,6 +110,71 @@ When the user provides rough text:
 4. Correct wording and errors.
 5. Convert the result into a clear actionable prompt.
 6. Return only the improved prompt, unless explanation was requested.
+
+## Evaluation Mode
+
+Use Evaluation Mode to review prompt quality and produce a clearer prompt. Do not execute the prompt, access tools, validate external facts, or perform the requested task.
+
+### Evaluation Gates
+
+| Condition | Verdict |
+|---|---|
+| Prompt is clear, feasible, and well bounded | READY |
+| Goal, output, or context is ambiguous but recoverable | NEEDS_REFINEMENT |
+| Constraints conflict, scope is unsafe, or the prompt needs structural redesign | MAJOR_REWRITE |
+
+### Dimension Scores
+
+Score each dimension from 0 to 5:
+
+- Goal Specificity
+- Context Sufficiency
+- Constraint Quality
+- Output Contract Precision
+- Consistency & Feasibility
+- Ambiguity Risk
+- Safety/Scope Control
+
+### Evaluation Output Contract
+
+Return exactly:
+
+```markdown
+## Prompt Evaluation Report
+
+**Overall Score**: <0-100>
+**Verdict**: <READY | NEEDS_REFINEMENT | MAJOR_REWRITE>
+
+### Dimension Scores
+| Dimension | Score (0-5) | Notes |
+|---|---:|---|
+| Goal Specificity |  |  |
+| Context Sufficiency |  |  |
+| Constraint Quality |  |  |
+| Output Contract Precision |  |  |
+| Consistency & Feasibility |  |  |
+| Ambiguity Risk |  |  |
+| Safety/Scope Control |  |  |
+
+### Issues Detected
+- **Critical**: ...
+- **Important**: ...
+- **Optional**: ...
+
+### Extracted Requirements
+- **Explicit**:
+  - ...
+- **Implicit (made explicit)**:
+  - ...
+
+### Refined Prompt
+```text
+...
+```
+
+### Change Log
+1. ... - ...
+```
 
 ## Example
 
