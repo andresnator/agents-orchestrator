@@ -33,6 +33,7 @@ The generated plan is saved to:
 - It does not modify production paths, build files, source files, or tests.
 - It does not create real `openspec/changes/**` artifacts.
 - It does not mix functional changes into refactoring tasks.
+- It does not rely on a global write-blocking plugin; write scope lives in the planner's `permission` frontmatter.
 
 ## Architecture
 
@@ -44,6 +45,7 @@ The generated plan is saved to:
 | Reviewer subagents | Nine focused lenses load `reviewer-output-contract` and return compact YAML findings or `nf: "<reason>"`. |
 | Composer subagent | `refactor-openspec-composer` creates the unified 17-section plan. |
 | Safety subagent | `refactor-safety-gate-reviewer` blocks unsafe, speculative, or non-evidence-based plans. |
+| Write boundary | `refactor-planner` permissions allow writes only under `.ia-refactor/plan/**`; subagents remain read-only. |
 | Skills | `skills/*/SKILL.md` provides reusable single-responsibility review instructions; `domains/*/skills/*` declare domain usage by symlink. |
 
 ## Depths
@@ -119,7 +121,7 @@ The planner must run the linter before safety review and again before finishing.
 
 - `domains/refactor/commands/*.md` for commands.
 - `domains/refactor/agents/*.md` for primary agents and subagents.
-- `domains/refactor/plugins/*.ts` for OpenCode plugins installed by `installers/opencode.sh`.
+- `domains/<domain>/plugins/*.ts` for OpenCode plugins installed by `installers/opencode.sh` when a domain owns runtime behavior.
 - `skills/<name>/SKILL.md` for skill bodies and `domains/<domain>/skills/<name>` symlinks for domain usage.
 
 ## Catalog Notes

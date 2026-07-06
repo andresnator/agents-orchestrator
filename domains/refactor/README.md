@@ -1,6 +1,6 @@
 # Refactor Domain
 
-Refactor planning, risk-gated legacy safety analysis, Java refactor guidance, reviewer agents, and the OpenCode write-guard plugin.
+Refactor planning, risk-gated legacy safety analysis, Java refactor guidance, and reviewer agents.
 
 Primary entries: `refactor-planner`.
 
@@ -15,5 +15,6 @@ graph TD
   reviewers --> composer[refactor-openspec-composer]
   composer --> safety[refactor-safety-gate-reviewer]
   safety --> plan[17-section plan]
+  planner -. permission .-> boundary[.ia-refactor/plan only]
   reviewers -.-> skills[quality and safety skills]
 ```

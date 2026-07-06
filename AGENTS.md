@@ -21,7 +21,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 ## Domains
 
 - `sdd`: spec-driven development workflows, SDD commands, and judgment-day agents.
-- `refactor`: refactor planning, legacy safety planning, Java refactor skills, and the write-guard plugin.
+- `refactor`: risk-gated refactor planning, Java refactor skills, and safety reviewer agents.
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.

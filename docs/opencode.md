@@ -23,14 +23,15 @@ Agents and commands are Markdown files with YAML frontmatter and the prompt body
 
 Skills are declared per domain as symlinks to top-level `skills/<skill>/` directories. The installer resolves those symlinks and links the central skill directories into OpenCode without rewriting. Plugins are linked as TypeScript files.
 
-## Refactor Plugin
+## Refactor Write Boundary
 
-`domains/refactor/plugins/write-guard.ts` belongs to the refactor planning flow. It denies writes outside `.ia-refactor/plan/YYYYMMDD/<target>.md` before tool execution.
+The refactor planning flow relies on agent `permission` frontmatter for write scoping. `refactor-planner` may write only under `.ia-refactor/plan/**`; there is no global refactor write-blocking plugin.
 
 ## Operational Notes
 
 - The installer default is all domains and all statuses.
 - Use `--domain` and `--status` to narrow installs.
 - Domain skill symlinks decide which skills are selected for a domain.
+- Plugins are discovered generically from `domains/<domain>/plugins/*.ts`; they are installed with the selected domain and are not filtered by skill status.
 - Manifest sync removes stale symlinks from the previous install selection.
 - CodeGraph MCP and compaction settings are runtime-local OpenCode configuration, not repo build outputs.
