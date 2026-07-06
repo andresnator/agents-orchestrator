@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.0.1"
   status: in-progress
 ---
 
@@ -35,7 +35,7 @@ Load this skill when building a legacy safety plan or scoping work around charac
 2. List the smallest characterization slices that reduce regression risk fastest.
 3. Highlight seam opportunities that enable isolation, fakes, or safer rollback.
 4. Prefer backlog items that can be validated incrementally.
-5. Keep speculative cleanup and redesign out of executable legacy-safety backlog.
+5. Keep speculative cleanup and redesign out of executable refactor-plan backlog.
 
 ## Test Types
 
@@ -57,7 +57,7 @@ Return guidance that sharpens characterization coverage, seam selection, contain
 
 ## References
 
-- the legacy-safety-planner agent
+- the refactor-planner agent
 - the reviewer-output-contract skill
 - the tooling-audit skill
 - the tooling-compatibility-matrix skill

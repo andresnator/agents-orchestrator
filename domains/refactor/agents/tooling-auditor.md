@@ -18,7 +18,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
+  version: "1.0.1"
   status: in-progress
 ---
 # tooling-auditor
@@ -40,7 +40,7 @@ Parallelizable analysis worker. Run in parallel with the other six analysis agen
 ## Safety boundary
 
 - Read-only: no edits, writes, refactors, generated repository artifacts, shell commands, web fetches, or nested tasks.
-- Return findings to `legacy-safety-planner` for consolidation.
+- Return findings to `refactor-planner` for consolidation.
 - Echo `target_path`, `target_slug`, and any supplied `unit_slug` values exactly as received.
 - Follow shared permission parity: subagent permissions must not exceed the primary agent's permissions.
 

@@ -1,18 +1,16 @@
 # OpenCode Refactor Plan Harness
 
-This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow that analyzes a code class, package, or module and writes one OpenSpec-style Markdown refactor plan.
+This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow that analyzes a code class, package, or module and writes one risk-gated OpenSpec-style Markdown refactor plan.
 
 ## Quick path
 
 ```bash
 opencode run "/refactor-plan src/main/java/com/acme/billing/InvoiceService.java"
 opencode run "/refactor-plan src/main/java/com/acme/billing"
-opencode run "/refactor-plan src/main/java/com/acme"
-opencode run "/legacy-safety-plan src/main/java/com/acme/billing/LegacyOrderProcessor.java"
-opencode run "/legacy-safety-plan mode=smoke src/main/java/com/acme/billing/LegacyOrderProcessor.java"
+opencode run "/refactor-plan mode=smoke src/main/java/com/acme/billing/LegacyOrderProcessor.java"
 ```
 
-The `mode=smoke` (or `--smoke`) flag skips the full worker/reviewer fan-out and writes a stub 12-section plan straight through lint, for fast harness validation.
+The `mode=smoke` flag writes a stub 17-section plan through lint for fast harness validation. Smoke output is not executable by `/refactor-execute`.
 
 The generated plan is saved to:
 
@@ -20,20 +18,19 @@ The generated plan is saved to:
 .ia-refactor/plan/YYYYMMDD/<target-name>.md
 ```
 
-For a class, `<target-name>` is usually the class name. For a package or module, it is the last meaningful path segment. If names collide, the planner must include more sanitized path context.
-
 ## What it does
 
-- Detects target type: class, package, or module.
-- Finds relevant source files, collaborators, callers, and tests.
-- Runs specialized review subagents for refactor findings.
-- Consolidates findings into one OpenSpec-style plan with proposal, design, spec, and tasks sections.
-- Runs a safety gate review before saving.
+- Freezes a single `plan_target` lock for the whole run.
+- Runs `scope-analyzer`, caps the target at 8 units, then runs `risk-assessor`.
+- Selects depth from risk: `low -> light`, `medium -> standard`, `high|critical -> deep`.
+- Uses reviewer lenses only when depth requires them.
+- Produces one 17-section plan with `Risk:`, `Depth:`, OpenSpec-style change sections, and `## 15. Execution Contract`.
+- Runs `plan-lint.sh` and `refactor-safety-gate-reviewer` before completion.
 
 ## What it does not do
 
 - It does not refactor code.
-- It does not modify production paths such as `src/**`, `app/**`, `lib/**`, `domain/**`, `infrastructure/**`, or build files.
+- It does not modify production paths, build files, source files, or tests.
 - It does not create real `openspec/changes/**` artifacts.
 - It does not mix functional changes into refactoring tasks.
 
@@ -41,102 +38,90 @@ For a class, `<target-name>` is usually the class name. For a package or module,
 
 | Part | Role |
 |---|---|
-| Command | `domains/refactor/commands/{refactor-plan,legacy-safety-plan}.md` receives `$ARGUMENTS` and routes to the matching planner. |
-| Primary agent | `domains/refactor/agents/{refactor-planner,legacy-safety-planner}.md` orchestrates review, composition, safety, and saving for its workflow. |
-| Reviewer subagents | Focused analysis agents load a shared `reviewer-output-contract` skill and return compact YAML findings or `nf: "<reason>"`, with max-5-findings noise caps and short enums to reduce token usage without dropping composer/safety data. |
-| Legacy analysis workers | `scope-analyzer`, `behavior-characterizer`, `dependency-seam-finder`, `risk-assessor`, `test-planner`, `architecture-reviewer`, and `tooling-auditor` run read-only legacy-risk analysis under `/legacy-safety-plan`, locked to a single frozen target for the whole run. |
-| Tooling matrix | `tooling-audit` and `tooling-compatibility-matrix` skills give `tooling-auditor` an offline Java/JS-TS/Python baseline for test, coverage, and mutation tooling (JaCoCo/PIT, Stryker, coverage.py/mutmut/cosmic-ray) with install snippets and verify commands. |
-| Composer subagent | `refactor-openspec-composer` creates either the standard 14-section refactor plan or the 12-section legacy-safety template. |
+| Command | `domains/refactor/commands/refactor-plan.md` receives `$ARGUMENTS` and routes to `refactor-planner`. |
+| Primary agent | `domains/refactor/agents/refactor-planner.md` orchestrates scope, risk, reviewer fan-out, composition, safety, lint, and saving. |
+| Analysis workers | `scope-analyzer`, `risk-assessor`, `behavior-characterizer`, `dependency-seam-finder`, `test-planner`, `architecture-reviewer`, and `tooling-auditor` provide locked, read-only safety analysis. |
+| Reviewer subagents | Nine focused lenses load `reviewer-output-contract` and return compact YAML findings or `nf: "<reason>"`. |
+| Composer subagent | `refactor-openspec-composer` creates the unified 17-section plan. |
 | Safety subagent | `refactor-safety-gate-reviewer` blocks unsafe, speculative, or non-evidence-based plans. |
-| Runtime plugin | `domains/refactor/plugins/write-guard.ts` hard-denies writes outside `.ia-refactor/plan/YYYYMMDD/<target>.md` before tool execution. |
-| Skills | `skills/*/SKILL.md` provides reusable single-responsibility review instructions; `domains/refactor/skills/*` and `domains/common/skills/*` declare domain usage by symlink. |
+| Skills | `skills/*/SKILL.md` provides reusable single-responsibility review instructions; `domains/*/skills/*` declare domain usage by symlink. |
 
-## Parallelizable and sequential phases
+## Depths
 
-Parallelizable under `/refactor-plan`, when the OpenCode runtime supports concurrent subagents:
+| Risk | Depth | Behavior |
+|---|---|---|
+| `low` | `light` | No reviewer panel; the planner writes minimal findings from scope and risk evidence. |
+| `medium` | `standard` | Runs selected reviewer lenses. Naming and type-contract lenses always run; other lenses follow target-size and collaborator heuristics. |
+| `high` or `critical` | `deep` | Runs behavior, seam, test, architecture, tooling workers plus all nine reviewer lenses. |
 
-- `naming-readability-reviewer`
-- `function-size-responsibility-reviewer`
-- `solid-design-reviewer`
-- `duplication-simplicity-reviewer`
-- `cohesion-coupling-reviewer`
-- `type-contract-nullability-reviewer`
-- `complexity-performance-reviewer`
-- `antipattern-reviewer`
-- `logging-observability-reviewer`
+Sections 8 and 9 always exist. When characterization or tooling is not required at the selected depth, the section contains exactly:
 
-Parallelizable under `/legacy-safety-plan`, after `scope-analyzer` resolves units:
+```text
+Not required at depth: <depth>.
+```
 
-- `behavior-characterizer`
-- `dependency-seam-finder`
-- `risk-assessor`
-- `test-planner`
-- `architecture-reviewer`
-- `tooling-auditor`
+## Required Plan Shape
 
-Sequential phases:
+Every plan uses one title/prelude plus exactly 17 sections:
 
-1. Consolidate and deduplicate findings.
-2. Resolve contradictions.
-3. Prioritize findings.
-4. Compose the OpenSpec-style Markdown.
-5. Run the safety gate review.
-6. Save the final plan.
+```text
+# Refactor Plan: <target-name>
+Generated at: <YYYY-MM-DD>
+Target: `<target>`
+Output file: `.ia-refactor/plan/YYYYMMDD/<target-name>.md`
+Risk: <low | medium | high | critical>
+Depth: <light | standard | deep | smoke>
+```
 
-## Skills
+Sections:
 
-Skills are not workers. They are reusable instructions loaded by reviewers and composers. Each skill has one responsibility and should stay concise, evidence-based, and plan-only.
+1. Executive Summary
+2. Target and Scope
+3. Risk and Depth Assessment
+4. Observations
+5. Goals
+6. Non-Goals
+7. Findings by Category
+8. Characterization Coverage Plan
+9. Tooling Audit
+10. Backlog
+11. Sequence
+12. OpenSpec-Style Change
+13. Validation
+14. Risk & Rollback
+15. Execution Contract
+16. Follow-up
+17. Safety Gate Result
 
-## Extending the system
+## Execution Contract
 
-To add a new review lens:
+Section 15 is the producer-to-executor handoff. It must tell a future executor how to:
 
-1. Add one `skills/<skill-name>/SKILL.md` file and symlink it from the domains that use it.
-2. Add one fused `domains/refactor/agents/<reviewer-name>.md` file for the subagent that loads that skill.
-3. Allow that subagent in `refactor-planner.md` task permissions.
-4. Add a category to the composer if the final plan needs a new findings section.
+- confirm Section 17 has `safety_review.status: "approved"`;
+- establish the baseline validation from Section 13;
+- execute Section 12 `tasks.md` in order;
+- re-check evidence before each task;
+- log deviations as `{task, status, reason, evidence}`;
+- use TCR: commit green task validations and revert red validations;
+- stop after repeated reverts, baseline failure, or target drift.
 
-## `/legacy-safety-plan` vs `/refactor-plan`
+## Validation
 
-This repository now includes both commands. Keep the distinction clear:
+Use the portable linter:
 
-- `/legacy-safety-plan`: focuses on baseline safety, characterization coverage, seams, containment, rollback, and tooling provisioning before touching legacy code. It fans out seven read-only workers under a single frozen `plan_target` lock, enumerates units (blocking above 8), conditionally runs a deep code-quality lens pass only when risk is `high`/`critical`, and folds a tooling-gap audit into the plan. Output is a single 12-section Markdown file.
-- `/refactor-plan`: focuses on an evidence-based sequence of behavior-preserving refactors up to OpenSpec-style `tasks.md`. Output is a single 14-section Markdown file.
+```bash
+sh skills/refactor-plan-safety-gates/assets/plan-lint.sh .ia-refactor/plan/YYYYMMDD/<target-name>.md
+```
 
-Both commands share the composer, the safety gate, the write-guard plugin, and `plan-lint.sh` — only the template, section count, and analysis pipeline differ.
+The planner must run the linter before safety review and again before finishing.
 
-### Limitation: external targets
-
-Both commands can analyze a target outside this repository (an absolute path elsewhere on disk), but the generated plan always saves inside this repository's `.ia-refactor/plan/**` — the write-guard denies writes to any other directory tree, including the target's own repository.
-
-## Layout and syntax decision
-
-This harness uses the official project-local OpenCode layout:
+## Layout
 
 - `domains/refactor/commands/*.md` for commands.
 - `domains/refactor/agents/*.md` for primary agents and subagents.
-- `domains/refactor/plugins/*.ts` for runtime plugins installed by `installers/opencode.sh`.
+- `domains/refactor/plugins/*.ts` for OpenCode plugins installed by `installers/opencode.sh`.
 - `skills/<name>/SKILL.md` for skill bodies and `domains/<domain>/skills/<name>` symlinks for domain usage.
-
-Markdown command files use YAML frontmatter and `$ARGUMENTS`. Agent files use YAML frontmatter with `mode`, `description`, and `permission`. Permission keys use the verified OpenCode permission keys from the implementation prompt. A dedicated write probe on 2026-07-03 confirmed that the active runtime write boundary is enforced by the scoped permissions plus `domains/refactor/plugins/write-guard.ts`: writes under `.ia-refactor/plan/**` were allowed and a root-level write was blocked before mutation.
-
-## Dry-run status
-
-Real runs executed on 2026-07-03 produced current evidence for the hardened harness, before the legacy-safety pipeline below was unified with a second harness (`evaluate-coverage`):
-
-- `.ia-refactor/plan/20260703/price-utils.md` — JavaScript target, lint-clean, safety approved.
-- `.ia-refactor/plan/20260703/LegacyOrderProcessor-legacy-safety.md` — legacy-safety target, lint-clean under the prior 10-section template (superseded by the 12-section template below).
-- `.ia-refactor/plan/20260703/NoteService.md` — adversarial prompt-injection target, lint-clean, write boundary held.
-- `.ia-refactor/plan/20260703/InvoiceService-opencode-test-fixtures.md` — refined InvoiceService plan with pointer spam removed and the same 2 in-scope items / 7 follow-ups preserved from the earlier baseline.
-
-### Legacy-safety pipeline unification (2026-07-03)
-
-`/legacy-safety-plan` absorbed a second OpenCode harness (`evaluate-coverage`): seven analysis workers, a file-less target lock (`plan_target` echoed through every payload instead of a handoff file), unit enumeration with an 8-unit cap, a conditional deep-lens pass gated on risk level, and the tooling-audit/tooling-compatibility-matrix capability. The legacy template grew from 10 to 12 sections (added Unit Breakdown and Tooling Audit and Provisioning); `plan-lint.sh`, the composer, and the safety gate were updated together to stay in lock-step. See the verification run below for post-merge evidence.
-
-## Known limitations
-
-- Reviewer fan-out is now instructed as a single-message batch and was observed overlapping in the local OpenCode session store on 2026-07-03. Runtime scheduling still depends on OpenCode/model support, so overlap should be treated as verified behavior for this environment, not a universal guarantee for every runtime.
 
 ## Catalog Notes
 
-The OpenCode plugin is stored under `domains/refactor/plugins/write-guard.ts` and is installed with the refactor domain. The plan linter travels with the `refactor-plan-safety-gates` skill under `assets/plan-lint.sh`.
+The plan linter travels with the `refactor-plan-safety-gates` skill under `assets/plan-lint.sh`.
