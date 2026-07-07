@@ -25,7 +25,7 @@ Skills are declared per domain as symlinks to top-level `skills/<skill>/` direct
 
 ## Skill Registry Plugin
 
-`domains/meta/plugins/skill-registry.ts` generates `.atl/skill-registry.md` and `.atl/skill-registry.hash` on OpenCode startup without blocking the session. It scans project and user skill directories, resolves symlinks, deduplicates by skill name with project skills winning, and writes only when its staleness hash changes.
+`domains/meta/plugins/skill-registry.ts` generates `.ai/atl/skill-registry.md` and `.ai/atl/skill-registry.hash` on OpenCode startup without blocking the session. On startup it migrates legacy `.atl/` to `.ai/atl/` when the new location does not already exist. It scans project and user skill directories, resolves symlinks, deduplicates by skill name with project skills winning, and writes only when its staleness hash changes.
 
 ## Refactor Write Boundary
 

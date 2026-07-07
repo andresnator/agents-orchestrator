@@ -23,11 +23,6 @@ permission:
     "./gradlew*": allow
     "./mvnw*": allow
     "npm test*": allow
-license: Apache-2.0
-metadata:
-  author: andresnator
-  version: "1.0.0"
-  status: in-progress
 ---
 # refactor-executor
 

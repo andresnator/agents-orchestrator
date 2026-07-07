@@ -1,5 +1,5 @@
 import crypto from "node:crypto"
-import { existsSync } from "node:fs"
+import { statSync } from "node:fs"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -13,11 +13,10 @@ type SkillEntry = {
   path: string
   mtimeMs: number
   project: boolean
-  compactRules: string[]
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
-const MAX_RULE_LINES = 15
+const FORMAT_VERSION = "3"
 
 function scalar(frontmatter: string, key: string) {
   const lines = frontmatter.split(/\r?\n/)
@@ -42,48 +41,29 @@ function scalar(frontmatter: string, key: string) {
 
 function triggerFrom(description: string) {
   const match = description.match(/Trigger:\s*([^.\n]+)/i)
-  return (match?.[1] ?? description).replace(/\s+/g, " ").trim()
+  const trigger = (match?.[1] ?? description).replace(/\s+/g, " ").trim()
+  if (trigger.length <= 120) return trigger
+  return `${trigger.slice(0, 119)}…`
 }
 
-function firstSection(body: string, headings: string[]) {
-  const lines = body.split(/\r?\n/)
-  for (let index = 0; index < lines.length; index++) {
-    const heading = lines[index].trim().toLowerCase()
-    if (!headings.some((candidate) => heading === candidate.toLowerCase())) continue
+function tableCell(value: string) {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim()
+}
 
-    const out: string[] = []
-    for (let next = index + 1; next < lines.length && out.length < MAX_RULE_LINES; next++) {
-      if (/^##\s+/.test(lines[next])) break
-      const value = lines[next].trim()
-      if (value) out.push(value)
-    }
-    return out
+async function directoryExists(dir: string) {
+  try {
+    return (await fs.stat(dir)).isDirectory()
+  } catch {
+    return false
   }
-  return []
-}
-
-function fallbackRules(body: string) {
-  const lines = body.split(/\r?\n/)
-  const start = lines.findIndex((line) => /^#\s+/.test(line))
-  return lines
-    .slice(start >= 0 ? start + 1 : 0)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 10)
 }
 
 async function parseSkill(file: string, project: boolean): Promise<SkillEntry | undefined> {
-  const text = await fs.readFile(file, "utf8")
   const stat = await fs.stat(file)
-  const match = text.match(FRONTMATTER_RE)
-  const frontmatter = match?.[1] ?? ""
-  const body = text.slice(match?.[0].length ?? 0)
+  const text = await fs.readFile(file, "utf8")
+  const frontmatter = text.match(FRONTMATTER_RE)?.[1] ?? ""
   const name = scalar(frontmatter, "name") || path.basename(path.dirname(file))
   if (name === "skill-registry") return undefined
-
-  const compactRules =
-    firstSection(body, ["## Rules", "## Hard Rules", "## Critical Patterns"]) ??
-    fallbackRules(body)
 
   return {
     name,
@@ -93,13 +73,25 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
     path: file,
     mtimeMs: stat.mtimeMs,
     project,
-    compactRules: compactRules.length > 0 ? compactRules : fallbackRules(body),
   }
 }
 
 async function listSkillFiles(dir: string) {
   const out: string[] = []
+  const seenDirs = new Set<string>()
+
+  // Report paths as discovered under the scanned root (e.g. ~/.config/opencode/skills/...),
+  // not their symlink targets; realpath is used only for cycle detection.
   async function walk(current: string) {
+    let realCurrent: string
+    try {
+      realCurrent = await fs.realpath(current)
+    } catch {
+      return
+    }
+    if (seenDirs.has(realCurrent)) return
+    seenDirs.add(realCurrent)
+
     let entries
     try {
       entries = await fs.readdir(current, { withFileTypes: true })
@@ -109,22 +101,27 @@ async function listSkillFiles(dir: string) {
 
     for (const entry of entries) {
       const full = path.join(current, entry.name)
-      if (entry.isDirectory()) await walk(full)
-      else if (entry.isFile() && entry.name === "SKILL.md") out.push(await fs.realpath(full))
+      let entryStat
+      try {
+        entryStat = await fs.stat(full)
+      } catch {
+        continue
+      }
+
+      if (entryStat.isDirectory()) await walk(full)
+      else if (entryStat.isFile() && entry.name === "SKILL.md") out.push(full)
     }
   }
 
   await walk(dir)
-  return out
+  return [...new Set(out)]
 }
 
 async function discoverSkills(worktree: string) {
   const home = os.homedir()
   const roots = [
     { dir: path.join(home, ".config/opencode/skills"), project: false },
-    { dir: path.join(home, ".claude/skills"), project: false },
     { dir: path.join(worktree, ".opencode/skills"), project: true },
-    { dir: path.join(worktree, ".claude/skills"), project: true },
     { dir: path.join(worktree, ".agents/skills"), project: true },
     { dir: path.join(worktree, "skills"), project: true },
   ]
@@ -141,95 +138,144 @@ async function discoverSkills(worktree: string) {
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-async function conventionRows(worktree: string) {
-  const conventionFiles = ["AGENTS.md", "CLAUDE.md", ".cursorrules", "GEMINI.md", "copilot-instructions.md"]
+type ConventionData = {
+  rows: string
+  hashInput: string
+}
+
+async function collectConventions(worktree: string): Promise<ConventionData> {
+  // Case-insensitive filesystems and symlinked convention files resolve several
+  // candidates to the same on-disk file; dedupe by inode, keeping the first.
+  const seenInodes = new Set<string>()
+  const conventionFiles = ["AGENTS.md", "agents.md", "CLAUDE.md", ".cursorrules", "GEMINI.md", "copilot-instructions.md"]
     .map((file) => path.join(worktree, file))
-    .filter(fileExistsSync)
+    .filter((file) => {
+      const inode = inodeKeySync(file)
+      if (!inode || seenInodes.has(inode)) return false
+      seenInodes.add(inode)
+      return true
+    })
 
   const rows: string[] = []
   const seen = new Set<string>()
+  const hashParts: string[] = []
+
+  async function addHash(file: string) {
+    try {
+      const text = await fs.readFile(file, "utf8")
+      const digest = crypto.createHash("sha256").update(text).digest("hex")
+      hashParts.push(`${file}@${digest}`)
+      return text
+    } catch {
+      return ""
+    }
+  }
+
   for (const file of conventionFiles) {
-    rows.push(`| ${path.basename(file)} | ${file} | Project convention file |`)
+    rows.push(`| ${tableCell(path.basename(file))} | ${tableCell(file)} | Project convention file |`)
     seen.add(file)
 
-    let text = ""
-    try {
-      text = await fs.readFile(file, "utf8")
-    } catch {
-      continue
-    }
+    const text = await addHash(file)
+    if (!text) continue
 
     for (const match of text.matchAll(/`([^`]+)`/g)) {
       const candidate = match[1]
       if (!candidate || candidate.includes("*") || candidate.includes("{")) continue
       const resolved = path.resolve(worktree, candidate)
-      if (!resolved.startsWith(worktree) || seen.has(resolved) || !fileExistsSync(resolved)) continue
+      const relative = path.relative(worktree, resolved)
+      if (
+        relative === ".atl" ||
+        relative.startsWith(`.atl${path.sep}`) ||
+        relative === ".ai" ||
+        relative.startsWith(`.ai${path.sep}`)
+      ) {
+        continue
+      }
+      if (!resolved.startsWith(worktree + path.sep) || seen.has(resolved) || !regularFileSync(resolved)) continue
       seen.add(resolved)
-      rows.push(`| ${path.basename(resolved)} | ${resolved} | Referenced by ${path.basename(file)} |`)
+      await addHash(resolved)
+      rows.push(`| ${tableCell(path.basename(resolved))} | ${tableCell(resolved)} | Referenced by ${tableCell(path.basename(file))} |`)
     }
   }
-  return rows.join("\n")
+  return { rows: rows.join("\n"), hashInput: hashParts.sort().join("\n") }
 }
 
-async function renderRegistry(skills: SkillEntry[], worktree: string) {
+async function renderRegistry(skills: SkillEntry[], conventions: ConventionData) {
   const userRows = skills
-    .map((skill) => `| ${triggerFrom(skill.description) || "-"} | ${skill.name} | ${skill.path} |`)
+    .map((skill) => `| ${tableCell(triggerFrom(skill.description) || "-")} | ${tableCell(skill.name)} | ${tableCell(skill.path)} |`)
     .join("\n")
-
-  const compactRules = skills
-    .map((skill) => {
-      const rules = skill.compactRules.map((rule) => `- ${rule.replace(/^[-*]\s*/, "")}`).join("\n")
-      return `### ${skill.name}\n${rules || "- No compact rules found."}`
-    })
-    .join("\n\n")
-
-  const conventions = await conventionRows(worktree)
 
   return `# Skill Registry
 
-Auto-generated — do not edit.
+Auto-generated — do not edit. Discovery index only: match a trigger, then read the skill's SKILL.md at the listed path for its full contract.
 
-## User Skills
+## Skills
 
 | Trigger | Skill | Path |
 |---|---|---|
 ${userRows || "| - | - | - |"}
 
-## Compact Rules
-
-${compactRules || "_No skills found._"}
-
 ## Project Conventions
 
 | File | Path | Notes |
 |---|---|---|
-${conventions || "| - | - | - |"}
+${conventions.rows || "| - | - | - |"}
 `
 }
 
-function fileExistsSync(file: string) {
-  return existsSync(file)
+function regularFileSync(file: string) {
+  try {
+    return statSync(file).isFile()
+  } catch {
+    return false
+  }
+}
+
+function inodeKeySync(file: string) {
+  try {
+    const stat = statSync(file)
+    return stat.isFile() ? `${stat.dev}:${stat.ino}` : ""
+  } catch {
+    return ""
+  }
 }
 
 async function ensureInfoExclude(worktree: string) {
   const exclude = path.join(worktree, ".git/info/exclude")
   try {
     const text = await fs.readFile(exclude, "utf8")
-    if (/(^|\n)\.atl\/?(\n|$)/.test(text)) return
-    await fs.appendFile(exclude, text.endsWith("\n") ? ".atl/\n" : "\n.atl/\n")
+    if (/(^|\n)\.ai\/?(\n|$)/.test(text)) return
+    await fs.appendFile(exclude, text.endsWith("\n") ? ".ai/\n" : "\n.ai/\n")
   } catch {
     // Non-git worktrees are valid OpenCode projects; skip local exclude updates.
   }
 }
 
+async function migrateLegacyAtl(worktree: string) {
+  const legacyDir = path.join(worktree, ".atl")
+  const aiDir = path.join(worktree, ".ai")
+  const atlDir = path.join(aiDir, "atl")
+
+  if (!(await directoryExists(legacyDir)) || (await directoryExists(atlDir))) return
+
+  try {
+    await fs.mkdir(aiDir, { recursive: true })
+    await fs.rename(legacyDir, atlDir)
+  } catch (error) {
+    console.error(`[skill-registry] legacy .atl migration failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
 async function generateRegistry(worktree: string) {
+  await migrateLegacyAtl(worktree)
   const skills = await discoverSkills(worktree)
+  const conventions = await collectConventions(worktree)
   const orderedHashInput = skills
     .map((skill) => `${skill.name}@${skill.version}@${skill.mtimeMs}`)
     .sort()
     .join("\n")
-  const hash = crypto.createHash("sha256").update(orderedHashInput).digest("hex")
-  const atlDir = path.join(worktree, ".atl")
+  const hash = crypto.createHash("sha256").update(`${FORMAT_VERSION}\n${orderedHashInput}\n${conventions.hashInput}`).digest("hex")
+  const atlDir = path.join(worktree, ".ai", "atl")
   const hashFile = path.join(atlDir, "skill-registry.hash")
   const registryFile = path.join(atlDir, "skill-registry.md")
 
@@ -240,15 +286,23 @@ async function generateRegistry(worktree: string) {
     // Missing hash means the registry should be written.
   }
 
-  await fs.writeFile(registryFile, await renderRegistry(skills, worktree), "utf8")
+  await fs.writeFile(registryFile, await renderRegistry(skills, conventions), "utf8")
   await fs.writeFile(hashFile, `${hash}\n`, "utf8")
   await ensureInfoExclude(worktree)
 }
 
+function projectRoot(input: { worktree?: string; directory: string }) {
+  const worktree = input.worktree ?? ""
+  // Non-git projects report the filesystem root as worktree; fall back to the session directory.
+  if (!worktree || worktree === path.parse(worktree).root) return input.directory
+  return worktree
+}
+
 export const SkillRegistryPlugin: Plugin = async (input) => {
+  const root = projectRoot(input)
   let failed = false
   const run = () =>
-    generateRegistry(input.worktree).catch((error) => {
+    generateRegistry(root).catch((error) => {
       failed = true
       console.error(`[skill-registry] ${error instanceof Error ? error.message : String(error)}`)
     })

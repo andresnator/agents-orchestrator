@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "3.0.0"
+  version: "3.0.1"
   status: in-progress
 ---
 
@@ -21,6 +21,7 @@ Load this skill when reviewing code refactor plans for safety, evidence, rollbac
 - Block behavior changes disguised as refactors.
 - Block plans that rename, merge, omit, or reorder the required 17 sections.
 - Block plans that omit `Risk:`, `Depth:`, the `plan_target` lock, Section 15 execution contract, or Section 17 safety YAML.
+- Block plans whose Section 3 omits `risk:` and `depth:` entries matching the prelude.
 - Block plans that omit `proposal.md`, `design.md`, `specs/<capability>/spec.md`, or `tasks.md`.
 - Block plans that use `Output:` instead of exact header label `Output file:`.
 - Block plans whose `tasks.md` entries are not ordered checkbox tasks (`- [ ]`) with evidence, validation, and rollback.
@@ -35,6 +36,7 @@ Load this skill when reviewing code refactor plans for safety, evidence, rollbac
 - Block public/API/deprecation/follow-up rows in Section 10 backlog, Section 11 sequence, or Section 12 `tasks.md`.
 - Block low-confidence, conditional, hypothesis, domain-terminology, or unverified rename rows in executable backlog or tasks.
 - Require Sections 8 and 9 to exist at every depth and use the exact placeholder `Not required at depth: <depth>.` when not required.
+- Require Sections 8 and 9 to contain concrete content, never the placeholder, at depth `deep`.
 - Block target-lock drift between Section 2 and worker-echoed target or unit identifiers.
 
 ## Decision Gates

@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.0.4"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -20,7 +20,7 @@ Use when drafting OpenSpec capability specs from an approved proposal or direct 
 - Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
 - Artifacts default to English; interview/summaries/gates use the user's language.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
-- One file per capability: `specs/{capability}/spec.md`. In `openspec/changes/`, new and modified capabilities both use delta sections; new behavior goes under ADDED Requirements.
+- One file per capability: `specs/{capability}/spec.md`. In `.ai/orchestrator/changes/`, new and modified capabilities both use delta sections; new behavior goes under ADDED Requirements.
 - Requirements use RFC 2119; scenarios use WHEN/THEN. Describe WHAT, not HOW. Keep under 650 words per domain.
 - When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
 
@@ -41,7 +41,7 @@ Use when drafting OpenSpec capability specs from an approved proposal or direct 
 3. For each capability, draft an OpenSpec change delta; use ADDED for new capability behavior and MODIFIED only for replacement behavior.
 4. Interview for observable requirements, scenarios, edge cases, removals, and renames.
 5. Present each spec or batch for approval; revise until approved.
-6. If standalone and approved, ask before writing `openspec/changes/{change-name}/specs/{capability}/spec.md`.
+6. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/specs/{capability}/spec.md`.
 
 ## Output Contract
 

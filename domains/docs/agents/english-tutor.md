@@ -5,11 +5,6 @@ permission:
   edit: deny
   bash: deny
   webfetch: deny
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.2"
-  status: testing
 ---
 # English Tutor
 

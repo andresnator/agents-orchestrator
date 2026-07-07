@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.2.1"
+  version: "1.3.2"
   status: in-progress
 ---
 
@@ -21,14 +21,14 @@ metadata:
 
 ### Pattern 0: Skill Resolution (BEFORE launching judges)
 
-Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates this file on session start; the read path stays the same.
+Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates `.ai/atl/skill-registry.md` on session start.
 
-1. Read `.atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
+1. Read `.ai/atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
 2. Identify the target files/scope: what code will the judges review?
-3. Match relevant skills from the registry's **Compact Rules** by:
+3. Match relevant skills from the registry's `## Skills` table by:
    - **Code context**: file extensions/paths of the target (e.g., `.tsx` → react-19, typescript)
    - **Task context**: "review code" → framework/language skills; "create PR" → branch-pr skill
-4. Build a `## Project Standards (auto-resolved)` block with the matching compact rules
+4. Read the matched skills' `SKILL.md` files, cap the set to the 3-5 most relevant skills, and distill their actionable rules into a `## Project Standards (auto-resolved)` block.
 5. Inject this block into BOTH Judge prompts AND the Fix Agent prompt (identical for all)
 
 This ensures judges review against project-specific standards, not just generic best practices.
@@ -42,7 +42,7 @@ Only the orchestrator runs this protocol. Judge agents and the fix agent review 
 When a runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate to those agents while preserving the same blindness, synthesis buckets, confirmed-only fix rule, and two-round escalation limit.
 
 
-- Launch **TWO** sub-agents with the runtime's sub-agent mechanism, such as OpenCode `delegate` or Claude Code `Task`.
+- Launch **TWO** sub-agents with the runtime's sub-agent mechanism, such as the OpenCode `task` tool or Claude Code `Task`.
 - Prefer parallel execution. If the runtime cannot run sub-agents in parallel, run the two judges sequentially with isolated blind prompts.
 - Each agent receives the **same target** but works **independently**
 - **Neither agent knows about the other** — no cross-contamination
@@ -51,7 +51,7 @@ When a runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate 
 
 ### Pattern 2: Verdict Synthesis
 
-The **orchestrator** (NOT a sub-agent) compares results after both judge sub-agents return their results (e.g., OpenCode `delegation_read`, or the runtime's equivalent):
+The **orchestrator** (NOT a sub-agent) compares results after both judge sub-agents return their results (each sub-agent call returns its result directly — e.g., the OpenCode `task` tool's return value, or the runtime's equivalent):
 
 ```
 Confirmed   → found by BOTH agents          → high confidence, fix immediately
@@ -80,7 +80,7 @@ User asks for "judgment day"
 │   └── NO → ask user to specify scope before proceeding
 │
 ▼
-Resolve skills (Pattern 0): read .atl registry if present → match by code + task context → build Project Standards block
+Resolve skills (Pattern 0): read .ai/atl registry if present → match by code + task context → build Project Standards block
 ▼
 Launch Judge A + Judge B with isolated prompts — in parallel when the runtime supports it
 ▼
@@ -124,9 +124,9 @@ You are an adversarial code reviewer. Your ONLY job is to find problems.
 ## Target
 {describe target: files, feature, architecture, component}
 
-{if compact rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
+{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
 ## Project Standards (auto-resolved)
-{paste matching compact rules blocks from the skill registry}
+{paste distilled actionable rules from the matched SKILL.md files}
 
 ## Review Criteria
 - Correctness: Does the code do what it claims? Are there logical errors?
@@ -164,9 +164,9 @@ You are a surgical fix agent. You apply ONLY the confirmed issues listed below.
 ## Confirmed Issues to Fix
 {paste the confirmed findings table from the verdict synthesis}
 
-{if compact rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
+{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
 ## Project Standards (auto-resolved)
-{paste matching compact rules blocks from the skill registry}
+{paste distilled actionable rules from the matched SKILL.md files}
 
 ## Context
 - Original review criteria: {paste same criteria used for judges}
@@ -256,7 +256,7 @@ Recommend: human review of the remaining issues above before re-running judgment
 ## Rules
 
 - The **orchestrator NEVER reviews code itself** — it only launches judges, reads results, and synthesizes
-- Judges use the active runtime's sub-agent mechanism; examples include OpenCode `delegate` and Claude Code `Task`
+- Judges use the active runtime's sub-agent mechanism; examples include the OpenCode `task` tool and Claude Code `Task`
 - Judges should run in parallel when available; otherwise run them sequentially with separate blind contexts
 - The **Fix Agent is a separate sub-agent** — never use one of the judges as the fixer
 - If user provides **custom review criteria**, include them in BOTH judge prompts (identical)
@@ -272,5 +272,5 @@ Recommend: human review of the remaining issues above before re-running judgment
 ```bash
 # No CLI commands — this is a pure orchestration protocol.
 # Execution happens via the runtime's sub-agent mechanism.
-# Examples: OpenCode delegate/delegation_read, Claude Code Task.
+# Examples: the OpenCode task tool, Claude Code Task.
 ```

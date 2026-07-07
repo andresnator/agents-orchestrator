@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.0.4"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -21,7 +21,7 @@ Use when drafting an OpenSpec `design.md` after proposal/spec context exists or 
 - Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
 - Artifacts default to English; interview/summaries/gates use the user's language.
 - Plan-only: no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
-- File Changes entries must name a real file path or `Create`. No code bodies. Enough precision for `sdd-apply` without re-deciding. Keep under 800 words.
+- File Changes entries must name a real file path or `Create`. No code bodies. Enough precision for the implementer to execute without re-deciding. Keep under 800 words.
 - When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
 
 ## Decision Gates
@@ -42,7 +42,7 @@ Use when drafting an OpenSpec `design.md` after proposal/spec context exists or 
 4. Interview only for non-discoverable technical decisions.
 5. Draft design with approach, decisions, data flow, file changes, contracts, tests, rollout, and open questions.
 6. Present for approval; revise until approved.
-7. If standalone and approved, ask before writing `openspec/changes/{change-name}/design.md`.
+7. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/design.md`.
 
 ## Output Contract
 

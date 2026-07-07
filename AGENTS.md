@@ -2,6 +2,8 @@
 
 This repo stores reusable OpenCode agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
 
+**This repo targets OpenCode only.** Do not add Claude Code (or other runtime) artifacts, and do not manage `~/.claude/**` state from this repo.
+
 ## Repo Shape
 
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
@@ -12,15 +14,16 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
+- `global/AGENTS.md` is the installable global OpenCode rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores workflow notes and migration records.
 - `installers/opencode.sh` symlinks selected domain components into OpenCode.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
-- `.atl/` is ignored local tool state; if `.atl/skill-registry.md` exists, treat it as a generated index produced by the meta `skill-registry` plugin. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
+- `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
 
 ## Domains
 
-- `sdd`: spec-driven development workflows, SDD commands, and judgment-day agents.
+- `sdd`: spec-driven development around the `orchestraitor` primary agent, SDD drafting skills, and judgment-day agents.
 - `refactor`: risk-gated refactor planning, Java refactor skills, and safety reviewer agents.
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
@@ -30,12 +33,13 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 - Component names must be unique globally within their type because OpenCode targets are flat.
 - Do not use `name:` or `prompt:` in agent or command frontmatter; OpenCode derives the name from the filename and the prompt is the file body.
-- Agent frontmatter order: `description`, `mode`, `model?`, `temperature?`, `permission`, `tools?`, `disable?`, `license`, `metadata`.
-- Command frontmatter order: `description`, `agent?`, `model?`, `subtask?`, `argument-hint?`, `license`, `metadata`.
+- Agent frontmatter order: `description`, `mode`, `temperature?`, `permission`, `tools?`, `disable?`.
+- Command frontmatter order: `description`, `agent?`, `model?`, `subtask?`, `argument-hint?`.
+- Do not add `license` or `metadata` to agent or command frontmatter; OpenCode routes unrecognized agent fields into model options and providers can reject them.
 - `argument-hint` may remain inline; OpenCode tolerates extra frontmatter keys.
 - Agent `mode` is `primary` or `subagent`.
 - Stub/prompt/override splitting is gone. Do not add separate prompt files for new components.
-- Forked agent or command files keep their original author and license, and record `metadata.adapted_by` plus `metadata.source`.
+- Track fork attribution for agents or commands outside OpenCode frontmatter; do not put attribution fields in executable agent or command metadata.
 
 ## Skill Files
 
@@ -62,8 +66,9 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 - Default target is `~/.config/opencode`.
 - `--project` targets `./.opencode` from the current working directory.
 - Default filter is `--domain all --status all`.
-- Valid statuses are `backlog`, `in-progress`, `testing`, and `done`.
+- Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, and plugins are not status-filtered.
 - The installer discovers agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
+- `install` always links `global/AGENTS.md` to `$TARGET/AGENTS.md` regardless of `--domain`/`--status` filters. A pre-existing foreign `AGENTS.md` in the target is skipped with a warning unless `--force`.
 - The installer writes `$TARGET/.agents-orchestrator-manifest` with `link<TAB>dest` and `dir<TAB>path` lines.
 - `install` is a sync: links from the previous manifest that are no longer selected are removed.
 - `uninstall` removes manifest-owned symlinks and empty created directories.
@@ -72,8 +77,8 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 
 1. Pick the domain first: `sdd`, `refactor`, `docs`, `meta`, or `common`.
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
-3. Set `metadata.status` deliberately. The installer includes all statuses unless filtered.
-4. Bump `metadata.version` when changing an existing component.
+3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
+4. For skills, bump `metadata.version` when changing an existing skill.
 5. Add a plugin under `domains/<domain>/plugins/` only for real OpenCode runtime behavior.
 6. Run `installers/opencode.sh install --dry-run` to confirm discovery and link behavior.
 

@@ -12,13 +12,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "2.0.0"
-  status: in-progress
 ---
 # refactor-openspec-composer
 
@@ -82,7 +75,7 @@ Use exactly these headings, in order:
 ## Mandatory rendering rules
 
 - `## 2. Target and Scope` must include one fenced YAML block that echoes the caller-supplied `plan_target` block verbatim.
-- `## 3. Risk and Depth Assessment` must include the selected risk, selected depth, and the evidence that drove the depth.
+- `## 3. Risk and Depth Assessment` must include one fenced YAML block with `risk:` and `depth:` entries matching the prelude, plus the evidence that drove the depth.
 - `## 4. Observations` must include worker/reviewer coverage from `reviewer_lens_coverage`.
 - `## 7. Findings by Category` must include these subsections exactly:
   - `### 7.1 Naming and Readability`
@@ -102,6 +95,8 @@ Use exactly these headings, in order:
 - `### tasks.md` must appear exactly once and use root checkbox lines (`- [ ] Task N: ...`) with indented `Evidence`, `Validation`, and `Rollback` bullets.
 - `## 15. Execution Contract` must include:
   - plan path and output file;
+  - the `plan_target` echo the executor uses for drift detection;
+  - the selected depth;
   - required approved Section 17 safety status;
   - validation command source from Section 13;
   - execution order from Section 12 `tasks.md`;

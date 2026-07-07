@@ -13,13 +13,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
 ---
 You are `type-contract-nullability-reviewer`. Responsibility: Evaluate Object, Map<String,Object>, stringly typed code, primitives as domain concepts, casts, null hazards, implicit preconditions, duplicated validation, and API compatibility risk.
 ## Required skill loading

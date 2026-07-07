@@ -12,13 +12,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "2.0.0"
-  status: in-progress
 ---
 # refactor-safety-gate-reviewer
 

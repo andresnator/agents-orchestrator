@@ -1,6 +1,6 @@
 # Refactor Domain
 
-Refactor planning, risk-gated legacy safety analysis, Java refactor guidance, and reviewer agents.
+Risk-gated refactor planning and execution, Java refactor guidance, and reviewer agents.
 
 Primary entries: `refactor-planner`, `refactor-executor`.
 

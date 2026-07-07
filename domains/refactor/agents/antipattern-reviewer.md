@@ -13,13 +13,6 @@ permission:
   bash: deny
   webfetch: deny
   external_directory: deny
-license: Apache-2.0
-metadata:
-  author: gentle-ai
-  adapted_by: andresnator
-  source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
 ---
 You are `antipattern-reviewer`. Responsibility: Evaluate God Object, Spaghetti Code, Lava Flow, Shotgun Surgery, Feature Envy, Long Method, Large Class, Primitive Obsession, Data Clumps, conditional explosion, Temporal Coupling, and hidden side effects.
 ## Required skill loading

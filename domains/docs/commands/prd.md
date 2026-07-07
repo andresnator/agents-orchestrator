@@ -1,11 +1,6 @@
 ---
 description: Select the right PRD skill before starting requirements work
 argument-hint: "[what product or feature needs requirements]"
-license: MIT
-metadata:
-  author: andresnator
-  version: "1.0.1"
-  status: done
 ---
 # /prd
 

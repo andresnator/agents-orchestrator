@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.0.4"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -37,7 +37,7 @@ Use when drafting an OpenSpec `proposal.md` through interview-first SDD planning
 2. Interview for problem, users, business rules, scope, risks, success, and capability binding.
 3. Draft `proposal.md` with New/Modified Capabilities as the spec contract.
 4. Present the draft for approval; revise until approved.
-5. If standalone and approved, ask before writing under `openspec/changes/{change-name}/proposal.md`.
+5. If standalone and approved, ask before writing under `.ai/orchestrator/changes/{change-name}/proposal.md`.
 
 ## Output Contract
 

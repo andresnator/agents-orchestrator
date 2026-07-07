@@ -26,6 +26,9 @@ Usage:
 
 Actions:
   install     Sync selected domain components into an OpenCode target as symlinks.
+              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
+              regardless of --domain/--status filters. A pre-existing foreign
+              AGENTS.md in the target is skipped with a warning unless --force.
   uninstall   Remove symlinks recorded in the target manifest, then remove the manifest.
   status      List selected components and whether each target link is linked, not linked, or foreign.
 
@@ -38,8 +41,11 @@ Filters:
   --domain    Comma-separated domains, or all.
               Current domains: common, docs, meta, refactor, sdd.
               Domain skills are symlinks to the top-level skills/ directory.
-  --status    Comma-separated lifecycle states, or all.
+  --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
+              Agents, commands, and plugins are not status-filtered because
+              OpenCode frontmatter for executable components cannot carry
+              repository-only metadata.
 
 Defaults:
   --domain all
@@ -183,11 +189,7 @@ discover_components() {
       [ -d "$dir" ] || continue
       find "$dir" -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r file; do
         name="$(basename "$file")"
-        status="$(status_from_file "$file")"
-        if ! status_allowed "$status"; then
-          valid_status "$status" || warn "$file: missing or invalid metadata.status; skipped"
-          continue
-        fi
+        status="-"
         src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
         dest="$target/$type/$name"
         printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$type" "$name" "$domain_name" "$status" "$src" "$dest" >> "$out"
@@ -338,6 +340,8 @@ install_action() {
     link_component "$src" "$dest" "$new_manifest"
   done < "$selected"
 
+  link_component "$REPO_ROOT/global/AGENTS.md" "$target/AGENTS.md" "$new_manifest"
+
   manifest="$target/$MANIFEST_NAME"
   remove_stale_links "$manifest" "$new_manifest"
 
@@ -402,6 +406,8 @@ status_action() {
     state="$(link_state "$src" "$dest")"
     printf '%s\t%s\t%s\t%s\t%s\n' "$domain" "$type" "$name" "$status" "$state"
   done < "$selected"
+  state="$(link_state "$REPO_ROOT/global/AGENTS.md" "$target/AGENTS.md")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "AGENTS.md" "-" "$state"
   rm -f "$selected"
 }
 

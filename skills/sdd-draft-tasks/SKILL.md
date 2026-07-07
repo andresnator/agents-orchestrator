@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.0.4"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -21,8 +21,8 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
 - Every task line MUST be `- [ ] X.Y {concrete action naming real files}`: Specific, Actionable, Verifiable, Small enough for one session. Never vague ("implement feature"). Testing tasks reference specific spec scenarios.
-- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the downstream apply agent.
-- Preserve the four Review Workload Forecast guard lines VERBATIM (`sdd-apply` gates on them): `Decision needed before apply:`, `Chained PRs recommended:`, `Chain strategy:`, `400-line budget risk:`.
+- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the implementer.
+- Preserve the four Review Workload Forecast guard lines VERBATIM (the orchestraitor gates on them before implementing): `Decision needed before apply:`, `Chained PRs recommended:`, `Chain strategy:`, `400-line budget risk:`.
 - Keep the artifact under 650 words. When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
 
 ## Decision Gates
@@ -40,7 +40,7 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 2. Interview for slicing, dependency order, and per-task verification.
 3. Draft `tasks.md` inline from the template with the forecast and dependency-ordered grouped checkboxes.
 4. Present for approval; revise until approved.
-5. If standalone and approved, ask before writing `openspec/changes/{change-name}/tasks.md`.
+5. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/tasks.md`.
 
 ## Output Contract
 
