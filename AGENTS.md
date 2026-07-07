@@ -8,7 +8,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/` is the source of truth for reusable skill bodies.
-- `domains/{sdd,refactor,docs,meta,common}/README.md` explains each domain.
+- `domains/{sdd,refactor,architecture,docs,meta,common}/README.md` explains each domain.
 - `domains/<domain>/agents/<name>.md` stores one fused OpenCode agent file: frontmatter plus prompt body.
 - `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
@@ -25,6 +25,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 - `sdd`: spec-driven development around the `orchestraitor` primary agent, SDD drafting skills, and judgment-day agents; adopts ready-for-sdd planner bundles (see `docs/plan-handoff.md`).
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles adopted by the sdd `orchestraitor`, plus Java refactor skills.
+- `architecture`: project-architecture mapping (C4-lite Mermaid docs), state reviews with gap analysis, reverse-engineered PRDs, security/observability audits, and ADR + ready-for-sdd ideation bundles adopted by the sdd `orchestraitor`.
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
@@ -76,7 +77,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 
 ## Adding A Component
 
-1. Pick the domain first: `sdd`, `refactor`, `docs`, `meta`, or `common`.
+1. Pick the domain first: `sdd`, `refactor`, `architecture`, `docs`, `meta`, or `common`.
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
 3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
 4. For skills, bump `metadata.version` when changing an existing skill.

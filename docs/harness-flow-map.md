@@ -4,12 +4,13 @@ This document maps the agent harnesses in this repository and evaluates them for
 
 ## Executive Summary
 
-The repo has two heavy orchestration clusters and three lighter routing domains.
+The repo has three heavy orchestration clusters and three lighter routing domains.
 
 | Cluster | Shape | Primary boundary |
 |---|---|---|
 | SDD | Opt-in coordinator primary agent with an explicit SDD kickoff | `orchestraitor` executes directly by default; after explicit SDD activation, it keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
 | Refactor | Risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles | `refactor-planner` delegates only to the generic `refactor-analyzer` (N parallel lens instances) and writes only `.ai/refactor-planner/changes/**`; execution happens through sdd plan intake (`docs/plan-handoff.md`). |
+| Architecture | Project-architecture analysis behind five commands sharing one primary | `architect` delegates only to the generic `arch-analyzer` (N parallel lens instances) and writes only `.ai/architect/**` plus the target doc folder's `architecture/` subtree; `/arch-ideate` bundles execute through the same sdd plan intake. First agent with non-deny bash: an ask-gated read-only audit-command allowlist. |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
 | Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
 | Common | Reusable inspection | `/boundary-inspector` delegates to the bounded `boundary-inspector` subagent. |
@@ -56,6 +57,20 @@ flowchart TD
   end
 
   RBundle -. plan intake .-> SDDHub
+
+  subgraph Architecture["domain: architecture"]
+    CMap["/arch-map"] --> Architect["architect<br/>primary"]
+    CReview["/arch-review"] --> Architect
+    CPrd["/arch-prd"] --> Architect
+    CIdeate["/arch-ideate"] --> Architect
+    CAudit["/arch-audit"] --> Architect
+    Architect --> AAnalyzer["arch-analyzer x N<br/>parallel: per-lens briefs"]
+    Architect --> ADoc["&lt;docfolder&gt;/architecture/*<br/>maps + PRD + ADRs"]
+    Architect --> AReports[".ai/architect/reports/*"]
+    Architect --> ABundle[".ai/architect/changes/*<br/>Status: ready-for-sdd"]
+  end
+
+  ABundle -. plan intake .-> SDDHub
 
   subgraph Docs["domain: docs"]
     Doc["/doc"] -. skill .-> ADR["adr"]
@@ -167,6 +182,27 @@ Lens fan-out:
 
 Execution is no longer part of this domain: `/refactor-execute` was removed, and adopted bundles run through the normal SDD flow (implement waves, verify, optional judgment, archive).
 
+### Architecture
+
+Sources: `domains/architecture/agents/architect.md`, `domains/architecture/agents/arch-analyzer.md`, and `docs/plan-handoff.md`.
+
+```mermaid
+flowchart TD
+  AStart["/arch-map /arch-review /arch-prd /arch-ideate /arch-audit"] --> ALock["freeze project_target"]
+  ALock --> AState["inline state scan<br/>architecture-state"]
+  AState --> AKickoff["GATE kickoff<br/>mode-specific questions"]
+  AKickoff --> AFanout["arch-analyzer x N<br/>one message: per-lens briefs"]
+  AFanout --> AReduce["consolidate + adversarial filter"]
+  AReduce --> AMap["map: C4-lite doc set<br/>drift refresh"]
+  AReduce --> AReview["review: state + gaps +<br/>repo-issues shortlist"]
+  AReduce --> APrd["prd: reverse-engineered PRD<br/>prd-light default"]
+  AReduce --> AIdeate["ideate: ADR + bundle<br/>Status: ready-for-sdd"]
+  AReduce --> AAudit["audit: CVEs + EOL + secrets +<br/>logging posture, bash ask-gated"]
+  AIdeate -. adoption .-> AOrch["orchestraitor plan intake"]
+```
+
+Mode boundaries: all five modes share the lock → state scan → kickoff → fan-out → consolidate spine; map/prd write only `<docfolder>/architecture/**`, review/audit write only `.ai/architect/reports/`, ideate additionally composes `.ai/architect/changes/<change>/` with the `sdd-draft-*` templates. Audit commands (`npm audit`, `mvn dependency:tree`, `pip-audit`, `osv-scanner`) are ask-gated in the primary only; denied or missing tools degrade to `method: manifest-fallback`. Code-level findings are rerouted to `/refactor-plan`, keeping the architecture/refactor boundary clean.
+
 ### Docs, Meta, Common
 
 ```mermaid
@@ -276,16 +312,17 @@ Current inventory from the working tree:
 
 | Type | Count |
 |---|---:|
-| Agents | 15 |
-| Commands | 8 |
-| Skills | 65 |
-| Domain skill symlinks | 71 |
+| Agents | 17 |
+| Commands | 13 |
+| Skills | 70 |
+| Domain skill symlinks | 90 |
 | Plugins | 1 |
 
 By domain:
 
 | Domain | Agents | Commands | Skill symlinks | Plugins |
 |---|---:|---:|---:|---:|
+| architecture | 2 | 5 | 19 | 0 |
 | common | 1 | 1 | 27 | 0 |
 | docs | 1 | 3 | 13 | 0 |
 | meta | 0 | 1 | 4 | 1 |
@@ -297,7 +334,7 @@ Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 | Status | Count |
 |---|---:|
 | backlog | 10 |
-| in-progress | 35 |
+| in-progress | 40 |
 | testing | 17 |
 | done | 3 |
 
@@ -311,6 +348,8 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 | `sdd-explore` | No separate homonymous skill; discovery behavior is in the agent prompt. |
 | `refactor-planner` | `scope-analysis`, `risk-assessment`, `native-question-ux` inline; `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, `sdd-draft-tasks` for bundle composition; lens skills selected per brief from the lens catalog. |
 | `refactor-analyzer` | Loads exactly the skills listed in each planner brief (lens catalog: readability, design, simplicity, contracts, behavior-safety, test-safety-net, architecture, tooling, observability). |
+| `architect` | `architecture-state`, `native-question-ux` inline; per mode: `architecture-map` (map), `repo-issues` (review), `prd`/`prd-light` (prd), `architecture-ideation` + `adr` + `sdd-draft-*` + `code-conventions` (ideate), `dependency-security-audit` (audit); `cognitive-doc-design` for every doc written. |
+| `arch-analyzer` | Loads exactly the skills listed in each architect brief (lens catalog: structure, boundaries, modularity, tooling, security, observability). |
 | `english-tutor` | `english-tutor`. |
 | `boundary-inspector` | `service-boundary-analysis`. |
 | `/doc` | `adr`, `rfc`, `usm`, `jira-spike`, `buildable-issue`, `cognitive-doc-design`, or `/prd` by request shape. |
@@ -323,5 +362,6 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 - Mermaid blocks use simple `flowchart` syntax suitable for GitHub preview.
 - SDD delegation edges match the 11 named `permission.task` allows in `domains/sdd/agents/orchestraitor.md` (including OpenCode's built-in `general` for auxiliary chores only).
 - Refactor planner delegation edges match the single named `permission.task` allow (`refactor-analyzer`) in `domains/refactor/agents/refactor-planner.md`.
+- Architect delegation edges match the single named `permission.task` allow (`arch-analyzer`) in `domains/architecture/agents/architect.md`; its bash permission is an ask-gated allowlist under a default deny.
 - Every agent and skill named in the inventory exists in `domains/*/agents/` or `skills/`.
 - This file is documentation-only under `docs/` and does not change executable frontmatter or installer behavior.
