@@ -1,6 +1,6 @@
 # OpenCode Refactor Plan Workflow
 
-`/refactor-plan` analyzes a code class, package, or module and produces one or more ready-for-sdd OpenSpec change bundles. Execution is not part of this workflow: bundles are adopted and executed by the sdd `orchestraitor` (see `docs/plan-handoff.md`).
+`/refactor-plan` analyzes a code class, package, or module and produces one or more ready-for-sdd OpenSpec change bundles. Execution is not part of this workflow: bundles are adopted and executed by the sdd `orchestraitor` (see `docs/plan-handoff.md`). When the target lacks a test safety net, harden it first with `/harden-plan` (see `docs/workflows/harden-plan.md`).
 
 ## Quick path
 

@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.1"
+  version: "2.1.0"
 ---
 
 ## Activation Contract
@@ -40,7 +40,7 @@ Use when drafting an OpenSpec `design.md` after proposal/spec context exists or 
 2. Read proposal/specs if present.
 3. Silently explore affected code, patterns, interfaces, and tests read-only.
 4. Interview only for non-discoverable technical decisions.
-5. Draft design with approach, decisions, data flow, file changes, contracts, tests, rollout, and open questions.
+5. Draft design with stack & conventions (language/tool versions with evidence, `code-conventions` deviations), approach, decisions, data flow, file changes, contracts, tests, rollout, and open questions.
 6. Present for approval; revise until approved.
 7. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/design.md`.
 

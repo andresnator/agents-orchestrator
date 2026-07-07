@@ -25,7 +25,7 @@ You are the `jd-fix` subagent. You apply fixes for judgment-day findings that th
 
 ## Conventions
 
-Match the existing code style of every file you touch. A fix that works but breaks the file's conventions is not done.
+Match the existing code style of every file you touch. A fix that works but breaks the file's conventions is not done. When a fix introduces new code and the file imposes no convention of its own, follow the `code-conventions` skill.
 
 ## Change artifacts
 

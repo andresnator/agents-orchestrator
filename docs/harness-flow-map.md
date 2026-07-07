@@ -9,7 +9,7 @@ The repo has two heavy orchestration clusters and three lighter routing domains.
 | Cluster | Shape | Primary boundary |
 |---|---|---|
 | SDD | Opt-in coordinator primary agent with an explicit SDD kickoff | `orchestraitor` executes directly by default; after explicit SDD activation, it keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
-| Refactor | Risk-gated planning producing ready-for-sdd bundles | `refactor-planner` delegates only to the generic `refactor-analyzer` (N parallel lens instances) and writes only `.ai/refactor-planner/changes/**`; execution happens through sdd plan intake (`docs/plan-handoff.md`). |
+| Refactor | Risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles | `refactor-planner` delegates only to the generic `refactor-analyzer` (N parallel lens instances) and writes only `.ai/refactor-planner/changes/**`; execution happens through sdd plan intake (`docs/plan-handoff.md`). |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
 | Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
 | Common | Reusable inspection | `/boundary-inspector` delegates to the bounded `boundary-inspector` subagent. |
@@ -50,6 +50,7 @@ flowchart TD
 
   subgraph Refactor["domain: refactor"]
     CPlan["/refactor-plan"] --> RPlanner["refactor-planner<br/>primary"]
+    CHarden["/harden-plan"] --> RPlanner
     RPlanner --> RAnalyzer["refactor-analyzer x N<br/>parallel: unit x lens"]
     RPlanner --> RBundle[".ai/refactor-planner/changes/*<br/>Status: ready-for-sdd"]
   end
@@ -132,11 +133,11 @@ Key observations:
 
 ### Refactor Plan
 
-Sources: `domains/refactor/agents/refactor-planner.md`, `docs/workflows/refactor-plan.md`, and `docs/plan-handoff.md`.
+Sources: `domains/refactor/agents/refactor-planner.md`, `docs/workflows/refactor-plan.md`, `docs/workflows/harden-plan.md`, and `docs/plan-handoff.md`.
 
 ```mermaid
 flowchart TD
-  Start["/refactor-plan target"] --> Lock["freeze plan_target"]
+  Start["/refactor-plan or /harden-plan target"] --> Lock["freeze plan_target"]
   Lock --> Scope["inline scope + risk<br/>scope-analysis, risk-assessment"]
   Scope --> Kickoff["GATE kickoff<br/>depth override / bundle split"]
   Kickoff --> Depth{"risk-gated lenses"}
@@ -162,6 +163,7 @@ Lens fan-out:
 | `low` | none | Planner drafts the bundle from its own scope and risk evidence. |
 | `medium` | 1-2 analyzer instances per unit | Core lenses (readability, contracts, simplicity) plus size/collaborator heuristics. |
 | `high` or `critical` | up to 3 analyzer instances per unit, max 12 per message | Full catalog including behavior-safety, test-safety-net, architecture, tooling. |
+| `hardening` plan kind (`/harden-plan`) | exactly 3 lens groups per unit | No risk gating: always behavior-safety, test-safety-net, tooling; structural lenses never run. Fixed CDD task order: tooling enablement → seams → characterization/unit tests → coverage/mutation baseline vs kickoff thresholds. |
 
 Execution is no longer part of this domain: `/refactor-execute` was removed, and adopted bundles run through the normal SDD flow (implement waves, verify, optional judgment, archive).
 
@@ -275,9 +277,9 @@ Current inventory from the working tree:
 | Type | Count |
 |---|---:|
 | Agents | 15 |
-| Commands | 7 |
-| Skills | 64 |
-| Domain skill symlinks | 69 |
+| Commands | 8 |
+| Skills | 65 |
+| Domain skill symlinks | 71 |
 | Plugins | 1 |
 
 By domain:
@@ -287,15 +289,15 @@ By domain:
 | common | 1 | 1 | 27 | 0 |
 | docs | 1 | 3 | 13 | 0 |
 | meta | 0 | 1 | 4 | 1 |
-| refactor | 2 | 1 | 18 | 0 |
-| sdd | 11 | 1 | 7 | 0 |
+| refactor | 2 | 2 | 19 | 0 |
+| sdd | 11 | 1 | 8 | 0 |
 
 Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 
 | Status | Count |
 |---|---:|
 | backlog | 10 |
-| in-progress | 34 |
+| in-progress | 35 |
 | testing | 17 |
 | done | 3 |
 
@@ -305,7 +307,7 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 
 | Agent or command | Explicit skill loads |
 |---|---|
-| `orchestraitor` | `native-question-ux` for the kickoff and gates; delegates drafting to `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks`; delegates implementation to `sdd-implement`; delegates verification to `sdd-verify`; loads `judgment-day` when judgment is requested; offers `tcr` for TDD cadence. |
+| `orchestraitor` | `native-question-ux` for the kickoff and gates; `code-conventions` for any code it writes; delegates drafting to `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks`; delegates implementation to `sdd-implement` (which loads `code-conventions`); delegates verification to `sdd-verify`; loads `judgment-day` when judgment is requested; offers `tcr` for TDD cadence. |
 | `sdd-explore` | No separate homonymous skill; discovery behavior is in the agent prompt. |
 | `refactor-planner` | `scope-analysis`, `risk-assessment`, `native-question-ux` inline; `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, `sdd-draft-tasks` for bundle composition; lens skills selected per brief from the lens catalog. |
 | `refactor-analyzer` | Loads exactly the skills listed in each planner brief (lens catalog: readability, design, simplicity, contracts, behavior-safety, test-safety-net, architecture, tooling, observability). |

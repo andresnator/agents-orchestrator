@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "3.1.6"
+  version: "3.2.0"
 ---
 
 # Java Testing Skill
@@ -65,11 +65,13 @@ Before writing tests, inspect or ask for:
 
 ## Simple Unit Tests
 
+- Follow the `code-conventions` skill as the general contract; the rules below are its Java specifics.
 - Place tests under `src/test/java/` mirroring the source package.
 - Name classes `{ClassName}Test` and methods `should{Behavior}When{Condition}` unless the project already uses another convention.
-- Use `// Given`, `// When`, `// Then` markers only when they improve scanning; avoid extra comments/Javadocs.
+- Split every non-trivial test body with `// Given`, `// When`, `// Then` section markers; avoid other comments/Javadocs.
 - For JUnit 5 + Mockito, use `@ExtendWith(MockitoExtension.class)`, `@Mock`, and `@InjectMocks` only when constructor setup adds noise.
 - Prefer AssertJ `assertThat()` / `assertThatThrownBy()` when already present; `WithAssertions` is acceptable if it matches project style.
+- For complex objects/DTOs, assert the whole object with `usingRecursiveComparison()` or ApprovalTests instead of field-by-field cascades.
 - Use parameterized tests for meaningful input matrices, and `ArgumentCaptor` only when the passed object is the behavior under test.
 
 ## Legacy Testing Flow
@@ -77,7 +79,7 @@ Before writing tests, inspect or ask for:
 1. Identify change points.
 2. Find test points with effect sketches.
 3. Break dependencies only where needed for Sensing or Separation.
-4. Write characterization tests that document what the code does now.
+4. Write characterization tests that document what the code does now, in a dedicated permanent `{ClassName}CharacterizationTest` class separate from intent-revealing unit tests.
 5. Modify and refactor behind the safety net.
 
 ## References

@@ -1,5 +1,10 @@
 # Design: {title}
 
+## Stack & Conventions
+
+- Language/tool versions with evidence: {e.g. Java 17 (`pom.xml` `java.version`), TypeScript 5.4 (`package.json`)}
+- Conventions: `code-conventions` contract applies{, except: deviations imposed by a consistent repo convention}.
+
 ## Technical Approach
 
 {Concise strategy mapped to proposal/spec behavior.}

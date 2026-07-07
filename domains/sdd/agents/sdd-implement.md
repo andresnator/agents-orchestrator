@@ -27,8 +27,8 @@ If required input is missing or contradictory, do not ask the user. Return open 
 ## Procedure
 
 1. Read the referenced proposal, specs, design, and tasks before editing.
-2. Implement only the assigned wave. Respect dependencies and existing project style.
-3. If TDD is selected, write the failing test from the relevant spec scenario first, then make it pass. Offer `tcr` only if the orchestraitor explicitly asked for that cadence.
+2. Implement only the assigned wave. Load the `code-conventions` skill and honor it; an established consistent repo convention wins on conflict. Respect dependencies.
+3. If TDD is selected, write the failing test from the relevant spec scenario first, then make it pass; tests follow the `code-conventions` format. Offer `tcr` only if the orchestraitor explicitly asked for that cadence.
 4. Run the requested validation. If it fails, repair your own changes before returning.
 5. Never edit artifacts under `.ai/orchestrator/`; the orchestraitor marks checkboxes and updates state.
 

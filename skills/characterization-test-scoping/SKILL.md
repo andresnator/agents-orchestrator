@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.3"
+  version: "2.1.0"
   status: in-progress
 ---
 
@@ -20,6 +20,7 @@ Load this skill when a refactor plan runs at deep depth or when scoping work aro
 - Keep executable work behavior-preserving; move redesigns and behavior changes to follow-up.
 - Require rollback-friendly increments and explicit containment rationale.
 - Tests must precede structural refactoring.
+- Keep characterization tests in a dedicated test class/file per unit (per `code-conventions`); they are a permanent regression net and never mix with intent-revealing unit tests.
 
 ## Decision Gates
 
@@ -43,7 +44,7 @@ Load this skill when a refactor plan runs at deep depth or when scoping work aro
 - Unit tests around isolated rules after seams exist.
 - Integration tests for persistence/external boundaries.
 - Contract tests for public APIs/events.
-- Approval/snapshot tests for broad legacy outputs when appropriate.
+- Approval/snapshot tests for broad legacy outputs when appropriate; prefer whole-object asserts (recursive comparison, approval, snapshot) over field-by-field cascades for complex outputs.
 - Mutation testing for critical rules using the concrete tool named by the tooling audit and compatibility matrix.
 - Property-based tests for invariants and input spaces when useful; name the concrete library when present, otherwise reference the install task.
 
