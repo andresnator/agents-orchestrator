@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -40,7 +40,7 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 2. Interview for slicing, dependency order, and per-task verification.
 3. Draft `tasks.md` inline from the template with the forecast and dependency-ordered grouped checkboxes.
 4. Present for approval; revise until approved.
-5. If standalone and approved, ask before writing `.orchestraitor/changes/{change-name}/tasks.md`.
+5. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/tasks.md`.
 
 ## Output Contract
 

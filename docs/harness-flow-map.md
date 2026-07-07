@@ -8,10 +8,10 @@ The repo has two heavy orchestration clusters and three lighter routing domains.
 
 | Cluster | Shape | Primary boundary |
 |---|---|---|
-| SDD | Single hybrid primary agent with a conversational kickoff | `orchestraitor` interviews, drafts, and implements itself; it delegates only to its 5 `permission.task` allowlisted subagents (explore, judgment-day, and the built-in `general` for self-contained background work and automatic-mode artifact drafting) and manages artifacts OpenSpec-style under `.orchestraitor/**`. |
+| SDD | Single coordinator primary agent with a conversational kickoff | `orchestraitor` keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
 | Refactor | Risk-gated planning plus TCR execution | `refactor-planner` delegates only to its 18 `permission.task` allowlisted analysis/composition/gate subagents and writes only `.ia-refactor/plan/**`; `refactor-executor` does not delegate. |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
-| Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.atl/skill-registry.md`. |
+| Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
 | Common | Reusable inspection | `/boundary-inspector` delegates to the bounded `boundary-inspector` subagent. |
 
 Legend:
@@ -34,10 +34,16 @@ flowchart TD
   subgraph SDD["domain: sdd"]
     SDDHub["orchestraitor<br/>primary"]
     SDDHub --> SExplore["sdd-explore"]
+    SDDHub --> SProposal["sdd-proposal"]
+    SDDHub --> SSpec["sdd-spec"]
+    SDDHub --> SDesign["sdd-design"]
+    SDDHub --> STasks["sdd-tasks"]
+    SDDHub --> SImplement["sdd-implement"]
+    SDDHub --> SVerify["sdd-verify"]
     SDDHub --> JDA["jd-judge-a"]
     SDDHub --> JDB["jd-judge-b"]
     SDDHub --> JDFix["jd-fix"]
-    SDDHub --> Gen["general (built-in)<br/>self-contained / background"]
+    SDDHub --> Gen["general (built-in)<br/>auxiliary chores only"]
     SDDHub -. skill .-> GrillSDD["grill + sdd-draft-*"]
     SDDHub -. skill .-> JDSkill["judgment-day"]
   end
@@ -81,7 +87,7 @@ flowchart TD
 
   subgraph Meta["domain: meta"]
     Prompt["/prompt-checker"] -. skill .-> PSW["prompt-structure-writer"]
-    Registry["skill-registry.ts"] --> ATL[".atl/skill-registry.md"]
+    Registry["skill-registry.ts"] --> ATL[".ai/atl/skill-registry.md"]
   end
 
   subgraph Common["domain: common"]
@@ -107,9 +113,15 @@ flowchart TD
   Trivial -->|no| Kickoff["kickoff questions<br/>mode / TDD / judgment"]
 
   Kickoff --> Explore["sdd-explore<br/>(or inline read)"]
-  Explore --> Draft["proposal -> specs || design -> tasks<br/>interactive: sdd-draft-* interview + gates<br/>automatic: drafted directly"]
-  Draft --> Implement["implement tasks.md<br/>TDD if chosen"]
-  Implement --> Verify["verify against spec scenarios"]
+  Explore --> Proposal["sdd-proposal<br/>writes proposal.md"]
+  Proposal --> ProposalGate["GATE proposal<br/>interactive mode"]
+  ProposalGate --> Spec["sdd-spec<br/>writes delta specs"]
+  ProposalGate --> Design["sdd-design<br/>writes design.md"]
+  Spec --> PlanGate["GATE specs + design<br/>interactive mode"]
+  Design --> PlanGate
+  PlanGate --> Tasks["sdd-tasks<br/>writes tasks.md"]
+  Tasks --> Implement["sdd-implement<br/>one related task wave"]
+  Implement --> Verify["sdd-verify<br/>cold-checks spec scenarios"]
   Verify --> JudgmentRoute{"judgment requested?"}
   JudgmentRoute -->|no| Archive["archive: merge deltas<br/>into canonical specs"]
   JudgmentRoute -->|yes| JDA2["jd-judge-a"]
@@ -127,10 +139,12 @@ Key observations:
 
 | Area | Current behavior |
 |---|---|
-| Entry | Conversational: "vamos con sdd" or any non-trivial development request; no commands, no automatic triage. |
+| Entry | Conversational: "vamos con sdd" or any non-trivial development request for the build cycle; `/judgment` is available for standalone adversarial review. |
 | Kickoff | One question round via `native-question-ux`: interactive/automatic mode, TDD, judgment. Ceremony scales down to a direct edit for trivial changes. |
 | Gates | Interactive mode confirms after the proposal and after specs plus design; automatic mode only stops when genuinely blocked. |
-| Artifacts | OpenSpec-style under `.orchestraitor/`: canonical `specs/`, active `changes/<name>/`, and `changes/archive/` with deltas merged into canonical specs. |
+| Phase agents | Dedicated agents handle proposal, spec, design, tasks, implementation, and verification so `model:` can be assigned per phase later. |
+| Auxiliary work | `general` stays allowlisted only for self-contained chores such as lateral research, fixtures, or background suites. |
+| Artifacts | OpenSpec-style under `.ai/orchestrator/`: canonical `specs/`, active `changes/<name>/`, and `changes/archive/` with deltas merged into canonical specs. |
 
 ### Refactor Plan
 
@@ -225,7 +239,7 @@ flowchart LR
   EnglishCmd["/english"] --> EnglishAgent2["english-tutor subagent"] -. skill .-> EnglishSkill["english-tutor"]
   PromptCmd["/prompt-checker"] -. skill .-> PromptSkill["prompt-structure-writer<br/>Evaluation Mode"]
   Boundary["/boundary-inspector"] --> BoundarySub["boundary-inspector"] -. skill .-> BoundaryTax["service-boundary-analysis"]
-  SkillRegistry["skill-registry.ts"] --> RegistryDoc[".atl/skill-registry.md"]
+  SkillRegistry["skill-registry.ts"] --> RegistryDoc[".ai/atl/skill-registry.md"]
 ```
 
 These domains are mostly routers, not multi-phase harnesses. They matter because they introduce reusable skills into the same installation target and because judgment-day can read the generated registry as "Project Standards".
@@ -267,11 +281,11 @@ Installer notes:
 
 | Finding | Evidence | Evaluation |
 |---|---|---|
-| SDD planning path unified | The 2026-07-06 simplification removed the phase agents (`sdd-{propose,spec,design,tasks,apply,verify}`); `orchestraitor` now drives the interview-first `sdd-draft-*` skills directly. | Resolved: one planning path, two interaction modes (interactive/automatic). |
+| SDD phase agents reintroduced with narrower roles | The 2026-07-06 simplification removed earlier phase agents because they duplicated interviewing and drafting decisions. The 2026-07-07 design reintroduces phase agents as single-responsibility workers with no user interview and one artifact or task wave each. | Intentional pivot: the coordinator still owns decisions and gates, while dedicated agents make future `model:` assignment possible per phase without returning to duplicated orchestration. |
 | Multiple review systems | SDD uses judgment-day dual blind judges (opt-in); refactor has nine reviewer lenses. | Intentional depth ladder, but review naming should make scope obvious to avoid invoking the expensive path for routine checks. |
 | Generic refactor skill overlaps refactor domain | `skills/refactor/SKILL.md` is a 62+ technique catalog, while `domains/refactor` provides planning/execution harnesses. | Keep the skill as technique reference; avoid routing it as a replacement for `/refactor-plan`. |
 | `single-responsibility` is reused by two lenses | `function-size-responsibility-reviewer` loads `single-responsibility`; `solid-design-reviewer` also loads it. | Acceptable reuse, but findings can duplicate. The planner reducer is the right dedupe point. |
-| Two SDD entrypoints | `grill` keeps its standalone `sdd` mode for pure planning interviews; `orchestraitor` runs the full build cycle using the same `sdd-draft-*` skills. | Acceptable: `grill sdd` is plan-only drafting in chat; `orchestraitor` plans and implements. Both write `.orchestraitor/changes/`. |
+| Two SDD entrypoints | `grill` keeps its standalone `sdd` mode for pure planning interviews; `orchestraitor` runs the full build cycle using the same `sdd-draft-*` skills through dedicated phase agents. | Acceptable: `grill sdd` is plan-only drafting in chat; `orchestraitor` coordinates the full cycle, delegating formal phases to `sdd-*` agents. Both write `.ai/orchestrator/changes/`. |
 
 ### 2. Coverage And Gaps
 
@@ -288,7 +302,7 @@ Installer notes:
 | Harness | Tier or depth | Subagent count | Fan-out points | Cost controls |
 |---|---:|---:|---|---|
 | SDD | trivial change | 0 subagents | none | No artifacts, no kickoff. |
-| SDD | default change | 0-1 (`sdd-explore` only when the area is unknown or large), plus up to 4 `general` drafters in automatic mode (proposal, specs ∥ design, tasks) and optional `general` calls for self-contained tasks | drafting wave 2 (specs and design in parallel); `general` in background for independent work | Kickoff choices; interactive gates after proposal and specs+design. |
+| SDD | default change | 0-1 (`sdd-explore` only when the area is unknown or large), plus phase agents: `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement` waves, and `sdd-verify` | drafting wave 2 (specs and design in parallel); independent implementation waves in parallel | Kickoff choices; interactive gates after proposal and specs+design; task grouping into waves bounds implementation subagent count. |
 | SDD | with judgment | explore plus 2 judges and `jd-fix`, repeated up to 2 fix rounds | `jd-judge-a` and `jd-judge-b` in blind parallel rounds | Opt-in at kickoff; confirmed-only fixes; max 2 rounds. |
 | Refactor plan | light | 2 delegated analysis agents plus composer/gate path as needed | none | `risk: low` skips reviewer panel. |
 | Refactor plan | standard | 2 base agents plus selected lenses plus composer and gate | selected reviewer subset | Lens heuristics by size, collaborators, and logging evidence. |
@@ -314,10 +328,10 @@ Current inventory from the working tree:
 
 | Type | Count |
 |---|---:|
-| Agents | 27 |
-| Commands | 7 |
-| Skills | 66 |
-| Domain skill symlinks | 67 |
+| Agents | 33 |
+| Commands | 8 |
+| Skills | 68 |
+| Domain skill symlinks | 69 |
 | Plugins | 1 |
 
 By domain:
@@ -326,17 +340,17 @@ By domain:
 |---|---:|---:|---:|---:|
 | common | 1 | 1 | 27 | 0 |
 | docs | 1 | 3 | 13 | 0 |
-| meta | 0 | 1 | 2 | 1 |
+| meta | 0 | 1 | 4 | 1 |
 | refactor | 20 | 2 | 18 | 0 |
-| sdd | 5 | 0 | 7 | 0 |
+| sdd | 11 | 1 | 7 | 0 |
 
 Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 
 | Status | Count |
 |---|---:|
 | backlog | 10 |
-| in-progress | 37 |
-| testing | 16 |
+| in-progress | 38 |
+| testing | 17 |
 | done | 3 |
 
 ### Agent To Skill Loads
@@ -345,7 +359,7 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 
 | Agent or command | Explicit skill loads |
 |---|---|
-| `orchestraitor` | `native-question-ux` for the kickoff and gates; `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, `sdd-draft-tasks` for drafting; `judgment-day` when judgment is requested; `tcr` offered for TDD cadence. |
+| `orchestraitor` | `native-question-ux` for the kickoff and gates; delegates drafting to `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks`; delegates implementation to `sdd-implement`; delegates verification to `sdd-verify`; loads `judgment-day` when judgment is requested; offers `tcr` for TDD cadence. |
 | `sdd-explore` | No separate homonymous skill; discovery behavior is in the agent prompt. |
 | `refactor-executor` | `tcr`, `work-unit-commits`. |
 | `refactor-openspec-composer` | `openspec-refactor-composition`. |
@@ -369,7 +383,7 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 ### Verification Checklist
 
 - Mermaid blocks use simple `flowchart` syntax suitable for GitHub preview.
-- SDD delegation edges match the 5 named `permission.task` allows in `domains/sdd/agents/orchestraitor.md` (including OpenCode's built-in `general`).
+- SDD delegation edges match the 11 named `permission.task` allows in `domains/sdd/agents/orchestraitor.md` (including OpenCode's built-in `general` for auxiliary chores only).
 - Refactor planner delegation edges match the 18 named `permission.task` allows in `domains/refactor/agents/refactor-planner.md`.
 - Every agent and skill named in the inventory exists in `domains/*/agents/` or `skills/`.
 - This file is documentation-only under `docs/` and does not change executable frontmatter or installer behavior.

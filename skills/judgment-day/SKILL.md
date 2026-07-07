@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.3.1"
+  version: "1.3.2"
   status: in-progress
 ---
 
@@ -21,9 +21,9 @@ metadata:
 
 ### Pattern 0: Skill Resolution (BEFORE launching judges)
 
-Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates this file on session start; the read path stays the same.
+Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates `.ai/atl/skill-registry.md` on session start.
 
-1. Read `.atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
+1. Read `.ai/atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
 2. Identify the target files/scope: what code will the judges review?
 3. Match relevant skills from the registry's `## Skills` table by:
    - **Code context**: file extensions/paths of the target (e.g., `.tsx` → react-19, typescript)
@@ -80,7 +80,7 @@ User asks for "judgment day"
 │   └── NO → ask user to specify scope before proceeding
 │
 ▼
-Resolve skills (Pattern 0): read .atl registry if present → match by code + task context → build Project Standards block
+Resolve skills (Pattern 0): read .ai/atl registry if present → match by code + task context → build Project Standards block
 ▼
 Launch Judge A + Judge B with isolated prompts — in parallel when the runtime supports it
 ▼

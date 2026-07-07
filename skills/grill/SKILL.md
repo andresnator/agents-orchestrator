@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -52,7 +52,7 @@ Select exactly one mode:
 | Situation | Action |
 | --- | --- |
 | Missing change name | Propose a kebab-case, verb-led name and confirm. |
-| `.orchestraitor/changes/{change-name}/` exists | Ask resume vs rename. |
+| `.ai/orchestrator/changes/{change-name}/` exists | Ask resume vs rename. |
 | Product/business uncertainty | Route to `sdd-draft-proposal`. |
 | Observable behavior uncertainty | Route to `sdd-draft-spec`. |
 | Technical/architecture uncertainty | Route to `sdd-draft-design`. |
@@ -71,7 +71,7 @@ Use these steps only in `sdd` mode:
 6. Run `sdd-draft-spec` for each capability or batch; loop until approved.
 7. Run `sdd-draft-design`; it must silently explore the real codebase read-only before technical questions or draft.
 8. Run `sdd-draft-tasks` with the approved spec and design; loop inline until the tasks draft is approved.
-9. Ask once to write N files under `.orchestraitor/changes/{change-name}/`.
+9. Ask once to write N files under `.ai/orchestrator/changes/{change-name}/`.
 10. On yes, write exactly `proposal.md`, `specs/{capability}/spec.md`, `design.md`, and `tasks.md`; on no, leave drafts inline.
 
 ## Output Contract

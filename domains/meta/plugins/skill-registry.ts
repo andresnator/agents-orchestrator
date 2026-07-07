@@ -50,6 +50,14 @@ function tableCell(value: string) {
   return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim()
 }
 
+async function directoryExists(dir: string) {
+  try {
+    return (await fs.stat(dir)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 async function parseSkill(file: string, project: boolean): Promise<SkillEntry | undefined> {
   const stat = await fs.stat(file)
   const text = await fs.readFile(file, "utf8")
@@ -113,9 +121,7 @@ async function discoverSkills(worktree: string) {
   const home = os.homedir()
   const roots = [
     { dir: path.join(home, ".config/opencode/skills"), project: false },
-    { dir: path.join(home, ".claude/skills"), project: false },
     { dir: path.join(worktree, ".opencode/skills"), project: true },
-    { dir: path.join(worktree, ".claude/skills"), project: true },
     { dir: path.join(worktree, ".agents/skills"), project: true },
     { dir: path.join(worktree, "skills"), project: true },
   ]
@@ -177,7 +183,14 @@ async function collectConventions(worktree: string): Promise<ConventionData> {
       if (!candidate || candidate.includes("*") || candidate.includes("{")) continue
       const resolved = path.resolve(worktree, candidate)
       const relative = path.relative(worktree, resolved)
-      if (relative === ".atl" || relative.startsWith(`.atl${path.sep}`)) continue
+      if (
+        relative === ".atl" ||
+        relative.startsWith(`.atl${path.sep}`) ||
+        relative === ".ai" ||
+        relative.startsWith(`.ai${path.sep}`)
+      ) {
+        continue
+      }
       if (!resolved.startsWith(worktree + path.sep) || seen.has(resolved) || !regularFileSync(resolved)) continue
       seen.add(resolved)
       await addHash(resolved)
@@ -231,14 +244,30 @@ async function ensureInfoExclude(worktree: string) {
   const exclude = path.join(worktree, ".git/info/exclude")
   try {
     const text = await fs.readFile(exclude, "utf8")
-    if (/(^|\n)\.atl\/?(\n|$)/.test(text)) return
-    await fs.appendFile(exclude, text.endsWith("\n") ? ".atl/\n" : "\n.atl/\n")
+    if (/(^|\n)\.ai\/?(\n|$)/.test(text)) return
+    await fs.appendFile(exclude, text.endsWith("\n") ? ".ai/\n" : "\n.ai/\n")
   } catch {
     // Non-git worktrees are valid OpenCode projects; skip local exclude updates.
   }
 }
 
+async function migrateLegacyAtl(worktree: string) {
+  const legacyDir = path.join(worktree, ".atl")
+  const aiDir = path.join(worktree, ".ai")
+  const atlDir = path.join(aiDir, "atl")
+
+  if (!(await directoryExists(legacyDir)) || (await directoryExists(atlDir))) return
+
+  try {
+    await fs.mkdir(aiDir, { recursive: true })
+    await fs.rename(legacyDir, atlDir)
+  } catch (error) {
+    console.error(`[skill-registry] legacy .atl migration failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
 async function generateRegistry(worktree: string) {
+  await migrateLegacyAtl(worktree)
   const skills = await discoverSkills(worktree)
   const conventions = await collectConventions(worktree)
   const orderedHashInput = skills
@@ -246,7 +275,7 @@ async function generateRegistry(worktree: string) {
     .sort()
     .join("\n")
   const hash = crypto.createHash("sha256").update(`${FORMAT_VERSION}\n${orderedHashInput}\n${conventions.hashInput}`).digest("hex")
-  const atlDir = path.join(worktree, ".atl")
+  const atlDir = path.join(worktree, ".ai", "atl")
   const hashFile = path.join(atlDir, "skill-registry.hash")
   const registryFile = path.join(atlDir, "skill-registry.md")
 

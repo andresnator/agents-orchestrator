@@ -29,7 +29,7 @@ Match the existing code style of every file you touch. A fix that works but brea
 
 ## Change artifacts
 
-Never edit change artifacts under `.orchestraitor/` (proposal, specs, design, tasks). The orchestraitor owns them; the judges' re-review validates your work.
+Never edit change artifacts under `.ai/orchestrator/` (proposal, specs, design, tasks). The orchestraitor owns them; the judges' re-review validates your work.
 
 ## No user questions
 

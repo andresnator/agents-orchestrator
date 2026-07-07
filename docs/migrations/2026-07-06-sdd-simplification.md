@@ -11,7 +11,7 @@ For a solo developer this was over-engineered: commands added friction, automati
 
 ## What changed
 
-- **New primary agent `orchestraitor`** (name after "andresnaitor"): interviews, drafts, implements, and archives itself. Delegates only exploration (`sdd-explore`) and adversarial review (`jd-judge-a/b`, `jd-fix`). Kickoff asks mode (interactive/automatic), TDD, and judgment once per change.
+- **New primary agent `orchestraitor`** (name after "andresnaitor"): a coordinator that interviews, decides, gates, integrates, and archives in the main session, and delegates the writing — artifacts in both modes, `tasks.md` implementation in waves of related tasks, and the spec cold-check — to the built-in `general` subagent, plus exploration (`sdd-explore`) and adversarial review (`jd-judge-a/b`, `jd-fix`). Kickoff asks mode (interactive/automatic), TDD, and judgment once per change.
 - **Agents 14 → 5**: removed `sdd-orchestrator`, `sdd-build`, `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-review-quality`, `sdd-review-risk`. Kept `sdd-explore` (simplified), `jd-judge-a`, `jd-judge-b`, `jd-fix` (envelope/state protocol removed).
 - **Commands 6 → 0**: removed `sdd-new`, `sdd-continue`, `sdd-quick`, `sdd-review`, `sdd-ship`, `sdd-status`. The flow starts conversationally.
 - **Skills removed**: `sdd-workflow`, `context-handoff`, `elicit` (top-level dirs + sdd symlinks) — their content duplicated what was inlined in the deleted agents, and nothing loaded them.
