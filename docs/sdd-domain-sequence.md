@@ -1,10 +1,10 @@
 # SDD Domain: Flujo del Orchestraitor
 
-`orchestraitor` coordina el ciclo SDD, pero las fases ahora viven en subagentes dedicados. Eso permite fijar `model:` por fase más adelante sin cambiar la experiencia del usuario ni mezclar responsabilidades.
+`orchestraitor` coordina el ciclo SDD solo cuando el usuario lo pide explícitamente. Sin mención de SDD, ejecuta directo y simple; las fases viven en subagentes dedicados únicamente dentro del flujo SDD para poder fijar `model:` por fase más adelante sin cambiar la experiencia del usuario ni mezclar responsabilidades.
 
 ## Kickoff
 
-Una sola ronda de preguntas (omite lo que ya dijiste en el pedido):
+El kickoff corre solo tras activación explícita de SDD ("vamos con sdd", "usa SDD" o intención equivalente). Hace una sola ronda de preguntas y omite lo que ya dijiste en el pedido:
 
 | Pregunta | Opciones |
 |---|---|
@@ -12,7 +12,7 @@ Una sola ronda de preguntas (omite lo que ya dijiste en el pedido):
 | TDD | test-first por tarea / tests junto a la implementación |
 | Juicio | judgment-day al final / sin review adversarial |
 
-Si el pedido es trivial (typo, rename, config), no hay kickoff ni artefactos: lo hace directo.
+Sin mención de SDD no hay kickoff ni artefactos, aunque el pedido sea complejo: lo hace directo.
 
 ## Flujo
 
@@ -31,7 +31,7 @@ sequenceDiagram
   participant JB as jd-judge-b
   participant JF as jd-fix
 
-  U->>O: vamos con sdd / pedido de desarrollo
+  U->>O: vamos con sdd / usa SDD
   O->>O: kickoff + migracion legacy
   O->>E: explorar si el area es amplia o desconocida
   E-->>O: resumen breve
@@ -101,4 +101,4 @@ Al inicio de cualquier cambio o resume, si existe `.orchestraitor/` o `.orchestr
 
 ## Resume / Contexto Largo
 
-Los artefactos son el estado; la conversación es desechable. Si la sesión se pone pesada a mitad de un cambio, ciérrala y en una sesión nueva di "continúa <change>": el orchestraitor relee `.ai/orchestrator/changes/<change>/` y retoma desde la primera tarea sin marcar, sin repetir el kickoff.
+Los artefactos son el estado; la conversación es desechable. Si la sesión se pone pesada a mitad de un cambio, ciérrala y en una sesión nueva di "continúa <change>": el orchestraitor relee `.ai/orchestrator/changes/<change>/` y retoma desde la primera tarea sin marcar, sin repetir el kickoff. Si al inicio de una sesión encuentra un cambio sin archivar, ofrece retomarlo en una línea y solo continúa si aceptas.

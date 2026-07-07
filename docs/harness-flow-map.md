@@ -8,7 +8,7 @@ The repo has two heavy orchestration clusters and three lighter routing domains.
 
 | Cluster | Shape | Primary boundary |
 |---|---|---|
-| SDD | Single coordinator primary agent with a conversational kickoff | `orchestraitor` keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
+| SDD | Opt-in coordinator primary agent with an explicit SDD kickoff | `orchestraitor` executes directly by default; after explicit SDD activation, it keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
 | Refactor | Risk-gated planning plus TCR execution | `refactor-planner` delegates only to its 18 `permission.task` allowlisted analysis/composition/gate subagents and writes only `.ia-refactor/plan/**`; `refactor-executor` does not delegate. |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
 | Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
@@ -108,9 +108,9 @@ Sources: `domains/sdd/agents/orchestraitor.md`, `skills/judgment-day/SKILL.md`, 
 
 ```mermaid
 flowchart TD
-  Request["User: vamos con sdd"] --> Trivial{"trivial or mechanical?"}
-  Trivial -->|yes| Direct["orchestraitor edits directly<br/>no artifacts"]
-  Trivial -->|no| Kickoff["kickoff questions<br/>mode / TDD / judgment"]
+  Request["User request"] --> ExplicitSDD{"explicitly asked for SDD?"}
+  ExplicitSDD -->|no| Direct["direct execution<br/>no SDD phases or questions"]
+  ExplicitSDD -->|yes| Kickoff["kickoff questions<br/>mode / TDD / judgment"]
 
   Kickoff --> Explore["sdd-explore<br/>(or inline read)"]
   Explore --> Proposal["sdd-proposal<br/>writes proposal.md"]
@@ -139,8 +139,8 @@ Key observations:
 
 | Area | Current behavior |
 |---|---|
-| Entry | Conversational: "vamos con sdd" or any non-trivial development request for the build cycle; `/judgment` is available for standalone adversarial review. |
-| Kickoff | One question round via `native-question-ux`: interactive/automatic mode, TDD, judgment. Ceremony scales down to a direct edit for trivial changes. |
+| Entry | Explicit only: "vamos con sdd", "usa SDD", or equivalent clear intent. Without an SDD mention, execution is direct and `general` is available only for auxiliary chores. `/judgment` is available for standalone adversarial review. |
+| Kickoff | Runs only after explicit SDD activation: one question round via `native-question-ux` for interactive/automatic mode, TDD, and judgment. |
 | Gates | Interactive mode confirms after the proposal and after specs plus design; automatic mode only stops when genuinely blocked. |
 | Phase agents | Dedicated agents handle proposal, spec, design, tasks, implementation, and verification so `model:` can be assigned per phase later. |
 | Auxiliary work | `general` stays allowlisted only for self-contained chores such as lateral research, fixtures, or background suites. |
@@ -285,7 +285,7 @@ Installer notes:
 | Multiple review systems | SDD uses judgment-day dual blind judges (opt-in); refactor has nine reviewer lenses. | Intentional depth ladder, but review naming should make scope obvious to avoid invoking the expensive path for routine checks. |
 | Generic refactor skill overlaps refactor domain | `skills/refactor/SKILL.md` is a 62+ technique catalog, while `domains/refactor` provides planning/execution harnesses. | Keep the skill as technique reference; avoid routing it as a replacement for `/refactor-plan`. |
 | `single-responsibility` is reused by two lenses | `function-size-responsibility-reviewer` loads `single-responsibility`; `solid-design-reviewer` also loads it. | Acceptable reuse, but findings can duplicate. The planner reducer is the right dedupe point. |
-| Two SDD entrypoints | `grill` keeps its standalone `sdd` mode for pure planning interviews; `orchestraitor` runs the full build cycle using the same `sdd-draft-*` skills through dedicated phase agents. | Acceptable: `grill sdd` is plan-only drafting in chat; `orchestraitor` coordinates the full cycle, delegating formal phases to `sdd-*` agents. Both write `.ai/orchestrator/changes/`. |
+| Two SDD entrypoints | `grill` keeps its standalone `sdd` mode for pure planning interviews; `orchestraitor` runs the full build cycle only after explicit SDD activation, using the same `sdd-draft-*` skills through dedicated phase agents. | Acceptable: `grill sdd` is plan-only drafting in chat; explicit SDD activation in `orchestraitor` coordinates the full cycle, delegating formal phases to `sdd-*` agents. Both write `.ai/orchestrator/changes/`. |
 
 ### 2. Coverage And Gaps
 
@@ -301,9 +301,9 @@ Installer notes:
 
 | Harness | Tier or depth | Subagent count | Fan-out points | Cost controls |
 |---|---:|---:|---|---|
-| SDD | trivial change | 0 subagents | none | No artifacts, no kickoff. |
-| SDD | default change | 0-1 (`sdd-explore` only when the area is unknown or large), plus phase agents: `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement` waves, and `sdd-verify` | drafting wave 2 (specs and design in parallel); independent implementation waves in parallel | Kickoff choices; interactive gates after proposal and specs+design; task grouping into waves bounds implementation subagent count. |
-| SDD | with judgment | explore plus 2 judges and `jd-fix`, repeated up to 2 fix rounds | `jd-judge-a` and `jd-judge-b` in blind parallel rounds | Opt-in at kickoff; confirmed-only fixes; max 2 rounds. |
+| Direct request | no SDD mention | 0 SDD phase subagents | none | Direct execution; no kickoff questions or `.ai/orchestrator/changes/` artifacts. |
+| SDD | explicit activation | 0-1 (`sdd-explore` only when the area is unknown or large), plus phase agents: `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement` waves, and `sdd-verify` | drafting wave 2 (specs and design in parallel); independent implementation waves in parallel | Kickoff choices; interactive gates after proposal and specs+design; task grouping into waves bounds implementation subagent count. |
+| SDD | explicit activation with judgment | explore plus 2 judges and `jd-fix`, repeated up to 2 fix rounds | `jd-judge-a` and `jd-judge-b` in blind parallel rounds | Opt-in at kickoff; confirmed-only fixes; max 2 rounds. |
 | Refactor plan | light | 2 delegated analysis agents plus composer/gate path as needed | none | `risk: low` skips reviewer panel. |
 | Refactor plan | standard | 2 base agents plus selected lenses plus composer and gate | selected reviewer subset | Lens heuristics by size, collaborators, and logging evidence. |
 | Refactor plan | deep | 16 analysis/reviewer subagents in one fan-out, then composer and safety gate | 5 workers plus 9 lenses after scope and risk | Risk-gated depth, target unit cap, reducer, lint, and max 3 safety iterations. |
@@ -313,7 +313,7 @@ Installer notes:
 
 | Gate or route | Location | Purpose |
 |---|---|---|
-| SDD kickoff | `orchestraitor` | One question round: mode (interactive/automatic), TDD, judgment; ceremony scales down for trivial changes. |
+| SDD kickoff | `orchestraitor` | Runs only after explicit SDD activation; one question round: mode (interactive/automatic), TDD, judgment. |
 | SDD proposal gate | interactive mode, after the proposal draft | Approves intent, scope, approach, and capability binding. |
 | SDD plan gate | interactive mode, after specs plus design | Approves the implementation contract before tasks. |
 | Judgment-day synthesis | `judgment-day` skill | Separates confirmed, suspect, and contradiction buckets; only confirmed findings go to `jd-fix`. |
