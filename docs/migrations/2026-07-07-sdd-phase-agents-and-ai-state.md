@@ -37,4 +37,4 @@ SDD state was split across two local roots: `.orchestraitor/` for OpenSpec-style
 
 ## Out of Scope
 
-`.ia-refactor/` is still the refactor planning state root. A future migration to `.ai/refactor/` is a separate change.
+`.ia-refactor/` is still the refactor planning state root. A future migration to `.ai/refactor/` is a separate change. (Superseded: the refactor planner rework later moved this state to `.ai/refactor-planner/changes/`; `.ia-refactor/**` is now legacy and ignored.)

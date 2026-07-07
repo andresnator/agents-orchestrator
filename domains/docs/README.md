@@ -4,7 +4,7 @@ Product documentation, Jira tickets, English tutoring, summaries, and transcript
 
 Agent entry: `english-tutor`.
 
-Commands: `doc`, `prd`, `english`.
+Commands: `doc`, `prd`, `english`, `decide` (grilling-style decision interview that converges into an ADR).
 
 ```mermaid
 graph TD

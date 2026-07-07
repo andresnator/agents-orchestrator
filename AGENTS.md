@@ -8,7 +8,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/` is the source of truth for reusable skill bodies.
-- `domains/{sdd,refactor,architecture,docs,meta,common}/README.md` explains each domain.
+- `domains/{sdd,refactor,architecture,plan,docs,meta,common}/README.md` explains each domain.
 - `domains/<domain>/agents/<name>.md` stores one fused OpenCode agent file: frontmatter plus prompt body.
 - `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
@@ -78,7 +78,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 
 ## Adding A Component
 
-1. Pick the domain first: `sdd`, `refactor`, `architecture`, `docs`, `meta`, or `common`.
+1. Pick the domain first: `sdd`, `refactor`, `architecture`, `plan`, `docs`, `meta`, or `common`.
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
 3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
 4. For skills, bump `metadata.version` when changing an existing skill.

@@ -344,9 +344,9 @@ Current inventory from the working tree:
 | Type | Count |
 |---|---:|
 | Agents | 18 |
-| Commands | 14 |
+| Commands | 19 |
 | Skills | 71 |
-| Domain skill symlinks | 95 |
+| Domain skill symlinks | 100 |
 | Plugins | 1 |
 
 By domain:
@@ -354,12 +354,12 @@ By domain:
 | Domain | Agents | Commands | Skill symlinks | Plugins |
 |---|---:|---:|---:|---:|
 | architecture | 2 | 5 | 19 | 0 |
-| common | 1 | 1 | 27 | 0 |
-| docs | 1 | 3 | 13 | 0 |
-| meta | 0 | 1 | 4 | 1 |
-| plan | 1 | 1 | 5 | 0 |
+| common | 1 | 2 | 28 | 0 |
+| docs | 1 | 4 | 15 | 0 |
+| meta | 0 | 2 | 4 | 1 |
+| plan | 1 | 2 | 6 | 0 |
 | refactor | 2 | 2 | 19 | 0 |
-| sdd | 11 | 1 | 8 | 0 |
+| sdd | 11 | 2 | 9 | 0 |
 
 Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 

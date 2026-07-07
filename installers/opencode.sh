@@ -39,7 +39,8 @@ Targets:
 
 Filters:
   --domain    Comma-separated domains, or all.
-              Current domains: common, docs, meta, refactor, sdd.
+              Domains are discovered dynamically from domains/
+              (currently: architecture, common, docs, meta, plan, refactor, sdd).
               Domain skills are symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
