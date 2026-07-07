@@ -1,6 +1,6 @@
 # SDD Domain: Flujo del Orchestraitor
 
-`orchestraitor` coordina el ciclo SDD solo cuando el usuario lo pide explícitamente. Sin mención de SDD, ejecuta directo y simple; las fases viven en subagentes dedicados únicamente dentro del flujo SDD para poder fijar `model:` por fase más adelante sin cambiar la experiencia del usuario ni mezclar responsabilidades.
+`orchestraitor` coordina el ciclo SDD solo cuando el usuario lo pide explícitamente. Sin mención de SDD, ejecuta directo y simple; las fases viven en subagentes dedicados únicamente dentro del flujo SDD para poder fijar un modelo por fase desde el `opencode.json` del usuario (ver `docs/agent-models.md`) sin cambiar la experiencia del usuario ni mezclar responsabilidades.
 
 ## Kickoff
 

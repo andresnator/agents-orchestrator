@@ -142,7 +142,7 @@ Key observations:
 | Entry | Explicit only: "vamos con sdd", "usa SDD", or equivalent clear intent. Without an SDD mention, execution is direct and `general` is available only for auxiliary chores. `/judgment` is available for standalone adversarial review. |
 | Kickoff | Runs only after explicit SDD activation: one question round via `native-question-ux` for interactive/automatic mode, TDD, and judgment. |
 | Gates | Interactive mode confirms after the proposal and after specs plus design; automatic mode only stops when genuinely blocked. |
-| Phase agents | Dedicated agents handle proposal, spec, design, tasks, implementation, and verification so `model:` can be assigned per phase later. |
+| Phase agents | Dedicated agents handle proposal, spec, design, tasks, implementation, and verification so a model can be assigned per phase via the user's `opencode.json` (see `docs/agent-models.md`). |
 | Auxiliary work | `general` stays allowlisted only for self-contained chores such as lateral research, fixtures, or background suites. |
 | Artifacts | OpenSpec-style under `.ai/orchestrator/`: canonical `specs/`, active `changes/<name>/`, and `changes/archive/` with deltas merged into canonical specs. |
 
@@ -281,7 +281,7 @@ Installer notes:
 
 | Finding | Evidence | Evaluation |
 |---|---|---|
-| SDD phase agents reintroduced with narrower roles | The 2026-07-06 simplification removed earlier phase agents because they duplicated interviewing and drafting decisions. The 2026-07-07 design reintroduces phase agents as single-responsibility workers with no user interview and one artifact or task wave each. | Intentional pivot: the coordinator still owns decisions and gates, while dedicated agents make future `model:` assignment possible per phase without returning to duplicated orchestration. |
+| SDD phase agents reintroduced with narrower roles | The 2026-07-06 simplification removed earlier phase agents because they duplicated interviewing and drafting decisions. The 2026-07-07 design reintroduces phase agents as single-responsibility workers with no user interview and one artifact or task wave each. | Intentional pivot: the coordinator still owns decisions and gates, while dedicated agents make per-phase model assignment possible through the user's `opencode.json` (see `docs/agent-models.md`) without returning to duplicated orchestration. |
 | Multiple review systems | SDD uses judgment-day dual blind judges (opt-in); refactor has nine reviewer lenses. | Intentional depth ladder, but review naming should make scope obvious to avoid invoking the expensive path for routine checks. |
 | Generic refactor skill overlaps refactor domain | `skills/refactor/SKILL.md` is a 62+ technique catalog, while `domains/refactor` provides planning/execution harnesses. | Keep the skill as technique reference; avoid routing it as a replacement for `/refactor-plan`. |
 | `single-responsibility` is reused by two lenses | `function-size-responsibility-reviewer` loads `single-responsibility`; `solid-design-reviewer` also loads it. | Acceptable reuse, but findings can duplicate. The planner reducer is the right dedupe point. |

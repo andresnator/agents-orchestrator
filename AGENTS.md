@@ -38,6 +38,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - Do not add `license` or `metadata` to agent or command frontmatter; OpenCode routes unrecognized agent fields into model options and providers can reject them.
 - `argument-hint` may remain inline; OpenCode tolerates extra frontmatter keys.
 - Agent `mode` is `primary` or `subagent`.
+- Do not hardcode `model:` (or provider/variant options) in agent frontmatter; agents stay provider-agnostic and per-agent model assignment is user-side via `opencode.json`, documented in `docs/agent-models.md`.
 - Stub/prompt/override splitting is gone. Do not add separate prompt files for new components.
 - Track fork attribution for agents or commands outside OpenCode frontmatter; do not put attribution fields in executable agent or command metadata.
 
