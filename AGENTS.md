@@ -25,6 +25,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 - `sdd`: spec-driven development around the `orchestraitor` primary agent, SDD drafting skills, and judgment-day agents; adopts ready-for-sdd planner bundles (see `docs/plan-handoff.md`).
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles adopted by the sdd `orchestraitor`, plus Java refactor skills.
+- `plan`: Fable-style deep planning for features and changes (evidence-first, edge-case validation) producing single plan documents under `.ai/plan-architect/plans/`.
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
