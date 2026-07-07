@@ -29,7 +29,7 @@ Skills are declared per domain as symlinks to top-level `skills/<skill>/` direct
 
 ## Refactor Write Boundary
 
-The refactor planning flow relies on agent `permission` frontmatter for write scoping. `refactor-planner` may write only under `.ia-refactor/plan/**`; there is no global refactor write-blocking plugin.
+The refactor planning flow relies on agent `permission` frontmatter for write scoping. `refactor-planner` may write only under `.ai/refactor-planner/changes/**`; there is no global refactor write-blocking plugin.
 
 ## Operational Notes
 

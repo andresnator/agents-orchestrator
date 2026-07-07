@@ -9,7 +9,7 @@ The repo has two heavy orchestration clusters and three lighter routing domains.
 | Cluster | Shape | Primary boundary |
 |---|---|---|
 | SDD | Opt-in coordinator primary agent with an explicit SDD kickoff | `orchestraitor` executes directly by default; after explicit SDD activation, it keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
-| Refactor | Risk-gated planning plus TCR execution | `refactor-planner` delegates only to its 18 `permission.task` allowlisted analysis/composition/gate subagents and writes only `.ia-refactor/plan/**`; `refactor-executor` does not delegate. |
+| Refactor | Risk-gated planning producing ready-for-sdd bundles | `refactor-planner` delegates only to the generic `refactor-analyzer` (N parallel lens instances) and writes only `.ai/refactor-planner/changes/**`; execution happens through sdd plan intake (`docs/plan-handoff.md`). |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
 | Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
 | Common | Reusable inspection | `/boundary-inspector` delegates to the bounded `boundary-inspector` subagent. |
@@ -50,27 +50,11 @@ flowchart TD
 
   subgraph Refactor["domain: refactor"]
     CPlan["/refactor-plan"] --> RPlanner["refactor-planner<br/>primary"]
-    CExec["/refactor-execute"] --> RExec["refactor-executor<br/>primary"]
-    RPlanner --> RScope["scope-analyzer"]
-    RPlanner --> RRisk["risk-assessor"]
-    RPlanner --> RBehavior["behavior-characterizer"]
-    RPlanner --> RSeam["dependency-seam-finder"]
-    RPlanner --> RTest["test-planner"]
-    RPlanner --> RArch["architecture-reviewer"]
-    RPlanner --> RTool["tooling-auditor"]
-    RPlanner --> RNaming["naming-readability-reviewer"]
-    RPlanner --> RSize["function-size-responsibility-reviewer"]
-    RPlanner --> RSolid["solid-design-reviewer"]
-    RPlanner --> RDup["duplication-simplicity-reviewer"]
-    RPlanner --> RCohesion["cohesion-coupling-reviewer"]
-    RPlanner --> RTypes["type-contract-nullability-reviewer"]
-    RComplex["complexity-performance-reviewer"]
-    RPlanner --> RComplex
-    RPlanner --> RAnti["antipattern-reviewer"]
-    RPlanner --> RLog["logging-observability-reviewer"]
-    RPlanner --> RCompose["refactor-openspec-composer"]
-    RPlanner --> RGate["refactor-safety-gate-reviewer"]
+    RPlanner --> RAnalyzer["refactor-analyzer x N<br/>parallel: unit x lens"]
+    RPlanner --> RBundle[".ai/refactor-planner/changes/*<br/>Status: ready-for-sdd"]
   end
+
+  RBundle -. plan intake .-> SDDHub
 
   subgraph Docs["domain: docs"]
     Doc["/doc"] -. skill .-> ADR["adr"]
@@ -148,76 +132,38 @@ Key observations:
 
 ### Refactor Plan
 
-Sources: `domains/refactor/agents/refactor-planner.md` and `docs/workflows/refactor-plan.md`.
+Sources: `domains/refactor/agents/refactor-planner.md`, `docs/workflows/refactor-plan.md`, and `docs/plan-handoff.md`.
 
 ```mermaid
 flowchart TD
   Start["/refactor-plan target"] --> Lock["freeze plan_target"]
-  Lock --> Scope["scope-analyzer"]
-  Scope --> UnitGate{"units <= 8?"}
-  UnitGate -->|no| Block["blocked<br/>narrow target"]
-  UnitGate -->|yes| Risk["risk-assessor"]
-  Risk --> Depth{"risk-gated depth"}
+  Lock --> Scope["inline scope + risk<br/>scope-analysis, risk-assessment"]
+  Scope --> Kickoff["GATE kickoff<br/>depth override / bundle split"]
+  Kickoff --> Depth{"risk-gated lenses"}
 
-  Depth -->|low -> light| Light["scope + risk only"]
-  Depth -->|medium -> standard| Standard["selected reviewer lenses"]
-  Depth -->|high critical -> deep| Deep["behavior seam test architecture tooling<br/>+ all 9 lenses"]
+  Depth -->|low| Light["no fan-out<br/>planner evidence only"]
+  Depth -->|medium| Standard["core lenses"]
+  Depth -->|high critical| Deep["full lens catalog"]
 
-  Standard --> Reducer["dedupe and partition findings"]
-  Deep --> Reducer
+  Standard --> Fanout["refactor-analyzer x N<br/>one message: unit x lens group"]
+  Deep --> Fanout
+  Fanout --> Reducer["consolidate: dedupe, contradictions,<br/>in_scope vs follow_up"]
   Light --> Reducer
-  Reducer --> Compose["refactor-openspec-composer"]
-  Compose --> Lint["plan-lint.sh"]
-  Lint --> Safety["refactor-safety-gate-reviewer"]
-  Safety -->|needs_changes max 3| Compose
-  Safety -->|approved| Plan["17-section plan<br/>.ia-refactor/plan/**"]
+  Reducer --> Compose["compose bundle(s)<br/>sdd-draft-* templates"]
+  Compose --> SelfCheck["self-check"]
+  SelfCheck --> Bundle[".ai/refactor-planner/changes/&lt;change&gt;<br/>Status: ready-for-sdd"]
+  Bundle -. adoption .-> Orch["orchestraitor plan intake<br/>implement, verify, judgment?, archive"]
 ```
 
-Depth fan-out:
+Lens fan-out:
 
-| Depth | Trigger | Delegation profile |
+| Risk | Fan-out | Profile |
 |---|---|---|
-| `smoke` | explicit `mode=smoke` or `--smoke` | No analysis fan-out; writes a lintable stub plan, not executable. |
-| `light` | `risk: low` | `scope-analyzer`, `risk-assessor`, then planner-authored minimal findings. |
-| `standard` | `risk: medium` | Always naming and type-contract lenses; additional lenses by method count, collaborators, target size, and logging evidence. |
-| `deep` | `risk: high` or `critical` | Five additional workers plus all nine reviewer lenses in one fan-out message, then composer and safety gate. |
+| `low` | none | Planner drafts the bundle from its own scope and risk evidence. |
+| `medium` | 1-2 analyzer instances per unit | Core lenses (readability, contracts, simplicity) plus size/collaborator heuristics. |
+| `high` or `critical` | up to 3 analyzer instances per unit, max 12 per message | Full catalog including behavior-safety, test-safety-net, architecture, tooling. |
 
-### Refactor Execute
-
-Source: `domains/refactor/agents/refactor-executor.md`.
-
-```mermaid
-flowchart TD
-  ExecStart["/refactor-execute plan"] --> Resolve["resolve explicit or latest plan"]
-  Resolve --> Validate{"valid 17-section plan<br/>Section 17 approved?"}
-  Validate -->|no| ExecBlock["blocked no edits"]
-  Validate -->|yes| Baseline["git status + baseline validation"]
-  Baseline -->|red or dirty| ExecBlock
-  Baseline -->|green| TaskLoop["for each unchecked tasks.md task"]
-  TaskLoop --> Evidence{"evidence still valid?"}
-  Evidence -->|no| Deviation["record deviation"]
-  Evidence -->|yes| Edit["smallest behavior-preserving edit"]
-  Edit --> Test["task validation"]
-  Test -->|green| Commit["mark task complete + report + commit"]
-  Test -->|red| Revert["revert task changes + report"]
-  Commit --> Continue{"more tasks?"}
-  Revert --> StopRule{"two consecutive reverts<br/>or unrecoverable baseline?"}
-  Deviation --> Continue
-  Continue -->|yes| TaskLoop
-  Continue -->|no| Report["execution report"]
-  StopRule -->|yes| Partial["partial or blocked"]
-  StopRule -->|no| TaskLoop
-```
-
-Execution gates:
-
-| Gate | Effect |
-|---|---|
-| Plan shape | Rejects anything without exactly the expected 17-section contract. |
-| `Depth:` | Rejects `smoke`; smoke is for harness validation only. |
-| Section 17 | Requires `safety_review.status: "approved"` before any edits. |
-| Baseline | Requires clean worktree and an explicit allowed validation command. |
-| TCR loop | Green validation commits; red validation reverts the current task only. |
+Execution is no longer part of this domain: `/refactor-execute` was removed, and adopted bundles run through the normal SDD flow (implement waves, verify, optional judgment, archive).
 
 ### Docs, Meta, Common
 
@@ -282,9 +228,9 @@ Installer notes:
 | Finding | Evidence | Evaluation |
 |---|---|---|
 | SDD phase agents reintroduced with narrower roles | The 2026-07-06 simplification removed earlier phase agents because they duplicated interviewing and drafting decisions. The 2026-07-07 design reintroduces phase agents as single-responsibility workers with no user interview and one artifact or task wave each. | Intentional pivot: the coordinator still owns decisions and gates, while dedicated agents make per-phase model assignment possible through the user's `opencode.json` (see `docs/agent-models.md`) without returning to duplicated orchestration. |
-| Multiple review systems | SDD uses judgment-day dual blind judges (opt-in); refactor has nine reviewer lenses. | Intentional depth ladder, but review naming should make scope obvious to avoid invoking the expensive path for routine checks. |
-| Generic refactor skill overlaps refactor domain | `skills/refactor/SKILL.md` is a 62+ technique catalog, while `domains/refactor` provides planning/execution harnesses. | Keep the skill as technique reference; avoid routing it as a replacement for `/refactor-plan`. |
-| `single-responsibility` is reused by two lenses | `function-size-responsibility-reviewer` loads `single-responsibility`; `solid-design-reviewer` also loads it. | Acceptable reuse, but findings can duplicate. The planner reducer is the right dedupe point. |
+| Multiple review systems | SDD uses judgment-day dual blind judges (opt-in); refactor runs parallel analyzer lenses at plan time. | Intentional depth ladder, but review naming should make scope obvious to avoid invoking the expensive path for routine checks. |
+| Generic refactor skill overlaps refactor domain | `skills/refactor/SKILL.md` is a 62+ technique catalog, while `domains/refactor` provides the planning harness. | Keep the skill as technique reference; avoid routing it as a replacement for `/refactor-plan`. |
+| Lens skills can overlap across analyzer briefs | The design and simplicity lenses both touch responsibility and duplication concerns. | Acceptable reuse, but findings can duplicate. The planner reducer is the right dedupe point. |
 | Two SDD entrypoints | `grill` keeps its standalone `sdd` mode for pure planning interviews; `orchestraitor` runs the full build cycle only after explicit SDD activation, using the same `sdd-draft-*` skills through dedicated phase agents. | Acceptable: `grill sdd` is plan-only drafting in chat; explicit SDD activation in `orchestraitor` coordinates the full cycle, delegating formal phases to `sdd-*` agents. Both write `.ai/orchestrator/changes/`. |
 
 ### 2. Coverage And Gaps
@@ -292,10 +238,10 @@ Installer notes:
 | Finding | Evidence | Risk or gap |
 |---|---|---|
 | No refactor runtime plugin | `domains/refactor/plugins/` has no plugin files. | The write boundary depends on OpenCode permission frontmatter and prompt contracts, not a global write-guard plugin. This is simpler but makes permission drift more important to review. |
-| Backlog skills are installable unless filtered out | Current frontmatter count: 10 backlog skills, including `buildable-issue` and `tcr`. `/doc` references `buildable-issue`; `refactor-executor` loads `tcr`. | Status is lifecycle metadata, not a hard runtime block unless installer filters are used. Backlog dependencies should be reviewed before promoting a workflow as stable. |
+| Backlog skills are installable unless filtered out | Current frontmatter count: 10 backlog skills, including `buildable-issue` and `tcr`. `/doc` references `buildable-issue`; `orchestraitor` offers `tcr` for TDD cadence. | Status is lifecycle metadata, not a hard runtime block unless installer filters are used. Backlog dependencies should be reviewed before promoting a workflow as stable. |
 | `meta` has no agents | `domains/meta/agents/` is absent; meta has one command and one plugin. | Fine for now: prompt checking is skill-only and registry behavior is plugin runtime. Add an agent only when prompt/meta work needs delegation or scoped permissions. |
 | Isolated leaf flows | `boundary-inspector` and `english-tutor` are useful leaf agents but not integrated into larger SDD or refactor flows. | This keeps them simple. The tradeoff is duplicated manual invocation when a larger workflow needs boundary or language review. |
-| Refactor execution observes tests, not app runtime | `refactor-executor` gates on baseline validation and TCR task validation. | Good for behavior-preserving refactors, but there is no explicit running-app observation phase beyond tests and user-approved validation commands. |
+| Refactor execution rides on SDD verification | Adopted bundles are executed by `sdd-implement` waves and cold-checked by `sdd-verify` against the bundle's characterization scenarios. | Behavior preservation depends on the quality of the bundle's spec deltas; there is no separate refactor-specific execution gate anymore. |
 
 ### 3. Cost And Orchestration Depth
 
@@ -304,10 +250,10 @@ Installer notes:
 | Direct request | no SDD mention | 0 SDD phase subagents | none | Direct execution; no kickoff questions or `.ai/orchestrator/changes/` artifacts. |
 | SDD | explicit activation | 0-1 (`sdd-explore` only when the area is unknown or large), plus phase agents: `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement` waves, and `sdd-verify` | drafting wave 2 (specs and design in parallel); independent implementation waves in parallel | Kickoff choices; interactive gates after proposal and specs+design; task grouping into waves bounds implementation subagent count. |
 | SDD | explicit activation with judgment | explore plus 2 judges and `jd-fix`, repeated up to 2 fix rounds | `jd-judge-a` and `jd-judge-b` in blind parallel rounds | Opt-in at kickoff; confirmed-only fixes; max 2 rounds. |
-| Refactor plan | light | 2 delegated analysis agents plus composer/gate path as needed | none | `risk: low` skips reviewer panel. |
-| Refactor plan | standard | 2 base agents plus selected lenses plus composer and gate | selected reviewer subset | Lens heuristics by size, collaborators, and logging evidence. |
-| Refactor plan | deep | 16 analysis/reviewer subagents in one fan-out, then composer and safety gate | 5 workers plus 9 lenses after scope and risk | Risk-gated depth, target unit cap, reducer, lint, and max 3 safety iterations. |
-| Refactor execute | approved plan | 0 delegated subagents | none | Section 17 approval, clean baseline, TCR commits/reverts, stop rules. |
+| Refactor plan | `risk: low` | 0 delegated subagents | none | Planner drafts from inline scope and risk evidence. |
+| Refactor plan | `risk: medium` | 1-2 `refactor-analyzer` instances per unit | one parallel message | Core lenses only; size/collaborator heuristics. |
+| Refactor plan | `risk: high/critical` | up to 3 `refactor-analyzer` instances per unit, max 12 per message | one parallel message, batched by unit beyond the cap | Full lens catalog; reducer dedupe; self-check before reporting. |
+| Refactor execution | via sdd adoption | sdd phase agents | sdd implementation waves | Kickoff-lite at adoption; normal SDD gates, verify, and optional judgment. |
 
 ### 4. Routing And Gates
 
@@ -317,9 +263,9 @@ Installer notes:
 | SDD proposal gate | interactive mode, after the proposal draft | Approves intent, scope, approach, and capability binding. |
 | SDD plan gate | interactive mode, after specs plus design | Approves the implementation contract before tasks. |
 | Judgment-day synthesis | `judgment-day` skill | Separates confirmed, suspect, and contradiction buckets; only confirmed findings go to `jd-fix`. |
-| Refactor risk gate | `refactor-planner` | Converts risk to depth and controls fan-out. |
-| Refactor safety gate | `refactor-safety-gate-reviewer` plus `plan-lint.sh` | Blocks malformed, speculative, or unsafe plans before completion. |
-| Refactor execute gate | `refactor-executor` | Requires valid Section 17 approved plan before edits. |
+| Refactor risk gate | `refactor-planner` | Converts risk to lens selection and controls fan-out size. |
+| Refactor self-check | `refactor-planner` | Verifies marker line, artifact completeness, task shape, and evidence before reporting. |
+| Plan intake gate | `orchestraitor` | Adopts only `Status: ready-for-sdd` bundles; never overwrites; asks the kickoff-lite round once. |
 | Task allowlists | `orchestraitor` and refactor planner frontmatter | Make delegation boundaries explicit: `*` denied, named subagents allowed. |
 
 ## Appendix: Inventory
@@ -328,9 +274,9 @@ Current inventory from the working tree:
 
 | Type | Count |
 |---|---:|
-| Agents | 33 |
-| Commands | 8 |
-| Skills | 68 |
+| Agents | 15 |
+| Commands | 7 |
+| Skills | 64 |
 | Domain skill symlinks | 69 |
 | Plugins | 1 |
 
@@ -341,7 +287,7 @@ By domain:
 | common | 1 | 1 | 27 | 0 |
 | docs | 1 | 3 | 13 | 0 |
 | meta | 0 | 1 | 4 | 1 |
-| refactor | 20 | 2 | 18 | 0 |
+| refactor | 2 | 1 | 18 | 0 |
 | sdd | 11 | 1 | 7 | 0 |
 
 Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
@@ -349,7 +295,7 @@ Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 | Status | Count |
 |---|---:|
 | backlog | 10 |
-| in-progress | 38 |
+| in-progress | 34 |
 | testing | 17 |
 | done | 3 |
 
@@ -361,18 +307,8 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 |---|---|
 | `orchestraitor` | `native-question-ux` for the kickoff and gates; delegates drafting to `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks`; delegates implementation to `sdd-implement`; delegates verification to `sdd-verify`; loads `judgment-day` when judgment is requested; offers `tcr` for TDD cadence. |
 | `sdd-explore` | No separate homonymous skill; discovery behavior is in the agent prompt. |
-| `refactor-executor` | `tcr`, `work-unit-commits`. |
-| `refactor-openspec-composer` | `openspec-refactor-composition`. |
-| `refactor-safety-gate-reviewer` | `refactor-plan-safety-gates`. |
-| `naming-readability-reviewer` | `reviewer-output-contract`, then `java-naming-readability` or `general-naming-readability`. |
-| `function-size-responsibility-reviewer` | `reviewer-output-contract`, `small-functions`, `single-responsibility`. |
-| `solid-design-reviewer` | `reviewer-output-contract`, `single-responsibility`, `open-closed-principle`, `dependency-inversion`. |
-| `duplication-simplicity-reviewer` | `reviewer-output-contract`, `dry-business-knowledge`, `kiss-yagni`. |
-| `cohesion-coupling-reviewer` | `reviewer-output-contract`, `cohesion-coupling`. |
-| `type-contract-nullability-reviewer` | `reviewer-output-contract`, `type-contracts`, `null-safety`, `input-validation-preconditions`. |
-| `complexity-performance-reviewer` | `reviewer-output-contract`, `complexity-big-o`. |
-| `antipattern-reviewer` | `reviewer-output-contract`, `god-object-detection`, `spaghetti-code-detection`. |
-| `logging-observability-reviewer` | `reviewer-output-contract`, `logging-observability`. |
+| `refactor-planner` | `scope-analysis`, `risk-assessment`, `native-question-ux` inline; `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, `sdd-draft-tasks` for bundle composition; lens skills selected per brief from the lens catalog. |
+| `refactor-analyzer` | Loads exactly the skills listed in each planner brief (lens catalog: readability, design, simplicity, contracts, behavior-safety, test-safety-net, architecture, tooling, observability). |
 | `english-tutor` | `english-tutor`. |
 | `boundary-inspector` | `service-boundary-analysis`. |
 | `/doc` | `adr`, `rfc`, `usm`, `jira-spike`, `buildable-issue`, `cognitive-doc-design`, or `/prd` by request shape. |
@@ -384,6 +320,6 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 
 - Mermaid blocks use simple `flowchart` syntax suitable for GitHub preview.
 - SDD delegation edges match the 11 named `permission.task` allows in `domains/sdd/agents/orchestraitor.md` (including OpenCode's built-in `general` for auxiliary chores only).
-- Refactor planner delegation edges match the 18 named `permission.task` allows in `domains/refactor/agents/refactor-planner.md`.
+- Refactor planner delegation edges match the single named `permission.task` allow (`refactor-analyzer`) in `domains/refactor/agents/refactor-planner.md`.
 - Every agent and skill named in the inventory exists in `domains/*/agents/` or `skills/`.
 - This file is documentation-only under `docs/` and does not change executable frontmatter or installer behavior.

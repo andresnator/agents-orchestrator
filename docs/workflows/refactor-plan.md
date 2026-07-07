@@ -1,140 +1,45 @@
-# OpenCode Refactor Plan Harness
+# OpenCode Refactor Plan Workflow
 
-This project-local OpenCode harness adds `/refactor-plan`, a plan-only workflow that analyzes a code class, package, or module and writes one risk-gated OpenSpec-style Markdown refactor plan. Approved plans can then be executed with `/refactor-execute`.
+`/refactor-plan` analyzes a code class, package, or module and produces one or more ready-for-sdd OpenSpec change bundles. Execution is not part of this workflow: bundles are adopted and executed by the sdd `orchestraitor` (see `docs/plan-handoff.md`).
 
 ## Quick path
 
 ```bash
 opencode run "/refactor-plan src/main/java/com/acme/billing/InvoiceService.java"
 opencode run "/refactor-plan src/main/java/com/acme/billing"
-opencode run "/refactor-plan mode=smoke src/main/java/com/acme/billing/LegacyOrderProcessor.java"
-opencode run "/refactor-execute .ia-refactor/plan/20260706/InvoiceService.md"
+# then, in an sdd session:
+#   "ejecuta el plan refactor-invoice-service"
 ```
 
-The `mode=smoke` flag writes a stub 17-section plan through lint for fast harness validation. Smoke output is not executable by `/refactor-execute`.
-
-The generated plan is saved to:
+Bundles are saved to:
 
 ```text
-.ia-refactor/plan/YYYYMMDD/<target-name>.md
+.ai/refactor-planner/changes/<change>/{proposal.md, design.md, specs/<capability>/spec.md, tasks.md}
 ```
 
 ## What it does
 
-- Freezes a single `plan_target` lock for the whole run.
-- Runs `scope-analyzer`, caps the target at 8 units, then runs `risk-assessor`.
-- Selects depth from risk: `low -> light`, `medium -> standard`, `high|critical -> deep`.
-- Uses reviewer lenses only when depth requires them.
-- Produces one 17-section plan with `Risk:`, `Depth:`, OpenSpec-style change sections, and `## 15. Execution Contract`.
-- Runs `plan-lint.sh` and `refactor-safety-gate-reviewer` before completion.
+- Freezes a `plan_target` lock for the whole run.
+- Scopes units and classifies risk inline (`scope-analysis`, `risk-assessment` skills), then asks one kickoff round (depth override; bundle split when >1 unit).
+- Risk-gates the analysis: low → no fan-out; medium → core lenses; high/critical → full lens catalog.
+- Fans out the generic read-only `refactor-analyzer` subagent in parallel (unit × lens group, capped per message).
+- Consolidates findings (dedupe, contradiction handling, priority) into `in_scope` vs `follow_up`.
+- Composes the bundle(s) with the `sdd-draft-*` templates; spec deltas are mostly ADDED behavior-preservation requirements whose scenarios characterize current behavior.
+- Self-checks the bundle (marker line, artifact completeness, task shape, evidence) before reporting.
 
 ## What it does not do
 
-- It does not refactor code.
+- It does not refactor or execute anything; `/refactor-execute` no longer exists.
 - It does not modify production paths, build files, source files, or tests.
-- It does not create real `openspec/changes/**` artifacts.
-- It does not mix functional changes into refactoring tasks.
-- It does not rely on a global write-blocking plugin; write scope lives in the planner's `permission` frontmatter.
+- It does not decide Mode/TDD/Judgment; the orchestraitor asks at adoption.
+- It ignores legacy `.ia-refactor/**` plans (frozen history, not executable).
 
 ## Architecture
 
 | Part | Role |
 |---|---|
-| Command | `domains/refactor/commands/refactor-plan.md` receives `$ARGUMENTS` and routes to `refactor-planner`. |
-| Primary agent | `domains/refactor/agents/refactor-planner.md` orchestrates scope, risk, reviewer fan-out, composition, safety, lint, and saving. |
-| Executor command | `domains/refactor/commands/refactor-execute.md` receives an approved plan path, or resolves the latest plan. |
-| Executor agent | `domains/refactor/agents/refactor-executor.md` validates the plan, checks baseline, executes tasks with TCR, commits each green task, and writes an execution report. |
-| Analysis workers | `scope-analyzer`, `risk-assessor`, `behavior-characterizer`, `dependency-seam-finder`, `test-planner`, `architecture-reviewer`, and `tooling-auditor` provide locked, read-only safety analysis. |
-| Reviewer subagents | Nine focused lenses load `reviewer-output-contract` and return compact YAML findings or `nf: "<reason>"`. |
-| Composer subagent | `refactor-openspec-composer` creates the unified 17-section plan. |
-| Safety subagent | `refactor-safety-gate-reviewer` blocks unsafe, speculative, or non-evidence-based plans. |
-| Write boundary | `refactor-planner` permissions allow writes only under `.ia-refactor/plan/**`; subagents remain read-only. |
-| Skills | `skills/*/SKILL.md` provides reusable single-responsibility review instructions; `domains/*/skills/*` declare domain usage by symlink. |
-
-## Depths
-
-| Risk | Depth | Behavior |
-|---|---|---|
-| `low` | `light` | No reviewer panel; the planner writes minimal findings from scope and risk evidence. |
-| `medium` | `standard` | Runs selected reviewer lenses. Naming and type-contract lenses always run; other lenses follow target-size and collaborator heuristics. |
-| `high` or `critical` | `deep` | Runs behavior, seam, test, architecture, tooling workers plus all nine reviewer lenses. |
-
-Sections 8 and 9 always exist. When characterization or tooling is not required at the selected depth, the section contains exactly:
-
-```text
-Not required at depth: <depth>.
-```
-
-## Required Plan Shape
-
-Every plan uses one title/prelude plus exactly 17 sections:
-
-```text
-# Refactor Plan: <target-name>
-Generated at: <YYYY-MM-DD>
-Target: `<target>`
-Output file: `.ia-refactor/plan/YYYYMMDD/<target-name>.md`
-Risk: <low | medium | high | critical>
-Depth: <light | standard | deep | smoke>
-```
-
-Sections:
-
-1. Executive Summary
-2. Target and Scope
-3. Risk and Depth Assessment
-4. Observations
-5. Goals
-6. Non-Goals
-7. Findings by Category
-8. Characterization Coverage Plan
-9. Tooling Audit
-10. Backlog
-11. Sequence
-12. OpenSpec-Style Change
-13. Validation
-14. Risk & Rollback
-15. Execution Contract
-16. Follow-up
-17. Safety Gate Result
-
-## Execution Contract
-
-Section 15 is the producer-to-executor handoff. It must tell `/refactor-execute` how to:
-
-- confirm Section 17 has `safety_review.status: "approved"`;
-- establish the baseline validation from Section 13;
-- execute Section 12 `tasks.md` in order;
-- re-check evidence before each task;
-- log deviations as `{task, status, reason, evidence}`;
-- use TCR: commit green task validations and revert red validations;
-- stop after repeated reverts, baseline failure, or target drift.
-
-`/refactor-execute` rejects plans when Section 17 is not approved, when `Depth: smoke`, when the output path does not match, or when `tasks.md` cannot be executed in order. During execution it records deviations instead of improvising outside the plan.
-
-Execution reports are written to:
-
-```text
-.ia-refactor/execute/YYYYMMDD/<target>-execution.md
-```
-
-## Validation
-
-Use the portable linter:
-
-```bash
-sh skills/refactor-plan-safety-gates/assets/plan-lint.sh .ia-refactor/plan/YYYYMMDD/<target-name>.md
-```
-
-The planner must run the linter before safety review and again before finishing.
-
-## Layout
-
-- `domains/refactor/commands/*.md` for commands.
-- `domains/refactor/agents/*.md` for primary agents and subagents.
-- `domains/<domain>/plugins/*.ts` for OpenCode plugins installed by `installers/opencode.sh` when a domain owns runtime behavior.
-- `skills/<name>/SKILL.md` for skill bodies and `domains/<domain>/skills/<name>` symlinks for domain usage.
-
-## Catalog Notes
-
-The plan linter travels with the `refactor-plan-safety-gates` skill under `assets/plan-lint.sh`.
+| Command | `domains/refactor/commands/refactor-plan.md` routes `$ARGUMENTS` to `refactor-planner`. |
+| Primary agent | `domains/refactor/agents/refactor-planner.md` scopes, risk-gates, fans out, consolidates, composes, self-checks. |
+| Analysis subagent | `domains/refactor/agents/refactor-analyzer.md` — one generic read-only instance per unit × lens brief. |
+| Handoff | `docs/plan-handoff.md` — `Status: ready-for-sdd` marker + orchestraitor adoption. |
+| Write boundary | Planner permissions allow writes only under `.ai/refactor-planner/changes/**`; the analyzer is read-only. |
