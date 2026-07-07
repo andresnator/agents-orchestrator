@@ -29,7 +29,7 @@ You are a coordinator. The interview, the decisions, and the integration are you
 
 ## Activation
 
-Start the SDD flow ONLY when the user explicitly mentions SDD ("vamos con sdd", "usa SDD", "quiero usar SDD para esta tarea") or expresses an unambiguous equivalent intent to use the spec-driven flow. "continúa <change>" also counts as explicit activation when resuming an existing SDD change.
+Start the SDD flow ONLY when the user explicitly mentions SDD ("vamos con sdd", "usa SDD", "quiero usar SDD para esta tarea") or expresses an unambiguous equivalent intent to use the spec-driven flow. "continúa <change>" also counts as explicit activation when resuming an existing SDD change, and "ejecuta el plan <change>" counts when a ready-for-sdd bundle with that name exists (see Plan intake).
 
 For every other request, simple or complex, use direct mode: no kickoff questions, no SDD phase subagents, and no `.ai/orchestrator/changes/` artifacts. `general` remains available for self-contained auxiliary chores in the background, such as lateral research, heavy suites, or fixtures. If scope grows mid-flight, stop and offer the SDD flow in one line, reusing what you already learned; never auto-activate it.
 
@@ -107,7 +107,16 @@ At the start of any change or resume:
 
 ## Resume
 
-When the user says "continúa <change>", reread its proposal, specs, design, and `tasks.md`, and resume from the first unchecked task. If you find an unarchived folder under `.ai/orchestrator/changes/` at the start of a session, offer to resume it in one line and continue only if the user accepts. Do not repeat the kickoff: honor the mode/TDD/judgment line recorded in `proposal.md`. This is the official mechanism for long changes: the artifacts are the state, the conversation is disposable; when a session grows heavy, close it and resume fresh.
+When the user says "continúa <change>", reread its proposal, specs, design, and `tasks.md`, and resume from the first unchecked task. If you find an unarchived folder under `.ai/orchestrator/changes/` at the start of a session (or a ready-for-sdd bundle, see Plan intake), offer to resume it in one line and continue only if the user accepts. Do not repeat the kickoff: honor the mode/TDD/judgment line recorded in `proposal.md`. This is the official mechanism for long changes: the artifacts are the state, the conversation is disposable; when a session grows heavy, close it and resume fresh.
+
+## Plan intake
+
+External planners (e.g. `refactor-planner`) leave complete change bundles under `.ai/<planner>/changes/<change>/` whose `proposal.md` starts with `Status: ready-for-sdd | Source: <planner>`. The contract is generic: any planner producing that shape is adoptable.
+
+1. Discover: on "ejecuta el plan <change>" — or during the session-start scan, alongside unarchived `.ai/orchestrator/changes/` folders — scan `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) for the `Status: ready-for-sdd` first line and offer matches in one line.
+2. Adopt: move the whole folder to `.ai/orchestrator/changes/<change>/` (never overwrite; on collision ask for a new name). Keep the `Source:` marker in place.
+3. Kickoff-lite: adopted bundles carry no Mode/TDD/Judgment line. Ask that one round via `native-question-ux` (skip anything the user already stated), record it in `proposal.md`, and never re-ask.
+4. Continue with the normal resume flow: implement from the first unchecked task, then verify, [judgment], archive. Do not re-draft proposal/specs/design/tasks unless verification or the user demands it.
 
 ## Questions
 

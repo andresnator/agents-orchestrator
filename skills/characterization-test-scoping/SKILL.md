@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.2"
+  version: "2.0.3"
   status: in-progress
 ---
 
@@ -58,6 +58,5 @@ Return guidance that sharpens characterization coverage, seam selection, contain
 ## References
 
 - the refactor-planner agent
-- the reviewer-output-contract skill
 - the tooling-audit skill
 - the tooling-compatibility-matrix skill

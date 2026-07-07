@@ -1,5 +1,5 @@
 ---
-description: "Generate one risk-gated OpenSpec-style refactor plan for a code class, package, or module."
+description: "Generate ready-for-sdd OpenSpec refactor change bundle(s) for a class, package, or module."
 agent: refactor-planner
 subtask: false
 argument-hint: "[target class, package, or module path]"
@@ -11,13 +11,11 @@ Delegate this workflow to the primary agent `refactor-planner` using the exact r
 
 Hard constraints:
 
-- This is a plan-only workflow: do not modify production code.
+- This is a plan-only workflow: do not modify production code, tests, or build files.
 - The first non-flag argument is the refactor target.
-- Allowed runtime write path: `.ia-refactor/plan/YYYYMMDD/<target-name>.md` only.
-- Produce one Markdown document with the 17-section refactor-plan template.
-- Run risk-gated depth selection: low -> light, medium -> standard, high/critical -> deep.
-- Include the frozen `plan_target` lock, `Risk:`, `Depth:`, `## 15. Execution Contract`, and approved safety YAML before reporting completion.
-- Every finding must have file/line/symbol evidence, or be explicitly marked as a hypothesis.
-- Keep refactoring separate from functional behavior changes.
-- Tasks must be small, ordered, verifiable, reversible, and safe for incremental execution.
-- Do not propose speculative abstractions or cosmetic-only changes without maintainability value.
+- Allowed runtime write path: `.ai/refactor-planner/changes/**` only.
+- Output: one or more OpenSpec change bundles (`proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md`) conforming to the `sdd-draft-*` templates.
+- `proposal.md` must start with `Status: ready-for-sdd | Source: refactor-planner`; execution happens later through orchestraitor adoption ("ejecuta el plan <change>").
+- Run risk-gated analysis depth with parallel `refactor-analyzer` fan-out.
+- Every finding must have `file:line` evidence, or be explicitly marked as a hypothesis.
+- Tasks must be small, ordered, verifiable, behavior-preserving, and sized for sdd implementation waves; behavior changes go to Scope Out, never to `tasks.md`.

@@ -13,9 +13,12 @@ The orchestraitor keeps the interview, confirmation gates, integration, checkbox
 
 Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonical `specs/` per capability, active `changes/<name>/` with proposal/design/spec deltas/tasks, and `changes/archive/` with deltas merged into canonical specs on completion. At resume/startup, legacy `.orchestraitor/` or `.orchestrator/` state is migrated into `.ai/orchestrator/` without overwriting existing files.
 
+The orchestraitor also adopts plans drafted elsewhere: external planners (e.g. `refactor-planner`) leave complete bundles under `.ai/<planner>/changes/<change>/` marked `Status: ready-for-sdd`, and "ejecuta el plan <change>" moves the bundle into `.ai/orchestrator/changes/` and runs it from implement onward. The contract is generic — see `docs/plan-handoff.md`.
+
 ```mermaid
 graph TD
   user[Usuario: vamos con sdd] --> orch[orchestraitor]
+  intake[".ai/*/changes: ready-for-sdd bundles"] -->|ejecuta el plan| orch
   orch --> explore[sdd-explore]
   orch --> proposal[sdd-proposal]
   proposal --> spec[sdd-spec]
