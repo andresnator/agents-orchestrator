@@ -19,4 +19,4 @@ Premise: assume the work shipped and failed six months from now. The interview r
 
 Close with a prioritized risk register (likelihood × impact ordering): risk, category, rating, mitigation, and owner/next step when known.
 
-Offer once to write the register to `.ai/plan-architect/plans/{kebab-case-topic}-premortem.md`; on no, leave it inline. Interview in the user's language; the written artifact defaults to English.
+Offer once to write the register to `.ai/deep-planner/plans/{kebab-case-topic}-premortem.md`; on no, leave it inline. Interview in the user's language; the written artifact defaults to English.

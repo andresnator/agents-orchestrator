@@ -11,7 +11,7 @@ The repo has three heavy orchestration clusters, one lightweight planning primar
 | SDD | Opt-in coordinator primary agent with an explicit SDD kickoff | `orchestraitor` executes directly by default; after explicit SDD activation, it keeps the interview, gates, integration, and archive in the main session and delegates phase work to its 11 `permission.task` allowlisted subagents: `sdd-explore`, six phase agents, judgment-day agents, and `general` for auxiliary chores only. Artifacts are managed OpenSpec-style under `.ai/orchestrator/**`. |
 | Refactor | Risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles | `refactor-planner` delegates only to the generic `refactor-analyzer` (N parallel lens instances) and writes only `.ai/refactor-planner/changes/**`; execution happens through sdd plan intake (`docs/plan-handoff.md`). |
 | Architecture | Project-architecture analysis behind five commands sharing one primary | `architect` delegates only to the generic `arch-analyzer` (N parallel lens instances) and writes only `.ai/architect/**` plus the target doc folder's `architecture/` subtree; `/arch-ideate` bundles execute through the same sdd plan intake. First agent with non-deny bash: an ask-gated read-only audit-command allowlist. |
-| Plan | Fable-style deep planning behind one command and one plan-only primary | `plan-architect` explores inline (optional fan-out of at most 3 read-only briefs to the built-in `general`) and writes only `.ai/plan-architect/plans/**`; the output is a single plan document — deliberately not a ready-for-sdd bundle — handed informally to the sdd `orchestraitor`. |
+| Plan | Fable-style deep planning behind one command and one plan-only primary | `deep-planner` explores inline (optional fan-out of at most 3 read-only briefs to the built-in `general`) and writes only `.ai/deep-planner/plans/**`; the output is a single plan document — deliberately not a ready-for-sdd bundle — handed informally to the sdd `orchestraitor`. |
 | Docs | Thin command routers | `/doc`, `/prd`, and `/english` select the smallest relevant skill or subagent. |
 | Meta | Prompt and registry utilities | `/prompt-checker` routes to `prompt-structure-writer`; `skill-registry.ts` generates `.ai/atl/skill-registry.md`. |
 | Common | Reusable inspection | `/boundary-inspector` delegates to the bounded `boundary-inspector` subagent. |
@@ -74,9 +74,9 @@ flowchart TD
   ABundle -. plan intake .-> SDDHub
 
   subgraph Plan["domain: plan"]
-    CDeep["/deep-plan"] --> PArchitect["plan-architect<br/>primary"]
+    CDeep["/deep-plan"] --> PArchitect["deep-planner<br/>primary"]
     PArchitect --> PGeneral["general (built-in) x 0-3<br/>read-only exploration"]
-    PArchitect --> PDoc[".ai/plan-architect/plans/*<br/>Context / Design / Edge Matrix / Verification"]
+    PArchitect --> PDoc[".ai/deep-planner/plans/*<br/>Context / Design / Edge Matrix / Verification"]
     PArchitect -. skill .-> FablePlanning["fable-planning"]
   end
 
@@ -215,7 +215,7 @@ Mode boundaries: all five modes share the lock → state scan → kickoff → fa
 
 ### Plan
 
-Sources: `domains/plan/agents/plan-architect.md` and `skills/fable-planning/SKILL.md`.
+Sources: `domains/plan/agents/deep-planner.md` and `skills/fable-planning/SKILL.md`.
 
 ```mermaid
 flowchart TD
@@ -224,12 +224,12 @@ flowchart TD
   PClarify --> PDesign["design: reuse-first,<br/>rejected alternatives"]
   PDesign --> PEdges["edge validation<br/>three-destinations rule"]
   PEdges --> PSelfCheck["self-check"]
-  PSelfCheck --> PPlanDoc[".ai/plan-architect/plans/&lt;slug&gt;.md<br/>Context / Design / Edge Matrix / Verification"]
+  PSelfCheck --> PPlanDoc[".ai/deep-planner/plans/&lt;slug&gt;.md<br/>Context / Design / Edge Matrix / Verification"]
   PPlanDoc -. opt-in .-> PJudgment["/judgment adversarial review"]
   PPlanDoc -. informal handoff .-> POrch["orchestraitor direct mode"]
 ```
 
-Mode boundaries: plan-only with a single write path (`.ai/plan-architect/plans/**`); no dedicated analyzer subagent — exploration is inline, with the built-in `general` allowed for at most 3 read-only briefs when scope spans independent areas. The methodology lives in the `fable-planning` skill so any agent can reuse it: evidence before opinion, minimal calibrated questions, edge-case validation under the three-destinations rule (handled / out of scope / open question — never silently dropped), and outcome-first selectivity. The output is deliberately not a ready-for-sdd bundle; automatic adoption would be added later via `docs/plan-handoff.md` if wanted.
+Mode boundaries: plan-only with a single write path (`.ai/deep-planner/plans/**`); no dedicated analyzer subagent — exploration is inline, with the built-in `general` allowed for at most 3 read-only briefs when scope spans independent areas. The methodology lives in the `fable-planning` skill so any agent can reuse it: evidence before opinion, minimal calibrated questions, edge-case validation under the three-destinations rule (handled / out of scope / open question — never silently dropped), and outcome-first selectivity. The output is deliberately not a ready-for-sdd bundle; automatic adoption would be added later via `docs/plan-handoff.md` if wanted.
 
 ### Docs, Meta, Common
 
@@ -332,8 +332,8 @@ Installer notes:
 | Judgment-day synthesis | `judgment-day` skill | Separates confirmed, suspect, and contradiction buckets; only confirmed findings go to `jd-fix`. |
 | Refactor risk gate | `refactor-planner` | Converts risk to lens selection and controls fan-out size. |
 | Refactor self-check | `refactor-planner` | Verifies marker line, artifact completeness, task shape, and evidence before reporting. |
-| Plan clarify gate | `plan-architect` | One grouped question round with recommended answers; only decisions the repo cannot answer. |
-| Plan self-check | `plan-architect` | Verifies evidence or hypothesis marking, an edge-matrix destination per row, and an executable Verification section before reporting. |
+| Plan clarify gate | `deep-planner` | One grouped question round with recommended answers; only decisions the repo cannot answer. |
+| Plan self-check | `deep-planner` | Verifies evidence or hypothesis marking, an edge-matrix destination per row, and an executable Verification section before reporting. |
 | Plan intake gate | `orchestraitor` | Adopts only `Status: ready-for-sdd` bundles; never overwrites; asks the kickoff-lite round once. |
 | Task allowlists | `orchestraitor` and refactor planner frontmatter | Make delegation boundaries explicit: `*` denied, named subagents allowed. |
 
@@ -382,7 +382,7 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 | `refactor-analyzer` | Loads exactly the skills listed in each planner brief (lens catalog: readability, design, simplicity, contracts, behavior-safety, test-safety-net, architecture, tooling, observability). |
 | `architect` | `architecture-state`, `native-question-ux` inline; per mode: `architecture-map` (map), `repo-issues` (review), `prd`/`prd-light` (prd), `architecture-ideation` + `adr` + `sdd-draft-*` + `code-conventions` (ideate), `dependency-security-audit` (audit); `cognitive-doc-design` for every doc written. |
 | `arch-analyzer` | Loads exactly the skills listed in each architect brief (lens catalog: structure, boundaries, modularity, tooling, security, observability). |
-| `plan-architect` | `fable-planning` inline as the methodology contract; `grilling` + `native-question-ux` for the clarification round; `code-conventions` for language/tool-version evidence; `judgment-day` offered opt-in on the finished plan. |
+| `deep-planner` | `fable-planning` inline as the methodology contract; `grilling` + `native-question-ux` for the clarification round; `code-conventions` for language/tool-version evidence; `judgment-day` offered opt-in on the finished plan. |
 | `english-tutor` | `english-tutor`. |
 | `boundary-inspector` | `service-boundary-analysis`. |
 | `/doc` | `adr`, `rfc`, `usm`, `jira-spike`, `buildable-issue`, `cognitive-doc-design`, or `/prd` by request shape. |
@@ -396,6 +396,6 @@ This table lists explicit, stable skill loads. Some agents select additional ski
 - SDD delegation edges match the 11 named `permission.task` allows in `domains/sdd/agents/orchestraitor.md` (including OpenCode's built-in `general` for auxiliary chores only).
 - Refactor planner delegation edges match the single named `permission.task` allow (`refactor-analyzer`) in `domains/refactor/agents/refactor-planner.md`.
 - Architect delegation edges match the single named `permission.task` allow (`arch-analyzer`) in `domains/architecture/agents/architect.md`; its bash permission is an ask-gated allowlist under a default deny.
-- Plan-architect delegation edges match the single named `permission.task` allow (`general`) in `domains/plan/agents/plan-architect.md`.
+- Plan-architect delegation edges match the single named `permission.task` allow (`general`) in `domains/plan/agents/deep-planner.md`.
 - Every agent and skill named in the inventory exists in `domains/*/agents/` or `skills/`.
 - This file is documentation-only under `docs/` and does not change executable frontmatter or installer behavior.

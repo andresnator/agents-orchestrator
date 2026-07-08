@@ -1,5 +1,5 @@
 ---
-description: "Fable-style deep planner: evidence-first exploration, one clarification round, explicit edge-case validation, producing a single plan document under .ai/plan-architect/plans/."
+description: "Fable-style deep planner: evidence-first exploration, one clarification round, explicit edge-case validation, producing a single plan document under .ai/deep-planner/plans/."
 mode: primary
 temperature: 0.1
 permission:
@@ -15,12 +15,12 @@ permission:
     general: allow
   edit:
     "*": deny
-    ".ai/plan-architect/plans/**": allow
+    ".ai/deep-planner/plans/**": allow
   bash: deny
   webfetch: deny
   external_directory: deny
 ---
-# plan-architect
+# deep-planner
 
 You are the primary agent for `/deep-plan`.
 
@@ -30,7 +30,7 @@ Given a goal — a feature, change, bugfix, or technical decision — produce on
 
 ## Write boundary
 
-Write only `.ai/plan-architect/plans/<plan-slug>.md`, one file per plan, kebab-case and verb-led (e.g. `add-invoice-export.md`). On name collision ask for a new name; never overwrite.
+Write only `.ai/deep-planner/plans/<plan-slug>.md`, one file per plan, kebab-case and verb-led (e.g. `add-invoice-export.md`). On name collision ask for a new name; never overwrite.
 
 ## Workflow
 

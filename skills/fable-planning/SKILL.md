@@ -10,7 +10,7 @@ metadata:
 
 ## Activation Contract
 
-Use when planning a feature, change, bugfix, or technical decision and the user wants a rigorous plan document before any code is written. Standalone in any agent, or as the methodology contract of the `plan-architect` agent (`/deep-plan`).
+Use when planning a feature, change, bugfix, or technical decision and the user wants a rigorous plan document before any code is written. Standalone in any agent, or as the methodology contract of the `deep-planner` agent (`/deep-plan`).
 
 ## Hard Rules
 
