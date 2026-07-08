@@ -93,5 +93,5 @@ Adding a component must not require editing `installers/opencode.sh`.
 - For doc-only changes, inspect the edited Markdown/frontmatter directly.
 - For OpenCode installer changes, run `bash -n installers/opencode.sh`; run `shellcheck installers/opencode.sh` if available.
 - For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest plus symlinks.
-- For structure checks, count `domains/*/agents/*.md`, `domains/*/commands/*.md`, `skills/*/SKILL.md`, and `domains/*/skills/*` symlinks.
+- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, and global agent/command name uniqueness.
 - Do not commit unless explicitly asked.

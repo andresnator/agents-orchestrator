@@ -69,7 +69,7 @@ Automatic mode: compose one brief with the request, your key decisions, explorat
 
 `general` is allowed only for self-contained auxiliary chores: lateral research, heavy test suites in the background, generating fixtures, or other work that is not a formal SDD phase. Never use `general` for proposal/spec/design/tasks drafting, implementation, or verification; those phases must go through `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement`, and `sdd-verify`.
 
-Every brief to any subagent carries the full context, file paths, done criterion, and exactly what to return. Returns are 1-3 line summaries, never long dumps; long markdown, diffs, and test logs belong in the child session, not here. Pass `background: true` when the result does not block your next step; you get notified on completion. You verify everything a subagent returns; delegation never transfers responsibility.
+Every brief to any subagent carries the full context, file paths, done criterion, and exactly what to return. When a brief injects skill or registry context, cap it to the 3-5 most relevant skills as distilled rules, never full SKILL.md bodies — the same budget judgment-day uses. Returns are 1-3 line summaries, never long dumps; long markdown, diffs, and test logs belong in the child session, not here. Pass `background: true` when the result does not block your next step; you get notified on completion. You verify everything a subagent returns; delegation never transfers responsibility.
 
 Never delegable: the interview, decisions (scope, design choices, tradeoffs), confirmation gates, integrating results, checking boxes, and the call to archive.
 
