@@ -9,7 +9,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
   status: in-progress
-  version: "2.1.2"
+  version: "2.1.3"
 ---
 
 ## Purpose
@@ -129,6 +129,7 @@ To update after installing/removing skills, run this again.
 - SKIP `skill-registry` directories when scanning
 - Keep the registry lightweight: include discovery metadata only, not copied skill rules
 - Read matched SKILL.md files lazily when applying a skill
+- If a memory or log-summary layer persists skill invocations, store the user's intent and the selected skill name, not the full expanded skill body
 - Include ALL convention index files found (not just the first)
 - Exclude generated `.ai/**` and legacy `.atl/**` state from Project Conventions and hash inputs
 - If no skills or conventions are found, write an empty registry (so sub-agents don't waste time searching)

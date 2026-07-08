@@ -9,7 +9,7 @@ metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "1.2.1"
+  version: "1.2.2"
   status: testing
 ---
 
@@ -52,6 +52,7 @@ For each target:
 For each resolved target, extract:
 
 - AI entrypoints such as `AGENTS.md`, `CLAUDE.md`, command folders, agent folders, skill folders, config files, prompt files, and AI-related plugins.
+- A repo counts as a valid harness even without `AGENTS.md`, `agents/`, or `skills/` trees: its AI surface may live primarily in plugins, runtime config handlers, and maintenance scripts.
 - How each candidate practice is triggered or wired.
 - Which practices are verified versus aspirational.
 

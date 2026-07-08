@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.3.2"
+  version: "1.3.3"
   status: in-progress
 ---
 
@@ -16,6 +16,10 @@ metadata:
 - When high-confidence review of code, features, or architecture is needed
 - When a single reviewer might miss edge cases or have blind spots
 - When the cost of a production bug is higher than the cost of two review rounds
+
+### Cost Gate
+
+Judgment-day is the most expensive review in the toolkit (two blind judges + fix agent + re-judge rounds). Do not make it the default reflex: routine or small changes get a cheap single-reviewer check. Reserve judgment-day for high-risk changes, large diffs, or SDD verification gates. An explicit user request always runs it.
 
 ## Critical Patterns
 

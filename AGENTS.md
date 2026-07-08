@@ -20,6 +20,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
 - `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
+- Runtime state directories such as `.engram/`, `.claude/`, `.cursor/`, or tool-local memory chunks must not become managed repo artifacts unless explicitly adopted as an OpenCode component.
 
 ## Domains
 
