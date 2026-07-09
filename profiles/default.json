@@ -1,0 +1,46 @@
+{
+  "name": "default",
+  "description": "Balanced tiering for all harness agents",
+  "tiers": {
+    "orchestration": {
+      "description": "Primary planners and orchestrators; strongest model",
+      "variant": "high",
+      "agents": ["orchestraitor", "deep-planner", "refactor-planner", "architect"]
+    },
+    "implementation": {
+      "description": "Code-writing agents",
+      "variant": null,
+      "agents": ["sdd-implement", "jd-fix"]
+    },
+    "analysis": {
+      "description": "Read-heavy exploration and inspection",
+      "variant": null,
+      "agents": ["sdd-explore", "arch-analyzer", "refactor-analyzer", "boundary-inspector"]
+    },
+    "drafting": {
+      "description": "Document drafting from decided inputs",
+      "variant": null,
+      "agents": ["sdd-design", "sdd-proposal", "sdd-spec", "sdd-tasks"]
+    },
+    "verification": {
+      "description": "Independent verification",
+      "variant": "high",
+      "agents": ["sdd-verify"]
+    },
+    "judge-a": {
+      "description": "Blind judge A; keep provider distinct from judge-b",
+      "variant": "high",
+      "agents": ["jd-judge-a"]
+    },
+    "judge-b": {
+      "description": "Blind judge B; keep provider distinct from judge-a",
+      "variant": "high",
+      "agents": ["jd-judge-b"]
+    },
+    "utility": {
+      "description": "Cheap utility agents",
+      "variant": null,
+      "agents": ["english-tutor"]
+    }
+  }
+}

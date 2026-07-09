@@ -14,6 +14,7 @@ AGENTS=0
 COMMANDS=0
 SKILLS=0
 LINKS=0
+PROFILES=0
 
 fail() {
   printf 'FAIL %s: %s\n' "$1" "$2"
@@ -147,14 +148,41 @@ for l in domains/*/skills/*; do
     fail "$l" "symlink resolves to '${resolved:-broken}', expected skills/$name"
 done
 
-# --- Installer syntax ---
-bash -n installers/opencode.sh 2>/dev/null ||
-  fail installers/opencode.sh "bash -n syntax check failed"
+# --- Model-tier profiles (jq-gated so the validator runs on jq-less machines) ---
+if command -v jq >/dev/null 2>&1; then
+  for p in profiles/*.json; do
+    [ -e "$p" ] || continue
+    PROFILES=$((PROFILES + 1))
+    if ! jq empty "$p" 2>/dev/null; then
+      fail "$p" "invalid JSON"
+      continue
+    fi
+    jq -e '.tiers | type == "object"' "$p" >/dev/null 2>&1 ||
+      fail "$p" "missing .tiers object"
+    jq -e '[.tiers[].agents[]] | length == (unique | length)' "$p" >/dev/null 2>&1 ||
+      fail "$p" "agent listed in more than one tier"
+    for a in $(jq -r '.tiers[].agents[]' "$p" 2>/dev/null); do
+      ls domains/*/agents/"$a".md >/dev/null 2>&1 ||
+        fail "$p" "unknown agent '$a'"
+    done
+  done
+fi
+
+# --- Script syntax ---
+for f in installers/*.sh installers/lib/*.sh scripts/configure-models.sh; do
+  [ -e "$f" ] || continue
+  bash -n "$f" 2>/dev/null ||
+    fail "$f" "bash -n syntax check failed"
+done
+if command -v shellcheck >/dev/null 2>&1; then
+  shellcheck -x installers/*.sh installers/lib/*.sh ||
+    fail installers "shellcheck reported issues"
+fi
 
 if [ "$FAILS" -gt 0 ]; then
-  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d skills, %d domain skill links.\n' \
-    "$FAILS" "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS"
+  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d skills, %d domain skill links, %d profiles.\n' \
+    "$FAILS" "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS" "$PROFILES"
   exit 1
 fi
-printf 'PASS: %d agents, %d commands, %d skills, %d domain skill links, installer syntax OK.\n' \
-  "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS"
+printf 'PASS: %d agents, %d commands, %d skills, %d domain skill links, %d profiles, script syntax OK.\n' \
+  "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS" "$PROFILES"

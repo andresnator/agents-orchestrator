@@ -1,8 +1,8 @@
 # AGENTS.md
 
-This repo stores reusable OpenCode agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
+This repo stores reusable agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
 
-**This repo targets OpenCode only.** Do not add Claude Code (or other runtime) artifacts, and do not manage `~/.claude/**` state from this repo.
+**OpenCode is the reference runtime and the authoring format.** Components are written once in OpenCode format and installed into OpenCode, Claude Code, and Codex CLI via sibling installers (see `docs/runtime-matrix.md`). Do not add runtime-specific component variants to the repo; the installers transform at install time. The repo stores no runtime state — installers write into targets like `~/.claude` or `~/.codex`, but those directories never become repo artifacts.
 
 ## Repo Shape
 
@@ -14,9 +14,11 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
-- `global/AGENTS.md` is the installable global OpenCode rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
+- `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); installers link it to `$TARGET/AGENTS.md` (OpenCode), `$TARGET/rules/agents-orchestrator.md` (Claude Code), or `~/.codex/AGENTS.md` (Codex).
 - `docs/` stores workflow notes and migration records.
-- `installers/opencode.sh` symlinks selected domain components into OpenCode.
+- `profiles/<name>.json` stores abstract model-tier profiles (agents grouped by tier, optional suggested variant, never concrete model ids) consumed by `scripts/configure-models.sh`.
+- `scripts/configure-models.sh` is the interactive per-agent model/variant wizard; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md`).
+- `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh` install selected domain components into their runtimes; `installers/lib/common.sh` is the shared discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
 - `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
@@ -34,7 +36,7 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 
 ## Agents And Commands
 
-- Component names must be unique globally within their type because OpenCode targets are flat.
+- Component names must be unique globally within their type because installer targets are flat in every runtime.
 - Do not use `name:` or `prompt:` in agent or command frontmatter; OpenCode derives the name from the filename and the prompt is the file body.
 - Agent frontmatter order: `description`, `mode`, `temperature?`, `permission`, `tools?`, `disable?`.
 - Command frontmatter order: `description`, `agent?`, `model?`, `subtask?`, `argument-hint?`.
@@ -57,25 +59,28 @@ This repo stores reusable OpenCode agent artifacts, not application code. Keep a
 - Agent-agnostic rule: do not add runtime tool allowlists; runtime-specific tool names may appear only as examples with a generic fallback. Use `skills/native-question-ux` for portable question presentation.
 - Forked skills keep their original author and license, and record `metadata.adapted_by` plus `metadata.source`.
 
-## OpenCode Installer
+## Installers
 
-Use:
+All three share the same CLI surface:
 
 ```bash
-installers/opencode.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force]
-installers/opencode.sh uninstall [--project] [--target DIR] [--dry-run]
-installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
+installers/<runtime>.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force]
+installers/<runtime>.sh uninstall [--project] [--target DIR] [--dry-run]
+installers/<runtime>.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
 ```
 
-- Default target is `~/.config/opencode`.
-- `--project` targets `./.opencode` from the current working directory.
+- `opencode.sh`: default target `~/.config/opencode`, `--project` targets `./.opencode`; everything is symlinked; global rules link to `$TARGET/AGENTS.md`.
+- `claude.sh`: default target `~/.claude`, `--project` targets `./.claude`; skills are symlinked, agents/commands are generated files with translated frontmatter, global rules link to `$TARGET/rules/agents-orchestrator.md` (never `CLAUDE.md` or settings files).
+- `codex.sh`: default roots `~/.codex` + `~/.agents/skills`; `--target DIR` acts as a fake `$HOME`; skills are symlinked, agents are generated TOML, commands are generated custom prompts (user-level only), global rules link to `~/.codex/AGENTS.md`. `--project` installs agents and skills only.
 - Default filter is `--domain all --status all`.
 - Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, and plugins are not status-filtered.
-- The installer discovers agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
-- `install` always links `global/AGENTS.md` to `$TARGET/AGENTS.md` regardless of `--domain`/`--status` filters. A pre-existing foreign `AGENTS.md` in the target is skipped with a warning unless `--force`.
-- The installer writes `$TARGET/.agents-orchestrator-manifest` with `link<TAB>dest` and `dir<TAB>path` lines.
-- `install` is a sync: links from the previous manifest that are no longer selected are removed.
-- `uninstall` removes manifest-owned symlinks and empty created directories.
+- Installers discover agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
+- `install` always installs the global rules regardless of `--domain`/`--status` filters. A pre-existing foreign destination is skipped with a warning unless `--force`.
+- Each installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated files), and `dir<TAB>path` lines.
+- `install` is a sync: links and generated files from the previous manifest that are no longer selected are removed (type-guarded, so user-replaced files are never deleted).
+- `uninstall` removes manifest-owned symlinks and generated files plus empty created directories.
+- Generated files do not auto-update when the repo changes; re-run install. `status` reports them as `generated`, `stale`, `foreign`, or `not installed`.
+- The OpenCode `skill-registry` plugin is not portable; Claude Code and Codex discover skills natively. See `docs/runtime-matrix.md` for the full mapping and portability caveats.
 
 ## Adding A Component
 
@@ -86,12 +91,13 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 5. Add a plugin under `domains/<domain>/plugins/` only for real OpenCode runtime behavior.
 6. Run `installers/opencode.sh install --dry-run` to confirm discovery and link behavior.
 
-Adding a component must not require editing `installers/opencode.sh`.
+Adding a component must not require editing any installer.
 
 ## Validation
 
 - For doc-only changes, inspect the edited Markdown/frontmatter directly.
-- For OpenCode installer changes, run `bash -n installers/opencode.sh`; run `shellcheck installers/opencode.sh` if available.
-- For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest plus symlinks.
-- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, and global agent/command name uniqueness.
+- For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks all installers plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
+- For install behavior, use `installers/<runtime>.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files. For Codex agents, parse the generated TOML (e.g. `python3 -c "import tomllib, ..."` with Python >= 3.11).
+- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command name uniqueness, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), and script syntax for all installers and `scripts/configure-models.sh`.
+- For wizard changes, test non-destructively with `scripts/configure-models.sh --dry-run --target <scratch> --catalog <fixture>` piping numbered answers on stdin.
 - Do not commit unless explicitly asked.

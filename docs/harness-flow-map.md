@@ -258,7 +258,7 @@ These domains are mostly routers, not multi-phase harnesses. They matter because
 
 ### Installer
 
-Source: `installers/opencode.sh`.
+Source: `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh`, all thin adapters over `installers/lib/common.sh` (discovery, manifest, symlink/generate primitives). OpenCode symlinks everything; Claude Code and Codex symlink skills and global rules but generate translated agent/command files at install time, recorded as `file` manifest entries. The diagram below shows the OpenCode flow; the other runtimes replace the symlink steps for agents/commands with generation.
 
 ```mermaid
 flowchart TD
@@ -282,7 +282,7 @@ Installer notes:
 
 | Area | Behavior |
 |---|---|
-| Targets | Default `~/.config/opencode`; `--project` targets `./.opencode`; `--target` supports scratch installs. |
+| Targets | OpenCode: `~/.config/opencode` (`--project` → `./.opencode`). Claude Code: `~/.claude` (`--project` → `./.claude`). Codex: `~/.codex` + `~/.agents/skills` (`--target` acts as fake `$HOME`). See `docs/runtime-matrix.md`. |
 | Status filter | Applies to skills only. Agents, commands, and plugins are not status-filtered because executable frontmatter cannot carry repo-only metadata. |
 | Skill source | Domain skill entries must be symlinks to top-level `skills/<skill>`. |
 | Sync | The manifest lets future installs remove previously owned links that are no longer selected. |
