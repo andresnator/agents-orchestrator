@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.3.3"
+  version: "1.4.0"
   status: in-progress
 ---
 
@@ -66,12 +66,22 @@ Contradiction → agents DISAGREE on the same thing → flag for manual decision
 
 Present findings as a structured verdict table (see Output Format).
 
-### Pattern 3: Fix and Re-judge
+### Pattern 3: Fix and Re-judge (user-gated after the first fix)
 
-1. If **confirmed issues** exist → delegate a **Fix Agent** (separate delegation)
-2. After Fix Agent completes → re-launch **both judges in parallel** (same blind protocol, fresh delegates)
-3. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history
-4. If both judges return clean → JUDGMENT: APPROVED ✅
+Round 1 and the first fix run automatically. After Fix 1, **every** further step — each re-judge round and each additional fix — requires explicit user confirmation first.
+
+1. If **confirmed issues** exist → delegate a **Fix Agent** (separate delegation). Fix 1 needs no confirmation.
+2. After Fix 1 completes → **confirmation gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates)
+3. If the re-judge still finds confirmed issues → **confirmation gate** → Fix 2 → **confirmation gate** → re-judge (Round 3)
+4. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history
+5. If both judges return clean → JUDGMENT: APPROVED ✅
+
+**Confirmation gate**: one question, presented via the `native-question-ux` skill (native mechanism when the runtime has one — e.g. Claude Code `AskUserQuestion`, OpenCode `question` — plain chat otherwise). Summarize the current verdict, then offer exactly:
+- **Continue (recommended)** — run the next step (re-judge or fix)
+- **Escalate now** — stop looping, emit `JUDGMENT: ESCALATED` with the history so far
+- **Stop here** — end the protocol, emit `JUDGMENT: STOPPED` reporting findings and fixes applied
+
+The orchestrator owns the gate; judge and fix delegates never ask the user anything.
 ---
 
 ## Decision Tree
@@ -96,18 +106,31 @@ Synthesize verdict
 │   └── JUDGMENT: APPROVED ✅ (stop here)
 │
 ├── Issues found (confirmed, suspect, or contradictions)?
-│   └── Delegate Fix Agent with confirmed issues list
+│   └── Delegate Fix Agent with confirmed issues list (Fix 1 — automatic)
 │       ▼
 │       Wait for Fix Agent to complete
 │       ▼
+│       [confirm with user via native-question-ux] — re-judge?
+│       ├── Escalate now → JUDGMENT: ESCALATED ⚠️ (history so far)
+│       ├── Stop here → JUDGMENT: STOPPED 🛑 (report state)
+│       └── Continue ▼
 │       Re-launch Judge A + Judge B in parallel (Round 2)
 │       ▼
 │       Synthesize verdict
 │       │
 │       ├── Clean → JUDGMENT: APPROVED ✅
 │       │
-│       └── Still issues → Delegate Fix Agent again (Round 3 / iteration 2)
+│       └── Still issues →
+│           [confirm with user via native-question-ux] — apply Fix 2?
+│           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
+│           ├── Stop here → JUDGMENT: STOPPED 🛑
+│           └── Continue ▼
+│           Delegate Fix Agent again (Fix 2 / iteration 2)
 │           ▼
+│           [confirm with user via native-question-ux] — re-judge?
+│           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
+│           ├── Stop here → JUDGMENT: STOPPED 🛑
+│           └── Continue ▼
 │           Re-launch Judge A + Judge B in parallel (Round 3)
 │           ▼
 │           Synthesize verdict
@@ -248,6 +271,30 @@ Manual review required before proceeding.
 Recommend: human review of the remaining issues above before re-running judgment day.
 ```
 
+### Stopped Format (user chose "Stop here" at a confirmation gate)
+
+```markdown
+## Judgment Day — {target}
+
+### JUDGMENT: STOPPED 🛑 (user)
+
+Protocol halted by user at the gate before {Round N | Fix N}.
+No escalation implied — this is a deliberate stop, not a failure.
+
+### Current State
+| Finding | Judge A | Judge B | Severity | Status |
+|---------|---------|---------|----------|--------|
+| {description} | ✅ | ✅ | CRITICAL | {Fixed \| Open} |
+
+### History
+- Round 1: {N} confirmed issues found
+- Fix 1: applied {list}
+- {further rounds/fixes completed before the stop}
+- Stopped by user before {next step}
+
+Re-run judgment day on the same target to resume review.
+```
+
 ---
 
 ## Language
@@ -266,6 +313,7 @@ Recommend: human review of the remaining issues above before re-running judgment
 - If user provides **custom review criteria**, include them in BOTH judge prompts (identical)
 - If target scope is **unclear**, stop and ask before launching — partial reviews are useless
 - **Max 2 fix iterations** — on the third failure, escalate with full report, do not loop forever
+- **After Fix 1, nothing runs unconfirmed** — never launch a re-judge round or another fix without explicit user confirmation, presented via the `native-question-ux` skill (continue / escalate now / stop here). Delegates never ask — the orchestrator owns the gate
 - Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict
 - Suspect findings (only one judge) are reported but NOT automatically fixed — triage and escalate to user if needed
 
