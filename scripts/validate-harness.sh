@@ -169,14 +169,14 @@ if command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Script syntax ---
-for f in installers/*.sh installers/lib/*.sh scripts/configure-models.sh; do
+for f in installers/*.sh installers/lib/*.sh scripts/*.sh; do
   [ -e "$f" ] || continue
   bash -n "$f" 2>/dev/null ||
     fail "$f" "bash -n syntax check failed"
 done
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck -x installers/*.sh installers/lib/*.sh ||
-    fail installers "shellcheck reported issues"
+  shellcheck -x installers/*.sh installers/lib/*.sh scripts/*.sh ||
+    fail scripts "shellcheck reported issues"
 fi
 
 if [ "$FAILS" -gt 0 ]; then

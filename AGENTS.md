@@ -8,7 +8,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/` is the source of truth for reusable skill bodies.
-- `domains/{sdd,refactor,architecture,plan,docs,meta,common}/README.md` explains each domain.
+- `domains/{sdd,refactor,architecture,plan,learning,docs,meta,common}/README.md` explains each domain.
 - `domains/<domain>/agents/<name>.md` stores one fused OpenCode agent file: frontmatter plus prompt body.
 - `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
@@ -18,6 +18,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `docs/` stores workflow notes and migration records.
 - `profiles/<name>.json` stores abstract model-tier profiles (agents grouped by tier, optional suggested variant, never concrete model ids) consumed by `scripts/configure-models.sh`.
 - `scripts/configure-models.sh` is the interactive per-agent model/variant wizard; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md`).
+- `scripts/sdd-automode.sh` is the SDD auto-mode toggle (`on|off|show`): it writes per-agent `permission` blocks into user OpenCode config so SDD runs without tool-permission prompts, preserving frontmatter denies verbatim, never repo artifacts (see `docs/sdd-automode.md`).
 - `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh` install selected domain components into their runtimes; `installers/lib/common.sh` is the shared discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
@@ -30,6 +31,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles adopted by the sdd `orchestraitor`, plus Java refactor skills.
 - `architecture`: project-architecture mapping (C4-lite Mermaid docs), state reviews with gap analysis, reverse-engineered PRDs, security/observability audits, and ADR + ready-for-sdd ideation bundles adopted by the sdd `orchestraitor`.
 - `plan`: Fable-style deep planning for features and changes (evidence-first, edge-case validation) producing single plan documents under `.ai/deep-planner/plans/`, plus `/wayfinder` multi-session discovery maps under `.ai/wayfinder/` for efforts too foggy to plan in one sitting.
+- `learning`: interactive multi-session learning via `/learn` and the hidden `mentor` subagent: Leitner spaced repetition, Cornell notes, Feynman teach-backs, Mermaid maps, and 70-20-10 practice, all Markdown under `.ai/learning/` (OpenCode-only for now; see `docs/learning-domain.md`).
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
@@ -98,6 +100,6 @@ Adding a component must not require editing any installer.
 - For doc-only changes, inspect the edited Markdown/frontmatter directly.
 - For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks all installers plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
 - For install behavior, use `installers/<runtime>.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files. For Codex agents, parse the generated TOML (e.g. `python3 -c "import tomllib, ..."` with Python >= 3.11).
-- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command name uniqueness, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), and script syntax for all installers and `scripts/configure-models.sh`.
+- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command name uniqueness, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), and script syntax (plus `shellcheck -x` when available) for all installers and every `scripts/*.sh`.
 - For wizard changes, test non-destructively with `scripts/configure-models.sh --dry-run --target <scratch> --catalog <fixture>` piping numbered answers on stdin.
 - Do not commit unless explicitly asked.
