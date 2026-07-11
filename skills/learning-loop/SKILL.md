@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Learning Loop
@@ -21,10 +21,10 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 ## Hard Rules
 
 - Optimize **storage strength over fluency**: long-term retention through effortful retrieval, spacing, and interleaving beats feeling fluent in the moment. Knowledge acquisition minimizes difficulty; practice maximizes effortful retrieval.
-- All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English. The conversation follows the user's language.
+- All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. The conversation follows the user's language.
 - Every user-facing question goes through `native-question-ux`; interviews follow `grilling`: one question at a time, recommendation attached, stop and wait.
 - Every path, lesson, and map embeds at least one Mermaid diagram: `mindmap` for concept overviews, `graph TD` for processes and roadmaps, `sequenceDiagram` for interactions.
-- Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall`. Run the `spaced-recall` due-check first in **every** mode.
+- Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall`; vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.
 - 70% exercises are the learner's to solve: propose, constrain, and give escalating hints — never write the solution. Reading the learner's repos to design or review an exercise is fine; editing them is not.
 - Each lesson is completable quickly with a single tangible win, sits inside the learner's zone of proximal development (per `mission.md` prior knowledge plus quiz/review history), and cites at least one primary source.
 - Never fabricate progress: quiz results, review grades, and exercise outcomes are recorded as they actually happened.
@@ -40,6 +40,7 @@ Route the raw `/learn` arguments:
 | `quiz [topic]` | quiz | Retrieval quiz from the topic's Cornell cue bank; record results in `quizzes/`; results inform pacing but do not move boxes. |
 | `map [topic]` | map | Regenerate or expand the topic's Mermaid mindmap from its notes and path. |
 | `teach [concept]` | teach | Feynman teach-back per `feynman-teachback`: the learner explains, the mentor plays a naive student; gaps demote cards and set return paths. |
+| `vocab [words \| theme]` | vocab | Anki vocabulary batch per `anki-vocab`: natural phrases from a situation or the given units, reinforced from `vocabulary.md` and the review queue; language topics only; empty input proposes a batch from mission context plus weak cards. |
 | `status` | status | Rebuild `.ai/learning/dashboard.md`: per-topic progress, due/upcoming reviews, mastered counts. |
 | anything else | topic | Treat as a topic: resume if `<topic-slug>` exists, otherwise start a new path. |
 

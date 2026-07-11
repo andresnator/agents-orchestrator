@@ -31,7 +31,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles adopted by the sdd `orchestraitor`, plus Java refactor skills.
 - `architecture`: project-architecture mapping (C4-lite Mermaid docs), state reviews with gap analysis, reverse-engineered PRDs, security/observability audits, and ADR + ready-for-sdd ideation bundles adopted by the sdd `orchestraitor`.
 - `plan`: Fable-style deep planning for features and changes (evidence-first, edge-case validation) producing single plan documents under `.ai/deep-planner/plans/`, plus `/wayfinder` multi-session discovery maps under `.ai/wayfinder/` for efforts too foggy to plan in one sitting.
-- `learning`: interactive multi-session learning via `/learn` and the hidden `mentor` subagent: Leitner spaced repetition, Cornell notes, Feynman teach-backs, Mermaid maps, and 70-20-10 practice, all Markdown under `.ai/learning/` (OpenCode-only for now; see `docs/learning-domain.md`).
+- `learning`: interactive multi-session learning via `/learn` and the hidden `mentor` subagent: Leitner spaced repetition, Cornell notes, Feynman teach-backs, Mermaid maps, 70-20-10 practice, and Anki vocab exports, all Markdown under `.ai/learning/` (OpenCode-only for now; see `docs/learning-domain.md`).
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
