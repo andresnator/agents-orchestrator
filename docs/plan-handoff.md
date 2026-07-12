@@ -30,6 +30,7 @@ The orchestraitor's discovery scan keys on this line; without it a folder is inv
 - Tasks are small, ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves.
 - Every claim is evidence-backed or marked hypothesis; hypotheses and behavior changes stay out of `tasks.md`.
 - Do not write the `Mode: … | TDD: … | Judgment: …` line; those choices belong to the user at adoption.
+- Bundles are always full depth — the four-artifact shape is the contract; the light-mode `change.md` is not a valid bundle format, and adoption never asks Depth.
 
 ## Adoption semantics (consumer: orchestraitor)
 

@@ -8,6 +8,7 @@ El kickoff corre solo tras activación explícita de SDD ("vamos con sdd", "usa 
 
 | Pregunta | Opciones |
 |---|---|
+| Profundidad | `light` (un solo `change.md` redactado inline, sin subagentes de drafting) / `full` (cuatro artefactos con subagentes de fase); el orchestraitor evalúa el alcance y propone una |
 | Modo | `interactivo` (entrevista + gates de confirmación) / `automático` (redacta, implementa y resume al final) |
 | TDD | test-first por tarea / tests junto a la implementación |
 | Juicio | `none` (sin review adversarial) / `verdict-only` (jueces + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
@@ -33,21 +34,26 @@ sequenceDiagram
 
   U->>O: vamos con sdd / usa SDD
   O->>O: kickoff + migracion legacy
-  O->>E: explorar si el area es amplia o desconocida
-  E-->>O: resumen breve
-  O->>P: brief de requisitos y decisiones
-  P-->>O: proposal.md escrito
-  O->>U: gate de proposal
-  par specs
-    O->>S: proposal + specs canonicas
-    S-->>O: deltas escritos
-  and design
-    O->>D: proposal + specs + decisiones
-    D-->>O: design.md escrito
+  alt depth full
+    O->>E: explorar si el area es amplia o desconocida
+    E-->>O: resumen breve
+    O->>P: brief de requisitos y decisiones
+    P-->>O: proposal.md escrito
+    O->>U: gate de proposal
+    par specs
+      O->>S: proposal + specs canonicas
+      S-->>O: deltas escritos
+    and design
+      O->>D: proposal + specs + decisiones
+      D-->>O: design.md escrito
+    end
+    O->>U: gate de specs + design
+    O->>T: proposal + specs + design
+    T-->>O: tasks.md escrito
+  else depth light
+    O->>O: explora y redacta change.md inline
+    O->>U: gate de change.md
   end
-  O->>U: gate de specs + design
-  O->>T: proposal + specs + design
-  T-->>O: tasks.md escrito
   loop olas de tareas
     O->>I: una ola con escenarios, design y tests
     I-->>O: resumen + validacion
@@ -75,7 +81,8 @@ sequenceDiagram
 ```
 
 - **explore**: `sdd-explore` cuando la zona es desconocida o grande; lectura inline si el cambio es acotado.
-- **proposal/specs/design/tasks**: `sdd-proposal`, `sdd-spec`, `sdd-design` y `sdd-tasks` escriben un solo artefacto cada uno y devuelven 1-3 líneas.
+- **proposal/specs/design/tasks** (solo `full`): `sdd-proposal`, `sdd-spec`, `sdd-design` y `sdd-tasks` escriben un solo artefacto cada uno y devuelven 1-3 líneas.
+- **depth light**: sin subagentes de drafting; el orchestraitor explora y redacta `change.md` inline con la skill `sdd-draft-light` (Why/What + Spec Deltas + Tasks, ≤800 palabras) y sigue con implement/verify igual que en `full`. Si el alcance crece al redactar, ofrece subir a `full`.
 - **implement**: `sdd-implement` ejecuta una ola relacionada de `tasks.md`; olas independientes pueden ir en paralelo.
 - **verify**: `sdd-verify` hace cold-check read-only por escenario de spec; los gaps vuelven como briefs de fix a `sdd-implement`.
 - **judgment**: `jd-judge-a` y `jd-judge-b` corren ciegos y siempre reportan un veredicto; `jd-fix` recibe solo findings confirmados, y únicamente en modo `full` (o si el usuario elige fix en el verdict gate).
@@ -88,6 +95,7 @@ sequenceDiagram
   project.md                     # contexto del proyecto
   specs/<capability>/spec.md     # specs canonicas: lo que el sistema hace hoy
   changes/<change>/
+    change.md                    # solo depth light: Why/What + Spec Deltas + Tasks (reemplaza los cuatro artefactos)
     proposal.md                  # por que y que cambia
     design.md                    # enfoque tecnico (opcional si es simple)
     specs/<capability>/spec.md   # deltas ADDED / MODIFIED / REMOVED
@@ -95,7 +103,7 @@ sequenceDiagram
   changes/archive/<YYYY-MM-DD>-<change>/
 ```
 
-Convención tomada de OpenSpec: las specs canónicas siempre reflejan lo construido; los cambios activos son propuestas en vuelo, y al archivar sus deltas se fusionan en las canónicas.
+Convención tomada de OpenSpec: las specs canónicas siempre reflejan lo construido; los cambios activos son propuestas en vuelo, y al archivar sus deltas se fusionan en las canónicas. En profundidad `light` los deltas viven en la sección `## Spec Deltas` de `change.md` y se fusionan al archivar con la misma semántica.
 
 ## Migración Legacy
 

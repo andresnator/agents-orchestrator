@@ -37,18 +37,22 @@ For every other request, simple or complex, use direct mode: no kickoff question
 
 After explicit SDD activation, run "Legacy migration" before reading or writing SDD artifacts.
 
+Then assess the change and propose a depth: `light` when the scope is bounded — roughly a handful of files, no new capability or a single small one, low risk; `full` otherwise. On doubt, propose `full`.
+
 Then ask ONE round of questions via the `native-question-ux` skill, skipping anything the user already stated in the request:
 
-1. **Mode** — `interactive` (interview plus confirmation gates) or `automatic` (draft everything, implement, summarize at the end).
-2. **TDD** — test-first per task, or tests alongside the implementation.
-3. **Judgment** — `none`, `verdict-only` (blind judges report a verdict, no fixes), or `full` (fixes plus the gated re-judge loop).
+1. **Depth** — `light` (single `change.md` drafted inline, no drafting subagents) or `full` (four artifacts via phase subagents); present your assessment as the recommended answer.
+2. **Mode** — `interactive` (interview plus confirmation gates) or `automatic` (draft everything, implement, summarize at the end).
+3. **TDD** — test-first per task, or tests alongside the implementation.
+4. **Judgment** — `none`, `verdict-only` (blind judges report a verdict, no fixes), or `full` (fixes plus the gated re-judge loop). When proposing `light`, recommend `none`.
 
-Record the answers in one line at the top of `proposal.md` (`Mode: automatic | TDD: yes | Judgment: verdict-only`) so a fresh session can resume without re-asking.
+Record the answers in one line at the top of `proposal.md` — or `change.md` for light depth — (`Mode: automatic | TDD: yes | Judgment: none | Depth: light`) so a fresh session can resume without re-asking.
 
 ## Flow
 
 ```
-explore -> proposal -> specs || design -> tasks -> implement -> verify -> [judgment] -> archive
+full:  explore -> proposal -> specs || design -> tasks -> implement -> verify -> [judgment] -> archive
+light: explore (inline) -> change.md -> implement -> verify -> [judgment] -> archive
 ```
 
 - **Explore**: delegate to `sdd-explore` when the area is unknown or large; read inline when the change is bounded.
@@ -60,6 +64,8 @@ explore -> proposal -> specs || design -> tasks -> implement -> verify -> [judgm
 - **Verify**: delegate a cold-check to `sdd-verify`: it reads the implementation against every spec scenario and returns pass/fail per scenario with evidence. Gaps go back out as fix briefs to `sdd-implement`; you decide when the change is closed before any review.
 - **Judgment** (only if requested): load the `judgment-day` skill. Launch `jd-judge-a` and `jd-judge-b` in parallel and blind; never mention one judge's existence or findings to the other. The recorded `Judgment:` mode pre-answers the verdict gate: `verdict-only` reports the verdict and continues to archive without any fix; `full` sends confirmed findings (flagged by both judges) to `jd-fix` without asking, then every re-judge and any further fix requires user confirmation (continue / escalate / stop), asked through `native-question-ux` — the delegates never ask. Maximum 2 fix rounds, then escalate to the user.
 - **Archive**: see file management below.
+
+**Light depth**: no drafting subagents — explore inline and draft `.ai/orchestrator/changes/<change>/change.md` yourself, loading the `sdd-draft-light` skill for the template and rules (`## Why / What`, `## Spec Deltas` with the same ADDED/MODIFIED/REMOVED semantics as delta files, `## Tasks`). One confirmation gate on `change.md` in interactive mode; automatic mode drafts and continues. Implement and verify run exactly as full depth: briefs carry the `change.md` path plus its relevant Spec Deltas scenarios instead of the four-artifact paths, and independent waves still launch in parallel. If drafting reveals a larger scope than assessed, stop and offer to upgrade to full — the draft becomes input to the `sdd-proposal` brief.
 
 Interactive mode: you run each drafting interview inline (grilling style: one question at a time, recommendation attached) to collect the decisions, but you do not write the document in chat. After each interview, brief the matching phase agent with the decisions, target path, and skill to load. The confirmation gates, after the proposal and after specs plus design, run against the written artifact: present the summary plus the file path; if the user wants changes, re-delegate to the same phase agent with their feedback. Writing before the gate is safe: `changes/<change>/` folders are proposals in flight by definition.
 
@@ -82,6 +88,7 @@ OpenSpec-style layout, per project:
   project.md                     # project context, created on first use
   specs/<capability>/spec.md     # canonical specs: current behavior of the system
   changes/<change>/              # one active change (kebab-case, verb-led name)
+    change.md                    # light depth only: Why/What + Spec Deltas + Tasks (replaces the four artifacts)
     proposal.md
     design.md                    # optional for simple changes
     specs/<capability>/spec.md   # deltas: ADDED / MODIFIED / REMOVED requirements
@@ -91,7 +98,7 @@ OpenSpec-style layout, per project:
 
 Archive procedure, once the change is implemented, verified, and (if requested) judged:
 
-1. Merge each delta into the canonical spec: append ADDED requirements, replace the matching requirement for MODIFIED, delete REMOVED. Create `specs/<capability>/spec.md` when the capability is new.
+1. Merge spec deltas into canonical specs — from each `specs/<capability>/spec.md` delta file (full depth) or from each capability block in the `## Spec Deltas` section of `change.md` (light depth): append ADDED requirements, replace the matching requirement for MODIFIED, delete REMOVED. Create `specs/<capability>/spec.md` when the capability is new.
 2. Move `changes/<change>/` to `changes/archive/<YYYY-MM-DD>-<change>/`.
 
 Canonical specs always reflect what is built; change folders are proposals in flight.
@@ -107,7 +114,7 @@ At the start of any change or resume:
 
 ## Resume
 
-When the user says "continúa <change>", reread its proposal, specs, design, and `tasks.md`, and resume from the first unchecked task. If you find an unarchived folder under `.ai/orchestrator/changes/` at the start of a session (or a ready-for-sdd bundle, see Plan intake), offer to resume it in one line and continue only if the user accepts. Do not repeat the kickoff: honor the mode/TDD/judgment line recorded in `proposal.md`. This is the official mechanism for long changes: the artifacts are the state, the conversation is disposable; when a session grows heavy, close it and resume fresh.
+When the user says "continúa <change>", reread its proposal, specs, design, and `tasks.md` — or just `change.md` for a light change (`change.md` present, no `proposal.md`, `Depth: light` in its first line) — and resume from the first unchecked task. If you find an unarchived folder under `.ai/orchestrator/changes/` at the start of a session (or a ready-for-sdd bundle, see Plan intake), offer to resume it in one line and continue only if the user accepts. Do not repeat the kickoff: honor the mode/TDD/judgment line recorded in `proposal.md`. This is the official mechanism for long changes: the artifacts are the state, the conversation is disposable; when a session grows heavy, close it and resume fresh.
 
 ## Plan intake
 
@@ -115,7 +122,7 @@ External planners (e.g. `refactor-planner`) leave complete change bundles under 
 
 1. Discover: on "ejecuta el plan <change>" — or during the session-start scan, alongside unarchived `.ai/orchestrator/changes/` folders — scan `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) for the `Status: ready-for-sdd` first line and offer matches in one line.
 2. Adopt: move the whole folder to `.ai/orchestrator/changes/<change>/` (never overwrite; on collision ask for a new name). Keep the `Source:` marker in place.
-3. Kickoff-lite: adopted bundles carry no Mode/TDD/Judgment line. Ask that one round via `native-question-ux` (skip anything the user already stated), record it in `proposal.md`, and never re-ask.
+3. Kickoff-lite: adopted bundles carry no Mode/TDD/Judgment line. Ask that one round via `native-question-ux` (skip anything the user already stated), record it in `proposal.md`, and never re-ask. Adopted bundles are always full depth; do not ask Depth or offer light.
 4. Continue with the normal resume flow: implement from the first unchecked task, then verify, [judgment], archive. Do not re-draft proposal/specs/design/tasks unless verification or the user demands it.
 
 ## Questions
