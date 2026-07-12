@@ -49,31 +49,30 @@ OpenCode variants are partial option overrides declared per model under the prov
 
 To pin a variant on a specific agent, set the agent's `variant` key to the variant name, as `sdd-implement` does above (per the config schema it is the agent's default variant and applies only when the agent uses its configured `model`). Provider built-in variants (Anthropic `high`/`max`, OpenAI `none` through `xhigh`, Google `low`/`high`) and custom variants declared under the provider block are both referenced by name. There is still no `model#variant` syntax in the `model` field; interactive selection is the `variant_cycle` keybind.
 
-## Interactive Wizard And Profiles
+## The Model Configurator (TUI)
 
-`scripts/configure-models.sh` is an interactive wizard over the recipe above. It discovers the harness agents from `domains/*/agents/`, loads a tier profile from `profiles/`, asks model + variant per tier (with per-agent overrides), and merges the resulting `agent` block into the target config, preserving every unrelated key and any non-harness agent entries.
+The meta domain ships an OpenCode TUI plugin, `model-configurator`, that is a staged assistant over the recipe above. Open it from the command palette ("Configure agent models") or with `/model-configurator`. It walks six stages:
 
-```bash
-scripts/configure-models.sh                 # wizard against ~/.config/opencode
-scripts/configure-models.sh --project       # wizard against ./.opencode (gitignored user state)
-scripts/configure-models.sh --dry-run       # print merged JSON + diff, write nothing
-scripts/configure-models.sh show            # print current mappings, read-only
-```
+1. **Scope** — global (`~/.config/opencode/opencode.json[c]`) or the current project (`./.opencode/opencode.json[c]`), showing the exact target file and warning when `OPENCODE_CONFIG`/`OPENCODE_CONFIG_CONTENT` can eclipse it.
+2. **Profile** — a tier profile from `profiles/` (default `default`); invalid profiles block, uncovered agents warn.
+3. **Tiers** — per non-empty tier: keep, inherit, or pick a model from the live catalog of connected providers, then one of that model's variants (the profile's suggested variant is preselected when available).
+4. **Overrides** — optional per-agent corrections: use the tier decision, keep current, inherit, or pick another model/variant.
+5. **Review** — a semantic `agent: before -> after` summary; if `jd-judge-a` and `jd-judge-b` resolve to the same provider it warns first (different providers strengthen the blind adversarial review).
+6. **Confirm/apply** — the catalog is refreshed and every selection revalidated; stale picks abort without writing. Cancel writes nothing.
 
 Behavior notes:
 
-- Profiles (`profiles/<name>.json`, `--profile NAME`) map agents to abstract tiers with an optional suggested variant; they never contain concrete model ids, so they work for any provider set.
-- The model/variant catalog is read from `~/.config/opencode/cache/model-variants.json`, written on OpenCode startup by the meta `model-variants` plugin (start a session once to generate or refresh it). Without the cache the wizard falls back to `opencode models`, which lists models but no variants.
-- Choosing `inherit` deletes that agent's `model`/`variant` mapping, restoring default inheritance; `skip` keeps whatever is there.
-- If `jd-judge-a` and `jd-judge-b` resolve to the same provider, the wizard warns and offers to re-pick judge-b.
-- An existing `opencode.jsonc` is detected and written back under its own name; JSONC comments are not supported (the script refuses rather than destroying them). A timestamped backup is created before every write.
+- Profiles (`profiles/<name>.json`) map agents to abstract tiers with an optional suggested variant; they never contain concrete model ids, so they work for any provider set. The installer snapshots `profiles/` and the agent catalog beside the plugin, so re-run `installers/opencode.sh install` after changing profiles or agents in the repo.
+- The model/variant catalog comes live from the running OpenCode server (`connected` providers intersected with the full catalog) — no cache file and no external process.
+- Choosing `inherit` deletes only that agent's `model`/`variant` keys at the selected scope (pruning an emptied agent entry), restoring default inheritance; `keep` is always a no-op.
+- Writes are transactional: comments and foreign keys in `opencode.json[c]` are preserved via targeted JSONC edits, a concurrent external edit aborts the write, and a timestamped backup is created next to the file. The success toast names the file and backup; restart affected OpenCode sessions to apply.
+
+Prerequisites: OpenCode >= 1.17.15, and `python3` + `jq` at install time (the installer registers the plugin in `$TARGET/tui.json` and pins the `jsonc-parser` dependency in `$TARGET/package.json`, owning only those exact values). Claude Code and Codex skip TUI plugins.
+
+If the palette entry and `/model-configurator` do not appear despite a clean install, check OpenCode's TUI plugin toggle: a persisted `"plugin_enabled": { "agents-orchestrator.model-configurator": false }` in `~/.local/state/opencode/kv.json` disables it silently. Re-enable it from the TUI plugin list, or set the value to `true` (or delete the key) with no OpenCode session running, then start a fresh session.
+
+If you used the retired shell wizard, existing `agent.<name>.model`/`variant` assignments and `profiles/*.json` keep working unchanged; the old `~/.config/opencode/cache/model-variants.json` cache is orphaned and can be deleted manually.
 
 ## Defaults When Unmapped
 
 An agent with no mapping keeps OpenCode's inheritance: primary agents use the global `model`, and subagents inherit the model of the agent that invoked them. Deleting a mapping entry restores that behavior.
-
-## Why Not A Plugin
-
-A plugin for this was designed and rejected: static assignment is fully covered by native config merging, and this repo adds plugins only for real runtime behavior. The reference implementation (`sdd-engram-plugin`) was audited in `.ai/absorb/2026-07-07-external-practices.md`; its runtime profile editing, on-disk `opencode.json` rewriting, and auto-generated fallback agents were rejected there. A plugin (via the `config` hook of `@opencode-ai/plugin`, following the `domains/meta/plugins/skill-registry.ts` pattern) becomes justified only if a genuinely dynamic need appears: model selection by environment or branch, fail-soft validation of mappings, or automatic per-agent variant resolution.
-
-The meta `model-variants` plugin (forked from gentle-ai, MIT) does not contradict this: it assigns nothing and rewrites no config. It only exports the provider/model/variant catalog — data available solely to the running OpenCode server — to `~/.config/opencode/cache/model-variants.json` for the wizard to read.

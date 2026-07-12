@@ -1,0 +1,9 @@
+{
+  // User-owned TUI settings must remain byte-for-byte stable.
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "system",
+  "plugin": [
+    "./foreign.tsx", // Keep this inline comment.
+  ],
+  "label": "Configuración ágil",
+}

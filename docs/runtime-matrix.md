@@ -10,6 +10,7 @@ How each repo artifact maps into each runtime. OpenCode format is the authoring 
 | Commands (20) | symlink `$T/commands/<n>.md` | generated `$T/commands/<n>.md` (frontmatter reduced to `description` + `argument-hint`) | generated `~/.codex/prompts/<n>.md`, invoked `/prompts:<n>` (user-level only) |
 | Skills | symlink `$T/skills/<n>` | symlink `$T/skills/<n>` | symlink `~/.agents/skills/<n>` (not `~/.codex/skills`) |
 | Plugins | symlink `$T/plugins/<n>.ts` | skipped | skipped |
+| TUI plugins | generated `$T/tui-plugins/<n>.tsx` + companion dir, plus managed `$T/tui.json` entry and `$T/package.json` dependency | skipped | skipped |
 | Global rules | symlink `$T/AGENTS.md` | symlink `$T/rules/agents-orchestrator.md` | symlink `~/.codex/AGENTS.md` |
 | `--project` | `./.opencode` (everything) | `./.claude` (everything) | `./.codex/agents` + `./.agents/skills` only; prompts and global rules skipped |
 
@@ -28,6 +29,7 @@ How each repo artifact maps into each runtime. OpenCode format is the authoring 
 - References to OpenCode's built-in `general` subagent degrade to prose in other runtimes; the runtime picks its own generic delegate.
 - `.ai/` state paths are CWD-relative and work identically in all runtimes.
 - The `skill-registry` plugin is OpenCode-only (`@opencode-ai/plugin`); Claude Code and Codex discover skills natively, so the registry is unnecessary there. `global/AGENTS.md` says to use the registry only when its file exists.
+- TUI plugins are OpenCode-only and, unlike other OpenCode artifacts, are generated copies rather than symlinks: OpenCode's runtime resolves imports from the file's real path, so a symlink into the repo could not load the `jsonc-parser` dependency installed in the target. The installer owns only the exact `tui.json` plugin entry and the exact pinned dependency value (recorded as `managed-array`/`managed-object` manifest rows); pre-existing identical values are never claimed or removed. Installing TUI plugins requires OpenCode >= 1.17.15 plus `python3` and `jq`.
 - Codex custom prompts are deprecated in favor of skills but still work; if OpenAI removes them, migrate the 20 commands to skills.
 - Codex docs state symlinked skill folders are supported, but there have been discovery regressions with symlinks in past Codex versions; after a Codex upgrade, verify skills still list in a fresh session (`/skills`).
 - Generated files (Claude agents/commands, Codex agents/prompts) do not auto-update when the repo changes; re-run the installer. Symlinked artifacts stay live.

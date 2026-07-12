@@ -258,7 +258,7 @@ These domains are mostly routers, not multi-phase harnesses. They matter because
 
 ### Installer
 
-Source: `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh`, all thin adapters over `installers/lib/common.sh` (discovery, manifest, symlink/generate primitives). OpenCode symlinks everything; Claude Code and Codex symlink skills and global rules but generate translated agent/command files at install time, recorded as `file` manifest entries. The diagram below shows the OpenCode flow; the other runtimes replace the symlink steps for agents/commands with generation.
+Source: `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh`, all thin adapters over `installers/lib/common.sh` (discovery, manifest, symlink/generate primitives). OpenCode symlinks everything except TUI plugins (generated copies plus managed config values, see below); Claude Code and Codex symlink skills and global rules but generate translated agent/command files at install time, recorded as `file` manifest entries. The diagram below shows the OpenCode flow; the other runtimes replace the symlink steps for agents/commands with generation and skip plugins/TUI plugins.
 
 ```mermaid
 flowchart TD
@@ -267,15 +267,20 @@ flowchart TD
   Filters --> DiscoverCommands["discover domains/*/commands/*.md"]
   Filters --> DiscoverSkills["discover domains/*/skills/* symlinks"]
   Filters --> DiscoverPlugins["discover domains/*/plugins/*.ts"]
+  Filters --> DiscoverTui["discover domains/*/tui-plugins/*.tsx"]
   DiscoverAgents --> LinkAgents["symlink target/agents"]
   DiscoverCommands --> LinkCommands["symlink target/commands"]
   DiscoverSkills --> LinkSkills["symlink target/skills to top-level skills"]
   DiscoverPlugins --> LinkPlugins["symlink target/plugins"]
+  DiscoverTui --> Gate["version/foreign-config preflight"]
+  Gate --> CopyTui["generate target/tui-plugins + profiles/agents snapshot"]
+  CopyTui --> Managed["managed tui.json entry + package.json dependency"]
   LinkAgents --> Manifest["write .agents-orchestrator-manifest"]
   LinkCommands --> Manifest
   LinkSkills --> Manifest
   LinkPlugins --> Manifest
-  Manifest --> Sync["next install removes stale manifest-owned links"]
+  Managed --> Manifest
+  Manifest --> Sync["next install removes stale manifest-owned links/values"]
 ```
 
 Installer notes:
@@ -283,9 +288,10 @@ Installer notes:
 | Area | Behavior |
 |---|---|
 | Targets | OpenCode: `~/.config/opencode` (`--project` → `./.opencode`). Claude Code: `~/.claude` (`--project` → `./.claude`). Codex: `~/.codex` + `~/.agents/skills` (`--target` acts as fake `$HOME`). See `docs/runtime-matrix.md`. |
-| Status filter | Applies to skills only. Agents, commands, and plugins are not status-filtered because executable frontmatter cannot carry repo-only metadata. |
+| Status filter | Applies to skills only. Agents, commands, plugins, and TUI plugins are not status-filtered because executable frontmatter cannot carry repo-only metadata. |
 | Skill source | Domain skill entries must be symlinks to top-level `skills/<skill>`. |
-| Sync | The manifest lets future installs remove previously owned links that are no longer selected. |
+| TUI plugins | OpenCode-only. Generated copies (imports must resolve `jsonc-parser` from the target's `package.json`), an exact managed `tui.json` plugin entry, and an exact pinned dependency, recorded as `managed-array`/`managed-object` manifest rows. Preflight requires OpenCode >= 1.17.15, `python3`, and `jq`, and aborts before any mutation on version or foreign-value conflicts; installs are transactional with rollback. |
+| Sync | The manifest lets future installs remove previously owned links, generated files, and still-matching managed values that are no longer selected. |
 
 ## Evaluation
 
@@ -343,31 +349,33 @@ Current inventory from the working tree:
 
 | Type | Count |
 |---|---:|
-| Agents | 18 |
-| Commands | 19 |
-| Skills | 71 |
-| Domain skill symlinks | 100 |
+| Agents | 19 |
+| Commands | 21 |
+| Skills | 78 |
+| Domain skill symlinks | 86 |
 | Plugins | 1 |
+| TUI plugins | 1 |
 
 By domain:
 
-| Domain | Agents | Commands | Skill symlinks | Plugins |
-|---|---:|---:|---:|---:|
-| architecture | 2 | 5 | 19 | 0 |
-| common | 1 | 2 | 28 | 0 |
-| docs | 1 | 4 | 15 | 0 |
-| meta | 0 | 2 | 4 | 1 |
-| plan | 1 | 2 | 6 | 0 |
-| refactor | 2 | 2 | 19 | 0 |
-| sdd | 11 | 2 | 9 | 0 |
+| Domain | Agents | Commands | Skill symlinks | Plugins | TUI plugins |
+|---|---:|---:|---:|---:|---:|
+| architecture | 3 | 6 | 14 | 0 | 0 |
+| common | 0 | 2 | 26 | 0 | 0 |
+| docs | 1 | 4 | 13 | 0 | 0 |
+| learning | 1 | 1 | 5 | 0 | 0 |
+| meta | 0 | 2 | 4 | 1 | 1 |
+| plan | 1 | 3 | 2 | 0 | 0 |
+| refactor | 2 | 2 | 17 | 0 | 0 |
+| sdd | 11 | 1 | 5 | 0 | 0 |
 
 Skill lifecycle status, from `skills/*/SKILL.md` frontmatter:
 
 | Status | Count |
 |---|---:|
 | backlog | 10 |
-| in-progress | 41 |
-| testing | 17 |
+| in-progress | 46 |
+| testing | 19 |
 | done | 3 |
 
 ### Agent To Skill Loads

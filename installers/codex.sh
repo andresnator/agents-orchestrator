@@ -103,10 +103,10 @@ runtime_dest() {
       fi
       ;;
     skills) DEST_PATH="$SKILLS_ROOT/$2" ;;
-    plugins)
+    plugins|tui-plugins)
       DEST_PATH=""
       if [ "$PLUGINS_WARNED" -eq 0 ]; then
-        warn "plugins are OpenCode-only; skipped for Codex"
+        warn "plugins and TUI plugins are OpenCode-only; skipped for Codex"
         PLUGINS_WARNED=1
       fi
       ;;

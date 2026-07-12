@@ -24,7 +24,7 @@ A complete `agent.<name>.permission` block in your user `opencode.json` (default
 Invariants:
 
 - Workflow gates still ask. Kickoff (Mode/TDD/Judgment), proposal/design confirmations, and judgment re-judge gates run through the orchestraitor's `question: allow` — only tool-permission prompts disappear.
-- `model`/`variant` written by `scripts/configure-models.sh`, non-sdd agents, and top-level config keys are never touched (see [agent-models.md](agent-models.md)).
+- `agent.<name>.model`/`variant` assignments (however they were written — the model configurator TUI or by hand), non-sdd agents, and top-level config keys are never touched (see [agent-models.md](agent-models.md)).
 - Repo agent frontmatter is never modified; the toggle is user-side config only.
 
 `off` deletes exactly those `permission` blocks (`general` included, always, even with `--no-general`) and prunes emptied objects; agents revert to frontmatter plus your global config.

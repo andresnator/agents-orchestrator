@@ -80,10 +80,10 @@ runtime_dest() {
     agents) DEST_PATH="$TARGET/agents/$2" ;;
     commands) DEST_PATH="$TARGET/commands/$2" ;;
     skills) DEST_PATH="$TARGET/skills/$2" ;;
-    plugins)
+    plugins|tui-plugins)
       DEST_PATH=""
       if [ "$PLUGINS_WARNED" -eq 0 ]; then
-        warn "plugins are OpenCode-only; skipped for Claude Code"
+        warn "plugins and TUI plugins are OpenCode-only; skipped for Claude Code"
         PLUGINS_WARNED=1
       fi
       ;;

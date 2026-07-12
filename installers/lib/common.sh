@@ -30,6 +30,9 @@ FORCE=0
 MANIFEST_ROOT=""
 OLD_MANIFEST=""
 DEST_PATH=""
+INSTALL_TRANSACTION_ACTIVE=0
+INSTALL_SELECTED=""
+INSTALL_NEW_MANIFEST=""
 
 warn() { printf 'warn: %s\n' "$*" >&2; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
@@ -161,12 +164,22 @@ discover_components() {
     fi
 
     dir="$domain/plugins"
-    [ -d "$dir" ] || continue
-    find "$dir" -type f -name '*.ts' | sort | while IFS= read -r file; do
-      name="$(basename "$file")"
-      src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-      printf '%s\t%s\t%s\t%s\t%s\n' "plugins" "$name" "$domain_name" "-" "$src" >> "$out"
-    done
+    if [ -d "$dir" ]; then
+      find "$dir" -type f -name '*.ts' | sort | while IFS= read -r file; do
+        name="$(basename "$file")"
+        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
+        printf '%s\t%s\t%s\t%s\t%s\n' "plugins" "$name" "$domain_name" "-" "$src" >> "$out"
+      done
+    fi
+
+    dir="$domain/tui-plugins"
+    if [ -d "$dir" ]; then
+      find "$dir" -maxdepth 1 -type f -name '*.tsx' | sort | while IFS= read -r file; do
+        name="$(basename "$file")"
+        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
+        printf '%s\t%s\t%s\t%s\t%s\n' "tui-plugins" "$name" "$domain_name" "-" "$src" >> "$out"
+      done
+    fi
   done
 }
 
@@ -340,17 +353,17 @@ file_state() {
 # new one. Type-guarded: a stale link is removed only if still a symlink, a
 # stale file only if still a regular non-symlink file.
 remove_stale() {
-  local old_manifest new_manifest old_entries new_entries kind dest
+  local old_manifest new_manifest old_entries new_entries kind dest field value
   old_manifest="$1"
   new_manifest="$2"
   [ -f "$old_manifest" ] || return 0
 
   old_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-old.XXXXXX")"
   new_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-new.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file"' "$old_manifest" | sort -u > "$old_entries"
-  awk -F '\t' '$1 == "link" || $1 == "file"' "$new_manifest" | sort -u > "$new_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$old_manifest" | sort -u > "$old_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$new_manifest" | sort -u > "$new_entries"
 
-  comm -23 "$old_entries" "$new_entries" | while IFS=$'\t' read -r kind dest; do
+  comm -23 "$old_entries" "$new_entries" | while IFS=$'\t' read -r kind dest field value; do
     [ -n "$dest" ] || continue
     case "$kind" in
       link)
@@ -362,6 +375,9 @@ remove_stale() {
         if [ -f "$dest" ] && [ ! -L "$dest" ]; then
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
+        ;;
+      managed-array|managed-object)
+        runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac
   done
@@ -381,6 +397,12 @@ install_action() {
 
   discover_components "$selected"
   check_collisions "$selected"
+  runtime_pre_install "$selected"
+  INSTALL_SELECTED="$selected"
+  INSTALL_NEW_MANIFEST="$new_manifest"
+  runtime_begin_install "$selected" "$manifest"
+  INSTALL_TRANSACTION_ACTIVE=1
+  trap install_abort_on_exit EXIT
 
   runtime_ensure_dirs "$new_manifest"
 
@@ -394,27 +416,45 @@ install_action() {
   runtime_install_global "$new_manifest"
 
   remove_stale "$manifest" "$new_manifest"
+  runtime_before_manifest_commit
 
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'write manifest %s\n' "$manifest"
   else
     mv "$new_manifest" "$manifest"
   fi
+  runtime_after_manifest_commit
+  runtime_commit_install
+  INSTALL_TRANSACTION_ACTIVE=0
+  trap - EXIT
   rm -f "$selected" "$new_manifest"
+  INSTALL_SELECTED=""
+  INSTALL_NEW_MANIFEST=""
+}
+
+install_abort_on_exit() {
+  local status=$?
+  trap - EXIT
+  if [ "$INSTALL_TRANSACTION_ACTIVE" -eq 1 ]; then
+    runtime_abort_install || true
+  fi
+  [ -z "$INSTALL_SELECTED" ] || rm -f "$INSTALL_SELECTED"
+  [ -z "$INSTALL_NEW_MANIFEST" ] || rm -f "$INSTALL_NEW_MANIFEST"
+  exit "$status"
 }
 
 uninstall_action() {
-  local manifest entries dirs kind dest dir
+  local manifest entries dirs kind dest field value dir
   runtime_init
   manifest="$MANIFEST_ROOT/$MANIFEST_NAME"
   [ -f "$manifest" ] || { warn "$manifest: no manifest found"; return 0; }
 
   entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-links.XXXXXX")"
   dirs="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-dirs.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file"' "$manifest" > "$entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$manifest" > "$entries"
   awk -F '\t' '$1 == "dir" { print $NF }' "$manifest" > "$dirs"
 
-  while IFS=$'\t' read -r kind dest; do
+  while IFS=$'\t' read -r kind dest field value; do
     [ -n "$dest" ] || continue
     case "$kind" in
       link)
@@ -426,6 +466,9 @@ uninstall_action() {
         if [ -f "$dest" ] && [ ! -L "$dest" ]; then
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
+        ;;
+      managed-array|managed-object)
+        runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac
   done < "$entries"
@@ -462,6 +505,34 @@ status_action() {
 # override this to route agents/commands through file_state.
 runtime_component_state() {
   link_state "$3" "$4"
+}
+
+runtime_pre_install() {
+  return 0
+}
+
+runtime_begin_install() {
+  return 0
+}
+
+runtime_commit_install() {
+  return 0
+}
+
+runtime_abort_install() {
+  return 0
+}
+
+runtime_before_manifest_commit() {
+  return 0
+}
+
+runtime_after_manifest_commit() {
+  return 0
+}
+
+runtime_remove_managed_entry() {
+  return 0
 }
 
 harness_main() {

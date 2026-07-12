@@ -15,6 +15,7 @@ COMMANDS=0
 SKILLS=0
 LINKS=0
 PROFILES=0
+TUI_PLUGINS=0
 
 fail() {
   printf 'FAIL %s: %s\n' "$1" "$2"
@@ -92,6 +93,15 @@ EOF
 }
 check_unique agents domains/*/agents/*.md
 check_unique commands domains/*/commands/*.md
+
+# --- OpenCode TUI plugins ---
+for f in domains/*/tui-plugins/*.tsx; do
+  [ -e "$f" ] || continue
+  TUI_PLUGINS=$((TUI_PLUGINS + 1))
+  companion="${f%.tsx}"
+  [ -d "$companion" ] || fail "$f" "missing same-named companion directory"
+done
+check_unique tui-plugins domains/*/tui-plugins/*.tsx
 
 # --- Skills ---
 for d in skills/*/; do
@@ -179,10 +189,16 @@ if command -v shellcheck >/dev/null 2>&1; then
     fail scripts "shellcheck reported issues"
 fi
 
+# --- Deterministic model-configurator contracts ---
+if [ -x scripts/test-model-configurator.sh ] && command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  scripts/test-model-configurator.sh shell-contracts >/dev/null ||
+    fail scripts/test-model-configurator.sh "shell contracts failed"
+fi
+
 if [ "$FAILS" -gt 0 ]; then
-  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d skills, %d domain skill links, %d profiles.\n' \
-    "$FAILS" "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS" "$PROFILES"
+  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d TUI plugins, %d skills, %d domain skill links, %d profiles.\n' \
+    "$FAILS" "$AGENTS" "$COMMANDS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
   exit 1
 fi
-printf 'PASS: %d agents, %d commands, %d skills, %d domain skill links, %d profiles, script syntax OK.\n' \
-  "$AGENTS" "$COMMANDS" "$SKILLS" "$LINKS" "$PROFILES"
+printf 'PASS: %d agents, %d commands, %d TUI plugins, %d skills, %d domain skill links, %d profiles, script syntax and deterministic contracts OK.\n' \
+  "$AGENTS" "$COMMANDS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"

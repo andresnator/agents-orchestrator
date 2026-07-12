@@ -8,6 +8,7 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format; insta
 - `domains/<domain>/commands/*.md`: fused OpenCode command files with frontmatter and prompt body.
 - `skills/<skill>/SKILL.md`: reusable skill contracts.
 - `domains/<domain>/skills/<skill>`: symlink declaring that a domain uses a central skill.
+- `domains/<domain>/tui-plugins/*.tsx`: OpenCode TUI plugins (entrypoint plus same-named companion directory), OpenCode-only.
 - `installers/opencode.sh`: symlink installer for OpenCode (`~/.config/opencode`).
 - `installers/claude.sh`: installer for Claude Code (`~/.claude`); skills symlinked, agents/commands generated.
 - `installers/codex.sh`: installer for Codex CLI (`~/.codex` + `~/.agents/skills`); skills symlinked, agents as TOML, commands as custom prompts.
