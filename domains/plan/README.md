@@ -6,6 +6,8 @@ One primary agent: `deep-planner` (plan-only; explores inline, with optional rea
 
 When the effort is too big and foggy for one `/deep-plan` sitting, `/wayfinder` sits upstream: the `wayfinder` skill charts a multi-session discovery map under `.ai/wayfinder/<map-slug>/` — investigation tickets (research / prototype / grilling / task) resolved one decision per session, with `grilling` + `domain-modeling` driving the HITL tickets — until the way is clear, then hands off to `/deep-plan` (or sdd drafting).
 
+Assumes the `common` domain is installed: `grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, and `risk-assessment` live there.
+
 The plan is a human-readable document under `.ai/deep-planner/plans/<plan-slug>.md` with four sections: Context (why + decisions made with the user), Design (approach, rejected alternatives, files, reused `path:symbol`), an Edge Case Matrix where every edge ends in exactly one destination (handled / out of scope / open question — never silently dropped), and an end-to-end Verification section that exercises the real flow.
 
 Deliberately **not** a ready-for-sdd bundle: the output is for humans first; execution is informal (hand the file to the sdd `orchestraitor` in direct mode). If automatic adoption is ever wanted, add a bundle mode following `docs/plan-handoff.md`.

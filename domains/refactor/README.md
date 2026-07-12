@@ -1,6 +1,6 @@
 # Refactor Domain
 
-Risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles, plus Java refactor skills.
+Risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles, plus Java refactor skills and the cross-language `refactor` technique catalog.
 
 One primary agent: `refactor-planner`. One subagent: `refactor-analyzer` (generic read-only analysis instance, launched N times in parallel with per-lens briefs). Two commands sharing the planner: `/refactor-plan` (behavior-preserving refactors) and `/harden-plan` (test safety net before refactoring).
 
@@ -10,7 +10,7 @@ The planner scopes and risk-classifies inline, fans out analyzer instances by un
 
 Bundles carry Andres's style contract: the `code-conventions` skill rides the test-safety-net lens, `design.md` records language/tool versions plus convention deviations, and test tasks prescribe the test format (naming, `// Given // When // Then` sections, whole-object asserts, separate characterization classes).
 
-Full lens coverage assumes the `common` domain is installed (lens skills such as `cohesion-coupling` or `kiss-yagni` live there); missing lens skills are reported as skipped, never as failures.
+Full lens coverage assumes the `common` domain is installed (lens skills such as `cohesion-coupling` or `kiss-yagni` live there, as do the transversal `code-conventions` and `risk-assessment`); missing lens skills are reported as skipped, never as failures. Bundle composition uses the `sdd-draft-*` templates from the `sdd` domain.
 
 Legacy note: pre-2026-07 `.ia-refactor/plan/**` artifacts are frozen history. The planner ignores them and `/refactor-execute` no longer exists — execution now happens through sdd adoption.
 

@@ -6,6 +6,8 @@ Agent entry: `english-tutor`.
 
 Commands: `doc`, `prd`, `english`, `decide` (grilling-style decision interview that converges into an ADR).
 
+Assumes the `common` domain is installed: `grilling` and `native-question-ux` live there.
+
 ```mermaid
 graph TD
   commands[Docs commands] --> docs[documentation skills]
