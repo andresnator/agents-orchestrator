@@ -6,11 +6,12 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.4.0"
+  version: "1.4.1"
   status: in-progress
 ---
 
 ## When to Use
+
 - User explicitly asks for "judgment day", "judgment-day", or equivalent trigger phrases
 - After significant implementations before merging
 - When high-confidence review of code, features, or architecture is needed
@@ -21,41 +22,33 @@ metadata:
 
 Judgment-day is the most expensive review in the toolkit (two blind judges + fix agent + re-judge rounds). Do not make it the default reflex: routine or small changes get a cheap single-reviewer check. Reserve judgment-day for high-risk changes, large diffs, or SDD verification gates. An explicit user request always runs it.
 
-## Critical Patterns
+## Protocol
 
-### Pattern 0: Skill Resolution (BEFORE launching judges)
+Only the orchestrator runs this protocol; it coordinates and synthesizes but NEVER reviews code itself. Judge and fix delegates work only on the scoped input they receive — they never coordinate rounds, synthesize buckets, decide escalation, or ask the user anything. If the target scope is unclear, stop and ask before launching — partial reviews are useless.
+
+### Pattern 0: Skill Resolution (before launching judges)
 
 Resolve project standards before launching ANY sub-agent. In OpenCode installs, the `skill-registry` plugin generates `.ai/atl/skill-registry.md` on session start.
 
 1. Read `.ai/atl/skill-registry.md` from the project root if it exists; skip registry injection if it does not.
-2. Identify the target files/scope: what code will the judges review?
-3. Match relevant skills from the registry's `## Skills` table by:
-   - **Code context**: file extensions/paths of the target (e.g., `.tsx` → react-19, typescript)
-   - **Task context**: "review code" → framework/language skills; "create PR" → branch-pr skill
-4. Read the matched skills' `SKILL.md` files, cap the set to the 3-5 most relevant skills, and distill their actionable rules into a `## Project Standards (auto-resolved)` block.
-5. Inject this block into BOTH Judge prompts AND the Fix Agent prompt (identical for all)
-
-This ensures judges review against project-specific standards, not just generic best practices.
+2. Identify the target files/scope the judges will review.
+3. Match relevant skills from the registry's `## Skills` table by code context (file extensions/paths of the target) and task context (e.g., "review code" → framework/language skills).
+4. Read the matched skills' `SKILL.md` files, cap the set to the 3-5 most relevant, and distill their actionable rules into a `## Project Standards (auto-resolved)` block.
+5. Inject this block identically into BOTH judge prompts AND the fix agent prompt.
 
 **If no registry exists**: warn the user ("No skill registry found — judges will review without project-specific standards. Ensure the skill-registry plugin is installed or wait for startup generation.") and proceed with generic review only.
 
 ### Pattern 1: Parallel Blind Review
 
-Only the orchestrator runs this protocol. Judge agents and the fix agent review or patch only the scoped input they receive; they never coordinate rounds, synthesize buckets, or decide escalation.
-
-When a runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate to those agents while preserving the same blindness, synthesis buckets, confirmed-only fix rule, and two-round escalation limit.
-
-
-- Launch **TWO** sub-agents with the runtime's sub-agent mechanism, such as the OpenCode `task` tool or Claude Code `Task`.
-- Prefer parallel execution. If the runtime cannot run sub-agents in parallel, run the two judges sequentially with isolated blind prompts.
-- Each agent receives the **same target** but works **independently**
-- **Neither agent knows about the other** — no cross-contamination
-- Both use identical review criteria but may find different issues
-- NEVER do the review yourself as the orchestrator — your job is coordination only
+- Launch **TWO** judge sub-agents via the runtime's sub-agent mechanism (e.g., the OpenCode `task` tool, Claude Code `Task`). When the runtime pre-registers `jd-judge-a`, `jd-judge-b`, and `jd-fix`, delegate to those agents; otherwise use the fallback prompts in `assets/judge-prompt.md`.
+- Prefer parallel execution; if the runtime cannot run sub-agents in parallel, run the judges sequentially with isolated blind prompts.
+- Each judge receives the **same target** but works **independently** — neither knows about the other, no cross-contamination.
+- If the user provides custom review criteria, include them identically in BOTH judge prompts.
+- Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict.
 
 ### Pattern 2: Verdict Synthesis
 
-The **orchestrator** (NOT a sub-agent) compares results after both judge sub-agents return their results (each sub-agent call returns its result directly — e.g., the OpenCode `task` tool's return value, or the runtime's equivalent):
+The **orchestrator** (NOT a sub-agent) compares both judges' returned results:
 
 ```
 Confirmed   → found by BOTH agents          → high confidence, fix immediately
@@ -64,265 +57,36 @@ Suspect B   → found ONLY by Judge B         → needs triage
 Contradiction → agents DISAGREE on the same thing → flag for manual decision
 ```
 
-Present findings as a structured verdict table (see Output Format).
+Present findings as a structured verdict table (see `assets/output-formats.md`). Suspect findings are reported but NOT automatically fixed — triage and escalate to the user if needed.
 
 ### Pattern 3: Fix and Re-judge (user-gated after the first fix)
 
 Round 1 and the first fix run automatically. After Fix 1, **every** further step — each re-judge round and each additional fix — requires explicit user confirmation first.
 
-1. If **confirmed issues** exist → delegate a **Fix Agent** (separate delegation). Fix 1 needs no confirmation.
-2. After Fix 1 completes → **confirmation gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates)
-3. If the re-judge still finds confirmed issues → **confirmation gate** → Fix 2 → **confirmation gate** → re-judge (Round 3)
-4. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history
+1. If **confirmed issues** exist → delegate a **Fix Agent** (a separate sub-agent, never one of the judges; fallback prompt in `assets/fix-prompt.md`). Fix 1 needs no confirmation, and the fixer only touches confirmed findings.
+2. After Fix 1 completes → **confirmation gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates).
+3. If the re-judge still finds confirmed issues → **confirmation gate** → Fix 2 → **confirmation gate** → re-judge (Round 3).
+4. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history; do not loop forever.
 5. If both judges return clean → JUDGMENT: APPROVED ✅
 
 **Confirmation gate**: one question, presented via the `native-question-ux` skill (native mechanism when the runtime has one — e.g. Claude Code `AskUserQuestion`, OpenCode `question` — plain chat otherwise). Summarize the current verdict, then offer exactly:
+
 - **Continue (recommended)** — run the next step (re-judge or fix)
 - **Escalate now** — stop looping, emit `JUDGMENT: ESCALATED` with the history so far
 - **Stop here** — end the protocol, emit `JUDGMENT: STOPPED` reporting findings and fixes applied
 
 The orchestrator owns the gate; judge and fix delegates never ask the user anything.
----
 
-## Decision Tree
+## Templates
 
-```
-User asks for "judgment day"
-│
-├── Target is specific files/feature/component?
-│   ├── YES → continue
-│   └── NO → ask user to specify scope before proceeding
-│
-▼
-Resolve skills (Pattern 0): read .ai/atl registry if present → match by code + task context → build Project Standards block
-▼
-Launch Judge A + Judge B with isolated prompts — in parallel when the runtime supports it
-▼
-Wait for both to complete
-▼
-Synthesize verdict
-│
-├── No issues found?
-│   └── JUDGMENT: APPROVED ✅ (stop here)
-│
-├── Issues found (confirmed, suspect, or contradictions)?
-│   └── Delegate Fix Agent with confirmed issues list (Fix 1 — automatic)
-│       ▼
-│       Wait for Fix Agent to complete
-│       ▼
-│       [confirm with user via native-question-ux] — re-judge?
-│       ├── Escalate now → JUDGMENT: ESCALATED ⚠️ (history so far)
-│       ├── Stop here → JUDGMENT: STOPPED 🛑 (report state)
-│       └── Continue ▼
-│       Re-launch Judge A + Judge B in parallel (Round 2)
-│       ▼
-│       Synthesize verdict
-│       │
-│       ├── Clean → JUDGMENT: APPROVED ✅
-│       │
-│       └── Still issues →
-│           [confirm with user via native-question-ux] — apply Fix 2?
-│           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
-│           ├── Stop here → JUDGMENT: STOPPED 🛑
-│           └── Continue ▼
-│           Delegate Fix Agent again (Fix 2 / iteration 2)
-│           ▼
-│           [confirm with user via native-question-ux] — re-judge?
-│           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
-│           ├── Stop here → JUDGMENT: STOPPED 🛑
-│           └── Continue ▼
-│           Re-launch Judge A + Judge B in parallel (Round 3)
-│           ▼
-│           Synthesize verdict
-│           │
-│           ├── Clean → JUDGMENT: APPROVED ✅
-│           └── Still issues → JUDGMENT: ESCALATED ⚠️ (report to user)
-```
+Read these files on demand — each one says when:
 
----
-
-## Sub-Agent Prompt Templates
-
-### Judge Prompt (use for BOTH Judge A and Judge B — identical)
-
-```
-You are an adversarial code reviewer. Your ONLY job is to find problems.
-
-## Target
-{describe target: files, feature, architecture, component}
-
-{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
-## Project Standards (auto-resolved)
-{paste distilled actionable rules from the matched SKILL.md files}
-
-## Review Criteria
-- Correctness: Does the code do what it claims? Are there logical errors?
-- Edge cases: What inputs or states aren't handled?
-- Error handling: Are errors caught, propagated, and logged properly?
-- Performance: Any N+1 queries, inefficient loops, unnecessary allocations?
-- Security: Any injection risks, exposed secrets, improper auth checks?
-- Naming & conventions: Does it follow the project's established patterns AND the Project Standards above?
-{if user provided custom criteria, add here}
-
-## Return Format
-Return a structured list of findings ONLY. No praise, no approval.
-
-Each finding:
-- Severity: CRITICAL | WARNING | SUGGESTION
-- File: path/to/file.ext (line N if applicable)
-- Description: What is wrong and why it matters
-- Suggested fix: one-line description of the fix (not code, just intent)
-
-Always include at the end: **Skill Resolution**: {injected|fallback-registry|fallback-path|none} — {details}
-
-If you find NO issues, return:
-VERDICT: CLEAN — No issues found.
-
-## Instructions
-Be thorough and adversarial. Assume the code has bugs until proven otherwise.
-Your job is to find problems, NOT to approve. Do not summarize. Do not praise.
-```
-
-### Fix Agent Prompt
-
-```
-You are a surgical fix agent. You apply ONLY the confirmed issues listed below.
-
-## Confirmed Issues to Fix
-{paste the confirmed findings table from the verdict synthesis}
-
-{if skill rules were resolved in Pattern 0, inject the following block — otherwise OMIT this entire section}
-## Project Standards (auto-resolved)
-{paste distilled actionable rules from the matched SKILL.md files}
-
-## Context
-- Original review criteria: {paste same criteria used for judges}
-- Target: {same target description}
-
-## Instructions
-- Fix ONLY the confirmed issues listed above
-- Do NOT refactor beyond what is strictly needed to fix each issue
-- Do NOT change code that was not flagged
-- After each fix, note: file changed, line changed, what was done
-
-Return a summary:
-## Fixes Applied
-- [file:line] — {what was fixed}
-
-**Skill Resolution**: {injected|fallback-registry|fallback-path|none} — {details}
-```
-
----
-
-## Output Format
-
-```markdown
-## Judgment Day — {target}
-
-### Round {N} — Verdict
-
-| Finding | Judge A | Judge B | Severity | Status |
-|---------|---------|---------|----------|--------|
-| Missing null check in auth.go:42 | ✅ | ✅ | CRITICAL | Confirmed |
-| Race condition in worker.go:88 | ✅ | ❌ | WARNING | Suspect (A only) |
-| Naming mismatch in handler.go:15 | ❌ | ✅ | SUGGESTION | Suspect (B only) |
-| Error swallowed in db.go:201 | ✅ | ✅ | CRITICAL | Confirmed |
-
-**Confirmed issues**: 2 CRITICAL
-**Suspect issues**: 1 WARNING, 1 SUGGESTION
-**Contradictions**: none
-
-### Fixes Applied (Round {N})
-- `auth.go:42` — Added nil check before dereferencing user pointer
-- `db.go:201` — Propagated error instead of silently returning nil
-
-### Round {N+1} — Re-judgment
-- Judge A: PASS ✅ — No issues found
-- Judge B: PASS ✅ — No issues found
-
----
-
-### JUDGMENT: APPROVED ✅
-Both judges pass clean. The target is cleared for merge.
-```
-
-### Escalation Format (after 2 failed iterations)
-
-```markdown
-## Judgment Day — {target}
-
-### JUDGMENT: ESCALATED ⚠️
-
-After 2 fix iterations, both judges still report issues.
-Manual review required before proceeding.
-
-### Remaining Issues
-| Finding | Judge A | Judge B | Severity |
-|---------|---------|---------|----------|
-| {description} | ✅ | ✅ | CRITICAL |
-
-### History
-- Round 1: {N} confirmed issues found
-- Fix 1: applied {list}
-- Round 2: {N} issues remain
-- Fix 2: applied {list}
-- Round 3: {N} issues remain → escalated
-
-Recommend: human review of the remaining issues above before re-running judgment day.
-```
-
-### Stopped Format (user chose "Stop here" at a confirmation gate)
-
-```markdown
-## Judgment Day — {target}
-
-### JUDGMENT: STOPPED 🛑 (user)
-
-Protocol halted by user at the gate before {Round N | Fix N}.
-No escalation implied — this is a deliberate stop, not a failure.
-
-### Current State
-| Finding | Judge A | Judge B | Severity | Status |
-|---------|---------|---------|----------|--------|
-| {description} | ✅ | ✅ | CRITICAL | {Fixed \| Open} |
-
-### History
-- Round 1: {N} confirmed issues found
-- Fix 1: applied {list}
-- {further rounds/fixes completed before the stop}
-- Stopped by user before {next step}
-
-Re-run judgment day on the same target to resume review.
-```
-
----
+- `assets/judge-prompt.md` — fallback judge prompt; only when `jd-judge-a`/`jd-judge-b` are not pre-registered, with an optional A/B emphasis differentiation mirroring those agents.
+- `assets/fix-prompt.md` — fallback fix agent prompt; only when `jd-fix` is not pre-registered.
+- `assets/output-formats.md` — verdict table plus APPROVED/ESCALATED/STOPPED templates; read when synthesizing a verdict and when emitting the final judgment.
+- `references/decision-tree.md` — the full step-by-step flow diagram with every confirmation gate.
 
 ## Language
 
 - **Spanish input → Rioplatense**: "Juicio iniciado", "Los jueces están trabajando en paralelo...", "Los jueces coinciden", "Juicio terminado — Aprobado", "Escalado — necesita revisión humana"
 - **English input**: "Judgment initiated", "Both judges are working in parallel...", "Both judges agree", "Judgment complete — Approved", "Escalated — requires human review"
-
----
-
-## Rules
-
-- The **orchestrator NEVER reviews code itself** — it only launches judges, reads results, and synthesizes
-- Judges use the active runtime's sub-agent mechanism; examples include the OpenCode `task` tool and Claude Code `Task`
-- Judges should run in parallel when available; otherwise run them sequentially with separate blind contexts
-- The **Fix Agent is a separate sub-agent** — never use one of the judges as the fixer
-- If user provides **custom review criteria**, include them in BOTH judge prompts (identical)
-- If target scope is **unclear**, stop and ask before launching — partial reviews are useless
-- **Max 2 fix iterations** — on the third failure, escalate with full report, do not loop forever
-- **After Fix 1, nothing runs unconfirmed** — never launch a re-judge round or another fix without explicit user confirmation, presented via the `native-question-ux` skill (continue / escalate now / stop here). Delegates never ask — the orchestrator owns the gate
-- Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict
-- Suspect findings (only one judge) are reported but NOT automatically fixed — triage and escalate to user if needed
-
----
-
-## Commands
-
-```bash
-# No CLI commands — this is a pure orchestration protocol.
-# Execution happens via the runtime's sub-agent mechanism.
-# Examples: the OpenCode task tool, Claude Code Task.
-```
