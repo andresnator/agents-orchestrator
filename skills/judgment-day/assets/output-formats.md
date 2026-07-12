@@ -34,6 +34,48 @@ Read this file when synthesizing a verdict and when emitting the final judgment.
 Both judges pass clean. The target is cleared for merge.
 ```
 
+## Verdict-Only Format (user chose "Stop here" at the verdict gate, or pre-set mode `verdict-only`)
+
+```markdown
+## Judgment Day — {target}
+
+### JUDGMENT: VERDICT 📋
+
+Review-only run — no fixes applied, no code touched.
+
+### Findings
+| Finding | Judge A | Judge B | Severity | Status |
+|---------|---------|---------|----------|--------|
+| {description} | ✅ | ✅ | CRITICAL | Confirmed |
+| {description} | ✅ | ❌ | WARNING | Suspect (A only) |
+
+**Confirmed issues**: {N}
+**Suspect issues**: {N}
+**Contradictions**: {N}
+
+Re-run judgment day and choose the fix loop to address the confirmed findings.
+```
+
+## Fixed-Unverified Format (user chose "Fix only" at the verdict gate)
+
+```markdown
+## Judgment Day — {target}
+
+### JUDGMENT: FIXED (unverified) 🔧
+
+Fix 1 applied to confirmed findings; no re-judge ran, so the fixes are unverified by the judges.
+
+### Fixes Applied
+- `{file:line}` — {what was fixed}
+
+### Still Open (not fixed)
+| Finding | Judge A | Judge B | Severity | Status |
+|---------|---------|---------|----------|--------|
+| {description} | ✅ | ❌ | WARNING | Suspect (A only) |
+
+Re-run judgment day on the same target to verify the fixes.
+```
+
 ## Escalation Format (after 2 failed fix iterations)
 
 ```markdown

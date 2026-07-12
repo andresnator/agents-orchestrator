@@ -41,9 +41,9 @@ Then ask ONE round of questions via the `native-question-ux` skill, skipping any
 
 1. **Mode** — `interactive` (interview plus confirmation gates) or `automatic` (draft everything, implement, summarize at the end).
 2. **TDD** — test-first per task, or tests alongside the implementation.
-3. **Judgment** — adversarial dual review at the end, or none.
+3. **Judgment** — `none`, `verdict-only` (blind judges report a verdict, no fixes), or `full` (fixes plus the gated re-judge loop).
 
-Record the answers in one line at the top of `proposal.md` (`Mode: automatic | TDD: yes | Judgment: no`) so a fresh session can resume without re-asking.
+Record the answers in one line at the top of `proposal.md` (`Mode: automatic | TDD: yes | Judgment: verdict-only`) so a fresh session can resume without re-asking.
 
 ## Flow
 
@@ -58,7 +58,7 @@ explore -> proposal -> specs || design -> tasks -> implement -> verify -> [judgm
 - **Tasks**: delegate to `sdd-tasks`. It loads `sdd-draft-tasks`, reads proposal/specs/design, writes only `.ai/orchestrator/changes/<change>/tasks.md`, and makes dependency groupings explicit for implementation waves.
 - **Implement**: group `tasks.md` into waves of related tasks (same area or files, dependencies respected). Each wave goes to `sdd-implement` with a complete brief: change-folder paths, relevant spec scenarios, design decisions, TDD instruction when chosen, the project test command, and what to return. Waves with no dependency between them may launch in parallel in a single message. You integrate each summary, verify it, and check the boxes yourself.
 - **Verify**: delegate a cold-check to `sdd-verify`: it reads the implementation against every spec scenario and returns pass/fail per scenario with evidence. Gaps go back out as fix briefs to `sdd-implement`; you decide when the change is closed before any review.
-- **Judgment** (only if requested): load the `judgment-day` skill. Launch `jd-judge-a` and `jd-judge-b` in parallel and blind; never mention one judge's existence or findings to the other. Only confirmed findings (flagged by both judges) go to `jd-fix`. The first judge round and first fix run automatically; every re-judge and any further fix requires user confirmation (continue / escalate / stop), asked through `native-question-ux` — the delegates never ask. Maximum 2 fix rounds, then escalate to the user.
+- **Judgment** (only if requested): load the `judgment-day` skill. Launch `jd-judge-a` and `jd-judge-b` in parallel and blind; never mention one judge's existence or findings to the other. The recorded `Judgment:` mode pre-answers the verdict gate: `verdict-only` reports the verdict and continues to archive without any fix; `full` sends confirmed findings (flagged by both judges) to `jd-fix` without asking, then every re-judge and any further fix requires user confirmation (continue / escalate / stop), asked through `native-question-ux` — the delegates never ask. Maximum 2 fix rounds, then escalate to the user.
 - **Archive**: see file management below.
 
 Interactive mode: you run each drafting interview inline (grilling style: one question at a time, recommendation attached) to collect the decisions, but you do not write the document in chat. After each interview, brief the matching phase agent with the decisions, target path, and skill to load. The confirmation gates, after the proposal and after specs plus design, run against the written artifact: present the summary plus the file path; if the user wants changes, re-delegate to the same phase agent with their feedback. Writing before the gate is safe: `changes/<change>/` folders are proposals in flight by definition.

@@ -22,11 +22,16 @@ Synthesize verdict
 │   └── JUDGMENT: APPROVED ✅ (stop here)
 │
 ├── Issues found (confirmed, suspect, or contradictions)?
-│   └── Delegate Fix Agent with confirmed issues list (Fix 1 — automatic)
+│   └── [verdict gate via native-question-ux — skipped when a mode is pre-set:
+│        `verdict-only` → report and stop; `full` → continue as "Fix and re-judge"]
+│       ├── Stop here (verdict only) → JUDGMENT: VERDICT 📋 (no code touched)
+│       ├── Fix only → Delegate Fix Agent (confirmed issues) → JUDGMENT: FIXED (unverified) 🔧
+│       └── Fix and re-judge (full loop) ▼
+│       Delegate Fix Agent with confirmed issues list (Fix 1)
 │       ▼
 │       Wait for Fix Agent to complete
 │       ▼
-│       [confirm with user via native-question-ux] — re-judge?
+│       [loop gate via native-question-ux] — re-judge?
 │       ├── Escalate now → JUDGMENT: ESCALATED ⚠️ (history so far)
 │       ├── Stop here → JUDGMENT: STOPPED 🛑 (report state)
 │       └── Continue ▼
@@ -37,13 +42,13 @@ Synthesize verdict
 │       ├── Clean → JUDGMENT: APPROVED ✅
 │       │
 │       └── Still issues →
-│           [confirm with user via native-question-ux] — apply Fix 2?
+│           [loop gate via native-question-ux] — apply Fix 2?
 │           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
 │           ├── Stop here → JUDGMENT: STOPPED 🛑
 │           └── Continue ▼
 │           Delegate Fix Agent again (Fix 2 / iteration 2)
 │           ▼
-│           [confirm with user via native-question-ux] — re-judge?
+│           [loop gate via native-question-ux] — re-judge?
 │           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
 │           ├── Stop here → JUDGMENT: STOPPED 🛑
 │           └── Continue ▼

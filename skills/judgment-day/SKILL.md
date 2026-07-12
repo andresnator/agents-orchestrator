@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.4.1"
+  version: "1.5.0"
   status: in-progress
 ---
 
@@ -59,23 +59,29 @@ Contradiction → agents DISAGREE on the same thing → flag for manual decision
 
 Present findings as a structured verdict table (see `assets/output-formats.md`). Suspect findings are reported but NOT automatically fixed — triage and escalate to the user if needed.
 
-### Pattern 3: Fix and Re-judge (user-gated after the first fix)
+### Pattern 3: Fix and Re-judge (opt-in, user-gated)
 
-Round 1 and the first fix run automatically. After Fix 1, **every** further step — each re-judge round and each additional fix — requires explicit user confirmation first.
+Round 1 and the verdict synthesis always run. **After the verdict, nothing touches code without confirmation** — the fix/re-judge loop is opt-in.
 
-1. If **confirmed issues** exist → delegate a **Fix Agent** (a separate sub-agent, never one of the judges; fallback prompt in `assets/fix-prompt.md`). Fix 1 needs no confirmation, and the fixer only touches confirmed findings.
-2. After Fix 1 completes → **confirmation gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates).
-3. If the re-judge still finds confirmed issues → **confirmation gate** → Fix 2 → **confirmation gate** → re-judge (Round 3).
-4. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history; do not loop forever.
-5. If both judges return clean → JUDGMENT: APPROVED ✅
+1. If both judges return clean → JUDGMENT: APPROVED ✅ (no gate needed).
+2. If **confirmed issues** exist → **verdict gate** (skipped when a mode is pre-set, see below). Summarize the verdict, then offer exactly:
+   - **Fix and re-judge (full loop)** — run Fix 1, then continue with the gated loop below
+   - **Fix only** — apply Fix 1, then stop and emit `JUDGMENT: FIXED (unverified)` 🔧
+   - **Stop here (verdict only)** — emit `JUDGMENT: VERDICT` 📋 without touching code
+3. Full loop: delegate a **Fix Agent** (a separate sub-agent, never one of the judges; fallback prompt in `assets/fix-prompt.md`); the fixer only touches confirmed findings. After Fix 1 completes → **loop gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates).
+4. If the re-judge still finds confirmed issues → **loop gate** → Fix 2 → **loop gate** → re-judge (Round 3).
+5. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history; do not loop forever.
+6. If both judges return clean → JUDGMENT: APPROVED ✅
 
-**Confirmation gate**: one question, presented via the `native-question-ux` skill (native mechanism when the runtime has one — e.g. Claude Code `AskUserQuestion`, OpenCode `question` — plain chat otherwise). Summarize the current verdict, then offer exactly:
+**Pre-set mode**: when the caller declares a mode (e.g. the SDD `Judgment: verdict-only | full` line in `proposal.md`), skip the verdict gate: `verdict-only` stops after the verdict report without asking; `full` proceeds as if "Fix and re-judge" was chosen. The loop gates still apply either way.
+
+**Gates**: every gate is one question, presented via the `native-question-ux` skill (native mechanism when the runtime has one — e.g. Claude Code `AskUserQuestion`, OpenCode `question` — plain chat otherwise). The verdict gate offers the three options above; each **loop gate** (every re-judge and every fix after Fix 1) summarizes the current verdict, then offers exactly:
 
 - **Continue (recommended)** — run the next step (re-judge or fix)
 - **Escalate now** — stop looping, emit `JUDGMENT: ESCALATED` with the history so far
 - **Stop here** — end the protocol, emit `JUDGMENT: STOPPED` reporting findings and fixes applied
 
-The orchestrator owns the gate; judge and fix delegates never ask the user anything.
+The orchestrator owns every gate; judge and fix delegates never ask the user anything.
 
 ## Templates
 
@@ -83,7 +89,7 @@ Read these files on demand — each one says when:
 
 - `assets/judge-prompt.md` — fallback judge prompt; only when `jd-judge-a`/`jd-judge-b` are not pre-registered, with an optional A/B emphasis differentiation mirroring those agents.
 - `assets/fix-prompt.md` — fallback fix agent prompt; only when `jd-fix` is not pre-registered.
-- `assets/output-formats.md` — verdict table plus APPROVED/ESCALATED/STOPPED templates; read when synthesizing a verdict and when emitting the final judgment.
+- `assets/output-formats.md` — verdict table plus APPROVED/VERDICT/FIXED/ESCALATED/STOPPED templates; read when synthesizing a verdict and when emitting the final judgment.
 - `references/decision-tree.md` — the full step-by-step flow diagram with every confirmation gate.
 
 ## Language

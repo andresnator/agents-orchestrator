@@ -10,7 +10,7 @@ El kickoff corre solo tras activación explícita de SDD ("vamos con sdd", "usa 
 |---|---|
 | Modo | `interactivo` (entrevista + gates de confirmación) / `automático` (redacta, implementa y resume al final) |
 | TDD | test-first por tarea / tests junto a la implementación |
-| Juicio | judgment-day al final / sin review adversarial |
+| Juicio | `none` (sin review adversarial) / `verdict-only` (jueces + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
 
 Sin mención de SDD no hay kickoff ni artefactos, aunque el pedido sea complejo: lo hace directo.
 
@@ -66,8 +66,10 @@ sequenceDiagram
       O->>JB: review blind
       JB-->>O: findings
     end
-    O->>JF: findings confirmados
-    JF-->>O: fixes + tests
+    opt full (o el usuario elige fix en el verdict gate)
+      O->>JF: findings confirmados
+      JF-->>O: fixes + tests
+    end
   end
   O->>O: archive
 ```
@@ -76,7 +78,7 @@ sequenceDiagram
 - **proposal/specs/design/tasks**: `sdd-proposal`, `sdd-spec`, `sdd-design` y `sdd-tasks` escriben un solo artefacto cada uno y devuelven 1-3 líneas.
 - **implement**: `sdd-implement` ejecuta una ola relacionada de `tasks.md`; olas independientes pueden ir en paralelo.
 - **verify**: `sdd-verify` hace cold-check read-only por escenario de spec; los gaps vuelven como briefs de fix a `sdd-implement`.
-- **judgment**: `jd-judge-a` y `jd-judge-b` corren ciegos; solo findings confirmados pasan a `jd-fix`.
+- **judgment**: `jd-judge-a` y `jd-judge-b` corren ciegos y siempre reportan un veredicto; `jd-fix` recibe solo findings confirmados, y únicamente en modo `full` (o si el usuario elige fix en el verdict gate).
 - **general**: queda solo para chores auxiliares autocontenidos, nunca para drafting, implementación o verify.
 
 ## Archivos (.ai/orchestrator/)
