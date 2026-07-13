@@ -18,8 +18,9 @@ For any structural or code-understanding question (repo map, call flow, dependen
 
 1. Check for `.codegraph/` at the project root.
 2. If present, answer through the `codegraph_explore` MCP tool before any grep, glob, or file crawling.
-3. If `.codegraph/` is missing, run `codegraph init <project-root>` once via bash, then use `codegraph_explore`.
-4. Fall back to filesystem tools only if CodeGraph init or use fails, and state the fallback in your summary.
+3. If the MCP tool is unavailable, use the read-only CodeGraph CLI via bash: `codegraph status | query | explore | node | files | callers | callees | impact | affected`.
+4. If `.codegraph/` is missing, run `codegraph init <project-root>` once via bash **only when the orchestraitor brief explicitly authorizes it**; otherwise skip CodeGraph for this run. Never run any other lifecycle command (re-init, index rebuilds) on your own.
+5. Fall back to filesystem tools only if CodeGraph use fails, and state the fallback in your summary.
 
 4-file backstop: if you find yourself needing more than 3 files to understand something, your exploration approach is wrong. Re-query CodeGraph with a narrower question instead of reading more files.
 

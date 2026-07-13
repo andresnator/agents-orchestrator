@@ -29,8 +29,9 @@ For structural or code-understanding questions:
 
 1. Check for `.codegraph/` at the project root.
 2. If present, answer through the `codegraph_explore` MCP tool before grep, glob, or file crawling.
-3. If `.codegraph/` is missing, do not initialize it; fall back to filesystem read-only tools and state the fallback in your summary.
-4. Fall back to filesystem tools if CodeGraph use fails, and state the fallback in your summary.
+3. If the MCP tool is unavailable, use the read-only CodeGraph CLI via bash: `codegraph status | query | explore | node | files | callers | callees | impact | affected`.
+4. If `.codegraph/` is missing, do not initialize it; never run CodeGraph lifecycle commands (`codegraph init`, index rebuilds) — fall back to filesystem read-only tools and state the fallback in your summary.
+5. Fall back to filesystem tools if both CodeGraph paths fail, and state the fallback in your summary.
 
 Bash is for read-only exploration only. Do not run builds, tests, package installs, generators, or state-changing commands.
 

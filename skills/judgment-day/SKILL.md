@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.5.0"
+  version: "1.6.0"
   status: in-progress
 ---
 
@@ -44,6 +44,7 @@ Resolve project standards before launching ANY sub-agent. In OpenCode installs, 
 - Prefer parallel execution; if the runtime cannot run sub-agents in parallel, run the judges sequentially with isolated blind prompts.
 - Each judge receives the **same target** but works **independently** — neither knows about the other, no cross-contamination.
 - If the user provides custom review criteria, include them identically in BOTH judge prompts.
+- **Review budget**: each judge performs exactly ONE full sweep of the target — two sweeps only when the diff exceeds ~400 changed lines or the brief flags hot paths. No loop-until-dry: when the sweep budget is spent, the judge reports what it has.
 - Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict.
 
 ### Pattern 2: Verdict Synthesis
@@ -57,7 +58,11 @@ Suspect B   → found ONLY by Judge B         → needs triage
 Contradiction → agents DISAGREE on the same thing → flag for manual decision
 ```
 
-Present findings as a structured verdict table (see `assets/output-formats.md`). Suspect findings are reported but NOT automatically fixed — triage and escalate to the user if needed.
+**Findings ledger**: each judge numbers its own findings with stable ids (`JA-001`, `JA-002`… for Judge A; `JB-001`… for Judge B). The synthesis merges them into one findings ledger — the verdict table plus a `Status` column with lifecycle `open | fixed | verified | refuted | wont-fix`. Every finding enters as `open`; ids are never renumbered or reused across rounds. A confirmed finding keeps the A-side id and records the B-side id alongside it.
+
+Present the ledger as a structured verdict table (see `assets/output-formats.md`). Suspect findings are reported but NOT automatically fixed — triage and escalate to the user if needed.
+
+**CLEAN persistence**: a clean round still produces the full record — emit the verdict with its (empty) ledger even when both judges return `VERDICT: CLEAN`; the empty ledger is the evidence. When judgment-day runs inside an SDD change, the orchestrator stores each round's ledger in `.ai/orchestrator/changes/<change>/judgment.md`.
 
 ### Pattern 3: Fix and Re-judge (opt-in, user-gated)
 
