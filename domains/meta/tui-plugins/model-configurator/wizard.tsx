@@ -11,23 +11,67 @@ import {
   type AgentDecision,
   type AgentMapping,
   type ModelOption,
-  type ModelProfile,
   type ProfileFile,
 } from "./domain"
 import {
+  displayConfigFile,
   higherPrecedenceWarning,
   readConfigSnapshot,
   resolveConfigFile,
   writeConfigChanges,
   type ConfigScope,
+  type ConfigSnapshot,
 } from "./persistence"
+import {
+  deletePreset,
+  loadPresets,
+  partitionPresetAssignments,
+  presetsFile,
+  savePreset,
+  type PresetAssignment,
+  type StoredPreset,
+} from "./presets"
 
 const DONE = "__done__"
 const KEEP_CURRENT = "__keep_current__"
 const USE_TIER = "__use_tier__"
 const INHERIT = "__inherit__"
 const NO_VARIANT = "__no_variant__"
+const NEXT_AGENT = "__next_agent__"
+const PREV_AGENT = "__prev_agent__"
+const OVERRIDE_YES = "__override_yes__"
+const OVERRIDE_NO = "__override_no__"
+const APPLY = "__apply__"
+const APPLY_SAVE = "__apply_save__"
+const CANCEL = "__cancel__"
+const APPLY_PRESET = "__apply_preset__"
+const DELETE_PRESET = "__delete_preset__"
+const PRESET_PREFIX = "__preset__:"
+const BACK_HINT = "esc: back"
+const CLOSE_HINT = "esc: close"
 let configuratorRunning = false
+
+type StepOutcome = "next" | "back" | "exit" | "done"
+
+type WizardState = {
+  agents: string[]
+  profiles: ProfileFile[]
+  presets: StoredPreset[]
+  models: ModelOption[]
+  presetsPath: string
+  scope?: ConfigScope
+  configFile?: string
+  snapshot?: ConfigSnapshot
+  source?: { kind: "profile" | "preset" }
+  selectedProfile?: ProfileFile
+  tierDecisions?: Map<string, AgentDecision>
+  decisions?: Map<string, AgentDecision>
+}
+
+type WizardStep = {
+  skip?: (state: WizardState) => boolean
+  run: (state: WizardState) => Promise<StepOutcome>
+}
 
 export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: string): Promise<void> {
   if (configuratorRunning) {
@@ -43,69 +87,18 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
 
     const agents = await discoverHarnessAgents(runtimeDataRoot)
     const profiles = await loadProfiles(runtimeDataRoot, agents)
-    const scope = await selectScope(api)
-    if (!scope) return
-
-    const configFile = await resolveConfigFile(scope, api.state.path)
-    const snapshot = await readConfigSnapshot(configFile)
-    const profileFile = await selectProfile(api, profiles)
-    if (!profileFile) return
-    for (const warning of profileFile.warnings) api.ui.toast({ variant: "warning", message: warning })
+    const presetsPath = presetsFile(api.state.path)
+    const presets = await loadPresets(presetsPath)
 
     const catalog = await loadCatalog(api)
     if (catalog.length === 0) {
       api.ui.toast({ variant: "warning", message: "No connected providers with models are available. Connect one and retry." })
       return
     }
-
     const models = flattenModels(catalog)
-    const tierDecisions = await selectTierDecisions(api, profileFile.profile, models, snapshot.mappings)
-    if (!tierDecisions) return
-    const decisions = new Map(tierDecisions)
-    const overridesCompleted = await selectOverrides(api, agents, models, tierDecisions, decisions, snapshot.mappings)
-    if (!overridesCompleted) return
 
-    const changes = calculateChanges(snapshot.mappings, decisions)
-    if (changes.length === 0) {
-      api.ui.toast({ variant: "info", message: "No model assignment changes selected." })
-      return
-    }
-
-    if (sameProviderForJudges(changes, snapshot.mappings)) {
-      const continueWithSharedProvider = await confirm(
-        api,
-        "Judges share a provider",
-        "jd-judge-a and jd-judge-b resolve to the same provider. Different providers strengthen blind review. Continue anyway?",
-      )
-      if (!continueWithSharedProvider) return
-    }
-
-    const refreshedModels = flattenModels(await loadCatalog(api))
-    const stale = findStaleSelections(decisions, refreshedModels)
-    if (stale.length > 0) {
-      api.ui.toast({ variant: "warning", message: `Selections changed in the live catalog: ${stale.join(", ")}. Reopen and select again.` })
-      return
-    }
-
-    const warning = higherPrecedenceWarning()
-    const summary = changes
-      .map((change) => `${change.agent}: ${formatMapping(change.before)} -> ${formatMapping(change.after)}`)
-      .join("\n")
-    const approved = await confirm(
-      api,
-      `Apply ${changes.length} model change${changes.length === 1 ? "" : "s"}?`,
-      [warning, summary].filter(Boolean).join("\n\n"),
-    )
-    if (!approved) return
-
-    const result = await writeConfigChanges(snapshot, changes)
-    const backup = result.backup ? ` Backup: ${result.backup}.` : ""
-    api.ui.toast({
-      variant: "success",
-      title: "Agent models updated",
-      message: `Wrote ${result.file}.${backup} Restart OpenCode sessions to apply the assignments.`,
-      duration: 8000,
-    })
+    const state: WizardState = { agents, profiles, presets, models, presetsPath }
+    await runSteps(api, state)
   } catch (error) {
     api.ui.toast({ variant: "error", title: "Model configurator failed", message: errorMessage(error), duration: 8000 })
   } finally {
@@ -114,79 +107,235 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
   }
 }
 
-async function selectScope(api: TuiPluginApi): Promise<ConfigScope | undefined> {
+async function runSteps(api: TuiPluginApi, state: WizardState): Promise<void> {
+  const steps: WizardStep[] = [
+    { run: (s) => runScopeStep(api, s) },
+    { run: (s) => runSourceStep(api, s) },
+    { skip: (s) => s.source?.kind === "preset", run: (s) => runTiersStep(api, s) },
+    { skip: (s) => s.source?.kind === "preset", run: (s) => runOverridesStep(api, s) },
+    { run: (s) => runReviewStep(api, s) },
+  ]
+
+  let index = 0
+  let direction: 1 | -1 = 1
+  while (index >= 0 && index < steps.length) {
+    const step = steps[index]
+    if (step.skip?.(state)) {
+      index += direction
+      continue
+    }
+    const outcome = await step.run(state)
+    if (outcome === "exit" || outcome === "done") return
+    direction = outcome === "next" ? 1 : -1
+    index += direction
+  }
+  // index < 0 → esc past the first step → exit silently
+}
+
+async function runScopeStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
   const [projectFile, globalFile] = await Promise.all([
     resolveConfigFile("project", api.state.path),
     resolveConfigFile("global", api.state.path),
   ])
   const warning = higherPrecedenceWarning()
-  return select(api, "Configuration scope", [
-    { title: "Project", value: "project", description: `${projectFile}${warning ? ` — ${warning}` : ""}` },
-    { title: "Global", value: "global", description: `${globalFile}${warning ? ` — ${warning}` : ""}` },
-  ])
+  const suffix = warning ? ` — ${warning}` : ""
+  const scope = await select(
+    api,
+    "Configuration scope",
+    [
+      { title: "Project", value: "project", description: `${displayConfigFile("project", projectFile, api.state.path)}${suffix}` },
+      { title: "Global", value: "global", description: `${displayConfigFile("global", globalFile, api.state.path)}${suffix}` },
+    ],
+    CLOSE_HINT,
+    state.scope,
+  )
+  if (!scope) return "exit"
+  state.scope = scope
+  state.configFile = scope === "project" ? projectFile : globalFile
+  state.snapshot = await readConfigSnapshot(state.configFile)
+  return "next"
 }
 
-async function selectProfile(api: TuiPluginApi, profiles: readonly ProfileFile[]): Promise<ProfileFile | undefined> {
-  const selected = await select(
-    api,
-    "Tier profile",
-    profiles.map((file) => ({
+async function runSourceStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
+  while (true) {
+    const hasPresets = state.presets.length > 0
+    const options: TuiDialogSelectOption<string>[] = state.profiles.map((file) => ({
       title: file.profile.name,
       value: file.profile.name,
       description: file.profile.description,
-    })),
-    DEFAULT_PROFILE_NAME,
-  )
-  return profiles.find((file) => file.profile.name === selected)
-}
+      ...(hasPresets ? { category: "Profiles" } : {}),
+    }))
+    for (const preset of state.presets) {
+      const count = Object.keys(preset.assignments).length
+      const saved = preset.savedAt ? ` — saved ${preset.savedAt.slice(0, 10)}` : ""
+      options.push({
+        title: preset.name,
+        value: PRESET_PREFIX + preset.name,
+        description: `${count} agent${count === 1 ? "" : "s"}${saved}`,
+        category: "Saved presets",
+      })
+    }
 
-async function selectTierDecisions(
-  api: TuiPluginApi,
-  profile: ModelProfile,
-  models: readonly ModelOption[],
-  current: Readonly<Record<string, AgentMapping>>,
-): Promise<Map<string, AgentDecision> | undefined> {
-  const decisions = new Map<string, AgentDecision>()
-  for (const [tierName, tier] of Object.entries(profile.tiers)) {
-    if (tier.agents.length === 0) continue
-    const currentSummary = tier.agents.map((agent) => `${agent}: ${formatMapping(current[agent] ?? {})}`).join("; ")
-    const decision = await selectDecision(api, `Tier: ${tierName}`, models, tier.variant, currentSummary)
-    if (!decision) return undefined
-    if (decision.action !== "keep") for (const agent of tier.agents) decisions.set(agent, decision)
+    const selected = await select(api, "Tier profile", options, BACK_HINT, DEFAULT_PROFILE_NAME)
+    if (!selected) return "back"
+
+    if (selected.startsWith(PRESET_PREFIX)) {
+      const name = selected.slice(PRESET_PREFIX.length)
+      const preset = state.presets.find((entry) => entry.name === name)
+      if (!preset) continue
+      const outcome = await handlePresetChoice(api, state, preset)
+      if (outcome === "reshow") continue
+      return outcome
+    }
+
+    const profileFile = state.profiles.find((file) => file.profile.name === selected)
+    if (!profileFile) continue
+    for (const warning of profileFile.warnings) api.ui.toast({ variant: "warning", message: warning })
+    state.source = { kind: "profile" }
+    state.selectedProfile = profileFile
+    return "next"
   }
-  return decisions
 }
 
-async function selectOverrides(
-  api: TuiPluginApi,
-  agents: readonly string[],
-  models: readonly ModelOption[],
-  tierDecisions: ReadonlyMap<string, AgentDecision>,
-  decisions: Map<string, AgentDecision>,
-  current: Readonly<Record<string, AgentMapping>>,
-): Promise<boolean> {
-  const wantsOverrides = await confirm(api, "Individual overrides", "Override any individual agent after applying tier decisions?")
-  if (!wantsOverrides) return true
+async function handlePresetChoice(api: TuiPluginApi, state: WizardState, preset: StoredPreset): Promise<StepOutcome | "reshow"> {
+  const count = Object.keys(preset.assignments).length
+  const action = await select(
+    api,
+    `Preset: ${preset.name}`,
+    [
+      { title: "Apply", value: APPLY_PRESET, description: `${count} agent${count === 1 ? "" : "s"}` },
+      { title: "Delete", value: DELETE_PRESET, description: "Remove this saved preset" },
+    ],
+    BACK_HINT,
+  )
+  if (!action) return "reshow"
 
+  if (action === DELETE_PRESET) {
+    await deletePreset(state.presetsPath, preset.name)
+    state.presets = state.presets.filter((entry) => entry.name !== preset.name)
+    api.ui.toast({ variant: "success", message: `Deleted preset "${preset.name}".` })
+    return "reshow"
+  }
+
+  const { valid, stale } = partitionPresetAssignments(preset.assignments, state.agents, state.models)
+  if (Object.keys(valid).length === 0) {
+    api.ui.toast({ variant: "warning", message: `Preset "${preset.name}" has no entries that match the live catalog.` })
+    return "reshow"
+  }
+  if (stale.length > 0) {
+    const proceed = await confirmStep(
+      api,
+      "Preset has stale entries",
+      `These no longer match the live catalog and will be skipped: ${stale.join(", ")}. Apply the rest?`,
+    )
+    if (!proceed) return "reshow"
+  }
+
+  const decisions = new Map<string, AgentDecision>()
+  for (const [agent, assignment] of Object.entries(valid)) {
+    decisions.set(agent, { action: "set", model: assignment.model, variant: assignment.variant })
+  }
+  state.decisions = decisions
+  state.tierDecisions = new Map()
+  state.source = { kind: "preset" }
+  return "next"
+}
+
+async function runTiersStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
+  const profile = state.selectedProfile!.profile
+  const current = state.snapshot!.mappings
+  const tiers = Object.entries(profile.tiers).filter(([, tier]) => tier.agents.length > 0)
+  const tierDecisions = new Map<string, AgentDecision>()
+
+  let i = 0
+  while (i < tiers.length) {
+    const [tierName, tier] = tiers[i]
+    const currentSummary = tier.agents.map((agent) => `${agent}: ${formatMapping(current[agent] ?? {})}`).join("; ")
+    const decision = await selectDecision(api, `Tier: ${tierName}`, state.models, tier.variant, currentSummary)
+    if (decision === undefined) {
+      if (i === 0) return "back"
+      i -= 1
+      for (const agent of tiers[i][1].agents) tierDecisions.delete(agent)
+      continue
+    }
+    if (decision.action !== "keep") for (const agent of tier.agents) tierDecisions.set(agent, decision)
+    else for (const agent of tier.agents) tierDecisions.delete(agent)
+    i += 1
+  }
+
+  state.tierDecisions = tierDecisions
+  state.decisions = new Map(tierDecisions)
+  return "next"
+}
+
+async function runOverridesStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
+  // A Yes/No select (not a confirm) so esc is unambiguously "back one step" via the dialog stack's onClose.
   while (true) {
-    const selected = await select(api, "Choose agent to override", [
-      { title: "Done", value: DONE },
-      ...agents.map((agent) => ({
-        title: agent,
-        value: agent,
-        description: decisionDisplay(decisions.get(agent), current[agent]),
-      })),
-    ])
-    if (!selected) return false
-    if (selected === DONE) return true
+    const wants = await select(
+      api,
+      "Individual overrides",
+      [
+        { title: "Yes, override individual agents", value: OVERRIDE_YES },
+        { title: "No, apply tier decisions as-is", value: OVERRIDE_NO },
+      ],
+      BACK_HINT,
+    )
+    if (wants === undefined) return "back"
+    if (wants === OVERRIDE_NO) return "next"
+    if (await runAgentOverrideLoop(api, state)) return "next"
+    // esc at the agent chooser lands here → re-show the Yes/No prompt, keeping overrides made so far.
+  }
+}
 
-    const action = await select(api, `Override: ${selected}`, [
-      { title: "Use tier decision", value: USE_TIER, description: decisionDisplay(tierDecisions.get(selected), current[selected]) },
-      { title: "Keep current", value: KEEP_CURRENT, description: formatMapping(current[selected] ?? {}) },
-      { title: "Inherit", value: INHERIT, description: "Remove model and variant at this scope" },
-      ...models.map((model) => ({ title: model.id, value: model.id, description: variantDescription(model) })),
-    ])
-    if (!action) return false
+async function runAgentOverrideLoop(api: TuiPluginApi, state: WizardState): Promise<boolean> {
+  const agents = state.agents
+  const decisions = state.decisions!
+  const tierDecisions = state.tierDecisions!
+  const current = state.snapshot!.mappings
+
+  let focus: string | undefined
+  while (true) {
+    let selected: string | undefined
+    if (focus) {
+      selected = focus
+      focus = undefined
+    } else {
+      selected = await select(
+        api,
+        "Choose agent to override",
+        [
+          { title: "Done", value: DONE },
+          ...agents.map((agent) => ({ title: agent, value: agent, description: decisionDisplay(decisions.get(agent), current[agent]) })),
+        ],
+        BACK_HINT,
+      )
+      if (!selected) return false
+      if (selected === DONE) return true
+    }
+
+    const agentIndex = agents.indexOf(selected)
+    const action = await select(
+      api,
+      `Override: ${selected}`,
+      [
+        { title: "→ Next agent", value: NEXT_AGENT },
+        { title: "← Prev agent", value: PREV_AGENT },
+        { title: "Use tier decision", value: USE_TIER, description: decisionDisplay(tierDecisions.get(selected), current[selected]) },
+        { title: "Keep current", value: KEEP_CURRENT, description: formatMapping(current[selected] ?? {}) },
+        { title: "Inherit", value: INHERIT, description: "Remove model and variant at this scope" },
+        ...state.models.map((model) => ({ title: model.id, value: model.id, description: variantDescription(model) })),
+      ],
+      BACK_HINT,
+    )
+    if (!action) continue
+    if (action === NEXT_AGENT) {
+      focus = agents[(agentIndex + 1) % agents.length]
+      continue
+    }
+    if (action === PREV_AGENT) {
+      focus = agents[(agentIndex - 1 + agents.length) % agents.length]
+      continue
+    }
     if (action === USE_TIER) {
       const tier = tierDecisions.get(selected)
       if (tier) decisions.set(selected, tier)
@@ -196,13 +345,121 @@ async function selectOverrides(
     } else if (action === INHERIT) {
       decisions.set(selected, { action: "inherit" })
     } else {
-      const model = models.find((candidate) => candidate.id === action)
-      if (!model) return false
+      const model = state.models.find((candidate) => candidate.id === action)
+      if (!model) continue
       const variant = await selectVariant(api, model)
-      if (variant === undefined) return false
+      if (variant === undefined) {
+        focus = selected
+        continue
+      }
       decisions.set(selected, { action: "set", model: model.id, variant: variant || undefined })
     }
   }
+}
+
+async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
+  const snapshot = state.snapshot!
+  const decisions = state.decisions!
+  const changes = calculateChanges(snapshot.mappings, decisions)
+  if (changes.length === 0) {
+    api.ui.toast({ variant: "info", message: "No model assignment changes selected." })
+    return "back"
+  }
+
+  if (sameProviderForJudges(changes, snapshot.mappings)) {
+    const proceed = await confirmStep(
+      api,
+      "Judges share a provider",
+      "jd-judge-a and jd-judge-b resolve to the same provider. Different providers strengthen blind review. Continue anyway?",
+    )
+    if (!proceed) return "back"
+  }
+
+  const refreshedModels = flattenModels(await loadCatalog(api))
+  const stale = findStaleSelections(decisions, refreshedModels)
+  if (stale.length > 0) {
+    api.ui.toast({ variant: "warning", message: `Selections changed in the live catalog: ${stale.join(", ")}. Reopen and select again.` })
+    return "exit"
+  }
+
+  const warning = higherPrecedenceWarning()
+  const title = `Apply ${changes.length} model change${changes.length === 1 ? "" : "s"}?`
+  const choice = await select(
+    api,
+    title,
+    [
+      { title: "Apply", value: APPLY, description: warning || undefined },
+      { title: "Apply and save as preset", value: APPLY_SAVE },
+      { title: "Cancel", value: CANCEL },
+      ...changes.map((change) => ({
+        title: change.agent,
+        value: `__change__:${change.agent}`,
+        description: `${formatMapping(change.before)} -> ${formatMapping(change.after)}`,
+        category: "Changes",
+        disabled: true,
+      })),
+    ],
+    BACK_HINT,
+  )
+  if (!choice) return "back"
+  if (choice === CANCEL) return "done"
+  if (choice !== APPLY && choice !== APPLY_SAVE) return "back"
+
+  let presetName: string | undefined
+  if (choice === APPLY_SAVE) {
+    presetName = await promptPresetName(api, state)
+    if (presetName === undefined) return "back"
+  }
+
+  const result = await writeConfigChanges(snapshot, changes)
+  const backup = result.backup ? ` Backup: ${result.backup}.` : ""
+  api.ui.toast({
+    variant: "success",
+    title: "Agent models updated",
+    message: `Wrote ${result.file}.${backup} Restart OpenCode sessions to apply the assignments.`,
+    duration: 8000,
+  })
+
+  if (presetName !== undefined) {
+    try {
+      const assignments = resolvePresetAssignments(snapshot.mappings, changes, state.agents)
+      await savePreset(state.presetsPath, { name: presetName, savedAt: new Date().toISOString(), assignments })
+      api.ui.toast({ variant: "success", message: `Saved preset "${presetName}".` })
+    } catch (error) {
+      api.ui.toast({ variant: "error", title: "Preset not saved", message: errorMessage(error), duration: 8000 })
+    }
+  }
+  return "done"
+}
+
+async function promptPresetName(api: TuiPluginApi, state: WizardState): Promise<string | undefined> {
+  while (true) {
+    const name = await prompt(api, "Preset name", "Name this preset")
+    if (name === undefined) return undefined
+    const trimmed = name.trim()
+    if (!trimmed) continue
+    if (state.presets.some((entry) => entry.name === trimmed)) {
+      const overwrite = await confirmStep(api, "Overwrite preset", `A preset named "${trimmed}" already exists. Overwrite it?`)
+      if (!overwrite) continue
+    }
+    return trimmed
+  }
+}
+
+function resolvePresetAssignments(
+  current: Readonly<Record<string, AgentMapping>>,
+  changes: readonly { agent: string; after: AgentMapping }[],
+  knownAgents: readonly string[],
+): Record<string, PresetAssignment> {
+  const known = new Set(knownAgents)
+  const resolved: Record<string, AgentMapping> = { ...current }
+  for (const change of changes) resolved[change.agent] = change.after
+  const assignments: Record<string, PresetAssignment> = {}
+  for (const [agent, mapping] of Object.entries(resolved)) {
+    if (!known.has(agent) || !mapping.model) continue
+    assignments[agent] = mapping.variant ? { model: mapping.model, variant: mapping.variant } : { model: mapping.model }
+  }
+  return assignments
 }
 
 async function selectDecision(
@@ -212,29 +469,34 @@ async function selectDecision(
   suggestedVariant: string | undefined,
   currentSummary: string,
 ): Promise<AgentDecision | undefined> {
-  const action = await select(api, title, [
-    { title: "Keep current", value: KEEP_CURRENT, description: currentSummary },
-    { title: "Inherit", value: INHERIT, description: "Remove model and variant at this scope" },
-    ...models.map((model) => ({ title: model.id, value: model.id, description: variantDescription(model) })),
-  ])
-  if (!action) return undefined
-  if (action === KEEP_CURRENT) return { action: "keep" }
-  if (action === INHERIT) return { action: "inherit" }
-  const model = models.find((candidate) => candidate.id === action)
-  if (!model) return undefined
-  const variant = await selectVariant(api, model, suggestedVariant)
-  if (variant === undefined) return undefined
-  return { action: "set", model: model.id, variant: variant || undefined }
+  while (true) {
+    const action = await select(
+      api,
+      title,
+      [
+        { title: "Keep current", value: KEEP_CURRENT, description: currentSummary },
+        { title: "Inherit", value: INHERIT, description: "Remove model and variant at this scope" },
+        ...models.map((model) => ({ title: model.id, value: model.id, description: variantDescription(model) })),
+      ],
+      BACK_HINT,
+    )
+    if (!action) return undefined
+    if (action === KEEP_CURRENT) return { action: "keep" }
+    if (action === INHERIT) return { action: "inherit" }
+    const model = models.find((candidate) => candidate.id === action)
+    if (!model) return undefined
+    const variant = await selectVariant(api, model, suggestedVariant)
+    if (variant === undefined) continue
+    return { action: "set", model: model.id, variant: variant || undefined }
+  }
 }
 
 async function selectVariant(api: TuiPluginApi, model: ModelOption, suggested?: string): Promise<string | undefined> {
   const selected = await select(
     api,
     `Variant for ${model.id}`,
-    [
-      { title: "None", value: NO_VARIANT },
-      ...model.variants.map((variant) => ({ title: variant, value: variant })),
-    ],
+    [{ title: "None", value: NO_VARIANT }, ...model.variants.map((variant) => ({ title: variant, value: variant }))],
+    BACK_HINT,
     suggested && model.variants.includes(suggested) ? suggested : NO_VARIANT,
   )
   if (selected === undefined) return undefined
@@ -271,6 +533,7 @@ function select<Value extends string>(
   api: TuiPluginApi,
   title: string,
   options: TuiDialogSelectOption<Value>[],
+  placeholder: string = BACK_HINT,
   current?: Value,
 ): Promise<Value | undefined> {
   return new Promise((resolve) => {
@@ -287,6 +550,7 @@ function select<Value extends string>(
           title,
           options,
           current,
+          placeholder,
           onSelect: (option) => {
             finish(option.value)
             api.ui.dialog.clear()
@@ -297,19 +561,36 @@ function select<Value extends string>(
   })
 }
 
-function confirm(api: TuiPluginApi, title: string, message: string): Promise<boolean> {
+function confirmStep(api: TuiPluginApi, title: string, message: string): Promise<boolean | undefined> {
   return new Promise((resolve) => {
     const DialogConfirm = api.ui.DialogConfirm
     let settled = false
-    const finish = (value: boolean) => {
+    const finish = (value?: boolean) => {
       if (settled) return
       settled = true
       api.ui.dialog.clear()
       resolve(value)
     }
     api.ui.dialog.replace(
-      () => DialogConfirm({ title, message, onConfirm: () => finish(true), onCancel: () => finish(false) }),
-      () => finish(false),
+      () => DialogConfirm({ title, message: `${message}\n\n${BACK_HINT}`, onConfirm: () => finish(true), onCancel: () => finish(false) }),
+      () => finish(undefined),
+    )
+  })
+}
+
+function prompt(api: TuiPluginApi, title: string, placeholder: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const DialogPrompt = api.ui.DialogPrompt
+    let settled = false
+    const finish = (value?: string) => {
+      if (settled) return
+      settled = true
+      api.ui.dialog.clear()
+      resolve(value)
+    }
+    api.ui.dialog.replace(
+      () => DialogPrompt({ title, placeholder, onConfirm: (value) => finish(value), onCancel: () => finish(undefined) }),
+      () => finish(undefined),
     )
   })
 }

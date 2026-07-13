@@ -150,7 +150,7 @@ export function higherPrecedenceWarning(): string | undefined {
   return undefined
 }
 
-function globalConfigRoot(runtime: RuntimePaths): string {
+export function globalConfigRoot(runtime: RuntimePaths): string {
   if (runtime.config) return runtime.config
   const xdgConfig = process.env.XDG_CONFIG_HOME
   return path.join(xdgConfig || path.join(homedir(), ".config"), "opencode")
@@ -159,6 +159,18 @@ function globalConfigRoot(runtime: RuntimePaths): string {
 function projectConfigRoot(runtime: RuntimePaths): string {
   const root = runtime.worktree && runtime.worktree !== "/" ? runtime.worktree : runtime.directory
   return path.join(root, ".opencode")
+}
+
+export function displayConfigFile(scope: ConfigScope, file: string, runtime: RuntimePaths): string {
+  if (scope === "project") {
+    const projectRoot = path.dirname(projectConfigRoot(runtime))
+    const relative = path.relative(projectRoot, file)
+    return relative.startsWith("..") ? file : relative
+  }
+  const home = homedir()
+  if (file === home) return "~"
+  if (file.startsWith(`${home}${path.sep}`)) return `~${file.slice(home.length)}`
+  return file
 }
 
 function extractMappings(config: Record<string, unknown>): Record<string, AgentMapping> {
