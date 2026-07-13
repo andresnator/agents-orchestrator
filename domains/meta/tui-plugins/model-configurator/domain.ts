@@ -3,8 +3,6 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 export const DEFAULT_PROFILE_NAME = "default"
-export const JUDGE_A_AGENT = "jd-judge-a"
-export const JUDGE_B_AGENT = "jd-judge-b"
 
 export type CatalogAgent = {
   name: string
@@ -214,14 +212,6 @@ export function calculateChanges(
   return changes.sort((left, right) => left.agent.localeCompare(right.agent))
 }
 
-export function sameProviderForJudges(changes: readonly AgentChange[], current: Readonly<Record<string, AgentMapping>>): boolean {
-  const resolved = { ...current }
-  for (const change of changes) resolved[change.agent] = change.after
-  const judgeA = providerOf(resolved[JUDGE_A_AGENT]?.model)
-  const judgeB = providerOf(resolved[JUDGE_B_AGENT]?.model)
-  return Boolean(judgeA && judgeB && judgeA === judgeB)
-}
-
 export function formatMapping(mapping: AgentMapping): string {
   if (!mapping.model) return "inherits"
   return mapping.variant ? `${mapping.model} variant=${mapping.variant}` : mapping.model
@@ -253,10 +243,6 @@ function normalizeMapping(mapping: AgentMapping | undefined): AgentMapping {
 
 function sameMapping(left: AgentMapping, right: AgentMapping): boolean {
   return left.model === right.model && left.variant === right.variant
-}
-
-function providerOf(model: string | undefined): string | undefined {
-  return model?.includes("/") ? model.slice(0, model.indexOf("/")) : undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -7,7 +7,6 @@ import {
   groupAgentsByDomain,
   loadProfiles,
   normalizeProviderCatalog,
-  sameProviderForJudges,
   type AgentDecision,
   type AgentMapping,
   type CatalogAgent,
@@ -47,6 +46,8 @@ const APPLY_SAVE = "__apply_save__"
 const CANCEL = "__cancel__"
 const APPLY_PRESET = "__apply_preset__"
 const DELETE_PRESET = "__delete_preset__"
+const OVERWRITE_PRESET = "__overwrite_preset__"
+const RENAME_PRESET = "__rename_preset__"
 const PRESET_PREFIX = "__preset__:"
 const DOMAIN_PREFIX = "__domain__:"
 const REVIEW_CHANGES = "__review_changes__"
@@ -432,15 +433,6 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
     return "back"
   }
 
-  if (sameProviderForJudges(changes, snapshot.mappings)) {
-    const proceed = await confirmStep(
-      api,
-      "Judges share a provider",
-      "jd-judge-a and jd-judge-b resolve to the same provider. Different providers strengthen blind review. Continue anyway?",
-    )
-    if (!proceed) return "back"
-  }
-
   const refreshedModels = flattenModels(await loadCatalog(api))
   const stale = findStaleSelections(decisions, refreshedModels)
   if (stale.length > 0) {
@@ -449,6 +441,12 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
   }
 
   const warning = higherPrecedenceWarning()
+  const domainOf = new Map(state.agents.map((agent) => [agent.name, agent.domain]))
+  const rows = [...changes].sort(
+    (left, right) =>
+      (domainOf.get(left.agent) ?? "other").localeCompare(domainOf.get(right.agent) ?? "other") ||
+      left.agent.localeCompare(right.agent),
+  )
   const title = `Apply ${changes.length} model change${changes.length === 1 ? "" : "s"}?`
   const choice = await select(
     api,
@@ -457,11 +455,11 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
       { title: "Apply", value: APPLY, description: warning || undefined },
       { title: "Apply and save as preset", value: APPLY_SAVE },
       { title: "Cancel", value: CANCEL },
-      ...changes.map((change) => ({
+      ...rows.map((change) => ({
         title: change.agent,
         value: `__change__:${change.agent}`,
         description: `${formatMapping(change.before)} -> ${formatMapping(change.after)}`,
-        category: "Changes",
+        category: domainOf.get(change.agent) ?? "other",
         disabled: true,
       })),
     ],
@@ -478,11 +476,10 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
   }
 
   const result = await writeConfigChanges(snapshot, changes)
-  const backup = result.backup ? ` Backup: ${result.backup}.` : ""
   api.ui.toast({
     variant: "success",
     title: "Agent models updated",
-    message: `Wrote ${result.file}.${backup} Restart OpenCode sessions to apply the assignments.`,
+    message: `Wrote ${result.file}. Restart OpenCode sessions to apply the assignments.`,
     duration: 8000,
   })
 
@@ -503,10 +500,21 @@ async function promptPresetName(api: TuiPluginApi, state: WizardState): Promise<
     const name = await prompt(api, "Preset name", "Name this preset")
     if (name === undefined) return undefined
     const trimmed = name.trim()
-    if (!trimmed) continue
+    if (!trimmed) {
+      api.ui.toast({ variant: "warning", message: "Preset name cannot be empty." })
+      continue
+    }
     if (state.presets.some((entry) => entry.name === trimmed)) {
-      const overwrite = await confirmStep(api, "Overwrite preset", `A preset named "${trimmed}" already exists. Overwrite it?`)
-      if (!overwrite) continue
+      const choice = await select(
+        api,
+        `Overwrite preset "${trimmed}"?`,
+        [
+          { title: "Overwrite", value: OVERWRITE_PRESET, description: "Replace the saved preset" },
+          { title: "Choose another name", value: RENAME_PRESET },
+        ],
+        BACK_HINT,
+      )
+      if (choice !== OVERWRITE_PRESET) continue
     }
     return trimmed
   }

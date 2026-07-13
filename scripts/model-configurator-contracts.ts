@@ -37,7 +37,6 @@ import type {
 const ROOT = path.resolve(import.meta.dirname, "..")
 const FIXTURES = path.join(ROOT, "scripts", "fixtures", "model-configurator")
 const EXPECTED_FAILURE_STEPS: PersistenceStep[] = [
-  "backup",
   "temporary-open",
   "temporary-write",
   "temporary-flush",
@@ -160,7 +159,7 @@ async function shouldPreserveForeignJsoncWhenRenderingAssignmentChanges(): Promi
   pass("shouldPreserveForeignJsoncWhenRenderingAssignmentChanges")
 }
 
-async function shouldWriteBackupAndPreserveModeWhenWriteSucceeds(): Promise<void> {
+async function shouldWriteWithoutBackupAndPreserveModeWhenWriteSucceeds(): Promise<void> {
   const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-persistence."))
   try {
     // Given
@@ -173,18 +172,17 @@ async function shouldWriteBackupAndPreserveModeWhenWriteSucceeds(): Promise<void
     const result = await writeConfigChanges(snapshot, fixtureChanges())
 
     // Then
-    assert.ok(result.backup)
-    assert.equal(await readFile(result.backup, "utf8"), original)
+    assert.equal(result.file, file)
     assert.equal(await readFile(file, "utf8"), await readFile(path.join(FIXTURES, "config-after.jsonc"), "utf8"))
     assert.equal((await stat(file)).mode & 0o777, 0o640)
-    assert.equal((await stat(result.backup)).mode & 0o777, 0o640)
-    pass("shouldWriteBackupAndPreserveModeWhenWriteSucceeds")
+    assert.deepEqual((await readdir(scratch)).sort(), ["opencode.jsonc"])
+    pass("shouldWriteWithoutBackupAndPreserveModeWhenWriteSucceeds")
   } finally {
     await rm(scratch, { recursive: true, force: true })
   }
 }
 
-async function shouldRejectConcurrentEditBeforeCreatingBackup(): Promise<void> {
+async function shouldRejectConcurrentEditBeforeWriting(): Promise<void> {
   const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-persistence."))
   try {
     // Given
@@ -200,7 +198,7 @@ async function shouldRejectConcurrentEditBeforeCreatingBackup(): Promise<void> {
     // Then
     assert.equal(await readFile(file, "utf8"), external)
     assert.deepEqual((await readdir(scratch)).sort(), ["opencode.jsonc"])
-    pass("shouldRejectConcurrentEditBeforeCreatingBackup")
+    pass("shouldRejectConcurrentEditBeforeWriting")
   } finally {
     await rm(scratch, { recursive: true, force: true })
   }
@@ -274,7 +272,7 @@ async function shouldCompleteStagedWizardAndPersistSelectedChanges(): Promise<vo
       alpha: { model: "openai/new", variant: "high" },
     })
     assert.equal(toasts.at(-1)?.variant, "success")
-    assert.equal((await readdir(path.dirname(configFile))).some((entry) => entry.includes(".bak.")), true)
+    assert.equal((await readdir(path.dirname(configFile))).some((entry) => entry.includes(".bak")), false)
     pass("shouldCompleteStagedWizardAndPersistSelectedChanges")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
@@ -817,6 +815,172 @@ async function shouldRoundTripAndOverwritePresetsWhenSaved(): Promise<void> {
   }
 }
 
+async function shouldOverwritePresetWhenSavingUnderExistingName(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a saved preset that differs from the current config
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const presetsPath = path.join(scratch.global, "model-configurator-presets.json")
+    await savePreset(presetsPath, {
+      name: "saved",
+      savedAt: "2026-01-01T00:00:00.000Z",
+      assignments: { alpha: { model: "openai/new", variant: "high" } },
+    })
+    const toasts: TuiToast[] = []
+    let promptedValue: string | undefined
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") return option(options, "__preset__:saved")
+        if (title === "Preset: saved") return option(options, "__apply_preset__")
+        if (title.startsWith("Apply ")) return option(options, "__apply_save__")
+        if (title === 'Overwrite preset "saved"?') return option(options, "__overwrite_preset__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+      prompt(title, value) {
+        if (title !== "Preset name") throw new Error(`unexpected prompt dialog: ${title}`)
+        promptedValue = value
+        return "saved"
+      },
+    })
+
+    // When the preset is re-applied and saved back under its existing name
+    await runModelConfigurator(api, scratch.data)
+
+    // Then the prompt opened empty (no default), the config was written, and the preset was overwritten in place
+    assert.equal(promptedValue, undefined)
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings, {
+      alpha: { model: "openai/new", variant: "high" },
+      beta: { model: "anthropic/old", variant: undefined },
+    })
+    const presets = await loadPresets(presetsPath)
+    assert.equal(presets.length, 1)
+    assert.equal(presets[0].name, "saved")
+    assert.deepEqual(presets[0].assignments, {
+      alpha: { model: "openai/new", variant: "high" },
+      beta: { model: "anthropic/old" },
+    })
+    pass("shouldOverwritePresetWhenSavingUnderExistingName")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldToastAndRepromptWhenPresetNameIsEmpty(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a domain-browse run that ends in "Apply and save as preset"
+    const presetsPath = path.join(scratch.global, "model-configurator-presets.json")
+    const toasts: TuiToast[] = []
+    let hubVisits = 0
+    let domainVisits = 0
+    let prompts = 0
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          hubVisits += 1
+          return option(options, hubVisits === 1 ? "__domain__:one" : "__review_changes__")
+        }
+        if (title === "one agents") {
+          domainVisits += 1
+          return option(options, domainVisits === 1 ? "alpha" : "__done__")
+        }
+        if (title === "Configure: alpha") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title.startsWith("Apply ")) return option(options, "__apply_save__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+      prompt(title) {
+        if (title !== "Preset name") throw new Error(`unexpected prompt dialog: ${title}`)
+        prompts += 1
+        return prompts === 1 ? "   " : "x"
+      },
+    })
+
+    // When the first name is blank
+    await runModelConfigurator(api, scratch.data)
+
+    // Then a warning toast fires, the prompt re-opens, and the second name is saved
+    assert.equal(prompts, 2)
+    assert.ok(toasts.some((toast) => toast.variant === "warning" && toast.message === "Preset name cannot be empty."))
+    const presets = await loadPresets(presetsPath)
+    assert.deepEqual(
+      presets.map((preset) => preset.name),
+      ["x"],
+    )
+    pass("shouldToastAndRepromptWhenPresetNameIsEmpty")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldGroupReviewChangesByDomain(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given pending changes in two domains
+    const toasts: TuiToast[] = []
+    let hubVisits = 0
+    let oneVisits = 0
+    let twoVisits = 0
+    let reviewRows: Array<{ value: string; category?: string }> = []
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          hubVisits += 1
+          if (hubVisits === 1) return option(options, "__domain__:one")
+          if (hubVisits === 2) return option(options, "__domain__:two")
+          return option(options, "__review_changes__")
+        }
+        if (title === "one agents") {
+          oneVisits += 1
+          return option(options, oneVisits === 1 ? "alpha" : "__done__")
+        }
+        if (title === "two agents") {
+          twoVisits += 1
+          return option(options, twoVisits === 1 ? "beta" : "__done__")
+        }
+        if (title === "Configure: alpha" || title === "Configure: beta") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title.startsWith("Apply ")) {
+          reviewRows = (options as Array<{ value: string; category?: string }>).filter((candidate) =>
+            candidate.value.startsWith("__change__:"),
+          )
+          return option(options, "__apply__")
+        }
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then each change row is categorized by its agent's domain
+    assert.deepEqual(
+      reviewRows.map((row) => ({ value: row.value, category: row.category })),
+      [
+        { value: "__change__:alpha", category: "one" },
+        { value: "__change__:beta", category: "two" },
+      ],
+    )
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldGroupReviewChangesByDomain")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
 async function shouldPartitionPresetAssignmentsByLiveCatalog(): Promise<void> {
   // Given a live catalog and a preset referencing unknown agents, gone models, and gone variants
   const models = [
@@ -877,7 +1041,7 @@ type PolicyOption = { title: string; value: string }
 type DialogPolicy = {
   select: (title: string, options: Array<PolicyOption>) => PolicyOption | "escape"
   confirm: (title: string) => boolean | "escape"
-  prompt?: (title: string) => string | "escape"
+  prompt?: (title: string, value?: string) => string | "escape"
 }
 
 async function createWizardFixture(): Promise<WizardFixture> {
@@ -971,7 +1135,7 @@ function createFakeApi(
         const onClose = currentOnClose
         queueMicrotask(() => {
           if (!policy.prompt) throw new Error(`unexpected prompt dialog: ${props.title}`)
-          const answer = policy.prompt(props.title)
+          const answer = policy.prompt(props.title, props.value)
           if (answer === "escape") onClose?.()
           else props.onConfirm?.(answer)
         })
@@ -1034,8 +1198,8 @@ await shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvalid()
 await shouldExposeOnlyConnectedProvidersWhenCatalogContainsDisconnectedEntries()
 await shouldCalculateOnlyChangedAssignmentsWhenDecisionsMixActions()
 await shouldPreserveForeignJsoncWhenRenderingAssignmentChanges()
-await shouldWriteBackupAndPreserveModeWhenWriteSucceeds()
-await shouldRejectConcurrentEditBeforeCreatingBackup()
+await shouldWriteWithoutBackupAndPreserveModeWhenWriteSucceeds()
+await shouldRejectConcurrentEditBeforeWriting()
 await shouldRestoreOriginalWhenInjectedPersistenceStepFails()
 await shouldCompleteStagedWizardAndPersistSelectedChanges()
 await shouldLeaveConfigUntouchedWhenFinalReviewIsCancelled()
@@ -1051,6 +1215,9 @@ await shouldWalkBackFromDomainAgentsToScopeWithoutWriting()
 await shouldParseDomainCatalogWhenDiscoveringAgents()
 await shouldGroupAgentsByDomainOrderedBySizeThenName()
 await shouldRoundTripAndOverwritePresetsWhenSaved()
+await shouldOverwritePresetWhenSavingUnderExistingName()
+await shouldToastAndRepromptWhenPresetNameIsEmpty()
+await shouldGroupReviewChangesByDomain()
 await shouldPartitionPresetAssignmentsByLiveCatalog()
 await shouldShortenConfigFilePathsForDisplay()
 process.stdout.write(`PASS: ${passes} TypeScript model configurator contracts.\n`)

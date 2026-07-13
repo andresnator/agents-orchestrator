@@ -1,4 +1,4 @@
-import { copyFile, mkdir, open, readFile, rename, rm, stat } from "fs/promises"
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from "fs/promises"
 import { homedir } from "os"
 import path from "path"
 import { randomBytes } from "crypto"
@@ -28,11 +28,9 @@ export type ConfigSnapshot = {
 
 export type WriteResult = {
   file: string
-  backup?: string
 }
 
 export type PersistenceStep =
-  | "backup"
   | "temporary-open"
   | "temporary-write"
   | "temporary-flush"
@@ -103,15 +101,7 @@ export async function writeConfigChanges(
   }
 
   const suffix = `${timestamp()}-${randomBytes(3).toString("hex")}`
-  const backup = snapshot.exists ? `${snapshot.file}.bak.${suffix}` : undefined
   const temporary = `${snapshot.file}.${suffix}.tmp`
-
-  if (backup) {
-    await hooks.before?.("backup")
-    await copyFile(snapshot.file, backup)
-    await chmodFile(backup, snapshot.mode)
-    await syncFile(backup)
-  }
 
   try {
     await hooks.before?.("temporary-open")
@@ -135,11 +125,11 @@ export async function writeConfigChanges(
     const persisted = await readFile(snapshot.file, "utf8")
     parseConfig(persisted, snapshot.file)
     if (persisted !== rendered) throw new Error(`${snapshot.file} did not persist the expected content`)
-    return { file: snapshot.file, backup }
+    return { file: snapshot.file }
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => undefined)
-    if (backup && (await exists(backup))) await copyFile(backup, snapshot.file).catch(() => undefined)
-    if (!snapshot.exists) await rm(snapshot.file, { force: true }).catch(() => undefined)
+    if (snapshot.exists) await writeFile(snapshot.file, snapshot.content, { mode: snapshot.mode }).catch(() => undefined)
+    else await rm(snapshot.file, { force: true }).catch(() => undefined)
     throw error
   }
 }

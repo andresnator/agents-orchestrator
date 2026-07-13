@@ -13,7 +13,6 @@ JSONC_PARSER_VERSION="3.3.1"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 INSTALL_TX_DIR=""
 INSTALL_TX_RECORDS=""
-INSTALL_TX_GENERATED=""
 
 runtime_usage() {
   cat <<'EOF'
@@ -214,9 +213,7 @@ runtime_begin_install() {
   [ "$DRY_RUN" -eq 0 ] || return 0
   INSTALL_TX_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agents-orchestrator-install.XXXXXX")"
   INSTALL_TX_RECORDS="$INSTALL_TX_DIR/records.tsv"
-  INSTALL_TX_GENERATED="$INSTALL_TX_DIR/generated.txt"
   : > "$INSTALL_TX_RECORDS"
-  : > "$INSTALL_TX_GENERATED"
 
   snapshot_created_directory "$TARGET"
   snapshot_created_directory "$TARGET/agents"
@@ -225,7 +222,9 @@ runtime_begin_install() {
   snapshot_created_directory "$TARGET/plugins"
   snapshot_created_directory "$TARGET/tui-plugins"
   snapshot_install_path "$TARGET/tui.json"
+  snapshot_install_path "$TARGET/tui.json.bak"
   snapshot_install_path "$TARGET/package.json"
+  snapshot_install_path "$TARGET/package.json.bak"
   snapshot_install_path "$manifest"
 
   while IFS=$'\t' read -r type name domain status src; do
@@ -252,18 +251,11 @@ runtime_commit_install() {
   [ -z "$INSTALL_TX_DIR" ] || rm -rf "$INSTALL_TX_DIR"
   INSTALL_TX_DIR=""
   INSTALL_TX_RECORDS=""
-  INSTALL_TX_GENERATED=""
 }
 
 runtime_abort_install() {
-  local reversed kind dest payload target
+  local reversed kind dest payload
   [ -n "$INSTALL_TX_DIR" ] && [ -f "$INSTALL_TX_RECORDS" ] || return 0
-  if [ -f "$INSTALL_TX_GENERATED" ]; then
-    while IFS= read -r target; do
-      [ -n "$target" ] || continue
-      rm -f "$target"
-    done < "$INSTALL_TX_GENERATED"
-  fi
   reversed="$INSTALL_TX_DIR/reversed.tsv"
   awk '{ rows[NR] = $0 } END { for (i = NR; i >= 1; i--) print rows[i] }' "$INSTALL_TX_RECORDS" > "$reversed"
   while IFS=$'\t' read -r kind dest payload; do
@@ -498,9 +490,8 @@ rewrite_managed_array() {
   fi
   backup=""
   if [ -f "$file" ]; then
-    backup="$file.bak.$(date +%Y%m%d%H%M%S).$$"
-    cp "$file" "$backup"
-    [ -z "$INSTALL_TX_GENERATED" ] || printf '%s\n' "$backup" >> "$INSTALL_TX_GENERATED"
+    backup="$file.bak"
+    cp -f "$file" "$backup"
     mode="$(file_mode "$file")"
     chmod "$mode" "$tmp"
   else
@@ -559,9 +550,8 @@ rewrite_managed_object() {
     else
       jq --arg field "$field" 'delpaths([$field | split(".")]) | if .dependencies == {} then del(.dependencies) else . end' "$file" > "$tmp"
     fi
-    backup="$file.bak.$(date +%Y%m%d%H%M%S).$$"
-    cp "$file" "$backup"
-    [ -z "$INSTALL_TX_GENERATED" ] || printf '%s\n' "$backup" >> "$INSTALL_TX_GENERATED"
+    backup="$file.bak"
+    cp -f "$file" "$backup"
     mode="$(file_mode "$file")"
     chmod "$mode" "$tmp"
   else
