@@ -3,7 +3,6 @@
 # Local AI/agent tool state and generated files
 .ai/
 .claude/
-.codex/
 .cursor/
 .windsurf/
 .pi/
@@ -16,7 +15,6 @@
 .atl/
 .sdd-status/
 .opencode/worktrees/
-.Codex/worktrees/
 *.chat.md
 *.session.md
 *.transcript.md

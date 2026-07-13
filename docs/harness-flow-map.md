@@ -258,7 +258,7 @@ These domains are mostly routers, not multi-phase harnesses. They matter because
 
 ### Installer
 
-Source: `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh`, all thin adapters over `installers/lib/common.sh` (discovery, manifest, symlink/generate primitives). OpenCode symlinks everything except TUI plugins (generated copies plus managed config values, see below); Claude Code and Codex symlink skills and global rules but generate translated agent/command files at install time, recorded as `file` manifest entries. The diagram below shows the OpenCode flow; the other runtimes replace the symlink steps for agents/commands with generation and skip plugins/TUI plugins.
+Source: `installers/opencode.sh`, a thin adapter over `installers/lib/common.sh` (discovery, manifest, symlink/generate primitives). It symlinks everything except TUI plugins (generated copies plus managed config values, see below).
 
 ```mermaid
 flowchart TD
@@ -287,7 +287,7 @@ Installer notes:
 
 | Area | Behavior |
 |---|---|
-| Targets | OpenCode: `~/.config/opencode` (`--project` → `./.opencode`). Claude Code: `~/.claude` (`--project` → `./.claude`). Codex: `~/.codex` + `~/.agents/skills` (`--target` acts as fake `$HOME`). See `docs/runtime-matrix.md`. |
+| Targets | `~/.config/opencode` (`--project` → `./.opencode`). |
 | Status filter | Applies to skills only. Agents, commands, plugins, and TUI plugins are not status-filtered because executable frontmatter cannot carry repo-only metadata. |
 | Skill source | Domain skill entries must be symlinks to top-level `skills/<skill>`. |
 | TUI plugins | OpenCode-only. Generated copies (imports must resolve `jsonc-parser` from the target's `package.json`), an exact managed `tui.json` plugin entry, and an exact pinned dependency, recorded as `managed-array`/`managed-object` manifest rows. Preflight requires OpenCode >= 1.17.15, `python3`, and `jq`, and aborts before any mutation on version or foreign-value conflicts; installs are transactional with rollback. |

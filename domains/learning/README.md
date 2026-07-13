@@ -23,4 +23,4 @@ graph TD
     M -- quiz/map/status --> A["Quiz from cue bank / mindmap / dashboard"]
 ```
 
-OpenCode-only for now: install with `installers/opencode.sh install --domain learning` and simply do not select this domain in `claude.sh`/`codex.sh` (there is no per-runtime flag; the `agent:`/`subtask:` delegation is OpenCode-specific anyway). Known fallback: if native questions do not surface well from the subtask session, change `mentor` to `mode: primary` (it becomes visible) or drop `subtask: true` from the command.
+Install with `installers/opencode.sh install --domain learning`. Known fallback: if native questions do not surface well from the subtask session, change `mentor` to `mode: primary` (it becomes visible) or drop `subtask: true` from the command.

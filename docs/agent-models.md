@@ -67,7 +67,7 @@ Behavior notes:
 - Choosing `inherit` deletes only that agent's `model`/`variant` keys at the selected scope (pruning an emptied agent entry), restoring default inheritance; `keep` is always a no-op.
 - Writes are transactional: comments and foreign keys in `opencode.json[c]` are preserved via targeted JSONC edits, a concurrent external edit aborts the write, and a timestamped backup is created next to the file. The success toast names the file and backup; restart affected OpenCode sessions to apply.
 
-Prerequisites: OpenCode >= 1.17.15, and `python3` + `jq` at install time (the installer registers the plugin in `$TARGET/tui.json` and pins the `jsonc-parser` dependency in `$TARGET/package.json`, owning only those exact values). Claude Code and Codex skip TUI plugins.
+Prerequisites: OpenCode >= 1.17.15, and `python3` + `jq` at install time (the installer registers the plugin in `$TARGET/tui.json` and pins the `jsonc-parser` dependency in `$TARGET/package.json`, owning only those exact values).
 
 If the palette entry and `/model-configurator` do not appear despite a clean install, check OpenCode's TUI plugin toggle: a persisted `"plugin_enabled": { "agents-orchestrator.model-configurator": false }` in `~/.local/state/opencode/kv.json` disables it silently. Re-enable it from the TUI plugin list, or set the value to `true` (or delete the key) with no OpenCode session running, then start a fresh session.
 

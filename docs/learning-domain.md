@@ -8,7 +8,7 @@ One command, one hidden agent, five methods. `/learn` drives multi-session learn
 installers/opencode.sh install          # default --domain all; install is a SYNC
 ```
 
-Do not install with `--domain learning` alone if other domains are already installed: install syncs against the previous manifest and would remove them. OpenCode-only for now — skip this domain when running `claude.sh`/`codex.sh` (the `agent:` + `subtask:` delegation is OpenCode-specific).
+Do not install with `--domain learning` alone if other domains are already installed: install syncs against the previous manifest and would remove them.
 
 ## Commands
 

@@ -2,7 +2,7 @@
 
 This repo stores reusable agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
 
-**OpenCode is the reference runtime and the authoring format.** Components are written once in OpenCode format and installed into OpenCode, Claude Code, and Codex CLI via sibling installers (see `docs/runtime-matrix.md`). Do not add runtime-specific component variants to the repo; the installers transform at install time. The repo stores no runtime state — installers write into targets like `~/.claude` or `~/.codex`, but those directories never become repo artifacts.
+**OpenCode is the runtime and the authoring format.** Components are written in OpenCode format and installed into OpenCode via `installers/opencode.sh`. The repo stores no runtime state — the installer writes into targets like `~/.config/opencode`, but those directories never become repo artifacts.
 
 ## Repo Shape
 
@@ -15,12 +15,12 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
-- `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); installers link it to `$TARGET/AGENTS.md` (OpenCode), `$TARGET/rules/agents-orchestrator.md` (Claude Code), or `~/.codex/AGENTS.md` (Codex).
+- `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores workflow notes and migration records.
 - `profiles/<name>.json` stores abstract model-tier profiles (agents grouped by tier, optional suggested variant, never concrete model ids) consumed by the meta `model-configurator` TUI plugin.
 - The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md`).
 - `scripts/sdd-automode.sh` is the SDD auto-mode toggle (`on|off|show`): it writes per-agent `permission` blocks into user OpenCode config so SDD runs without tool-permission prompts, preserving frontmatter denies verbatim, never repo artifacts (see `docs/sdd-automode.md`).
-- `installers/opencode.sh`, `installers/claude.sh`, and `installers/codex.sh` install selected domain components into their runtimes; `installers/lib/common.sh` is the shared discovery/manifest library.
+- `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
 - `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
@@ -39,7 +39,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 ## Agents And Commands
 
-- Component names must be unique globally within their type because installer targets are flat in every runtime.
+- Component names must be unique globally within their type because installer targets are flat.
 - Do not use `name:` or `prompt:` in agent or command frontmatter; OpenCode derives the name from the filename and the prompt is the file body.
 - Agent frontmatter order: `description`, `mode`, `temperature?`, `permission`, `tools?`, `disable?`.
 - Command frontmatter order: `description`, `agent?`, `model?`, `subtask?`, `argument-hint?`.
@@ -65,26 +65,24 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 ## Installers
 
-All three share the same CLI surface:
+CLI surface:
 
 ```bash
-installers/<runtime>.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force]
-installers/<runtime>.sh uninstall [--project] [--target DIR] [--dry-run]
-installers/<runtime>.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
+installers/opencode.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force]
+installers/opencode.sh uninstall [--project] [--target DIR] [--dry-run]
+installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
 ```
 
-- `opencode.sh`: default target `~/.config/opencode`, `--project` targets `./.opencode`; everything is symlinked except TUI plugins, which are generated copies plus a managed `tui.json` entry and pinned `package.json` dependency (requires OpenCode >= 1.17.15, `python3`, and `jq`; aborts before mutation otherwise); global rules link to `$TARGET/AGENTS.md`.
-- `claude.sh`: default target `~/.claude`, `--project` targets `./.claude`; skills are symlinked, agents/commands are generated files with translated frontmatter, global rules link to `$TARGET/rules/agents-orchestrator.md` (never `CLAUDE.md` or settings files).
-- `codex.sh`: default roots `~/.codex` + `~/.agents/skills`; `--target DIR` acts as a fake `$HOME`; skills are symlinked, agents are generated TOML, commands are generated custom prompts (user-level only), global rules link to `~/.codex/AGENTS.md`. `--project` installs agents and skills only.
+- Default target `~/.config/opencode`, `--project` targets `./.opencode`; everything is symlinked except TUI plugins, which are generated copies plus a managed `tui.json` entry and pinned `package.json` dependency (requires OpenCode >= 1.17.15, `python3`, and `jq`; aborts before mutation otherwise); global rules link to `$TARGET/AGENTS.md`.
 - Default filter is `--domain all --status all`.
 - Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, plugins, and TUI plugins are not status-filtered.
-- Installers discover agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
+- The installer discovers agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
 - `install` always installs the global rules regardless of `--domain`/`--status` filters. A pre-existing foreign destination is skipped with a warning unless `--force`.
-- Each installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated files), and `dir<TAB>path` lines; the OpenCode installer adds `managed-array`/`managed-object` rows (`kind<TAB>file<TAB>field<TAB>value`) that narrowly own one exact config value each (the `tui.json` plugin entry and the `jsonc-parser` dependency). Pre-existing identical values are never claimed.
+- The installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated files), and `dir<TAB>path` lines, plus `managed-array`/`managed-object` rows (`kind<TAB>file<TAB>field<TAB>value`) that narrowly own one exact config value each (the `tui.json` plugin entry and the `jsonc-parser` dependency). Pre-existing identical values are never claimed.
 - `install` is a sync: links, generated files, and managed values from the previous manifest that are no longer selected are removed (type-guarded and exact-value-guarded, so user-replaced content is never deleted). OpenCode installs are transactional: a failure mid-install rolls the target back to its prior state.
 - `uninstall` removes manifest-owned symlinks, generated files, and still-matching managed values plus empty created directories.
 - Generated files do not auto-update when the repo changes; re-run install. `status` reports them as `generated`, `stale`, `foreign`, or `not installed`.
-- The OpenCode `skill-registry` plugin is not portable; Claude Code and Codex discover skills natively. See `docs/runtime-matrix.md` for the full mapping and portability caveats.
+- The `skill-registry` plugin generates the skill index consumed at runtime (`.ai/atl/skill-registry.md`).
 
 ## Adding A Component
 
@@ -101,8 +99,8 @@ Adding a component must not require editing any installer.
 ## Validation
 
 - For doc-only changes, inspect the edited Markdown/frontmatter directly.
-- For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks all installers plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
-- For install behavior, use `installers/<runtime>.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files. For Codex agents, parse the generated TOML (e.g. `python3 -c "import tomllib, ..."` with Python >= 3.11).
+- For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks `installers/opencode.sh` plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
+- For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files.
 - For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command/TUI-plugin name uniqueness, TUI companion-directory layout, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), script syntax (plus `shellcheck -x` when available) for all installers and every `scripts/*.sh`, and the deterministic model-configurator shell contracts (python3/jq-gated).
 - For model-configurator changes, run `scripts/test-model-configurator.sh contracts` (shell + TypeScript suites; the TypeScript half needs `npm`) and, with a real binary, `OPENCODE_BIN=<path> scripts/test-model-configurator.sh smoke`.
 - Do not commit unless explicitly asked.
