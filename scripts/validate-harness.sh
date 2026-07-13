@@ -130,6 +130,30 @@ for d in skills/*/; do
     fail "$f" "metadata.version must be strict quoted SemVer \"X.Y.Z\""
   printf '%s\n' "$meta" | grep -Eq '^  status: (backlog|in-progress|testing|done)[[:space:]]*$' ||
     fail "$f" "metadata.status must be backlog|in-progress|testing|done"
+  # Dead-reference check: relative references/ and assets/ paths cited in a
+  # SKILL.md body must resolve to a real file or dir under some skill. Skills
+  # legitimately cite each other's references/ and assets/, so a path is valid
+  # if it exists under any skill, not only the current one; a path that exists
+  # nowhere is the drift this guards against.
+  refs="$(grep -oE '(references|assets)/[A-Za-z0-9_./-]+' "$f" | sort -u)"
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    case "$ref" in
+      *'*'* | *'?'*) continue ;; # skip globs/patterns, not concrete paths
+    esac
+    ref="${ref%[.,:;)]}" # strip one trailing sentence-punctuation char
+    found=0
+    for cand in skills/*/"$ref"; do
+      [ -e "$cand" ] && {
+        found=1
+        break
+      }
+    done
+    [ "$found" -eq 1 ] ||
+      fail "$f" "references missing path '$ref'"
+  done <<EOF
+$refs
+EOF
 done
 
 # --- Domain skill symlinks ---

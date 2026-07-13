@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Learning Loop
@@ -53,7 +53,7 @@ Route the raw `/learn` arguments:
 ## Module Session Flow (70-20-10)
 
 1. **Due-check** (`spaced-recall`): offer overdue reviews before new material.
-2. **10% formal** — micro-lesson captured as a Cornell note (`cornell-notes`, `assets/../cornell-template.md` in that skill): Mermaid map, cue questions, notes, learner-voiced summary, primary source.
+2. **10% formal** — micro-lesson captured as a Cornell note (`cornell-notes`, `assets/cornell-template.md` in that skill): Mermaid map, cue questions, notes, learner-voiced summary, primary source.
 3. **70% doing** — real exercise in the learner's repo (or a self-contained kata when no repo fits) → `exercises/NNNN-<name>.md` from `assets/exercise-template.md`: brief, constraints, escalating hints, outcome log. The learner executes; the mentor coaches.
 4. **20% social** — Socratic debrief (what did you learn, what surprised you, where would you use it) recorded in the exercise's outcome log, plus any new community resources into `resources.md`. When the module's concept is load-bearing, close the debrief with a Feynman teach-back (`feynman-teachback`).
 5. **Close** — new cues go to `review-queue.md` via `spaced-recall`; update `path.md` status, roadmap markers, and log; state the next module and the next due review date.
