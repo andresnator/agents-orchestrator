@@ -160,6 +160,8 @@ shouldInstallReinstallStatusAndUninstallWithoutOwningForeignConfig() {
     fail "TUI entrypoint was not generated locally"
   [ -d "$target/tui-plugins/model-configurator" ] && [ ! -L "$target/tui-plugins/model-configurator" ] ||
     fail "TUI companion directory was not generated locally"
+  assert_json_value "$target/tui-plugins/model-configurator/agents.json" \
+    '.[0] | (has("name") and has("domain") and has("mode"))' "true" "agent catalog entries lost the domain shape"
   assert_count "$target/tui.json" "$PLUGIN_SPEC" 1 "reinstall duplicated the plugin entry"
   assert_json_value "$target/package.json" '.dependencies["jsonc-parser"]' "$JSONC_VERSION" "dependency was not pinned"
   assert_json_value "$target/package.json" '.devDependencies.foreign' "1.0.0" "foreign package data changed"

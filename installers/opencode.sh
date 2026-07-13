@@ -425,11 +425,14 @@ copy_source() {
 }
 
 render_agent_catalog() {
-  local agent
+  local agent domain mode
   for agent in "$REPO_ROOT"/domains/*/agents/*.md; do
     [ -f "$agent" ] || continue
-    basename "$agent" .md
-  done | sort -u | jq -R . | jq -s .
+    domain="$(basename "$(dirname "$(dirname "$agent")")")"
+    mode="$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } $1 == "mode:" { print $2; exit }' "$agent")"
+    jq -n --arg name "$(basename "$agent" .md)" --arg domain "$domain" --arg mode "${mode:-subagent}" \
+      '{name: $name, domain: $domain, mode: $mode}'
+  done | jq -s 'unique_by(.name)'
 }
 
 preflight_generated_source() {

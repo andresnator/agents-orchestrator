@@ -6,6 +6,17 @@ export const DEFAULT_PROFILE_NAME = "default"
 export const JUDGE_A_AGENT = "jd-judge-a"
 export const JUDGE_B_AGENT = "jd-judge-b"
 
+export type CatalogAgent = {
+  name: string
+  domain: string
+  mode: "primary" | "subagent"
+}
+
+export type DomainGroup = {
+  domain: string
+  agents: CatalogAgent[]
+}
+
 export type AgentMapping = {
   model?: string
   variant?: string
@@ -64,12 +75,36 @@ export async function resolveRuntimeDataRoot(moduleUrl: string): Promise<string>
   return root
 }
 
-export async function discoverHarnessAgents(runtimeDataRoot: string): Promise<string[]> {
+export async function discoverHarnessAgents(runtimeDataRoot: string): Promise<CatalogAgent[]> {
   const raw = JSON.parse(await readFile(path.join(runtimeDataRoot, "agents.json"), "utf8")) as unknown
-  if (!Array.isArray(raw) || raw.some((agent) => typeof agent !== "string")) {
-    throw new Error("Installed model configurator agent catalog is invalid")
+  if (!Array.isArray(raw)) throw new Error("Installed model configurator agent catalog is invalid")
+  const byName = new Map<string, CatalogAgent>()
+  for (const entry of raw) {
+    if (!isRecord(entry) || typeof entry.name !== "string" || entry.name.length === 0) {
+      throw new Error("Installed model configurator agent catalog is invalid")
+    }
+    if (typeof entry.domain !== "string" || entry.domain.length === 0) {
+      throw new Error("Installed model configurator agent catalog is invalid")
+    }
+    byName.set(entry.name, {
+      name: entry.name,
+      domain: entry.domain,
+      mode: entry.mode === "primary" ? "primary" : "subagent",
+    })
   }
-  return [...new Set(raw)].sort()
+  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name))
+}
+
+export function groupAgentsByDomain(agents: readonly CatalogAgent[]): DomainGroup[] {
+  const groups = new Map<string, CatalogAgent[]>()
+  for (const agent of agents) {
+    const group = groups.get(agent.domain)
+    if (group) group.push(agent)
+    else groups.set(agent.domain, [agent])
+  }
+  return [...groups.entries()]
+    .map(([domain, domainAgents]) => ({ domain, agents: domainAgents }))
+    .sort((left, right) => right.agents.length - left.agents.length || left.domain.localeCompare(right.domain))
 }
 
 export async function loadProfiles(runtimeDataRoot: string, agents: readonly string[]): Promise<ProfileFile[]> {

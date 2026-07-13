@@ -1,15 +1,16 @@
 import type { TuiDialogSelectOption, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import {
-  DEFAULT_PROFILE_NAME,
   calculateChanges,
   discoverHarnessAgents,
   flattenModels,
   formatMapping,
+  groupAgentsByDomain,
   loadProfiles,
   normalizeProviderCatalog,
   sameProviderForJudges,
   type AgentDecision,
   type AgentMapping,
+  type CatalogAgent,
   type ModelOption,
   type ProfileFile,
 } from "./domain"
@@ -47,14 +48,17 @@ const CANCEL = "__cancel__"
 const APPLY_PRESET = "__apply_preset__"
 const DELETE_PRESET = "__delete_preset__"
 const PRESET_PREFIX = "__preset__:"
+const DOMAIN_PREFIX = "__domain__:"
+const REVIEW_CHANGES = "__review_changes__"
 const BACK_HINT = "esc: back"
 const CLOSE_HINT = "esc: close"
+const DOMAINS_HINT = "esc: back to domains"
 let configuratorRunning = false
 
 type StepOutcome = "next" | "back" | "exit" | "done"
 
 type WizardState = {
-  agents: string[]
+  agents: CatalogAgent[]
   profiles: ProfileFile[]
   presets: StoredPreset[]
   models: ModelOption[]
@@ -62,7 +66,7 @@ type WizardState = {
   scope?: ConfigScope
   configFile?: string
   snapshot?: ConfigSnapshot
-  source?: { kind: "profile" | "preset" }
+  source?: { kind: "profile" | "preset" | "domains" }
   selectedProfile?: ProfileFile
   tierDecisions?: Map<string, AgentDecision>
   decisions?: Map<string, AgentDecision>
@@ -86,7 +90,7 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
     }
 
     const agents = await discoverHarnessAgents(runtimeDataRoot)
-    const profiles = await loadProfiles(runtimeDataRoot, agents)
+    const profiles = await loadProfiles(runtimeDataRoot, agents.map((agent) => agent.name))
     const presetsPath = presetsFile(api.state.path)
     const presets = await loadPresets(presetsPath)
 
@@ -110,9 +114,9 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
 async function runSteps(api: TuiPluginApi, state: WizardState): Promise<void> {
   const steps: WizardStep[] = [
     { run: (s) => runScopeStep(api, s) },
-    { run: (s) => runSourceStep(api, s) },
-    { skip: (s) => s.source?.kind === "preset", run: (s) => runTiersStep(api, s) },
-    { skip: (s) => s.source?.kind === "preset", run: (s) => runOverridesStep(api, s) },
+    { run: (s) => runHubStep(api, s) },
+    { skip: (s) => s.source?.kind !== "profile", run: (s) => runTiersStep(api, s) },
+    { skip: (s) => s.source?.kind !== "profile", run: (s) => runOverridesStep(api, s) },
     { run: (s) => runReviewStep(api, s) },
   ]
 
@@ -156,15 +160,33 @@ async function runScopeStep(api: TuiPluginApi, state: WizardState): Promise<Step
   return "next"
 }
 
-async function runSourceStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
+async function runHubStep(api: TuiPluginApi, state: WizardState): Promise<StepOutcome> {
   while (true) {
-    const hasPresets = state.presets.length > 0
-    const options: TuiDialogSelectOption<string>[] = state.profiles.map((file) => ({
-      title: file.profile.name,
-      value: file.profile.name,
-      description: file.profile.description,
-      ...(hasPresets ? { category: "Profiles" } : {}),
-    }))
+    const pending = state.decisions?.size ?? 0
+    const options: TuiDialogSelectOption<string>[] = []
+    if (pending > 0) {
+      options.push({
+        title: `Review ${pending} pending change${pending === 1 ? "" : "s"}`,
+        value: REVIEW_CHANGES,
+        description: "Continue to the apply confirmation",
+      })
+    }
+    for (const group of groupAgentsByDomain(state.agents)) {
+      options.push({
+        title: group.domain,
+        value: DOMAIN_PREFIX + group.domain,
+        description: `${group.agents.length} agent${group.agents.length === 1 ? "" : "s"}`,
+        category: "Domains",
+      })
+    }
+    for (const file of state.profiles) {
+      options.push({
+        title: file.profile.name,
+        value: file.profile.name,
+        description: file.profile.description,
+        category: "Profiles",
+      })
+    }
     for (const preset of state.presets) {
       const count = Object.keys(preset.assignments).length
       const saved = preset.savedAt ? ` — saved ${preset.savedAt.slice(0, 10)}` : ""
@@ -176,8 +198,18 @@ async function runSourceStep(api: TuiPluginApi, state: WizardState): Promise<Ste
       })
     }
 
-    const selected = await select(api, "Tier profile", options, BACK_HINT, DEFAULT_PROFILE_NAME)
+    const selected = await select(api, "Select domain", options, BACK_HINT)
     if (!selected) return "back"
+
+    if (selected === REVIEW_CHANGES) {
+      state.source = { kind: "domains" }
+      return "next"
+    }
+
+    if (selected.startsWith(DOMAIN_PREFIX)) {
+      await runDomainAgentsLoop(api, state, selected.slice(DOMAIN_PREFIX.length))
+      continue
+    }
 
     if (selected.startsWith(PRESET_PREFIX)) {
       const name = selected.slice(PRESET_PREFIX.length)
@@ -194,6 +226,40 @@ async function runSourceStep(api: TuiPluginApi, state: WizardState): Promise<Ste
     state.source = { kind: "profile" }
     state.selectedProfile = profileFile
     return "next"
+  }
+}
+
+async function runDomainAgentsLoop(api: TuiPluginApi, state: WizardState, domain: string): Promise<void> {
+  const agents = state.agents.filter((agent) => agent.domain === domain)
+  const decisions = (state.decisions ??= new Map())
+  const current = state.snapshot!.mappings
+
+  while (true) {
+    const selected = await select(
+      api,
+      `${domain} agents`,
+      [
+        { title: "Done", value: DONE },
+        ...agents.map((agent) => ({
+          title: decisions.has(agent.name) ? `● ${agent.name}` : agent.name,
+          value: agent.name,
+          description: `${agent.mode} — ${decisionDisplay(decisions.get(agent.name), current[agent.name])}`,
+        })),
+      ],
+      DOMAINS_HINT,
+    )
+    if (!selected || selected === DONE) return
+
+    const decision = await selectDecision(
+      api,
+      `Configure: ${selected}`,
+      state.models,
+      undefined,
+      formatMapping(current[selected] ?? {}),
+    )
+    if (decision === undefined) continue
+    if (decision.action === "keep") decisions.delete(selected)
+    else decisions.set(selected, decision)
   }
 }
 
@@ -217,7 +283,7 @@ async function handlePresetChoice(api: TuiPluginApi, state: WizardState, preset:
     return "reshow"
   }
 
-  const { valid, stale } = partitionPresetAssignments(preset.assignments, state.agents, state.models)
+  const { valid, stale } = partitionPresetAssignments(preset.assignments, state.agents.map((agent) => agent.name), state.models)
   if (Object.keys(valid).length === 0) {
     api.ui.toast({ variant: "warning", message: `Preset "${preset.name}" has no entries that match the live catalog.` })
     return "reshow"
@@ -288,7 +354,7 @@ async function runOverridesStep(api: TuiPluginApi, state: WizardState): Promise<
 }
 
 async function runAgentOverrideLoop(api: TuiPluginApi, state: WizardState): Promise<boolean> {
-  const agents = state.agents
+  const agents = state.agents.map((agent) => agent.name)
   const decisions = state.decisions!
   const tierDecisions = state.tierDecisions!
   const current = state.snapshot!.mappings
@@ -422,7 +488,7 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
 
   if (presetName !== undefined) {
     try {
-      const assignments = resolvePresetAssignments(snapshot.mappings, changes, state.agents)
+      const assignments = resolvePresetAssignments(snapshot.mappings, changes, state.agents.map((agent) => agent.name))
       await savePreset(state.presetsPath, { name: presetName, savedAt: new Date().toISOString(), assignments })
       api.ui.toast({ variant: "success", message: `Saved preset "${presetName}".` })
     } catch (error) {

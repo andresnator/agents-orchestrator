@@ -4,9 +4,12 @@ import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 import {
   calculateChanges,
+  discoverHarnessAgents,
+  groupAgentsByDomain,
   normalizeProviderCatalog,
   validateProfile,
   type AgentChange,
+  type CatalogAgent,
 } from "../domains/meta/tui-plugins/model-configurator/domain"
 import {
   displayConfigFile,
@@ -244,7 +247,7 @@ async function shouldCompleteStagedWizardAndPersistSelectedChanges(): Promise<vo
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return options[0]
+        if (title === "Select domain") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -287,7 +290,7 @@ async function shouldLeaveConfigUntouchedWhenFinalReviewIsCancelled(): Promise<v
     const api = createFakeApi(scratch, [], {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return options[0]
+        if (title === "Select domain") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -318,14 +321,14 @@ async function shouldReshowPreviousDialogWhenEscapingBack(): Promise<void> {
     // Given a wizard that escapes the first tier dialog once, then completes
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const toasts: TuiToast[] = []
-    let tierProfileVisits = 0
+    let hubVisits = 0
     let highTierVisits = 0
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") {
-          tierProfileVisits += 1
-          return options[0]
+        if (title === "Select domain") {
+          hubVisits += 1
+          return option(options, "default")
         }
         if (title === "Tier: high") {
           highTierVisits += 1
@@ -345,8 +348,8 @@ async function shouldReshowPreviousDialogWhenEscapingBack(): Promise<void> {
     // When
     await runModelConfigurator(api, scratch.data)
 
-    // Then esc on the first tier returned to the source step, which re-showed both dialogs
-    assert.equal(tierProfileVisits, 2)
+    // Then esc on the first tier returned to the domain hub, which re-showed both dialogs
+    assert.equal(hubVisits, 2)
     assert.equal(highTierVisits, 2)
     const persisted = await readConfigSnapshot(configFile)
     assert.deepEqual(persisted.mappings, {
@@ -398,7 +401,7 @@ async function shouldSavePresetWhenApplyingAndSaving(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return options[0]
+        if (title === "Select domain") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -452,7 +455,7 @@ async function shouldApplyPresetSkippingTiersAndOverrides(): Promise<void> {
       // No tier/override handlers: reaching one throws and fails the test
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return option(options, "__preset__:saved")
+        if (title === "Select domain") return option(options, "__preset__:saved")
         if (title === "Preset: saved") return option(options, "__apply_preset__")
         if (title.startsWith("Apply ")) return option(options, "__apply__")
         throw new Error(`unexpected select dialog: ${title}`)
@@ -492,16 +495,16 @@ async function shouldDeletePresetWithoutTouchingConfig(): Promise<void> {
     })
     const toasts: TuiToast[] = []
     let scopeVisits = 0
-    let tierProfileVisits = 0
+    let hubVisits = 0
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") {
           scopeVisits += 1
           return scopeVisits === 1 ? option(options, "project") : "escape"
         }
-        if (title === "Tier profile") {
-          tierProfileVisits += 1
-          return tierProfileVisits === 1 ? option(options, "__preset__:saved") : "escape"
+        if (title === "Select domain") {
+          hubVisits += 1
+          return hubVisits === 1 ? option(options, "__preset__:saved") : "escape"
         }
         if (title === "Preset: saved") return option(options, "__delete_preset__")
         throw new Error(`unexpected select dialog: ${title}`)
@@ -511,7 +514,7 @@ async function shouldDeletePresetWithoutTouchingConfig(): Promise<void> {
       },
     })
 
-    // When: apply project, delete the preset, esc back through the source and scope dialogs to exit
+    // When: apply project, delete the preset, esc back through the hub and scope dialogs to exit
     await runModelConfigurator(api, scratch.data)
 
     // Then the preset is gone and the config is untouched
@@ -535,7 +538,7 @@ async function shouldOpenAdjacentAgentViaNextAgent(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return options[0]
+        if (title === "Select domain") return option(options, "default")
         if (title === "Tier: high") return option(options, "__keep_current__")
         if (title === "Tier: low") return option(options, "__keep_current__")
         if (title === "Individual overrides") return option(options, "__override_yes__")
@@ -584,7 +587,7 @@ async function shouldPreserveOverridesWhenEscapingAgentChooser(): Promise<void> 
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Tier profile") return options[0]
+        if (title === "Select domain") return option(options, "default")
         if (title === "Tier: high") return option(options, "__keep_current__")
         if (title === "Tier: low") return option(options, "__keep_current__")
         if (title === "Individual overrides") {
@@ -623,6 +626,155 @@ async function shouldPreserveOverridesWhenEscapingAgentChooser(): Promise<void> 
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
+}
+
+async function shouldConfigureAgentThroughDomainBrowseAndApply(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a run that browses domain "one", configures alpha, and applies from the hub
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const toasts: TuiToast[] = []
+    let domainAgentsVisits = 0
+    let sawPendingMarker = false
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          const review = options.find((candidate) => candidate.value === "__review_changes__")
+          return review ?? option(options, "__domain__:one")
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          if (domainAgentsVisits === 1) return option(options, "alpha")
+          sawPendingMarker = options.some((candidate) => candidate.title === "● alpha")
+          return option(options, "__done__")
+        }
+        if (title === "Configure: alpha") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then the domain-browsed decision is applied and the pending marker was visible
+    assert.equal(sawPendingMarker, true)
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings, {
+      alpha: { model: "openai/new", variant: "high" },
+      beta: { model: "anthropic/old", variant: undefined },
+    })
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldConfigureAgentThroughDomainBrowseAndApply")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldWalkBackFromDomainAgentsToScopeWithoutWriting(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given esc pressed at each level: domain agents → hub → scope
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const original = await readFile(configFile, "utf8")
+    let scopeVisits = 0
+    let hubVisits = 0
+    let domainAgentsVisits = 0
+    const api = createFakeApi(scratch, [], {
+      select(title, options) {
+        if (title === "Configuration scope") {
+          scopeVisits += 1
+          return scopeVisits === 1 ? option(options, "project") : "escape"
+        }
+        if (title === "Select domain") {
+          hubVisits += 1
+          return hubVisits === 1 ? option(options, "__domain__:one") : "escape"
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          return "escape"
+        }
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then each esc stepped back exactly one level and nothing was written
+    assert.equal(domainAgentsVisits, 1)
+    assert.equal(hubVisits, 2)
+    assert.equal(scopeVisits, 2)
+    assert.equal(await readFile(configFile, "utf8"), original)
+    assert.deepEqual((await readdir(path.dirname(configFile))).sort(), ["opencode.jsonc"])
+    pass("shouldWalkBackFromDomainAgentsToScopeWithoutWriting")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldParseDomainCatalogWhenDiscoveringAgents(): Promise<void> {
+  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-catalog."))
+  try {
+    // Given duplicate names, a missing mode, and unsorted entries
+    await writeJson(path.join(scratch, "agents.json"), [
+      { name: "beta", domain: "two" },
+      { name: "alpha", domain: "one", mode: "primary" },
+      { name: "beta", domain: "two", mode: "primary" },
+    ])
+
+    // When
+    const agents = await discoverHarnessAgents(scratch)
+
+    // Then names are deduplicated (last entry wins), sorted, and mode falls back to subagent
+    assert.deepEqual(agents, [
+      { name: "alpha", domain: "one", mode: "primary" },
+      { name: "beta", domain: "two", mode: "primary" },
+    ])
+
+    // And legacy flat string catalogs are rejected
+    await writeJson(path.join(scratch, "agents.json"), ["alpha"])
+    await assert.rejects(() => discoverHarnessAgents(scratch), /agent catalog is invalid/)
+
+    // And entries without a domain are rejected
+    await writeJson(path.join(scratch, "agents.json"), [{ name: "alpha" }])
+    await assert.rejects(() => discoverHarnessAgents(scratch), /agent catalog is invalid/)
+    pass("shouldParseDomainCatalogWhenDiscoveringAgents")
+  } finally {
+    await rm(scratch, { recursive: true, force: true })
+  }
+}
+
+async function shouldGroupAgentsByDomainOrderedBySizeThenName(): Promise<void> {
+  // Given
+  const agents: CatalogAgent[] = [
+    { name: "a1", domain: "small-b", mode: "subagent" },
+    { name: "a2", domain: "big", mode: "primary" },
+    { name: "a3", domain: "big", mode: "subagent" },
+    { name: "a4", domain: "small-a", mode: "subagent" },
+  ]
+
+  // When
+  const groups = groupAgentsByDomain(agents)
+
+  // Then bigger domains come first and ties break alphabetically
+  assert.deepEqual(
+    groups.map((group) => group.domain),
+    ["big", "small-a", "small-b"],
+  )
+  assert.deepEqual(
+    groups[0].agents.map((agent) => agent.name),
+    ["a2", "a3"],
+  )
+  pass("shouldGroupAgentsByDomainOrderedBySizeThenName")
 }
 
 async function shouldRoundTripAndOverwritePresetsWhenSaved(): Promise<void> {
@@ -734,7 +886,10 @@ async function createWizardFixture(): Promise<WizardFixture> {
   const project = path.join(root, "project")
   const global = path.join(root, "global")
   await Promise.all([
-    writeJson(path.join(data, "agents.json"), ["alpha", "beta"]),
+    writeJson(path.join(data, "agents.json"), [
+      { name: "alpha", domain: "one", mode: "primary" },
+      { name: "beta", domain: "two", mode: "subagent" },
+    ]),
     writeJson(path.join(data, "profiles", "default.json"), {
       name: "default",
       description: "Fixture profile",
@@ -891,6 +1046,10 @@ await shouldApplyPresetSkippingTiersAndOverrides()
 await shouldDeletePresetWithoutTouchingConfig()
 await shouldOpenAdjacentAgentViaNextAgent()
 await shouldPreserveOverridesWhenEscapingAgentChooser()
+await shouldConfigureAgentThroughDomainBrowseAndApply()
+await shouldWalkBackFromDomainAgentsToScopeWithoutWriting()
+await shouldParseDomainCatalogWhenDiscoveringAgents()
+await shouldGroupAgentsByDomainOrderedBySizeThenName()
 await shouldRoundTripAndOverwritePresetsWhenSaved()
 await shouldPartitionPresetAssignmentsByLiveCatalog()
 await shouldShortenConfigFilePathsForDisplay()
