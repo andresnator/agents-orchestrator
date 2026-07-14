@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
+  version: "1.0.1"
   status: in-progress
 ---
 
@@ -17,7 +17,7 @@ Delimit whether the target is a class, package, or module, then keep the plan in
 
 - Identify the primary target file(s).
 - Find public methods, exported APIs, public constructors, endpoints, and events.
-- Find callers/consumers with references, imports, routes, or LSP when available.
+- Find callers/consumers with references, imports, routes, LSP, or a code-graph index (for example, CodeGraph MCP/CLI) when available.
 - Find existing tests by naming, package, fixtures, integration suites, and build metadata.
 - Separate in-scope files from neighboring context.
 - Record out-of-scope work explicitly.

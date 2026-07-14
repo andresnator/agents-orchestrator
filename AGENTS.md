@@ -14,6 +14,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
+- `domains/common/plugins/codegraph-init.ts` is the opt-in, non-blocking CodeGraph initializer; setup and recovery live in `docs/codegraph.md`.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores reference docs for live mechanisms.
@@ -106,4 +107,5 @@ Adding a component must not require editing any installer.
 - For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files.
 - For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command/TUI-plugin name uniqueness, TUI companion-directory layout, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), script syntax (plus `shellcheck -x` when available) for all installers and every `scripts/*.sh`, and the deterministic model-configurator shell contracts (python3/jq-gated).
 - For model-configurator changes, run `scripts/test-model-configurator.sh contracts` (shell + TypeScript suites; the TypeScript half needs `npm`) and, with a real binary, `OPENCODE_BIN=<path> scripts/test-model-configurator.sh smoke`.
+- For CodeGraph initializer changes, run `scripts/test-codegraph-init.sh`; it uses isolated HOME/XDG state, a fake CodeGraph binary, and OpenCode's `/global/event` stream.
 - Do not commit unless explicitly asked.
