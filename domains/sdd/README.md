@@ -19,6 +19,15 @@ Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonic
 
 The orchestraitor also adopts plans drafted elsewhere: external planners (e.g. `refactor-planner`) leave complete bundles under `.ai/<planner>/changes/<change>/` marked `Status: ready-for-sdd`, and "ejecuta el plan <change>" moves the bundle into `.ai/orchestrator/changes/` and runs it from implement onward. The contract is generic — see `docs/plan-handoff.md`.
 
+Kickoff runs only after explicit SDD activation, asks one round of questions, and skips anything already stated in the request:
+
+| Pregunta | Opciones |
+|---|---|
+| Profundidad | `light` (un solo `change.md` redactado inline, sin subagentes de drafting) / `full` (cuatro artefactos con subagentes de fase); el orchestraitor evalúa el alcance y propone una |
+| Modo | `interactivo` (entrevista + gates de confirmación) / `automático` (redacta, implementa y resume al final) |
+| TDD | test-first por tarea / tests junto a la implementación |
+| Juicio | `none` (sin review adversarial) / `verdict-only` (jueces + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
+
 ```mermaid
 graph TD
   user[Usuario: vamos con sdd] --> orch[orchestraitor]
@@ -36,3 +45,70 @@ graph TD
   orch --> aux[general: auxiliary chores only]
   orch --> files[.ai/orchestrator specs + changes + archive]
 ```
+
+Full session sequence (gates, waves, judgment):
+
+```mermaid
+sequenceDiagram
+  participant U as Usuario
+  participant O as orchestraitor
+  participant E as sdd-explore
+  participant P as sdd-proposal
+  participant S as sdd-spec
+  participant D as sdd-design
+  participant T as sdd-tasks
+  participant I as sdd-implement
+  participant V as sdd-verify
+  participant JA as jd-judge-a
+  participant JB as jd-judge-b
+  participant JF as jd-fix
+
+  U->>O: vamos con sdd / usa SDD
+  O->>O: kickoff + migracion legacy
+  alt depth full
+    O->>E: explorar si el area es amplia o desconocida
+    E-->>O: resumen breve
+    O->>P: brief de requisitos y decisiones
+    P-->>O: proposal.md escrito
+    O->>U: gate de proposal
+    par specs
+      O->>S: proposal + specs canonicas
+      S-->>O: deltas escritos
+    and design
+      O->>D: proposal + specs + decisiones
+      D-->>O: design.md escrito
+    end
+    O->>U: gate de specs + design
+    O->>T: proposal + specs + design
+    T-->>O: tasks.md escrito
+  else depth light
+    O->>O: explora y redacta change.md inline
+    O->>U: gate de change.md
+  end
+  loop olas de tareas
+    O->>I: una ola con escenarios, design y tests
+    I-->>O: resumen + validacion
+  end
+  O->>V: cold-check contra escenarios de spec
+  V-->>O: pass/fail + gaps
+  opt gaps
+    O->>I: brief de fix por gap
+    I-->>O: resumen + validacion
+  end
+  opt judgment
+    par juicio ciego
+      O->>JA: review blind
+      JA-->>O: findings
+    and juicio ciego
+      O->>JB: review blind
+      JB-->>O: findings
+    end
+    opt full (o el usuario elige fix en el verdict gate)
+      O->>JF: findings confirmados
+      JF-->>O: fixes + tests
+    end
+  end
+  O->>O: archive
+```
+
+Resume: artifacts are the state, the conversation is disposable — in a new session say "continúa <change>" and the orchestraitor rereads `.ai/orchestrator/changes/<change>/` and resumes from the first unchecked task without repeating kickoff.

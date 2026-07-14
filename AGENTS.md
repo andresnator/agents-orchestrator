@@ -16,10 +16,10 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
-- `docs/` stores workflow notes and migration records.
-- `profiles/<name>.json` stores abstract model-tier profiles (agents grouped by tier, optional suggested variant, never concrete model ids) consumed by the meta `model-configurator` TUI plugin.
-- The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts, and hot-applies the result to its running server when possible (see `docs/agent-models.md` and `docs/hot-reload.md`).
-- `scripts/sdd-automode.sh` is the SDD auto-mode toggle (`on|off|show`): it writes per-agent `permission` blocks into user OpenCode config so SDD runs without tool-permission prompts, preserving frontmatter denies verbatim, never repo artifacts (see `docs/sdd-automode.md`).
+- `docs/` stores reference docs for live mechanisms.
+- `profiles/<name>.json` stores abstract model-tier profiles (never concrete model ids) consumed by the meta `model-configurator` TUI plugin; see `docs/agent-models.md`.
+- The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md` and `docs/hot-reload.md`).
+- `scripts/sdd-automode.sh` toggles SDD auto-mode: per-agent `permission` blocks in user OpenCode config, never repo artifacts (see `docs/sdd-automode.md`).
 - `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
@@ -28,11 +28,13 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 ## Domains
 
-- `sdd`: spec-driven development around the `orchestraitor` primary agent, SDD drafting skills, and judgment-day agents; adopts ready-for-sdd planner bundles (see `docs/plan-handoff.md`).
-- `refactor`: risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles adopted by the sdd `orchestraitor`, plus Java refactor skills.
-- `architecture`: project-architecture mapping (C4-lite Mermaid docs), state reviews with gap analysis, reverse-engineered PRDs, security/observability audits, and ADR + ready-for-sdd ideation bundles adopted by the sdd `orchestraitor`.
-- `plan`: Fable-style deep planning for features and changes (evidence-first, edge-case validation) producing single plan documents under `.ai/deep-planner/plans/`, plus `/wayfinder` multi-session discovery maps under `.ai/wayfinder/` for efforts too foggy to plan in one sitting.
-- `learning`: interactive multi-session learning via `/learn` and the hidden `mentor` subagent: Leitner spaced repetition, Cornell notes, Feynman teach-backs, Mermaid maps, 70-20-10 practice, and Anki vocab exports, all Markdown under `.ai/learning/` (OpenCode-only for now; see `docs/learning-domain.md`).
+Each `domains/<domain>/README.md` is the authoritative description; one-liners:
+
+- `sdd`: spec-driven development around the `orchestraitor` primary agent; adopts ready-for-sdd planner bundles (see `docs/plan-handoff.md`).
+- `refactor`: risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles, plus Java refactor skills.
+- `architecture`: architecture mapping, state reviews, reverse-engineered PRDs, audits, and ADR + ideation bundles.
+- `plan`: Fable-style deep planning (`/deep-plan`) and `/wayfinder` multi-session discovery maps under `.ai/`.
+- `learning`: interactive multi-session learning via `/learn` (see `docs/learning-domain.md`).
 - `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
@@ -82,7 +84,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 - `install` is a sync: links, generated files, and managed values from the previous manifest that are no longer selected are removed (type-guarded and exact-value-guarded, so user-replaced content is never deleted). OpenCode installs are transactional: a failure mid-install rolls the target back to its prior state.
 - `uninstall` removes manifest-owned symlinks, generated files, and still-matching managed values plus empty created directories.
 - Generated files do not auto-update when the repo changes; re-run install. `status` reports them as `generated`, `stale`, `foreign`, or `not installed`.
-- `install --reload` additionally POSTs `/global/dispose` to running OpenCode servers (from `OPENCODE_RELOAD_URLS` or localhost `lsof` discovery, health-checked) after the transaction commits, so re-installed agents/commands/skills are re-read without a restart; best-effort and never fails the install. Plugin code (including TUI plugins) still needs a restart (see `docs/hot-reload.md`).
+- `install --reload` additionally hot-reloads running OpenCode servers after the transaction commits (best-effort, never fails the install); plugin code still needs a restart. Mechanism in `docs/hot-reload.md`.
 - The `skill-registry` plugin generates the skill index consumed at runtime (`.ai/atl/skill-registry.md`).
 
 ## Adding A Component
