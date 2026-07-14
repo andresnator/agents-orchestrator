@@ -18,7 +18,7 @@ runtime_usage() {
   cat <<'EOF'
 Usage:
   opencode.sh <install|uninstall|status> [--domain d1,d2] [--status s1,s2]
-              [--project] [--target DIR] [--dry-run] [--force]
+              [--project] [--target DIR] [--dry-run] [--force] [--reload]
 
 Actions:
   install     Sync selected domain components into an OpenCode target as symlinks.
@@ -52,6 +52,12 @@ Defaults:
 Options:
   --dry-run   Print planned mkdir/link/rm/manifest actions without changing files.
   --force     Replace an existing non-matching destination symlink/file during install.
+  --reload    After a committed install, POST /global/dispose to running OpenCode
+              servers so re-installed agents, commands, and skills are re-read
+              without a restart. Servers come from OPENCODE_RELOAD_URLS
+              (comma/space-separated base URLs) or lsof discovery on localhost.
+              Best-effort: never fails the install. Plugin code changes
+              (including TUI plugins) still require an OpenCode restart.
   -h, --help  Show this help.
 
 Examples:
@@ -570,6 +576,59 @@ file_mode() {
 
 runtime_install_global() {
   link_component "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md" "$1"
+}
+
+runtime_post_install() {
+  [ "$RELOAD" -eq 1 ] || return 0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'reload: skipped (dry run)\n'
+    return 0
+  fi
+  reload_running_servers
+}
+
+# Validated on OpenCode 1.17.15 (docs/hot-reload.md): POST /global/dispose makes
+# every instance re-read markdown artifacts and project config on its next
+# request. It does NOT re-read the global opencode.json[c] (infinite-TTL cache)
+# and cannot reload plugin code, but the installer changes neither.
+reload_running_servers() {
+  local urls url health reachable=0
+  command -v curl >/dev/null 2>&1 || { warn "reload: curl not found; restart OpenCode sessions to apply"; return 0; }
+  urls="$(discover_opencode_server_urls)"
+  if [ -z "$urls" ]; then
+    printf 'reload: no running OpenCode server found; sessions pick changes up on restart\n'
+    return 0
+  fi
+  for url in $urls; do
+    health="$(curl -fsS --max-time 2 "$url/global/health" 2>/dev/null || true)"
+    case "$health" in
+      *'"healthy":true'*) ;;
+      *) continue ;;
+    esac
+    reachable=$((reachable + 1))
+    if [ "$(curl -fsS --max-time 5 -X POST "$url/global/dispose" 2>/dev/null || true)" = "true" ]; then
+      printf 'reload: disposed instances on %s\n' "$url"
+    else
+      warn "reload: POST $url/global/dispose failed; restart that OpenCode session to apply"
+    fi
+  done
+  if [ "$reachable" -eq 0 ]; then
+    printf 'reload: no healthy OpenCode server found; sessions pick changes up on restart\n'
+    return 0
+  fi
+  printf 'reload: agents, commands, and skills re-read on next request; plugin code changes still need a restart\n'
+}
+
+discover_opencode_server_urls() {
+  if [ -n "${OPENCODE_RELOAD_URLS:-}" ]; then
+    printf '%s\n' "$OPENCODE_RELOAD_URLS" | tr ', ' '\n' | awk 'NF'
+    return 0
+  fi
+  command -v lsof >/dev/null 2>&1 || { warn "reload: lsof not found; set OPENCODE_RELOAD_URLS to reload explicitly"; return 0; }
+  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null |
+    awk '$1 ~ /^opencode/ { sub(/.*:/, "", $9); if ($9 ~ /^[0-9]+$/) print $9 }' |
+    sort -un |
+    while IFS= read -r port; do printf 'http://127.0.0.1:%s\n' "$port"; done
 }
 
 runtime_status_global() {

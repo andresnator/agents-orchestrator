@@ -13,12 +13,12 @@ import {
   type ModelOption,
   type ProfileFile,
 } from "./domain"
+import { applyConfigChanges } from "./hot-apply"
 import {
   displayConfigFile,
   higherPrecedenceWarning,
   readConfigSnapshot,
   resolveConfigFile,
-  writeConfigChanges,
   type ConfigScope,
   type ConfigSnapshot,
 } from "./persistence"
@@ -475,11 +475,13 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
     if (presetName === undefined) return "back"
   }
 
-  const result = await writeConfigChanges(snapshot, changes)
+  const result = await applyConfigChanges(api.client, state.scope!, api.state.path, snapshot, changes)
   api.ui.toast({
     variant: "success",
     title: "Agent models updated",
-    message: `Wrote ${result.file}. Restart OpenCode sessions to apply the assignments.`,
+    message: result.hotApplied
+      ? `Wrote ${result.file}. Applied live to this OpenCode server; other running OpenCode processes still need a restart.`
+      : `Wrote ${result.file}. Restart OpenCode sessions to apply the assignments (${result.detail}).`,
     duration: 8000,
   })
 

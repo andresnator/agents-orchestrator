@@ -18,7 +18,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores workflow notes and migration records.
 - `profiles/<name>.json` stores abstract model-tier profiles (agents grouped by tier, optional suggested variant, never concrete model ids) consumed by the meta `model-configurator` TUI plugin.
-- The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md`).
+- The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts, and hot-applies the result to its running server when possible (see `docs/agent-models.md` and `docs/hot-reload.md`).
 - `scripts/sdd-automode.sh` is the SDD auto-mode toggle (`on|off|show`): it writes per-agent `permission` blocks into user OpenCode config so SDD runs without tool-permission prompts, preserving frontmatter denies verbatim, never repo artifacts (see `docs/sdd-automode.md`).
 - `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
@@ -68,7 +68,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 CLI surface:
 
 ```bash
-installers/opencode.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force]
+installers/opencode.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force] [--reload]
 installers/opencode.sh uninstall [--project] [--target DIR] [--dry-run]
 installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
 ```
@@ -82,6 +82,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 - `install` is a sync: links, generated files, and managed values from the previous manifest that are no longer selected are removed (type-guarded and exact-value-guarded, so user-replaced content is never deleted). OpenCode installs are transactional: a failure mid-install rolls the target back to its prior state.
 - `uninstall` removes manifest-owned symlinks, generated files, and still-matching managed values plus empty created directories.
 - Generated files do not auto-update when the repo changes; re-run install. `status` reports them as `generated`, `stale`, `foreign`, or `not installed`.
+- `install --reload` additionally POSTs `/global/dispose` to running OpenCode servers (from `OPENCODE_RELOAD_URLS` or localhost `lsof` discovery, health-checked) after the transaction commits, so re-installed agents/commands/skills are re-read without a restart; best-effort and never fails the install. Plugin code (including TUI plugins) still needs a restart (see `docs/hot-reload.md`).
 - The `skill-registry` plugin generates the skill index consumed at runtime (`.ai/atl/skill-registry.md`).
 
 ## Adding A Component

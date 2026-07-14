@@ -12,6 +12,10 @@ import {
   type CatalogAgent,
 } from "../domains/meta/tui-plugins/model-configurator/domain"
 import {
+  applyConfigChanges,
+  planGlobalHotApply,
+} from "../domains/meta/tui-plugins/model-configurator/hot-apply"
+import {
   displayConfigFile,
   readConfigSnapshot,
   renderConfigChanges,
@@ -1010,6 +1014,242 @@ async function shouldPartitionPresetAssignmentsByLiveCatalog(): Promise<void> {
   pass("shouldPartitionPresetAssignmentsByLiveCatalog")
 }
 
+async function shouldPlanGlobalHotApplyAsPatchWithLocalPreludeForDeletions(): Promise<void> {
+  // Given a mix of a model set, an inherit, and a variant-removal-only set
+  const changes: AgentChange[] = [
+    { agent: "alpha", before: { model: "openai/old" }, after: { model: "openai/new", variant: "high" }, action: "set" },
+    { agent: "beta", before: { model: "anthropic/old" }, after: {}, action: "inherit" },
+    { agent: "gamma", before: { model: "openai/keep", variant: "low" }, after: { model: "openai/keep" }, action: "set" },
+  ]
+
+  // When
+  const plan = planGlobalHotApply(changes)
+
+  // Then deletions go to the local prelude and PATCHable leaves to the payload
+  assert.equal(plan.strategy, "patch")
+  if (plan.strategy !== "patch") return
+  assert.deepEqual(plan.preludeChanges, [
+    changes[1],
+    { agent: "gamma", before: { model: "openai/keep", variant: "low" }, after: { model: "openai/keep" }, action: "set" },
+  ])
+  assert.deepEqual(plan.patch, {
+    agent: {
+      alpha: { model: "openai/new", variant: "high" },
+      gamma: { model: "openai/keep" },
+    },
+  })
+  assert.deepEqual(plan.fallbackChanges, [changes[0], changes[2]])
+  pass("shouldPlanGlobalHotApplyAsPatchWithLocalPreludeForDeletions")
+}
+
+async function shouldPlanWriteOnlyWhenGlobalChangesAreRemovalOnly(): Promise<void> {
+  // Given inherit-only changes, and separately a variant-removal-only set
+  const inheritOnly: AgentChange[] = [
+    { agent: "beta", before: { model: "anthropic/old" }, after: {}, action: "inherit" },
+  ]
+  const variantRemovalOnly: AgentChange[] = [
+    { agent: "gamma", before: { model: "openai/keep", variant: "low" }, after: { model: "openai/keep" }, action: "set" },
+  ]
+
+  // Then neither has a byte-changing leaf the global PATCH could carry
+  assert.equal(planGlobalHotApply(inheritOnly).strategy, "write-only")
+  assert.equal(planGlobalHotApply(variantRemovalOnly).strategy, "write-only")
+  pass("shouldPlanWriteOnlyWhenGlobalChangesAreRemovalOnly")
+}
+
+async function shouldHotApplyProjectScopeByDisposingTheProjectInstance(): Promise<void> {
+  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-hot-apply."))
+  try {
+    // Given a project config snapshot and a client exposing instance disposal.
+    // Like the SDK v2 generated groups, the fake is a class whose method reads
+    // this — a detached (unbound) call fails here like it does in production.
+    const file = path.join(scratch, "opencode.jsonc")
+    await writeFile(file, '{\n  "agent": {\n    "alpha": {"model": "openai/old"}\n  }\n}\n')
+    const snapshot = await readConfigSnapshot(file)
+    class FakeInstanceGroup {
+      disposedDirectories: string[] = []
+      async dispose(parameters: { directory: string }) {
+        this.disposedDirectories.push(parameters.directory)
+        return { data: true }
+      }
+    }
+    const instance = new FakeInstanceGroup()
+    const client = { instance }
+    const runtime = { config: scratch, worktree: "/work/project", directory: "/work/project" }
+    const changes: AgentChange[] = [
+      { agent: "alpha", before: { model: "openai/old" }, after: { model: "openai/new" }, action: "set" },
+    ]
+
+    // When
+    const result = await applyConfigChanges(client, "project", runtime, snapshot, changes)
+
+    // Then the write lands and the project instance is disposed once
+    assert.deepEqual(result, { file, hotApplied: true })
+    assert.deepEqual(instance.disposedDirectories, ["/work/project"])
+    assert.deepEqual((await readConfigSnapshot(file)).mappings, { alpha: { model: "openai/new", variant: undefined } })
+    pass("shouldHotApplyProjectScopeByDisposingTheProjectInstance")
+  } finally {
+    await rm(scratch, { recursive: true, force: true })
+  }
+}
+
+async function shouldHotApplyGlobalScopeViaConfigPatchAfterLocalDeletions(): Promise<void> {
+  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-hot-apply."))
+  try {
+    // Given a global config with an inherit target and a stale variant to delete
+    const file = path.join(scratch, "opencode.jsonc")
+    await writeFile(
+      file,
+      '{\n  // Keep me.\n  "agent": {\n    "alpha": {"model": "openai/old"},\n    "beta": {"model": "anthropic/old"},\n    "gamma": {"model": "openai/keep", "variant": "low"}\n  }\n}\n',
+    )
+    const snapshot = await readConfigSnapshot(file)
+    // Class-based fake like the SDK v2 groups: update reads this, so an
+    // unbound call fails here like it does in production.
+    class FakeGlobalConfigGroup {
+      patches: Array<{ config: unknown; fileAtPatchTime: string }> = []
+      async update(parameters: { config: unknown }) {
+        this.patches.push({ config: parameters.config, fileAtPatchTime: await readFile(file, "utf8") })
+        return { data: {} }
+      }
+    }
+    const globalConfig = new FakeGlobalConfigGroup()
+    const client = { global: { config: globalConfig } }
+    const runtime = { config: scratch, worktree: "/work/project", directory: "/work/project" }
+    const changes: AgentChange[] = [
+      { agent: "alpha", before: { model: "openai/old" }, after: { model: "openai/new", variant: "high" }, action: "set" },
+      { agent: "beta", before: { model: "anthropic/old" }, after: {}, action: "inherit" },
+      { agent: "gamma", before: { model: "openai/keep", variant: "low" }, after: { model: "openai/keep" }, action: "set" },
+    ]
+
+    // When
+    const result = await applyConfigChanges(client, "global", runtime, snapshot, changes)
+
+    // Then deletions were on disk before the PATCH, which carried only the set leaves
+    assert.deepEqual(result, { file, hotApplied: true })
+    assert.equal(globalConfig.patches.length, 1)
+    assert.deepEqual(globalConfig.patches[0].config, {
+      agent: { alpha: { model: "openai/new", variant: "high" }, gamma: { model: "openai/keep" } },
+    })
+    assert.equal(globalConfig.patches[0].fileAtPatchTime.includes("beta"), false)
+    assert.equal(globalConfig.patches[0].fileAtPatchTime.includes("low"), false)
+    assert.equal(globalConfig.patches[0].fileAtPatchTime.includes("// Keep me."), true)
+    // And the set leaves stay with the server-side PATCH, not a second local write
+    assert.deepEqual((await readConfigSnapshot(file)).mappings, {
+      alpha: { model: "openai/old", variant: undefined },
+      gamma: { model: "openai/keep", variant: undefined },
+    })
+    pass("shouldHotApplyGlobalScopeViaConfigPatchAfterLocalDeletions")
+  } finally {
+    await rm(scratch, { recursive: true, force: true })
+  }
+}
+
+async function shouldFallBackToLocalWriteWhenGlobalPatchFails(): Promise<void> {
+  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-hot-apply."))
+  try {
+    // Given a global PATCH that the server rejects
+    const file = path.join(scratch, "opencode.jsonc")
+    await writeFile(file, '{\n  "agent": {\n    "alpha": {"model": "openai/old"},\n    "beta": {"model": "anthropic/old"}\n  }\n}\n')
+    const snapshot = await readConfigSnapshot(file)
+    const client = {
+      global: {
+        config: {
+          update: async () => ({ error: { name: "BadRequest" }, response: { status: 400 } }),
+        },
+      },
+    }
+    const runtime = { config: scratch, worktree: "/work/project", directory: "/work/project" }
+    const changes: AgentChange[] = [
+      { agent: "alpha", before: { model: "openai/old" }, after: { model: "openai/new" }, action: "set" },
+      { agent: "beta", before: { model: "anthropic/old" }, after: {}, action: "inherit" },
+    ]
+
+    // When
+    const result = await applyConfigChanges(client, "global", runtime, snapshot, changes)
+
+    // Then every change still lands locally and the outcome reports the failure
+    assert.equal(result.hotApplied, false)
+    assert.equal(result.detail?.includes("status 400"), true)
+    assert.deepEqual((await readConfigSnapshot(file)).mappings, { alpha: { model: "openai/new", variant: undefined } })
+    pass("shouldFallBackToLocalWriteWhenGlobalPatchFails")
+  } finally {
+    await rm(scratch, { recursive: true, force: true })
+  }
+}
+
+async function shouldReportRestartFallbackWhenClientLacksHotApplyRoutes(): Promise<void> {
+  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-hot-apply."))
+  try {
+    // Given clients without the disposal and global config update capabilities
+    const file = path.join(scratch, "opencode.jsonc")
+    await writeFile(file, '{\n  "agent": {\n    "alpha": {"model": "openai/old"}\n  }\n}\n')
+    const runtime = { config: scratch, worktree: "/work/project", directory: "/work/project" }
+    const changes: AgentChange[] = [
+      { agent: "alpha", before: { model: "openai/old" }, after: { model: "openai/new" }, action: "set" },
+    ]
+
+    // When / Then the write still lands and the outcome degrades to restart guidance
+    const project = await applyConfigChanges({}, "project", runtime, await readConfigSnapshot(file), changes)
+    assert.equal(project.hotApplied, false)
+    assert.equal(project.detail?.includes("instance disposal"), true)
+    assert.deepEqual((await readConfigSnapshot(file)).mappings, { alpha: { model: "openai/new", variant: undefined } })
+
+    const back: AgentChange[] = [
+      { agent: "alpha", before: { model: "openai/new" }, after: { model: "openai/old" }, action: "set" },
+    ]
+    const global = await applyConfigChanges({}, "global", runtime, await readConfigSnapshot(file), back)
+    assert.equal(global.hotApplied, false)
+    assert.equal(global.detail?.includes("global config route"), true)
+    assert.deepEqual((await readConfigSnapshot(file)).mappings, { alpha: { model: "openai/old", variant: undefined } })
+    pass("shouldReportRestartFallbackWhenClientLacksHotApplyRoutes")
+  } finally {
+    await rm(scratch, { recursive: true, force: true })
+  }
+}
+
+async function shouldToastLiveApplyWhenProjectInstanceDisposalSucceeds(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a wizard client that can dispose the project instance
+    const toasts: TuiToast[] = []
+    class FakeInstanceGroup {
+      disposedDirectories: string[] = []
+      async dispose(parameters: { directory: string }) {
+        this.disposedDirectories.push(parameters.directory)
+        return { data: true }
+      }
+    }
+    const instanceGroup = new FakeInstanceGroup()
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") return option(options, "default")
+        if (title === "Tier: high") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title === "Tier: low") return option(options, "__keep_current__")
+        if (title === "Individual overrides") return option(options, "__override_no__")
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+    ;(api.client as unknown as Record<string, unknown>).instance = instanceGroup
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then the success toast reports a live apply and the project instance was disposed
+    assert.deepEqual(instanceGroup.disposedDirectories, [scratch.project])
+    assert.equal(toasts.at(-1)?.variant, "success")
+    assert.equal(toasts.at(-1)?.message?.includes("Applied live"), true)
+    pass("shouldToastLiveApplyWhenProjectInstanceDisposalSucceeds")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
 async function shouldShortenConfigFilePathsForDisplay(): Promise<void> {
   // Given
   const runtime = { config: path.join(homedir(), ".config", "opencode"), worktree: "/work/project", directory: "/work/project" }
@@ -1219,5 +1459,12 @@ await shouldOverwritePresetWhenSavingUnderExistingName()
 await shouldToastAndRepromptWhenPresetNameIsEmpty()
 await shouldGroupReviewChangesByDomain()
 await shouldPartitionPresetAssignmentsByLiveCatalog()
+await shouldPlanGlobalHotApplyAsPatchWithLocalPreludeForDeletions()
+await shouldPlanWriteOnlyWhenGlobalChangesAreRemovalOnly()
+await shouldHotApplyProjectScopeByDisposingTheProjectInstance()
+await shouldHotApplyGlobalScopeViaConfigPatchAfterLocalDeletions()
+await shouldFallBackToLocalWriteWhenGlobalPatchFails()
+await shouldReportRestartFallbackWhenClientLacksHotApplyRoutes()
+await shouldToastLiveApplyWhenProjectInstanceDisposalSucceeds()
 await shouldShortenConfigFilePathsForDisplay()
 process.stdout.write(`PASS: ${passes} TypeScript model configurator contracts.\n`)

@@ -334,6 +334,80 @@ shouldUpgradeFromLegacyManifestWithoutTouchingAssignments() {
   pass "shouldUpgradeFromLegacyManifestWithoutTouchingAssignments"
 }
 
+shouldReloadRunningServersOnlyWhenRequested() {
+  local scratch target binary port server_pid requests output
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-reload.XXXXXX")"
+  target="$scratch/target"
+  requests="$scratch/requests.log"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+
+  # Given a fake OpenCode server logging /global/health and /global/dispose hits
+  : > "$requests"
+  python3 - "$requests" > "$scratch/port" <<'EOF' &
+import http.server, sys
+
+log_path = sys.argv[1]
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    def _reply(self, body):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body.encode())
+
+    def do_GET(self):
+        self._log()
+        self._reply('{"healthy":true,"version":"1.17.15"}' if self.path == "/global/health" else "{}")
+
+    def do_POST(self):
+        self._log()
+        self._reply("true" if self.path == "/global/dispose" else "false")
+
+    def _log(self):
+        with open(log_path, "a") as log:
+            log.write(f"{self.command} {self.path}\n")
+
+    def log_message(self, *args):
+        pass
+
+server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+print(server.server_address[1], flush=True)
+server.serve_forever()
+EOF
+  server_pid=$!
+  for _ in $(seq 1 50); do [ -s "$scratch/port" ] && break; sleep 0.1; done
+  [ -s "$scratch/port" ] || { kill "$server_pid" 2>/dev/null; fail "fake reload server did not start"; }
+  port="$(cat "$scratch/port")"
+
+  # When install runs without --reload, then with --reload, then with --reload --dry-run
+  output="$scratch/output.txt"
+  OPENCODE_RELOAD_URLS="http://127.0.0.1:$port" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" > "$output"
+  assert_count "$requests" "POST /global/dispose" 0 "install without --reload disposed a server"
+  OPENCODE_RELOAD_URLS="http://127.0.0.1:$port" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" --reload > "$output"
+  assert_count "$requests" "GET /global/health" 1 "reload did not health-check the server"
+  assert_count "$requests" "POST /global/dispose" 1 "reload did not dispose the server exactly once"
+  assert_contains "$output" "reload: disposed instances on http://127.0.0.1:$port" "reload did not report the disposal"
+  assert_contains "$output" "plugin code changes still need a restart" "reload did not keep the plugin restart caveat"
+  OPENCODE_RELOAD_URLS="http://127.0.0.1:$port" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" --reload --dry-run > "$output"
+  assert_count "$requests" "POST /global/dispose" 1 "dry-run reload contacted the server"
+  assert_contains "$output" "reload: skipped (dry run)" "dry-run reload did not report the skip"
+
+  # Then an unreachable server degrades to restart guidance without failing
+  kill "$server_pid" 2>/dev/null
+  wait "$server_pid" 2>/dev/null || true
+  OPENCODE_RELOAD_URLS="http://127.0.0.1:$port" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" --reload > "$output" ||
+    fail "reload against a dead server failed the install"
+  assert_contains "$output" "no healthy OpenCode server found" "dead server did not degrade to restart guidance"
+
+  "$INSTALLER" uninstall --target "$target" >/dev/null
+  rm -rf "$scratch"
+  pass "shouldReloadRunningServersOnlyWhenRequested"
+}
+
 shouldInstallOnlyInsideProjectTarget() {
   local scratch project binary
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-project.XXXXXX")"
@@ -370,6 +444,7 @@ run_shell_contracts() {
   shouldRollbackStaleRemovalWhenSyncFails
   shouldSyncAwayManagedTuiValuesWhenMetaIsDeselected
   shouldUpgradeFromLegacyManifestWithoutTouchingAssignments
+  shouldReloadRunningServersOnlyWhenRequested
   shouldInstallOnlyInsideProjectTarget
 }
 

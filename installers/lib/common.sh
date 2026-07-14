@@ -12,6 +12,7 @@
 #   runtime_component_state TYPE NAME SRC DEST   print link/file state for status
 #   runtime_install_global M
 #   runtime_status_global     print the global-rules status row
+#   runtime_post_install      optional: runs after a committed install (e.g. --reload)
 # then calls: harness_main "$@"
 
 MANIFEST_NAME=".agents-orchestrator-manifest"
@@ -27,6 +28,7 @@ PROJECT_TARGET=0
 TARGET_ARG=""
 DRY_RUN=0
 FORCE=0
+RELOAD=0
 MANIFEST_ROOT=""
 OLD_MANIFEST=""
 DEST_PATH=""
@@ -430,6 +432,8 @@ install_action() {
   rm -f "$selected" "$new_manifest"
   INSTALL_SELECTED=""
   INSTALL_NEW_MANIFEST=""
+  # After the transaction: a reload failure must never roll the install back.
+  runtime_post_install || true
 }
 
 install_abort_on_exit() {
@@ -535,6 +539,10 @@ runtime_remove_managed_entry() {
   return 0
 }
 
+runtime_post_install() {
+  return 0
+}
+
 harness_main() {
   [ "$#" -gt 0 ] || { runtime_usage; exit 1; }
   case "$1" in
@@ -554,6 +562,7 @@ harness_main() {
       --target) shift; [ "$#" -gt 0 ] || die "--target requires a value"; TARGET_ARG="$1" ;;
       --dry-run) DRY_RUN=1 ;;
       --force) FORCE=1 ;;
+      --reload) RELOAD=1 ;;
       -h|--help) runtime_usage; exit 0 ;;
       *) die "unknown argument: $1" ;;
     esac
