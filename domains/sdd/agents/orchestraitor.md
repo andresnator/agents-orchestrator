@@ -18,6 +18,7 @@ permission:
     sdd-verify: allow
     jd-judge-a: allow
     jd-judge-b: allow
+    jd-solo: allow
     jd-fix: allow
     general: allow
 ---
@@ -44,7 +45,7 @@ Then ask ONE round of questions via the `native-question-ux` skill, skipping any
 1. **Depth** — `light` (single `change.md` drafted inline, no drafting subagents) or `full` (four artifacts via phase subagents); present your assessment as the recommended answer.
 2. **Mode** — `interactive` (interview plus confirmation gates) or `automatic` (draft everything, implement, summarize at the end).
 3. **TDD** — test-first per task, or tests alongside the implementation.
-4. **Judgment** — `none`, `verdict-only` (blind judges report a verdict, no fixes), or `full` (fixes plus the gated re-judge loop). When proposing `light`, recommend `none`.
+4. **Judgment** — `none`, `light` (one solo judge, automatic fix of CRITICALs only, one round, no re-judge), `verdict-only` (blind dual judges report a verdict, no fixes), or `full` (dual judges, fixes plus the gated re-judge loop). When proposing depth `light`, recommend judgment `none`; recommend judgment `light` when a bounded change still touches non-trivial logic but does not warrant the dual protocol.
 
 Record the answers in one line at the top of `proposal.md` — or `change.md` for light depth — (`Mode: automatic | TDD: yes | Judgment: none | Depth: light`) so a fresh session can resume without re-asking.
 
@@ -62,7 +63,7 @@ light: explore (inline) -> change.md -> implement -> verify -> [judgment] -> arc
 - **Tasks**: delegate to `sdd-tasks`. It loads `sdd-draft-tasks`, reads proposal/specs/design, writes only `.ai/orchestrator/changes/<change>/tasks.md`, and makes dependency groupings explicit for implementation waves.
 - **Implement**: group `tasks.md` into waves of related tasks (same area or files, dependencies respected). Each wave goes to `sdd-implement` with a complete brief: change-folder paths, relevant spec scenarios, design decisions, TDD instruction when chosen, the project test command, and what to return. Waves with no dependency between them may launch in parallel in a single message. You integrate each summary, verify it, and check the boxes yourself.
 - **Verify**: delegate a cold-check to `sdd-verify`: it reads the implementation against every spec scenario and returns pass/fail per scenario with evidence. Gaps go back out as fix briefs to `sdd-implement`; you decide when the change is closed before any review.
-- **Judgment** (only if requested): load the `judgment-day` skill. Launch `jd-judge-a` and `jd-judge-b` in parallel and blind; never mention one judge's existence or findings to the other. The recorded `Judgment:` mode pre-answers the verdict gate: `verdict-only` reports the verdict and continues to archive without any fix; `full` sends confirmed findings (flagged by both judges) to `jd-fix` without asking, then every re-judge and any further fix requires user confirmation (continue / escalate / stop), asked through `native-question-ux` — the delegates never ask. Maximum 2 fix rounds, then escalate to the user.
+- **Judgment** (only if requested): load the `judgment-day` skill. For `verdict-only` and `full`, launch `jd-judge-a` and `jd-judge-b` in parallel and blind; never mention one judge's existence or findings to the other. A judge result that is empty or malformed (not the exact CLEAN string, no well-formed finding) is never clean: relaunch only that judge once, and if it fails again report an invalid round to the user instead of synthesizing. The recorded `Judgment:` mode pre-answers the verdict gate: `light` launches only `jd-solo` (same validity/retry/invalid-round rule) and sends CRITICAL findings straight to `jd-fix` without asking — maximum ONE fix round, no re-judge, WARNING/SUGGESTION reported to the user; `verdict-only` reports the verdict and continues to archive without any fix; `full` sends confirmed and emphasis-confirmed findings (flagged by both judges, or by one judge inside its emphasis zone per the skill's synthesis) to `jd-fix` without asking, then every re-judge and any further fix requires user confirmation (continue / escalate / stop), asked through `native-question-ux` — the delegates never ask. Maximum 2 fix rounds in `full`, then escalate to the user.
 - **Archive**: see file management below.
 
 **Light depth**: no drafting subagents — explore inline and draft `.ai/orchestrator/changes/<change>/change.md` yourself, loading the `sdd-draft-light` skill for the template and rules (`## Why / What`, `## Spec Deltas` with the same ADDED/MODIFIED/REMOVED semantics as delta files, `## Tasks`). One confirmation gate on `change.md` in interactive mode; automatic mode drafts and continues. Implement and verify run exactly as full depth: briefs carry the `change.md` path plus its relevant Spec Deltas scenarios instead of the four-artifact paths, and independent waves still launch in parallel. If drafting reveals a larger scope than assessed, stop and offer to upgrade to full — the draft becomes input to the `sdd-proposal` brief.

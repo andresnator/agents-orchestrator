@@ -37,6 +37,11 @@
       "variant": "high",
       "agents": ["jd-judge-b"]
     },
+    "judge-solo": {
+      "description": "Single light-mode judge; cheap fast tier",
+      "variant": null,
+      "agents": ["jd-solo"]
+    },
     "utility": {
       "description": "Cheap utility agents",
       "variant": null,

@@ -2,6 +2,34 @@
 
 Complete flow of the judgment-day protocol including every confirmation gate. The compact protocol in `SKILL.md` is authoritative; this diagram expands it step by step.
 
+## Light Mode branch (single judge)
+
+Entered when the caller pre-set `Judgment: light`, or the user asked for a light/solo judgment.
+
+```
+Light mode requested
+│
+├── Target is specific files/feature/component?
+│   ├── YES → continue
+│   └── NO → ask user to specify scope before proceeding
+▼
+Resolve skills (Pattern 0) → launch ONE judge (jd-solo, or solo-variant fallback prompt)
+▼
+Result valid? (exact CLEAN string, or ≥1 well-formed finding)
+├── NO → retry that judge once → still invalid → JUDGMENT: INVALID ROUND ⚠️ (stop)
+└── YES ▼
+    ├── CLEAN → JUDGMENT: LIGHT APPROVED ✅
+    ├── Findings, none CRITICAL → JUDGMENT: LIGHT VERDICT 📋 (report; no auto-fix)
+    └── CRITICAL findings →
+        [verdict gate — skipped when mode pre-set `light`: fix without asking]
+        ├── decline → JUDGMENT: LIGHT VERDICT 📋
+        └── fix → Delegate Fix Agent (CRITICALs only, max ONE round, no re-judge)
+            → JUDGMENT: LIGHT FIXED (unverified) 🔧
+            (worse than expected? recommend re-running the full dual protocol)
+```
+
+## Full dual protocol
+
 ```
 User asks for "judgment day"
 │
@@ -16,7 +44,13 @@ Launch Judge A + Judge B with isolated prompts — in parallel when the runtime 
 ▼
 Wait for both to complete
 ▼
-Synthesize verdict
+Both results valid? (exact CLEAN string, or ≥1 well-formed finding — empty/malformed is NEVER clean)
+├── YES → continue
+└── NO → relaunch only the invalid judge once (fresh delegate, same blind prompt)
+    ├── retry valid → continue
+    └── still invalid → JUDGMENT: INVALID ROUND ⚠️ (preserve the valid judge's findings as unsynthesized; stop)
+▼
+Synthesize verdict (Confirmed = both judges; Emphasis-confirmed = one judge, inside its emphasis zone, CRITICAL/WARNING — treated like Confirmed)
 │
 ├── No issues found?
 │   └── JUDGMENT: APPROVED ✅ (stop here)
@@ -25,9 +59,9 @@ Synthesize verdict
 │   └── [verdict gate via native-question-ux — skipped when a mode is pre-set:
 │        `verdict-only` → report and stop; `full` → continue as "Fix and re-judge"]
 │       ├── Stop here (verdict only) → JUDGMENT: VERDICT 📋 (no code touched)
-│       ├── Fix only → Delegate Fix Agent (confirmed issues) → JUDGMENT: FIXED (unverified) 🔧
+│       ├── Fix only → Delegate Fix Agent (confirmed + emphasis-confirmed issues) → JUDGMENT: FIXED (unverified) 🔧
 │       └── Fix and re-judge (full loop) ▼
-│       Delegate Fix Agent with confirmed issues list (Fix 1)
+│       Delegate Fix Agent with confirmed + emphasis-confirmed issues list (Fix 1)
 │       ▼
 │       Wait for Fix Agent to complete
 │       ▼
