@@ -6,6 +6,18 @@ The domain has a single hidden agent, `mentor` (`mode: subagent`, so it never ap
 
 All state lives under `.ai/learning/`: a `dashboard.md` plus one `<topic-slug>/` directory per topic with `mission.md`, `path.md` (Mermaid roadmap), `review-queue.md`, `resources.md`, `vocabulary.md` (Anki export inventory), and `notes/`, `exercises/`, `quizzes/`, `anki/` files. Every `/learn` invocation runs the spaced-repetition due-check first — there is no scheduler; the queue is pull-based.
 
+## Components
+
+| Type | Name | Purpose |
+|---|---|---|
+| Agent (subagent) | `mentor` | Runs hidden multi-session learning flows |
+| Command | `/learn` | Routes learning, review, quiz, and status modes |
+| Skill | `anki-vocab` | Create situation-driven Anki vocabulary batches |
+| Skill | `cornell-notes` | Capture micro-lessons as Cornell notes |
+| Skill | `feynman-teachback` | Run learner-led Feynman teach-backs |
+| Skill | `learning-loop` | Run mission-grounded 70-20-10 learning loops |
+| Skill | `spaced-recall` | Schedule Leitner-style Markdown recall reviews |
+
 ```mermaid
 graph TD
     L["/learn ..."] --> D{Due cards?}

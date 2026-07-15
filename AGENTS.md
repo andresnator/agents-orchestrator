@@ -6,6 +6,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 
 ## Repo Shape
 
+- All documentation and descriptive text in this repo — including READMEs, `docs/`, skill contracts, frontmatter descriptions, and comments — is written in English. Preserve literal runtime trigger phrases (for example, `"ejecuta el plan <change>"` and Spanish skill triggers) because they are activation contracts, not documentation; translating existing legacy Spanish prose is out of scope for this forward-looking rule.
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/` is the source of truth for reusable skill bodies.
 - `domains/{sdd,refactor,architecture,plan,learning,docs,meta,common}/README.md` explains each domain.
@@ -96,7 +97,8 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 4. For skills, bump `metadata.version` when changing an existing skill.
 5. Add a plugin under `domains/<domain>/plugins/` only for real OpenCode runtime behavior.
 6. Add a TUI plugin under `domains/<domain>/tui-plugins/` (entrypoint `<name>.tsx` plus same-named companion directory) only for interactive OpenCode UI; it is OpenCode-only by design.
-7. Run `installers/opencode.sh install --dry-run` to confirm discovery and link behavior.
+7. When adding, removing, or moving a component, update the domain README's `## Components` table; if its entry points changed, update that domain's row in the root README too.
+8. Run `installers/opencode.sh install --dry-run` to confirm discovery and link behavior.
 
 Adding a component must not require editing any installer.
 

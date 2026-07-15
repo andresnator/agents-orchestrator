@@ -2,13 +2,18 @@
 
 Prompt, skill, and registry maintenance utilities for this artifact repo.
 
-Commands: `prompt-checker`, `absorb`.
+## Components
 
-Skills: `absorb`, `prompt-structure-writer`, `skill-creator`, `skill-registry`.
-
-Plugins: `skill-registry`.
-
-TUI plugins: `model-configurator`.
+| Type | Name | Purpose |
+|---|---|---|
+| Command | `/absorb` | Compares external AI harness practices |
+| Command | `/prompt-checker` | Evaluates and refines prompt text |
+| Skill | `absorb` | Compare external AI harness practices |
+| Skill | `prompt-structure-writer` | Turn rough ideas into executable prompts |
+| Skill | `skill-creator` | Create Agent Skills-compliant skills |
+| Skill | `skill-registry` | Generate the project skill registry |
+| Plugin | `skill-registry` | Generates the runtime skill index |
+| TUI plugin | `model-configurator` | Assigns per-agent models and variants |
 
 ```mermaid
 graph TD

@@ -14,6 +14,32 @@ Full lens coverage assumes the `common` domain is installed (lens skills such as
 
 Legacy note: pre-2026-07 `.ia-refactor/plan/**` artifacts are frozen history. The planner ignores them and `/refactor-execute` no longer exists — execution now happens through sdd adoption.
 
+## Components
+
+| Type | Name | Purpose |
+|---|---|---|
+| Agent (primary) | `refactor-planner` | Plans risk-gated ready-for-sdd refactors |
+| Agent (subagent) | `refactor-analyzer` | Analyzes one refactor lens read-only |
+| Command | `/harden-plan` | Plans characterization, coverage, and mutation safety |
+| Command | `/refactor-plan` | Plans ready-for-sdd refactor bundles |
+| Skill | `architecture-impact-review` | Classify risk as local or architectural |
+| Skill | `behavior-characterization` | Record current legacy behavior |
+| Skill | `characterization-test-scoping` | Scope tests, seams, containment, and rollback |
+| Skill | `dependency-seam-detection` | Find seams for legacy testability |
+| Skill | `java-api-design` | Design clear Java API boundaries |
+| Skill | `java-exception-robustness` | Design robust Java failure handling |
+| Skill | `java-immutability-modeling` | Model Java data safely |
+| Skill | `java-naming-readability` | Evaluate Java naming and readability |
+| Skill | `java-secure-coding` | Review Java security practices |
+| Skill | `java-testing` | Generate and retrofit Java tests |
+| Skill | `legacy-code-safety` | Make untested code safe to change |
+| Skill | `null-safety` | Detect null hazards conservatively |
+| Skill | `refactor` | Apply cross-language refactoring techniques |
+| Skill | `scope-analysis` | Delimit class, package, or module scope |
+| Skill | `tooling-audit` | Detect refactor safety tooling gaps |
+| Skill | `tooling-compatibility-matrix` | Guide test, coverage, and mutation tooling |
+| Skill | `type-contracts` | Detect weak or implicit Java contracts |
+
 ```mermaid
 graph TD
   refactor[/refactor-plan/] --> planner[refactor-planner]

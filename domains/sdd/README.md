@@ -2,12 +2,28 @@
 
 Spec-driven development around one primary coordinator: `orchestraitor`. The SDD cycle is explicit opt-in: start it conversationally ("vamos con sdd", "usa SDD") or with equivalent clear intent. Without an SDD mention, `orchestraitor` executes directly and keeps `general` only for auxiliary chores. Use `/judgment` for a standalone adversarial review, and `/grill` (installed with the `common` domain) to run the grill interview router explicitly (`/grill [me|docs|sdd] <topic>`) instead of relying on trigger phrases. Judgment-day is a high-signal gate for high-risk, high-size, or SDD verification moments — not a default pre-commit/pre-push action; routine work gets the cheap single-reviewer check formalized as the skill's Light Mode (`/judgment light <target>`, one `jd-solo` judge, automatic fix of CRITICALs only, no re-judge).
 
-Agents:
+## Components
 
-- `orchestraitor` (primary coordinator)
-- `sdd-explore` (read-only discovery)
-- `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement`, `sdd-verify` (single-responsibility phase subagents)
-- `jd-judge-a`, `jd-judge-b`, `jd-solo`, `jd-fix` (judgment-day review, opt-in; `jd-solo` is the single light-mode judge)
+| Type | Name | Purpose |
+|---|---|---|
+| Agent (primary) | `orchestraitor` | Executes tasks and coordinates opt-in SDD |
+| Agent (subagent) | `jd-fix` | Applies confirmed adversarial findings |
+| Agent (subagent) | `jd-judge-a` | Reviews correctness adversarially |
+| Agent (subagent) | `jd-judge-b` | Reviews security adversarially |
+| Agent (subagent) | `jd-solo` | Runs balanced light-mode review |
+| Agent (subagent) | `sdd-design` | Drafts `design.md` from code evidence |
+| Agent (subagent) | `sdd-explore` | Discovers codebase structure read-only |
+| Agent (subagent) | `sdd-implement` | Implements one approved task wave |
+| Agent (subagent) | `sdd-proposal` | Drafts `proposal.md` from an approved brief |
+| Agent (subagent) | `sdd-spec` | Drafts OpenSpec delta specifications |
+| Agent (subagent) | `sdd-tasks` | Drafts dependency-ordered `tasks.md` |
+| Agent (subagent) | `sdd-verify` | Cold-checks implementation against scenarios |
+| Command | `/judgment` | Runs the adversarial review protocol |
+| Skill | `sdd-draft-design` | Explore then draft an approved design |
+| Skill | `sdd-draft-light` | Draft bounded light-depth `change.md` |
+| Skill | `sdd-draft-proposal` | Draft an approved OpenSpec proposal |
+| Skill | `sdd-draft-spec` | Draft delta specs with scenarios |
+| Skill | `sdd-draft-tasks` | Draft ordered, verifiable implementation tasks |
 
 Code written in either mode follows the shared `code-conventions` skill (Andres's style contract: constants, test format, whole-object asserts, separate characterization classes); a consistent repo convention wins on conflict.
 

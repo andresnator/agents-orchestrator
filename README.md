@@ -2,6 +2,19 @@
 
 Reusable agent artifacts organized by domain. Authored in OpenCode format for OpenCode.
 
+## Domains at a glance
+
+| Domain | Purpose | Entry points |
+|---|---|---|
+| [sdd](domains/sdd/README.md) | Spec-driven development around the `orchestraitor` primary agent | `orchestraitor` (primary), `/judgment` |
+| [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening planning producing ready-for-sdd bundles, plus Java refactor skills | `refactor-planner` (primary), `/harden-plan`, `/refactor-plan` |
+| [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (primary), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
+| [plan](domains/plan/README.md) | Fable-style deep planning and `/wayfinder` multi-session discovery maps under `.ai/` | `deep-planner` (primary), `/deep-plan`, `/premortem`, `/wayfinder` |
+| [learning](domains/learning/README.md) | Interactive multi-session learning via `/learn` | `/learn` |
+| [docs](domains/docs/README.md) | Product docs, Jira ticketing, English tutoring, summaries, and transcription | `/decide`, `/doc`, `/english`, `/prd` |
+| [meta](domains/meta/README.md) | Prompt and skill maintenance utilities | `/absorb`, `/prompt-checker`, `model-configurator` (TUI plugin) |
+| [common](domains/common/README.md) | Shared engineering, quality, question UX, and output-refinement skills | `/defend`, `/grill`, transversal skills |
+
 - `domains/`: source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/`: source of truth for reusable skill bodies.
 - `domains/<domain>/agents/*.md`: fused OpenCode agent files with frontmatter and prompt body.

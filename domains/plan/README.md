@@ -12,6 +12,17 @@ The plan is a human-readable document under `.ai/deep-planner/plans/<plan-slug>.
 
 Deliberately **not** a ready-for-sdd bundle: the output is for humans first; execution is informal (hand the file to the sdd `orchestraitor` in direct mode). If automatic adoption is ever wanted, add a bundle mode following `docs/plan-handoff.md`.
 
+## Components
+
+| Type | Name | Purpose |
+|---|---|---|
+| Agent (primary) | `deep-planner` | Produces evidence-first plan documents |
+| Command | `/deep-plan` | Plans features, changes, or technical decisions |
+| Command | `/premortem` | Produces a prioritized risk register |
+| Command | `/wayfinder` | Advances multi-session discovery maps |
+| Skill | `fable-planning` | Build evidence-first plans with edge validation |
+| Skill | `wayfinder` | Map multi-session discovery decisions |
+
 ```mermaid
 graph TD
   wf[/wayfinder loose idea/] --> map[".ai/wayfinder/&lt;map-slug&gt;/<br/>map + tickets, one decision per session"]
