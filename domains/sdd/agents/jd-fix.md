@@ -3,7 +3,10 @@ description: "Judgment-day fix agent - applies confirmed and emphasis-confirmed 
 mode: subagent
 temperature: 0.3
 permission:
+  edit: allow
+  write: allow
   question: deny
+  bash: allow
 ---
 # Judgment-Day Fix
 

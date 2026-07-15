@@ -29,12 +29,12 @@ The orchestraitor's discovery scan keys on this line; without it a folder is inv
 - All four artifacts conform to the `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, and `sdd-draft-tasks` templates, including the four Review Workload Forecast guard lines in `tasks.md`.
 - Tasks are small, ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves.
 - Every claim is evidence-backed or marked hypothesis; hypotheses and behavior changes stay out of `tasks.md`.
-- Do not write the `Mode: … | TDD: … | Judgment: …` line; those choices belong to the user at adoption.
+- Do not write the `Mode: … | TDD: … | Judgment: … | Depth: …` kickoff line; those choices belong to the user at adoption.
 - Bundles are always full depth — the four-artifact shape is the contract; the light-mode `change.md` is not a valid bundle format, and adoption never asks Depth.
 
 ## Adoption semantics (consumer: orchestraitor)
 
 1. Discover on "ejecuta el plan <change>" or during the session-start scan: `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) with the marker first line.
 2. Adopt by moving the whole folder to `.ai/orchestrator/changes/<change>/`; never overwrite, ask for a new name on collision. The `Source:` marker stays.
-3. Kickoff-lite: ask the Mode/TDD/Judgment round once, record it in `proposal.md`.
+3. Kickoff-lite: ask the Mode/TDD/Judgment round once, record the kickoff line (with `Depth: full`) in `proposal.md`.
 4. Normal sdd flow from there: implement from the first unchecked task, verify, optional judgment, archive. On archive, spec deltas merge into canonical specs — behavior-preservation deltas progressively document the system.

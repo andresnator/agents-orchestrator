@@ -1,4 +1,4 @@
-Mode: {interactive|automatic} | TDD: {yes|no} | Judgment: {none|verdict-only|full} | Depth: light
+Mode: {interactive|automatic} | TDD: {yes|no} | Judgment: {none|light|verdict-only|full} | Depth: light
 
 # Change: {title}
 
