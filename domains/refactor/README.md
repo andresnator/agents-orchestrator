@@ -2,6 +2,8 @@
 
 Risk-gated refactor and test-hardening (CDD) planning that produces ready-for-sdd OpenSpec change bundles, plus Java refactor skills and the cross-language `refactor` technique catalog.
 
+This domain owns behavior-preserving work on existing code; features, behavior changes, and technical decisions route to the `plan` domain's `/deep-plan`. Both planners hand off to sdd through the same contract in `docs/plan-handoff.md`, and each recommends the other when a request lands on the wrong side of that line.
+
 The planner scopes and risk-classifies inline, fans out analyzer instances by unit × lens, consolidates findings, and composes one or more OpenSpec bundles under `.ai/refactor-planner/changes/<change>/` using the `sdd-draft-*` templates. Execution belongs to the sdd `orchestraitor`, which adopts bundles via the plan-intake contract in `docs/plan-handoff.md` ("ejecuta el plan <change>").
 
 `/harden-plan` is the Working-Effectively-with-Legacy-Code path: when the target lacks a safety net, harden first. It always runs the `behavior-safety`, `test-safety-net`, and `tooling` lenses (no risk gating, no structural lenses), inspects whether coverage (e.g. JaCoCo) and mutation (e.g. PIT) tooling is configured — missing tooling becomes explicit enablement tasks — and asks coverage/mutation thresholds at kickoff. Its tasks follow a fixed CDD order: tooling enablement → minimal behavior-preserving seams → characterization and unit tests → coverage/mutation baseline against the thresholds. The full CDD sequence: `/harden-plan` → "ejecuta el plan" (sdd) → archive merges the characterization deltas into canonical specs → `/refactor-plan` on the hardened code with fresh evidence → "ejecuta el plan".

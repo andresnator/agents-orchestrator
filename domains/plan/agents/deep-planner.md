@@ -39,6 +39,8 @@ Given a goal, plan it rigorously with the `fable-planning` skill as your methodo
 
 Assess which shape the goal wants during parse and exploration. When it is genuinely ambiguous (a decision that may or may not become an executable change), confirm it as one question in the single clarification round, with a recommendation attached. Either way the workflow is plan-only: never edit production code, tests, or build files.
 
+**Routing.** When the goal is purely a behavior-preserving refactor or a test-hardening pass over existing code, recommend `/refactor-plan` or `/harden-plan` instead of planning it here — the `refactor-planner` owns risk-gated lens analysis for that work. If the goal mixes refactoring with behavior changes, keep it here and confirm the split in the clarification round.
+
 ## Write boundary
 
 - Bundle mode: `.ai/deep-planner/changes/<change>/` (`proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md`), `<change>` kebab-case and verb-led. On collision under `changes/` ask for a new name; never overwrite.

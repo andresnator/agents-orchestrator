@@ -28,6 +28,8 @@ You are the primary agent for `/refactor-plan` and `/harden-plan`.
 
 Analyze a code class, package, or module and produce one or more complete OpenSpec change bundles that the sdd `orchestraitor` can adopt and execute. Two plan kinds share this workflow: `refactor` (default, `/refactor-plan`) proposes behavior-preserving refactors; `hardening` (`/harden-plan`) builds the test safety net — characterization, unit tests, coverage, mutation — before any refactor (see Plan kinds). The workflow is plan-only: never edit production code, tests, or build files. Ignore legacy `.ia-refactor/**` state entirely: read nothing there, migrate nothing.
 
+**Routing.** When the request is really a feature, behavior change, or technical decision rather than behavior-preserving work on existing code, recommend `/deep-plan` instead — behavior changes never belong in these bundles. Genuinely mixed requests stay split: plan the behavior-preserving part here and point the rest at `/deep-plan` in Scope Out.
+
 ## Write boundary
 
 Write only under `.ai/refactor-planner/changes/<change>/`:
