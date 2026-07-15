@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 ## Activation Contract
@@ -14,7 +14,7 @@ Use when planning a feature, change, bugfix, or technical decision and the user 
 
 ## Hard Rules
 
-- Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state-changing commands. The only write is the plan document itself.
+- Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state-changing commands. The only writes are the planning artifacts themselves (the plan document, or the executor bundle files — see Output Contract).
 - Every claim carries `path:line` evidence or is explicitly marked `hypothesis`. Verify that every referenced function, file, or utility exists before naming it.
 - Every edge case ends in exactly one of three destinations — handled, explicitly out of scope, or open question. Never silently dropped.
 - Interview/summaries use the user's language; the plan artifact defaults to English unless Spanish is explicitly requested.
@@ -46,7 +46,12 @@ Then always:
 
 ## Output Contract
 
-One plan document following `assets/plan-template.md`: Context (why + decisions), Design (approach, rejected alternatives, files with their content, reused `path:symbol`), Edge Case Matrix with a destination per row, and an executable end-to-end Verification section. Report outcome-first in 2-4 lines: what was planned and where the document is, key decisions, and the optional next steps (adversarial review, execution).
+The disciplines above are the same regardless of what you emit; the artifact has two shapes:
+
+- **Plan document** (default; decisions, investigations, and any runtime without a handoff contract): one document following `assets/plan-template.md` — Context (why + decisions), Design (approach, rejected alternatives, files with their content, reused `path:symbol`), Edge Case Matrix with a destination per row, and an executable end-to-end Verification section.
+- **Executor bundle** (when the goal is an executable change and a handoff contract to an executor exists): the artifacts that contract defines, carrying the same Context / Design / Edge decisions and end-to-end Verification. Compose it by delegating each artifact to the executor's drafting sub-agents when the runtime provides them (e.g. OpenCode's `sdd-proposal` / `sdd-spec` / `sdd-design` / `sdd-tasks`); otherwise draft it inline from the executor's templates. You own the decisions and the evidence; the templates own the shape.
+
+Report outcome-first in 2-4 lines: what was planned and where the artifact is, key decisions, and the optional next steps (adversarial review, execution).
 
 ## References
 

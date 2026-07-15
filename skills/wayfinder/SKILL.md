@@ -7,7 +7,7 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills/tree/main/skills/engineering/wayfinder
   status: testing
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Wayfinder
@@ -88,7 +88,7 @@ The user may run unblocked tickets in parallel sessions, so expect concurrent ed
 
 ## Handoff
 
-When the fog is pushed back and the way is clear, the map merges onto the main build flow: run `/deep-plan` to turn the cleared decisions into a plan document, or the sdd drafting skills (`sdd-draft-proposal` onward) when the destination is a change bundle. To slice the outcome into implementation-ready tickets, use the `buildable-issue` skill. If the effort turned out small, implement directly.
+When the fog is pushed back and the way is clear, the map merges onto the main build flow: run `/deep-plan`, which turns the cleared decisions into a ready-for-sdd bundle when the destination is an executable change, or a plan document when it is a decision. To slice the outcome into implementation-ready tickets, use the `buildable-issue` skill. If the effort turned out small, implement directly.
 
 ## Attribution
 

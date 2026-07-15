@@ -1,6 +1,6 @@
 # Plan Handoff Contract
 
-How external planners hand complete OpenSpec change bundles to the sdd `orchestraitor` for execution. `refactor-planner` and `architect` (via `/arch-ideate`) are the current producers; any future planner (performance, migration, security) reuses the same shape.
+How external planners hand complete OpenSpec change bundles to the sdd `orchestraitor` for execution. `refactor-planner`, `architect` (via `/arch-ideate`), and `deep-planner` (via `/deep-plan`) are the current producers; any future planner (performance, migration, security) reuses the same shape.
 
 ## Bundle location
 
