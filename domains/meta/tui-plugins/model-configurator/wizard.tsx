@@ -33,6 +33,7 @@ import {
 } from "./presets"
 
 const DONE = "__done__"
+const ALL_AGENTS = "__all_agents__"
 const KEEP_CURRENT = "__keep_current__"
 const USE_TIER = "__use_tier__"
 const INHERIT = "__inherit__"
@@ -241,6 +242,7 @@ async function runDomainAgentsLoop(api: TuiPluginApi, state: WizardState, domain
       `${domain} agents`,
       [
         { title: "Done", value: DONE },
+        { title: "All agents", value: ALL_AGENTS, description: "Set model/variant for every agent in this domain" },
         ...agents.map((agent) => ({
           title: decisions.has(agent.name) ? `● ${agent.name}` : agent.name,
           value: agent.name,
@@ -250,6 +252,15 @@ async function runDomainAgentsLoop(api: TuiPluginApi, state: WizardState, domain
       DOMAINS_HINT,
     )
     if (!selected || selected === DONE) return
+
+    if (selected === ALL_AGENTS) {
+      const summary = agents.map((agent) => `${agent.name}: ${formatMapping(current[agent.name] ?? {})}`).join("; ")
+      const decision = await selectDecision(api, `Configure all ${domain} agents`, state.models, undefined, summary)
+      if (decision === undefined) continue
+      if (decision.action === "keep") for (const agent of agents) decisions.delete(agent.name)
+      else for (const agent of agents) decisions.set(agent.name, decision)
+      continue
+    }
 
     const decision = await selectDecision(
       api,
@@ -568,10 +579,15 @@ async function selectDecision(
 }
 
 async function selectVariant(api: TuiPluginApi, model: ModelOption, suggested?: string): Promise<string | undefined> {
+  if (model.variants.length === 0) return ""
   const selected = await select(
     api,
     `Variant for ${model.id}`,
-    [{ title: "None", value: NO_VARIANT }, ...model.variants.map((variant) => ({ title: variant, value: variant }))],
+    [
+      // Distinct from a provider-supplied "none" variant, which is a real value (e.g. OpenAI's reasoning-off tier).
+      { title: "Default (no variant)", value: NO_VARIANT, description: "Do not write a variant key — inherit the provider default" },
+      ...model.variants.map((variant) => ({ title: variant, value: variant })),
+    ],
     BACK_HINT,
     suggested && model.variants.includes(suggested) ? suggested : NO_VARIANT,
   )

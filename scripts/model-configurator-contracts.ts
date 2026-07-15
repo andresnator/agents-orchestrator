@@ -678,6 +678,226 @@ async function shouldConfigureAgentThroughDomainBrowseAndApply(): Promise<void> 
   }
 }
 
+async function shouldApplyDecisionToAllDomainAgentsThroughAllOption(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given domain "one" holds two agents and the run configures them through "All agents"
+    await writeJson(path.join(scratch.data, "agents.json"), [
+      { name: "alpha", domain: "one", mode: "primary" },
+      { name: "gamma", domain: "one", mode: "subagent" },
+      { name: "beta", domain: "two", mode: "subagent" },
+    ])
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const toasts: TuiToast[] = []
+    let domainAgentsVisits = 0
+    let sawAllPendingMarkers = false
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          const review = options.find((candidate) => candidate.value === "__review_changes__")
+          return review ?? option(options, "__domain__:one")
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          if (domainAgentsVisits === 1) return option(options, "__all_agents__")
+          sawAllPendingMarkers =
+            options.some((candidate) => candidate.title === "● alpha") &&
+            options.some((candidate) => candidate.title === "● gamma")
+          return option(options, "__done__")
+        }
+        if (title === "Configure all one agents") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then one decision fanned out to every agent in the domain and beta stayed untouched
+    assert.equal(sawAllPendingMarkers, true)
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings, {
+      alpha: { model: "openai/new", variant: "high" },
+      gamma: { model: "openai/new", variant: "high" },
+      beta: { model: "anthropic/old", variant: undefined },
+    })
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldApplyDecisionToAllDomainAgentsThroughAllOption")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given "All agents" sets a decision for the whole domain and then keeps current
+    await writeJson(path.join(scratch.data, "agents.json"), [
+      { name: "alpha", domain: "one", mode: "primary" },
+      { name: "gamma", domain: "one", mode: "subagent" },
+      { name: "beta", domain: "two", mode: "subagent" },
+    ])
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const original = await readFile(configFile, "utf8")
+    let domainAgentsVisits = 0
+    let configureAllVisits = 0
+    let hubVisits = 0
+    let scopeVisits = 0
+    let sawMarkersAfterSet = false
+    let sawMarkersAfterKeep = true
+    let sawReviewAfterKeep = true
+    const api = createFakeApi(scratch, [], {
+      select(title, options) {
+        if (title === "Configuration scope") {
+          scopeVisits += 1
+          return scopeVisits === 1 ? option(options, "project") : "escape"
+        }
+        if (title === "Select domain") {
+          hubVisits += 1
+          if (hubVisits === 1) return option(options, "__domain__:one")
+          sawReviewAfterKeep = options.some((candidate) => candidate.value === "__review_changes__")
+          return "escape"
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          if (domainAgentsVisits === 1) return option(options, "__all_agents__")
+          if (domainAgentsVisits === 2) {
+            sawMarkersAfterSet = options.some((candidate) => candidate.title === "● alpha")
+            return option(options, "__all_agents__")
+          }
+          sawMarkersAfterKeep = options.some((candidate) => candidate.title.startsWith("● "))
+          return option(options, "__done__")
+        }
+        if (title === "Configure all one agents") {
+          configureAllVisits += 1
+          return configureAllVisits === 1 ? option(options, "openai/new") : option(options, "__keep_current__")
+        }
+        if (title === "Variant for openai/new") return option(options, "high")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then keep-current cleared every pending domain decision and nothing was written
+    assert.equal(sawMarkersAfterSet, true)
+    assert.equal(sawMarkersAfterKeep, false)
+    assert.equal(sawReviewAfterKeep, false)
+    assert.equal(await readFile(configFile, "utf8"), original)
+    pass("shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a model whose provider catalog itself ships a real "none" variant
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const toasts: TuiToast[] = []
+    let domainAgentsVisits = 0
+    let variantOptions: PolicyOption[] = []
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          const review = options.find((candidate) => candidate.value === "__review_changes__")
+          return review ?? option(options, "__domain__:one")
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          return domainAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
+        }
+        if (title === "Configure: alpha") return option(options, "openai/new")
+        if (title === "Variant for openai/new") {
+          variantOptions = options
+          return option(options, "none")
+        }
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then the synthetic no-variant entry is labelled distinctly from the catalog "none"
+    const syntheticEntries = variantOptions.filter((candidate) => candidate.value === "__no_variant__")
+    assert.equal(syntheticEntries.length, 1)
+    assert.equal(syntheticEntries[0]?.title, "Default (no variant)")
+    assert.equal(variantOptions.filter((candidate) => candidate.title === "none").length, 1)
+    assert.equal(variantOptions.filter((candidate) => candidate.title.toLowerCase().startsWith("none")).length, 1)
+
+    // And picking the catalog "none" persists it as a real variant value
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings, {
+      alpha: { model: "openai/new", variant: "none" },
+      beta: { model: "anthropic/old", variant: undefined },
+    })
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldSkipVariantDialogWhenModelHasNoVariants(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given anthropic/old exposes no variants; any variant dialog would fail the policy
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const toasts: TuiToast[] = []
+    let domainAgentsVisits = 0
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Select domain") {
+          const review = options.find((candidate) => candidate.value === "__review_changes__")
+          return review ?? option(options, "__domain__:one")
+        }
+        if (title === "one agents") {
+          domainAgentsVisits += 1
+          return domainAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
+        }
+        if (title === "Configure: alpha") return option(options, "anthropic/old")
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.data)
+
+    // Then the model applied without a variant dialog and without a variant key
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings, {
+      alpha: { model: "anthropic/old", variant: undefined },
+      beta: { model: "anthropic/old", variant: undefined },
+    })
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldSkipVariantDialogWhenModelHasNoVariants")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
 async function shouldWalkBackFromDomainAgentsToScopeWithoutWriting(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
@@ -1339,7 +1559,7 @@ function createFakeApi(
             data: {
               connected: ["openai", "anthropic"],
               all: [
-                { id: "openai", models: { new: { variants: { high: {}, low: {} } } } },
+                { id: "openai", models: { new: { variants: { high: {}, low: {}, none: {} } } } },
                 { id: "anthropic", models: { old: { variants: {} } } },
               ],
             },
@@ -1451,6 +1671,10 @@ await shouldDeletePresetWithoutTouchingConfig()
 await shouldOpenAdjacentAgentViaNextAgent()
 await shouldPreserveOverridesWhenEscapingAgentChooser()
 await shouldConfigureAgentThroughDomainBrowseAndApply()
+await shouldApplyDecisionToAllDomainAgentsThroughAllOption()
+await shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent()
+await shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant()
+await shouldSkipVariantDialogWhenModelHasNoVariants()
 await shouldWalkBackFromDomainAgentsToScopeWithoutWriting()
 await shouldParseDomainCatalogWhenDiscoveringAgents()
 await shouldGroupAgentsByDomainOrderedBySizeThenName()
