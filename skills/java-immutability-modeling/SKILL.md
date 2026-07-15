@@ -4,8 +4,8 @@ description: "Trigger: Java immutability, records, value objects, defensive copi
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "1.0.3"
+  status: testing
+  version: "1.0.4"
 ---
 
 # Skill: java-immutability-modeling

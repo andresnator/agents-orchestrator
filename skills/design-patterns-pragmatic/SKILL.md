@@ -4,8 +4,8 @@ description: "Trigger: design patterns, GoF patterns, Java patterns, strategy, a
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "1.0.3"
+  status: testing
+  version: "1.1.0"
 ---
 
 # Skill: design-patterns-pragmatic
@@ -38,6 +38,8 @@ This skill teaches pragmatic pattern selection and application. It does not call
 - Prefer no pattern when simple code is clearer.
 - Introduce indirection only when it reduces real change cost.
 - Name the cost: extra types, navigation, testing surface, and cognitive load.
+- Check the candidate pattern's contraindications (`references/pattern-forces.md`) before recommending it.
+- Patterns belong to the consolidation phase of a design, not the prototyping phase: recommend one when variation is proven, not anticipated.
 - For Java, consider lambdas, records, sealed classes, and composition before classic boilerplate-heavy patterns.
 
 ## Decision Gates
@@ -73,6 +75,7 @@ Return:
 ## References
 
 - `references/pattern-selection.md` — Pattern selection and tradeoff table.
+- `references/pattern-forces.md` — Redesign causes → candidate patterns, per-pattern contraindications, and pattern relations/combinations.
 
 ## Assets
 

@@ -4,8 +4,8 @@ description: "Trigger: Java secure coding, Oracle Secure Coding Guidelines, inpu
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "1.0.3"
+  status: testing
+  version: "1.0.4"
 ---
 
 # Skill: java-secure-coding

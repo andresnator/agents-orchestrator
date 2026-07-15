@@ -6,12 +6,12 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.1"
-  status: in-progress
+  version: "1.1.0"
+  status: testing
 ---
 
 # Tooling Compatibility Matrix
-Offline baseline for deep `/refactor-plan` tooling recommendations. This skill never fetches versions. Every emitted version must include `verify-latest-at-execution: true` and an executor task to verify the chosen version is current and CVE-free before installation.
+Offline baseline for `/harden-plan` and high/critical `/refactor-plan` tooling recommendations. This skill never fetches versions. Every emitted version must include `verify-latest-at-execution: true` and an executor task to verify the chosen version is current and CVE-free before installation.
 
 ## Standing rules
 
@@ -127,6 +127,14 @@ pytest==${pytestVersion}
 coverage==${coverageVersion}
 mutmut==${mutmutVersion}
 ```
+
+## Characterization tooling
+
+| Need | Baseline option | Notes |
+| --- | --- | --- |
+| Golden master / approval of large outputs | ApprovalTests (Java, .NET, Python, JS variants) | Anchors current output verbatim; good first net for monster methods and report-like outputs. |
+| Characterizing persistence or external boundaries | Testcontainers | Real dependency in a disposable container; heavier — prefer at pinch points, not per unit. |
+| Comparing JSON outputs | JsonUnit (Java) or snapshot testing in JS/TS | Whole-document asserts with ignorable fields; aligns with whole-object assert conventions. |
 
 ## Verification commands
 

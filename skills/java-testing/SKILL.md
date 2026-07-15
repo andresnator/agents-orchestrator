@@ -4,8 +4,8 @@ description: "Trigger: Java tests, JUnit, Mockito, AssertJ, legacy code, charact
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "3.2.0"
+  status: testing
+  version: "3.2.1"
 ---
 
 # Java Testing Skill

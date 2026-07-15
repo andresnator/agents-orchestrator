@@ -6,8 +6,8 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
+  version: "1.1.0"
+  status: testing
 ---
 
 # Architecture Impact Review
@@ -25,3 +25,10 @@ Decide whether the target problem is local or architectural.
 - Boundary-crossing dependencies.
 
 Keep broad architectural cleanup as follow-up unless it is required for safe characterization.
+
+## Routing rules (local vs architectural)
+
+- **Modules first, deployment last**: modularizing inside the current deployable is always the safe local move and belongs to refactor plans. Extracting a deployable (service) is an architectural decision — defer it to its last responsible moment, the point where not deciding would eliminate the alternative, and route it to the architecture domain.
+- **Consistency boundary test**: components that must stay transactionally consistent belong in the same module (local concern); where eventual consistency and domain events are acceptable, a module boundary — and possibly an architectural decision — is in play.
+- **Language boundary test**: when the same term means different things across the code under review ("policy", "account"), the scope is straddling a bounded-context boundary; escalate the boundary question instead of refactoring across it.
+- **Problem nature test**: if nobody can predict whether the restructuring will work (a complex, experiment-first problem rather than a complicated, analyzable one), the right next step is a scoped discovery spike — recommend `/wayfinder` — not an executable bundle.

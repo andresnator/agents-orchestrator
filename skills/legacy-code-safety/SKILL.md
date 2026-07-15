@@ -6,8 +6,8 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
+  version: "1.1.0"
+  status: testing
 ---
 
 # Legacy Code Safety
@@ -24,3 +24,19 @@ Legacy code is code without a sufficient test safety net. The goal is not to mak
 - Validate after every step.
 - Protect public contracts.
 - Document rollback before implementation begins.
+
+## Legacy Code Change Algorithm
+
+Every safe change to legacy code follows the same pipeline: (1) identify change points, (2) find test points, (3) break dependencies, (4) write characterization tests, (5) change and refactor. Plans over legacy code should make these five steps recognizable in their task ordering.
+
+## Cover & Modify
+
+Cover & Modify, never Edit & Pray: no plan step modifies code that is not covered by tests (the "software vise"). If coverage is not affordable, the step shrinks until it is, or it moves behind a hardening task.
+
+## Cheap impact mapping
+
+Lean on the compiler: in statically typed code, deliberately changing a signature or type makes the compiler enumerate every use site — a free impact map when call hierarchies are unclear.
+
+## Sprout and Wrap (routing note)
+
+Sprout Method/Class (grow new, tested code called from the untested flow) and Wrap Method/Class (add behavior before or after the untested code) are mitigation routes for delivering NEW logic when putting the class under test is not affordable yet. They add behavior, so they never appear as tasks in a behavior-preserving refactor bundle: in refactor plans they are recorded only as follow-up/Scope Out routing hints toward `/deep-plan` or sdd execution. Decision rule where they do apply: sprout for new logic inside the flow, wrap for behavior before/after it; escalate to the class variant when the original cannot be instantiated.

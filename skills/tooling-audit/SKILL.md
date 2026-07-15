@@ -6,12 +6,12 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.1"
-  status: in-progress
+  version: "1.0.2"
+  status: testing
 ---
 
 # Tooling Audit
-Read-only detection skill for deep `/refactor-plan` runs. Use it to identify existing test infrastructure, missing safety tooling, installation tasks, verification commands, and compatibility checks.
+Read-only detection skill for `/harden-plan` and for `/refactor-plan` runs at high/critical risk. Use it to identify existing test infrastructure, missing safety tooling, installation tasks, verification commands, and compatibility checks.
 
 ## Shared contract
 

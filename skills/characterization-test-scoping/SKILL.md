@@ -1,17 +1,17 @@
 ---
 name: characterization-test-scoping
-description: "Trigger: characterization tests, seams, deep-depth refactor planning, test safety planning. Scope high-risk refactor work around tests, seams, containment, and rollback."
+description: "Trigger: characterization tests, seams, high-risk refactor planning, test safety planning. Scope high-risk refactor work around tests, seams, containment, and rollback."
 license: Apache-2.0
 metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.1.0"
-  status: in-progress
+  version: "2.2.0"
+  status: testing
 ---
 
 ## Activation Contract
-Load this skill when a refactor plan runs at deep depth or when scoping work around characterization coverage, seams, and the test safety net.
+Load this skill when a refactor plan runs at high/critical risk or when scoping work around characterization coverage, seams, and the test safety net.
 
 ## Hard Rules
 
@@ -37,6 +37,18 @@ Load this skill when a refactor plan runs at deep depth or when scoping work aro
 3. Highlight seam opportunities that enable isolation, fakes, or safer rollback.
 4. Prefer backlog items that can be validated incrementally.
 5. Keep speculative cleanup and redesign out of executable refactor-plan backlog.
+
+## Effect Reasoning
+
+Choose what to characterize by tracing effects forward from each change point until they become observable, along the three propagation paths: return values, mutation of reachable state, and statics/globals or external writes. The methods where those effects surface are the test points; code the change cannot affect needs no characterization. Characterize only the zone the plan will touch (targeted characterization), never the whole unit by default.
+
+## Pinch Points
+
+When a change spans a cluster of coupled classes, find the narrowest downstream point where their effects converge and anchor a temporary integration-level characterization test there ("test one level back"). Pinch-point tests are scaffolding: they trade defect localization and speed for coverage, so the plan must schedule their removal or demotion once unit-level tests exist at the new seams.
+
+## Test Priority
+
+Boundary conditions and the happy path rank highest; expected error paths rank medium; code that rarely changes ranks lowest. A few tests that would catch a real regression beat many trivial ones. When a bug is in scope, the first test is one that reproduces it.
 
 ## Test Types
 

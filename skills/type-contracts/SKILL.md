@@ -6,8 +6,8 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
-  status: in-progress
+  version: "1.0.1"
+  status: testing
 ---
 
 ## Activation Contract
@@ -25,7 +25,7 @@ Load this skill when reviewing refactor plans for: type contracts, Object, Map<S
 
 | Signal | Action |
 |---|---|
-| Concrete evidence exists | Create a finding with file, lines, symbol, benefit, validation, and rollback. |
+| Concrete evidence exists | Create a finding with `file:line` evidence and the smallest safe refactor. |
 | Evidence is incomplete | Mark as hypothesis and lower confidence. |
 | Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
 
@@ -34,11 +34,11 @@ Load this skill when reviewing refactor plans for: type contracts, Object, Map<S
 1. Inspect the target and nearby tests only as needed for this lens.
 2. Identify findings that match this skill's responsibility.
 3. Recommend the smallest safe behavior-preserving refactor.
-4. Add validation and rollback steps for each recommendation.
+4. Note validation and rollback implications where material; the calling agent decides where they land.
 
 ## Output Contract
 
-Return structured findings for the calling reviewer. Return `no_findings` when this lens has no material issue.
+Return findings in the calling agent's output contract — that contract wins over any field list here. Every finding carries `file:line` evidence or is marked hypothesis. Return `no_findings` when this lens has no material issue.
 
 ## References
 

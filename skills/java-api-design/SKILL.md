@@ -4,8 +4,8 @@ description: "Trigger: Java API design, public API, encapsulation, modules, visi
 license: MIT
 metadata:
   author: andresnator
-  status: backlog
-  version: "1.0.3"
+  status: testing
+  version: "1.0.4"
 ---
 
 # Skill: java-api-design

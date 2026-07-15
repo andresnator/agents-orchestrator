@@ -20,8 +20,8 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  status: testing
-  version: "1.2.0"
+  status: done
+  version: "1.3.0"
 ---
 
 # Refactoring Catalog (Multi-Language)
@@ -76,7 +76,7 @@ For detailed concept-to-language mappings, see `references/language-idioms.md`.
 1. **Detect** the language (Step 0 above)
 2. **Diagnose first**: Identify the code smell (see `techniques/00-code-smells-diagnostic.md`)
 3. **Check applicability**: See `references/language-applicability.md` for technique availability per language
-4. **Select technique**: Each smell maps to one or more refactoring techniques
+4. **Select technique**: Each smell maps to one or more refactoring techniques; when several compete, use `references/selection-heuristics.md` for the ordered decision rules
 5. **Read the technique file**: Each technique has multi-language examples (Python, TypeScript, Go, Rust)
 6. **For Java**: Read `references/java-notes.md`, use Java OOP/Stream idioms, honor Java 8 versus Java 11+ API availability, and finish with the Java completion gate
 7. **For language idiom mapping**: See `references/language-idioms.md`
@@ -206,3 +206,5 @@ These principles underpin every technique in the catalog:
 | `references/language-idioms.md` | Refactoring concept → {Python, TypeScript, Go, Rust} equivalents |
 | `references/language-applicability.md` | 62-technique × language applicability matrix with alternatives |
 | `references/java-notes.md` | Java-specific constraints, Java 8 vs 11+ notes, and the Java completion gate |
+| `references/selection-heuristics.md` | Ordered decision rules when several techniques compete: conditionals tree, smell directionality, falsifiable micro-tests, inheritance→delegation triggers |
+| `references/technique-to-pattern.md` | Which refactoring techniques land on which GoF pattern (Kerievsky bridge) |
