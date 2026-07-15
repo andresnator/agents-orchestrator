@@ -37,12 +37,12 @@ The orchestraitor also adopts plans drafted elsewhere: external planners (e.g. `
 
 Kickoff runs only after explicit SDD activation, asks one round of questions, and skips anything already stated in the request:
 
-| Pregunta | Opciones |
+| Question | Options |
 |---|---|
-| Profundidad | `light` (un solo `change.md` redactado inline, sin subagentes de drafting) / `full` (cuatro artefactos con subagentes de fase); el orchestraitor evalúa el alcance y propone una |
-| Modo | `interactivo` (entrevista + gates de confirmación) / `automático` (redacta, implementa y resume al final) |
-| TDD | test-first por tarea / tests junto a la implementación |
-| Juicio | `none` (sin review adversarial) / `light` (un solo juez `jd-solo`, fix automático solo de CRITICALs, una ronda, sin re-juicio) / `verdict-only` (jueces duales + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
+| Depth | `light` (single `change.md` drafted inline, no drafting subagents) / `full` (four artifacts via phase subagents); the orchestraitor assesses the scope and proposes one |
+| Mode | `interactive` (interview plus confirmation gates) / `automatic` (draft everything, implement, summarize at the end) |
+| TDD | test-first per task / tests alongside the implementation |
+| Judgment | `none` (no adversarial review) / `light` (one solo `jd-solo` judge, automatic fix of CRITICALs only, one round, no re-judge) / `verdict-only` (blind dual judges plus verdict, no fixes) / `full` (fixes plus the gated re-judge loop) |
 
 ```mermaid
 graph TD
