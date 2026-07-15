@@ -16,7 +16,7 @@ Restart OpenCode sessions after `on`/`off`; the config is read at startup.
 
 A complete `agent.<name>.permission` block in your user `opencode.json` (default `~/.config/opencode/opencode.json`) for every agent under `domains/sdd/agents/` plus the built-in `general` agent. Agents are discovered by glob, so new sdd agents are covered without editing the script. Every OpenCode permission key is set to `allow`, except keys the agent's repo frontmatter already sets, which are copied verbatim:
 
-- `jd-judge-a`, `jd-judge-b`, `sdd-explore`, `sdd-verify` keep `edit`/`write: deny`.
+- `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify` keep `edit`/`write: deny`.
 - `sdd-proposal`, `sdd-spec`, `sdd-tasks` keep `bash: deny`.
 - Every subagent keeps `question: deny`; the orchestraitor keeps `question: allow`.
 - The orchestraitor's `task` map (`"*": deny` plus the sdd subagent allowlist) is copied as-is.

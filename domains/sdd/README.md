@@ -1,13 +1,13 @@
 # SDD Domain
 
-Spec-driven development around one primary coordinator: `orchestraitor`. The SDD cycle is explicit opt-in: start it conversationally ("vamos con sdd", "usa SDD") or with equivalent clear intent. Without an SDD mention, `orchestraitor` executes directly and keeps `general` only for auxiliary chores. Use `/judgment` for a standalone adversarial review, and `/grill` (installed with the `common` domain) to run the grill interview router explicitly (`/grill [me|docs|sdd] <topic>`) instead of relying on trigger phrases. Judgment-day is a high-signal gate for high-risk, high-size, or SDD verification moments — not a default pre-commit/pre-push action; routine work gets a cheap single-reviewer check.
+Spec-driven development around one primary coordinator: `orchestraitor`. The SDD cycle is explicit opt-in: start it conversationally ("vamos con sdd", "usa SDD") or with equivalent clear intent. Without an SDD mention, `orchestraitor` executes directly and keeps `general` only for auxiliary chores. Use `/judgment` for a standalone adversarial review, and `/grill` (installed with the `common` domain) to run the grill interview router explicitly (`/grill [me|docs|sdd] <topic>`) instead of relying on trigger phrases. Judgment-day is a high-signal gate for high-risk, high-size, or SDD verification moments — not a default pre-commit/pre-push action; routine work gets the cheap single-reviewer check formalized as the skill's Light Mode (`/judgment light <target>`, one `jd-solo` judge, automatic fix of CRITICALs only, no re-judge).
 
 Agents:
 
 - `orchestraitor` (primary coordinator)
 - `sdd-explore` (read-only discovery)
 - `sdd-proposal`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-implement`, `sdd-verify` (single-responsibility phase subagents)
-- `jd-judge-a`, `jd-judge-b`, `jd-fix` (judgment-day review, opt-in)
+- `jd-judge-a`, `jd-judge-b`, `jd-solo`, `jd-fix` (judgment-day review, opt-in; `jd-solo` is the single light-mode judge)
 
 Code written in either mode follows the shared `code-conventions` skill (Andres's style contract: constants, test format, whole-object asserts, separate characterization classes); a consistent repo convention wins on conflict.
 
@@ -26,7 +26,7 @@ Kickoff runs only after explicit SDD activation, asks one round of questions, an
 | Profundidad | `light` (un solo `change.md` redactado inline, sin subagentes de drafting) / `full` (cuatro artefactos con subagentes de fase); el orchestraitor evalúa el alcance y propone una |
 | Modo | `interactivo` (entrevista + gates de confirmación) / `automático` (redacta, implementa y resume al final) |
 | TDD | test-first por tarea / tests junto a la implementación |
-| Juicio | `none` (sin review adversarial) / `verdict-only` (jueces + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
+| Juicio | `none` (sin review adversarial) / `light` (un solo juez `jd-solo`, fix automático solo de CRITICALs, una ronda, sin re-juicio) / `verdict-only` (jueces duales + veredicto, sin fixes) / `full` (fixes + loop de re-juicio con gates) |
 
 ```mermaid
 graph TD
@@ -41,7 +41,7 @@ graph TD
   design --> tasks
   tasks --> implement[sdd-implement]
   implement --> verify[sdd-verify]
-  verify --> jd[jd-judge-a / jd-judge-b / jd-fix]
+  verify --> jd[jd-judge-a / jd-judge-b / jd-solo / jd-fix]
   orch --> aux[general: auxiliary chores only]
   orch --> files[.ai/orchestrator specs + changes + archive]
 ```
@@ -61,6 +61,7 @@ sequenceDiagram
   participant V as sdd-verify
   participant JA as jd-judge-a
   participant JB as jd-judge-b
+  participant JS as jd-solo
   participant JF as jd-fix
 
   U->>O: vamos con sdd / usa SDD
@@ -96,16 +97,25 @@ sequenceDiagram
     I-->>O: resumen + validacion
   end
   opt judgment
-    par juicio ciego
-      O->>JA: review blind
-      JA-->>O: findings
-    and juicio ciego
-      O->>JB: review blind
-      JB-->>O: findings
-    end
-    opt full (o el usuario elige fix en el verdict gate)
-      O->>JF: findings confirmados
-      JF-->>O: fixes + tests
+    alt light
+      O->>JS: review blind (un solo juez)
+      JS-->>O: findings
+      opt CRITICALs
+        O->>JF: solo CRITICALs (max 1 ronda, sin re-juicio)
+        JF-->>O: fixes + tests
+      end
+    else verdict-only / full
+      par juicio ciego
+        O->>JA: review blind
+        JA-->>O: findings
+      and juicio ciego
+        O->>JB: review blind
+        JB-->>O: findings
+      end
+      opt full (o el usuario elige fix en el verdict gate)
+        O->>JF: findings confirmed + emphasis-confirmed
+        JF-->>O: fixes + tests
+      end
     end
   end
   O->>O: archive

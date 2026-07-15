@@ -20,12 +20,13 @@ Merge a block like this into your `opencode.json` (global for your default polic
     "sdd-implement": { "model": "anthropic/claude-sonnet-4-5", "variant": "high" },
     "sdd-verify":    { "model": "anthropic/claude-sonnet-4-5" },
     "jd-judge-a":    { "model": "openai/gpt-5.1" },
-    "jd-judge-b":    { "model": "google/gemini-2.5-pro" }
+    "jd-judge-b":    { "model": "google/gemini-2.5-pro" },
+    "jd-solo":       { "model": "anthropic/claude-haiku-4-5" }
   }
 }
 ```
 
-Putting `jd-judge-a` and `jd-judge-b` on different providers strengthens the blind adversarial review: the judges cannot share model-specific blind spots.
+Putting `jd-judge-a` and `jd-judge-b` on different providers strengthens the blind adversarial review: the judges cannot share model-specific blind spots. `jd-solo` is the single light-mode judge — mapping it to a cheap fast model is the point of the tier (profile tier `judge-solo`).
 
 ## Variants
 
