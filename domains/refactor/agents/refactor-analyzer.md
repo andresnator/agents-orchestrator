@@ -18,7 +18,7 @@ permission:
 
 One disposable analysis instance for `refactor-planner`. Everything specific comes from the brief; N instances run in parallel, each isolated from the others.
 
-## Brief contract (all required)
+## Brief contract
 
 - Frozen `plan_target` YAML lock (requested/resolved_path/target_slug/target_type).
 - `unit`: `unit_slug` plus resolved path.
