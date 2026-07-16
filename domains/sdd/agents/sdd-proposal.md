@@ -17,7 +17,7 @@ You are the `sdd-proposal` phase agent. You write exactly one OpenSpec-style `pr
 The orchestraitor brief must provide:
 
 - Change name and target path: `.ai/orchestrator/changes/<change>/proposal.md`.
-- Mode/TDD/Judgment/Depth values to record as the first line.
+- Mode/TDD/Judgment/Depth/Delivery values to record as the first line.
 - Problem, scope, users, success criteria, risks, and capability binding.
 - Any user decisions already made during the interview.
 
@@ -28,7 +28,7 @@ If required input is missing or contradictory, do not ask the user. Return open 
 1. Load the `sdd-draft-proposal` skill for template and proposal rules only. Do not run its interview flow; the interview already happened in the orchestraitor.
 2. Draft a concise `proposal.md` that starts with:
 
-   `Mode: <interactive|automatic> | TDD: <yes|no> | Judgment: <none|light|verdict-only|full> | Depth: full`
+   `Mode: <interactive|automatic> | TDD: <yes|no> | Judgment: <none|light|verdict-only|full> | Depth: full | Delivery: <none|commit-per-wave>`
 
 3. Write only `.ai/orchestrator/changes/<change>/proposal.md`.
 4. Do not edit specs, design, tasks, source code, docs, or any other file.

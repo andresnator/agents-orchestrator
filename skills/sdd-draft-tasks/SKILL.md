@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.1"
+  version: "2.1.0"
 ---
 
 ## Activation Contract
@@ -21,8 +21,10 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
 - Every task line MUST be `- [ ] X.Y {concrete action naming real files}`: Specific, Actionable, Verifiable, Small enough for one session. Never vague ("implement feature"). Testing tasks reference specific spec scenarios.
-- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the implementer.
-- Preserve the four Review Workload Forecast guard lines VERBATIM (the orchestraitor gates on them before implementing): `Decision needed before apply:`, `Chained PRs recommended:`, `Chain strategy:`, `400-line budget risk:`.
+- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the implementer; the `Files:` scopes exist so it can schedule safely.
+- Every group carries a `Files:` line right under its heading: the directories or globs its tasks will touch. Scopes are scheduling predictions, not enforcement — only groups with disjoint scopes and no shared hotspot may run as parallel waves downstream; a missing `Files:` line means that group serializes.
+- Fill the `Shared hotspots:` guard line with repo-wide collision points any group might touch (lockfiles/manifests, barrel or index files, DI/route registries, generated code, shared fixtures), or `none`.
+- Preserve the five forecast guard lines VERBATIM (the orchestraitor gates and schedules on them): `Decision needed before apply:`, `Chained PRs recommended:`, `Chain strategy:`, `400-line budget risk:`, `Shared hotspots:`.
 - Keep the artifact under 650 words. When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
 
 ## Decision Gates

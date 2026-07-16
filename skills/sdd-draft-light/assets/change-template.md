@@ -1,4 +1,4 @@
-Mode: {interactive|automatic} | TDD: {yes|no} | Judgment: {none|light|verdict-only|full} | Depth: light
+Mode: {interactive|automatic} | TDD: {yes|no} | Judgment: {none|light|verdict-only|full} | Depth: light | Delivery: {none|commit-per-wave}
 
 # Change: {title}
 
@@ -44,6 +44,13 @@ The system MUST {observable behavior}.
 (Reason: {why removal is correct})
 (Migration: {replacement, migration path, or None})
 
+#### RENAMED Requirements
+
+##### Requirement: {old-name} → {new-name}
+
+(Reason: {why rename is correct})
+(Migration: {references/tests/docs to update, or None})
+
 ## Tasks
 
 - [ ] 1.1 {Concrete action naming real files}
@@ -52,4 +59,5 @@ The system MUST {observable behavior}.
 <!-- Keep under 800 words total. Delta semantics are identical to full-depth
 delta files; at archive each capability block merges into
 specs/{capability}/spec.md. Omit empty ADDED/MODIFIED/REMOVED/RENAMED
-subsections. Tasks: dependency-ordered `- [ ] X.Y` naming real files. -->
+subsections. Tasks: dependency-ordered `- [ ] X.Y` naming real files; only
+multi-group changes add `### N. {group}` headings with a `Files:` scope line. -->

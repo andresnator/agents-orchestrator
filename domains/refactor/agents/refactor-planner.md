@@ -79,14 +79,14 @@ plan_target:
    - `proposal.md`: first line exactly `Status: ready-for-sdd | Source: refactor-planner`, then the proposal template. Why = risk evidence; What Changes = behavior-preserving refactors; Capabilities usually Modified; `follow_up` items go in Scope Out.
    - `specs/<capability>/spec.md`: delta template. Mostly ADDED behavior-preservation requirements whose scenarios are characterization captures of current behavior (WHEN current input THEN current observable output). Use MODIFIED only when a visible contract genuinely changes. On archive these merge into canonical specs, so each refactor progressively documents the system.
    - `design.md`: design template. Detected language/toolchain versions with evidence (from scope or tooling findings) and `code-conventions` deviation notes, technical approach, seams, task ordering rationale, rollback notes, a lens coverage table (ran/skipped with evidence-based skip reasons), and any drift blockers.
-   - `tasks.md`: tasks template verbatim, including the four Review Workload Forecast guard lines. Characterization/baseline group first. Small ordered `- [ ] X.Y` tasks naming real files and their validation evidence, sized for `sdd-implement` waves. Test tasks name the `code-conventions` format: Should/When naming, `// Given // When // Then` sections, unified asserts, whole-object asserts for complex outputs, characterization in its own class.
+   - `tasks.md`: tasks template verbatim, including the Review Workload Forecast guard lines and per-group `Files:` scopes. Characterization/baseline group first. Small ordered `- [ ] X.Y` tasks naming real files and their validation evidence, sized for `sdd-implement` waves. Test tasks name the `code-conventions` format: Should/When naming, `// Given // When // Then` sections, unified asserts, whole-object asserts for complex outputs, characterization in its own class.
 11. **Self-check** before reporting; fix violations first:
     - the `Status: ready-for-sdd | Source: refactor-planner` marker is proposal.md's first line;
     - all four artifacts exist per bundle;
     - every task line matches `- [ ] X.Y` and names real files;
     - every finding is evidence-backed (`file:line`) or explicitly marked hypothesis;
     - no behavior-changing task in `tasks.md`; hypotheses and behavior changes live only in follow-up/Scope Out;
-    - the four forecast guard lines are verbatim;
+    - the forecast guard lines are verbatim;
     - every spec scenario is observable and testable.
 12. **Report**: 1-3 lines per bundle with the bundle path and the adoption hint: run the sdd `orchestraitor` with "ejecuta el plan <change>". A deeper adversarial review is the user's call via `/judgment`.
 

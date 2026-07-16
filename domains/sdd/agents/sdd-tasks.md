@@ -28,7 +28,8 @@ If required input is missing or contradictory, do not ask the user. Return open 
 2. Read proposal, specs, and design from disk.
 3. Write only `.ai/orchestrator/changes/<change>/tasks.md`.
 4. Use dependency-ordered checklist groups. Make dependencies explicit so the orchestraitor can batch implementation waves safely.
-5. Preserve the Review Workload Forecast guard lines required by the skill.
+5. Give every group a `Files:` scope line (directories/globs it will touch) and fill the `Shared hotspots:` guard line per the skill — the orchestraitor only parallelizes groups with disjoint scopes and no shared hotspot.
+6. Preserve the Review Workload Forecast guard lines required by the skill.
 
 ## Output
 
