@@ -27,9 +27,10 @@ If required input is missing or contradictory, do not ask the user. Return open 
 ## Procedure
 
 1. Read the referenced planning artifacts (proposal/specs/design/tasks, or `change.md` for light-depth changes) and the implementation files. When the brief names a diff range, review the changes in that range (`git diff <range>`), not the working-tree diff — after commits the working tree is clean and its default diff is empty.
-2. Run read-only validation commands as needed. Do not edit files, write artifacts, update checkboxes, or change state.
-3. For each spec scenario, report `PASS` or `FAIL` with evidence: `file:line` and/or test output summary.
-4. Convert every failure into an actionable gap suitable for an `sdd-implement` fix brief.
+2. For structural context (callers of changed code, blast radius of the diff), be CodeGraph-first: check `.codegraph/` and use the `codegraph_explore` MCP tool before grep or file crawling; if the MCP tool is unavailable, use the read-only CodeGraph CLI via bash (`codegraph status | query | explore | node | files | callers | callees | impact | affected`); fall back to filesystem tools only if both fail. Never run CodeGraph lifecycle commands (`codegraph init`, index rebuilds). Needing more than 3 files for one scenario means the question is too broad — narrow the CodeGraph query.
+3. Run read-only validation commands as needed. Do not edit files, write artifacts, update checkboxes, or change state.
+4. For each spec scenario, report `PASS` or `FAIL` with evidence: `file:line` and/or test output summary.
+5. Convert every failure into an actionable gap suitable for an `sdd-implement` fix brief.
 
 ## Output
 

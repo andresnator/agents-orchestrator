@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 ## Activation Contract
@@ -24,7 +24,7 @@ Use when planning a feature, change, bugfix, or technical decision and the user 
 
 The four disciplines, applied as reasoning habits rather than pipeline phases:
 
-1. **Evidence before opinion.** Never propose a design without having read the relevant code. Explore first: existing implementations, contracts, callers, test patterns. Reuse-first — search for existing functions, utilities, and patterns before proposing new code, and name everything reused as `path:symbol`. Record considered alternatives in one line each with why they were rejected. No speculative abstractions.
+1. **Evidence before opinion.** Never propose a design without having read the relevant code. Explore first: existing implementations, contracts, callers, test patterns. Prefer a code-graph index (for example, CodeGraph MCP/CLI) for symbols, callers, and impact when one is available, before file-by-file search. Reuse-first — search for existing functions, utilities, and patterns before proposing new code, and name everything reused as `path:symbol`. Record considered alternatives in one line each with why they were rejected. No speculative abstractions.
 2. **Minimal calibrated questions.** The question test: if the repo can answer it, explore instead of asking. Only decisions that are genuinely the user's (scope, product trade-offs, acceptance criteria) reach the user — one grouped round after exploring, each question with a recommended answer first, skipping anything already stated in the request and never re-asking a decided question. Present via the `grilling` and `native-question-ux` skills when installed; otherwise plain chat. Record each answer as a decision in the plan's Context. See `references/question-economy.md`.
 3. **Edge-case validation (the distinctive step).** Before closing the design, walk each branch of it against `references/edge-validation.md`: what inputs or states break this? Apply the three-destinations rule and build the plan's Edge Case Matrix (`edge | decision | where`). Open questions from this step get at most one extra mini-round.
 4. **Outcome-first selectivity.** The plan opens with Context: what is being done, why, and the decisions already made with their rationale. Include only what changes what the executor will do; omit detail that alters no action. Depth is proportional to the task — a small task gets a short plan, and non-contributing sections are omitted, not padded.

@@ -12,7 +12,7 @@ Compatibility target: OpenCode `1.17.15` and CodeGraph `1.4.1`.
    npm install -g @colbymchenry/codegraph@1.4.1
    ```
 
-2. Merge `mcp.codegraph` into your existing user or project `opencode.jsonc`:
+2. Merge `mcp.codegraph` into your existing user or project `opencode.jsonc`. This minimal entry is the recommended configuration for this repository's domains (see MCP options below):
 
    ```jsonc
    {
@@ -37,7 +37,7 @@ Do not run the CodeGraph OpenCode wizard. It writes agent instructions and can r
 
 ## MCP options
 
-`codegraph_explore` is the default MCP tool and covers most structural questions. Expose extra tools only when a workflow needs them:
+**Recommended: the minimal entry from step 2.** `codegraph_explore` is the default MCP tool and covers most structural questions; it is the only MCP tool this repository's agents reference (plan, refactor, and sdd domains) — agents with shell access reach the finer verbs (`callers`, `impact`, `node`, …) through the read-only CLI instead. Every extra exposed tool adds its schema to each session's context, so expose extra tools only when a workflow explicitly needs them via MCP:
 
 ```jsonc
 {
@@ -106,7 +106,7 @@ Other common recovery checks:
 
 The installed global rules make structural exploration CodeGraph-first when a healthy index exists. Agents use `codegraph_explore`, then read-only CLI queries when permitted, and finally normal LSP/filesystem tools as fallback.
 
-Domain-specific restrictions still win. SDD agents retain their stricter lifecycle and read-only rules, while `deep-planner` explicitly uses the MCP graph first and falls back because its shell access is denied.
+Domain-specific restrictions still win. SDD agents retain their stricter lifecycle and read-only rules, while `deep-planner`, `refactor-planner`, and `refactor-analyzer` use the MCP graph only and fall back, because their shell access does not allow the CodeGraph CLI. The refactor planner probes the index once and passes `codegraph: available | absent` in its analyzer briefs so fan-out instances do not re-probe.
 
 ## Measure the benefit (A/B)
 

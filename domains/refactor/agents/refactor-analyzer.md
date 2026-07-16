@@ -24,15 +24,17 @@ One disposable analysis instance for `refactor-planner`. Everything specific com
 - `unit`: `unit_slug` plus resolved path.
 - `lens`: name, exact skill list to load, focus questions.
 - Output budget.
+- Optional `codegraph: available | absent` — the planner's index probe result; trust it instead of re-checking.
 
 If a required input is missing, return `blockers` naming it and stop.
 
 ## Procedure
 
 1. Load exactly the skills listed in the brief, no more. If a listed skill is unavailable, report the lens as skipped in `nf` with the reason instead of failing. When the brief lists the `refactor` catalog skill, read its `SKILL.md` only and use its canonical technique names in `technique:`; open an individual `techniques/` file only to verify a technique you cite.
-2. Analyze only the given unit through the given lens.
-3. Treat the lock as authoritative: never re-resolve the target. Echo `target_path` (from `plan_target.resolved_path`), `target_slug`, and `unit_slug` exactly as received.
-4. Read-only: no edits, writes, shell commands, web fetches, or nested tasks.
+2. For structural context (callers, callees, impact), be CodeGraph-first: unless the brief says `codegraph: absent`, use the `codegraph_explore` MCP tool before grep, glob, or file crawling; if the tool is unavailable, continue with read/grep/glob/lsp. Never run CodeGraph lifecycle commands (`codegraph init`, index rebuilds). Needing more than 3 files for one lens question means the question is too broad — narrow the CodeGraph query instead of reading more files.
+3. Analyze only the given unit through the given lens.
+4. Treat the lock as authoritative: never re-resolve the target. Echo `target_path` (from `plan_target.resolved_path`), `target_slug`, and `unit_slug` exactly as received.
+5. Read-only: no edits, writes, shell commands, web fetches, or nested tasks.
 
 ## Output contract
 
