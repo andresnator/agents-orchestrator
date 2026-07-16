@@ -10,15 +10,19 @@ const CODEGRAPH_PACKAGE = "@colbymchenry/codegraph@1.4.1"
 const GIT_BINARY = "git"
 const AUTOINIT_ENV = "OPENCODE_CODEGRAPH_AUTOINIT"
 const CODEGRAPH_DIR_ENV = "CODEGRAPH_DIR"
-const AUTOINIT_ENABLED = "1"
+const AUTOINIT_OPT_OUT = "0"
 const STATUS_ARGS = ["status"] as const
 const INIT_ARGS = ["init"] as const
+const INDEX_ARGS = ["index"] as const
 const JSON_FLAG = "--json"
 const FORCE_FLAG = "--force"
 const GIT_EXCLUDE_ARGS = ["rev-parse", "--is-inside-work-tree", "--git-path", "info/exclude"] as const
 const GIT_WORK_TREE_RESULT = "true"
 const NOT_GIT_REPOSITORY_ERROR = "not a git repository"
 const DEFAULT_INDEX_DIR = ".codegraph"
+const IGNORED_DIRECTORY_NAMES = new Set(["node_modules"])
+const NESTED_REPO_MAX_DEPTH = 2
+const MAX_SUMMARY_FAILURES = 3
 const MAX_ERROR_OUTPUT_LENGTH = 1_000
 const INFO_DURATION_MS = 5_000
 const WARNING_DURATION_MS = 8_000
@@ -93,6 +97,24 @@ const incompleteMessage = (repo: string, state: IndexState, command: string) => 
 
 const processFailureMessage = (repo: string, command: string) =>
   `CodeGraph indexing failed for ${repo}, but this session is still operational. Run: ${command}`
+
+const repairStartMessage = (repo: string) =>
+  `CodeGraph is repairing the ${repo} index in the background. You can keep working.`
+
+const repositoriesLabel = (count: number) => `${count} ${count === 1 ? "repository" : "repositories"}`
+
+const aggregateStartMessage = (count: number, rootName: string) =>
+  `CodeGraph is indexing ${repositoriesLabel(count)} under ${rootName} in the background. You can keep working.`
+
+const aggregateSuccessMessage = (count: number, rootName: string, elapsed: string) =>
+  `CodeGraph indexed ${repositoriesLabel(count)} under ${rootName} in ${elapsed}.`
+
+const aggregateFailureMessage = (okCount: number, total: number, rootName: string, failedNames: string[]) => {
+  const shown = failedNames.slice(0, MAX_SUMMARY_FAILURES)
+  const overflow = failedNames.length - shown.length
+  const list = overflow > 0 ? `${shown.join(", ")}, +${overflow} more` : shown.join(", ")
+  return `CodeGraph indexed ${okCount} of ${total} repositories under ${rootName}. Failed: ${list}. Run: ${CODEGRAPH_BINARY} status <repo> ${JSON_FLAG}`
+}
 
 function projectRoot(input: { worktree?: string; directory: string }) {
   const worktree = input.worktree ?? ""
@@ -304,72 +326,188 @@ async function ensureGitExclude(root: string, indexPath: string) {
   }
 }
 
-async function initializeCodeGraph(input: ToastInput & { root: string }) {
-  if (process.env[AUTOINIT_ENV] !== AUTOINIT_ENABLED) return
+type RepoAction = "init" | "repair"
 
-  const { root } = input
-  const repo = repoName(root)
+type RepoOutcome =
+  | { kind: "healthy" }
+  | { kind: "ready"; action: RepoAction; fileCount: number }
+  | { kind: "missing-binary" }
+  | { kind: "status-failed" }
+  | { kind: "action-failed"; action: RepoAction }
+  | { kind: "incomplete"; action: RepoAction; state: IndexState }
+
+// Drive one repository's index to a healthy state. The caller emits toasts; onStart runs
+// immediately before the init/repair process spawns so a presenter can time it and announce it.
+async function ensureRepoIndex(root: string, onStart: (action: RepoAction) => Promise<void>): Promise<RepoOutcome> {
   const initial = await readStatus(root)
-  if (isMissingBinary(initial.result)) {
-    await showToastBestEffort(input, missingBinaryMessage(), TOAST_VARIANTS.WARNING, WARNING_DURATION_MS)
-    return
-  }
+  if (isMissingBinary(initial.result)) return { kind: "missing-binary" }
   if (!initial.status) {
     const detail = initial.result.error ? errorMessage(initial.result.error) : initial.result.stderr.trim()
-    if (detail) console.error(`${LOG_PREFIX} status failed: ${detail}`)
-    await showToastBestEffort(
-      input,
-      processFailureMessage(repo, recoveryStatusCommand(root)),
-      TOAST_VARIANTS.ERROR,
-      ERROR_DURATION_MS,
-    )
-    return
+    if (detail) console.error(`${LOG_PREFIX} status failed for ${root}: ${detail}`)
+    return { kind: "status-failed" }
   }
-  if (isHealthy(initial.status)) return
-  if (initial.status.initialized) {
-    await showToastBestEffort(
-      input,
-      incompleteMessage(repo, initial.status.index?.state ?? null, recoveryIndexCommand(root)),
-      TOAST_VARIANTS.WARNING,
-      WARNING_DURATION_MS,
-    )
-    return
-  }
+  if (isHealthy(initial.status)) return { kind: "healthy" }
 
-  await showToastBestEffort(input, startMessage(repo), TOAST_VARIANTS.INFO, INFO_DURATION_MS)
-  const startedAt = Date.now()
-  const init = await runCodeGraph([...INIT_ARGS, root], root, false)
-  if (init.error || init.exitCode !== 0) {
-    const detail = init.error ? errorMessage(init.error) : init.stderr.trim()
-    if (detail) console.error(`${LOG_PREFIX} init failed: ${detail}`)
-    await showToastBestEffort(
-      input,
-      processFailureMessage(repo, recoveryStatusCommand(root)),
-      TOAST_VARIANTS.ERROR,
-      ERROR_DURATION_MS,
-    )
-    return
+  const action: RepoAction = initial.status.initialized ? "repair" : "init"
+  const args = action === "repair" ? [...INDEX_ARGS, root, FORCE_FLAG] : [...INIT_ARGS, root]
+
+  await onStart(action)
+  const run = await runCodeGraph(args, root, false)
+  if (run.error || run.exitCode !== 0) {
+    const detail = run.error ? errorMessage(run.error) : run.stderr.trim()
+    if (detail) console.error(`${LOG_PREFIX} ${action} failed for ${root}: ${detail}`)
+    return { kind: "action-failed", action }
   }
 
   const final = await readStatus(root)
   if (!final.status || !isHealthy(final.status)) {
-    const state = final.status?.index?.state ?? null
+    return { kind: "incomplete", action, state: final.status?.index?.state ?? null }
+  }
+
+  await ensureGitExclude(root, resolvedIndexPath(final.status, root))
+  return { kind: "ready", action, fileCount: final.status.fileCount ?? 0 }
+}
+
+async function initializeSingleRoot(input: ToastInput, root: string) {
+  const repo = repoName(root)
+  let startedAt = Date.now()
+  const onStart = async (action: RepoAction) => {
+    startedAt = Date.now()
+    const message = action === "repair" ? repairStartMessage(repo) : startMessage(repo)
+    await showToastBestEffort(input, message, TOAST_VARIANTS.INFO, INFO_DURATION_MS)
+  }
+
+  const outcome = await ensureRepoIndex(root, onStart)
+  switch (outcome.kind) {
+    case "healthy":
+      return
+    case "missing-binary":
+      await showToastBestEffort(input, missingBinaryMessage(), TOAST_VARIANTS.WARNING, WARNING_DURATION_MS)
+      return
+    case "status-failed":
+    case "action-failed":
+      await showToastBestEffort(
+        input,
+        processFailureMessage(repo, recoveryStatusCommand(root)),
+        TOAST_VARIANTS.ERROR,
+        ERROR_DURATION_MS,
+      )
+      return
+    case "incomplete":
+      await showToastBestEffort(
+        input,
+        incompleteMessage(repo, outcome.state, recoveryIndexCommand(root)),
+        TOAST_VARIANTS.WARNING,
+        WARNING_DURATION_MS,
+      )
+      return
+    case "ready":
+      await showToastBestEffort(
+        input,
+        successMessage(repo, outcome.fileCount, formatElapsed(Date.now() - startedAt)),
+        TOAST_VARIANTS.SUCCESS,
+        INFO_DURATION_MS,
+      )
+      return
+  }
+}
+
+async function hasGitEntry(dir: string) {
+  try {
+    const stat = await fs.stat(path.join(dir, ".git"))
+    return stat.isDirectory() || stat.isFile()
+  } catch {
+    return false
+  }
+}
+
+// Find git repositories nested up to NESTED_REPO_MAX_DEPTH directory levels below a non-git
+// workspace root. Symlinked directories are skipped (no cycle/escape risk); a directory holding
+// a .git entry is a repository and is not descended into (its children are submodule territory).
+async function discoverNestedRepos(root: string) {
+  const repos: string[] = []
+
+  async function scan(dir: string, depth: number) {
+    let entries
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      if (entry.name.startsWith(".") || IGNORED_DIRECTORY_NAMES.has(entry.name)) continue
+      const child = path.join(dir, entry.name)
+      if (await hasGitEntry(child)) {
+        repos.push(child)
+        continue
+      }
+      if (depth < NESTED_REPO_MAX_DEPTH) await scan(child, depth + 1)
+    }
+  }
+
+  await scan(root, 1)
+  return repos.sort((a, b) => a.localeCompare(b))
+}
+
+async function initializeAggregate(input: ToastInput, root: string, repos: string[]) {
+  const rootName = repoName(root)
+
+  // Classify first so an already-healthy workspace stays silent and a missing binary surfaces
+  // exactly one warning before any start toast. Unreadable status is left as work; the engine
+  // re-reads it and reports the failure uniformly.
+  const work: string[] = []
+  for (const repo of repos) {
+    const status = await readStatus(repo)
+    if (isMissingBinary(status.result)) {
+      await showToastBestEffort(input, missingBinaryMessage(), TOAST_VARIANTS.WARNING, WARNING_DURATION_MS)
+      return
+    }
+    if (status.status && isHealthy(status.status)) continue
+    work.push(repo)
+  }
+  if (work.length === 0) return
+
+  await showToastBestEffort(input, aggregateStartMessage(work.length, rootName), TOAST_VARIANTS.INFO, INFO_DURATION_MS)
+  const startedAt = Date.now()
+  const failed: string[] = []
+  for (const repo of work) {
+    const outcome = await ensureRepoIndex(repo, async () => {})
+    if (outcome.kind !== "ready" && outcome.kind !== "healthy") failed.push(repo)
+  }
+
+  if (failed.length === 0) {
     await showToastBestEffort(
       input,
-      incompleteMessage(repo, state, recoveryIndexCommand(root)),
-      TOAST_VARIANTS.WARNING,
-      WARNING_DURATION_MS,
+      aggregateSuccessMessage(work.length, rootName, formatElapsed(Date.now() - startedAt)),
+      TOAST_VARIANTS.SUCCESS,
+      INFO_DURATION_MS,
     )
     return
   }
 
-  await ensureGitExclude(root, resolvedIndexPath(final.status, root))
   await showToastBestEffort(
     input,
-    successMessage(repo, final.status.fileCount ?? 0, formatElapsed(Date.now() - startedAt)),
-    TOAST_VARIANTS.SUCCESS,
-    INFO_DURATION_MS,
+    aggregateFailureMessage(
+      work.length - failed.length,
+      work.length,
+      rootName,
+      failed.map((repo) => path.relative(root, repo)),
+    ),
+    TOAST_VARIANTS.WARNING,
+    WARNING_DURATION_MS,
   )
+}
+
+async function initializeCodeGraph(input: ToastInput & { root: string }) {
+  if (process.env[AUTOINIT_ENV] === AUTOINIT_OPT_OUT) return
+
+  const { root } = input
+  if (await hasGitEntry(root)) return initializeSingleRoot(input, root)
+
+  const repos = await discoverNestedRepos(root)
+  if (repos.length === 0) return initializeSingleRoot(input, root)
+  return initializeAggregate(input, root, repos)
 }
 
 export const CodeGraphInitPlugin: Plugin = async (input) => {

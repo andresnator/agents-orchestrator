@@ -15,7 +15,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
-- `domains/common/plugins/codegraph-init.ts` is the opt-in, non-blocking CodeGraph initializer; setup and recovery live in `docs/codegraph.md`.
+- `domains/common/plugins/codegraph-init.ts` is the default-on (opt out with `OPENCODE_CODEGRAPH_AUTOINIT=0`), non-blocking CodeGraph initializer and repairer; setup and recovery live in `docs/codegraph.md`.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores reference docs for live mechanisms.

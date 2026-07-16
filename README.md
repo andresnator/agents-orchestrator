@@ -47,6 +47,6 @@ CodeGraph gives agents a local structural index for symbol, caller, and impact e
 npm install -g @colbymchenry/codegraph@1.4.1
 ```
 
-Do not run the CodeGraph OpenCode wizard: it can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. See [docs/codegraph.md](docs/codegraph.md) for the safe JSONC merge, opt-in background indexing, recovery, and A/B measurement procedure.
+Do not run the CodeGraph OpenCode wizard: it can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. See [docs/codegraph.md](docs/codegraph.md) for the safe JSONC merge, default-on background indexing and repair, recovery, and A/B measurement procedure.
 
 See `AGENTS.md` for the editing contract before changing components.

@@ -34,7 +34,7 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 
 - In a repository with a healthy CodeGraph index, explore structure CodeGraph-first: use `codegraph_explore` before grep, glob, or file-by-file reading for symbols, callers, callees, flows, and impact.
 - If the MCP tool is unavailable, use only read-only CodeGraph CLI queries (`status`, `query`, `explore`, `node`, `files`, `callers`, `callees`, `impact`, `affected`) when the agent has shell access.
-- Never run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`) on your own. The opt-in `codegraph-init` plugin owns first initialization; incomplete indexes require user recovery.
+- Never run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`) on your own. The `codegraph-init` plugin owns initialization and automatic repair; leave any remaining recovery to the user.
 - If the index is absent, unhealthy, or unavailable, continue with the runtime's normal read, LSP, grep, and glob tools without friction.
 - More restrictive domain rules win. In particular, SDD agents keep their own read-only and authorization boundaries.
 

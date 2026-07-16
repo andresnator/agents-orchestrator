@@ -245,12 +245,21 @@ start_server() {
   SERVER_LOG="$SUITE_DIR/$name.server.log"
   : >"$EVENTS_FILE"
 
+  # The sentinel "unset" launches with OPENCODE_CODEGRAPH_AUTOINIT truly absent (env -u),
+  # so an ambient value from the parent shell cannot leak in and mask default-on behavior.
+  local -a autoinit_prefix
+  if [[ "$autoinit" == unset ]]; then
+    autoinit_prefix=(env -u OPENCODE_CODEGRAPH_AUTOINIT)
+  else
+    autoinit_prefix=(env "OPENCODE_CODEGRAPH_AUTOINIT=$autoinit")
+  fi
+
   HOME="$HOME_DIR" \
     XDG_CONFIG_HOME="$XDG_DIR" \
     PATH="$path_value" \
-    OPENCODE_CODEGRAPH_AUTOINIT="$autoinit" \
     CODEGRAPH_DIR="$codegraph_dir" \
     FAKE_CODEGRAPH_LOG="$FAKE_LOG" \
+    "${autoinit_prefix[@]}" \
     "$OPENCODE_BIN" serve --hostname 127.0.0.1 --port "$PORT" --print-logs --log-level ERROR \
     >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
@@ -301,6 +310,16 @@ count_init_calls() {
   grep -Fc "init|$root|" "$FAKE_LOG" || true
 }
 
+count_index_calls() {
+  local root=$1
+  if [[ ! -f "$FAKE_LOG" ]]; then
+    printf '0\n'
+    return
+  fi
+  # "init|" never appears inside an "index|" line, so this counts repairs only.
+  grep -Fc "index|$root|" "$FAKE_LOG" || true
+}
+
 mkdir -p "$HOME_DIR" "$TARGET_DIR" "$FAKE_BIN_DIR" "$SUITE_DIR/repos"
 
 cat >"$FAKE_BIN_DIR/codegraph" <<'FAKE_CODEGRAPH'
@@ -328,23 +347,37 @@ case "$command_name" in
         exit 0
         ;;
       status-null-repo)
-        printf '{"initialized":true,"indexPath":"%s","fileCount":0,"index":{"state":null}}\n' "$index_dir"
-        exit 0
+        # Repairs to complete once the fake index --force writes the ready marker.
+        if [[ -f "$state_dir/ready" ]]; then
+          state=complete
+          initialized=true
+        else
+          printf '{"initialized":true,"indexPath":"%s","fileCount":0,"index":{"state":null}}\n' "$index_dir"
+          exit 0
+        fi
         ;;
       healthy-repo)
         state=complete
         initialized=true
         ;;
-      partial-repo)
+      partial-repo | failed-index-repo | abandoned-repo)
+        # Unhealthy until a fake index --force writes the ready marker, then complete.
+        if [[ -f "$state_dir/ready" ]]; then
+          state=complete
+          initialized=true
+        else
+          case "$repo_name" in
+            partial-repo) state=partial ;;
+            failed-index-repo) state=failed ;;
+            abandoned-repo) state=indexing ;;
+          esac
+          initialized=true
+        fi
+        ;;
+      repair-fail-repo | repair-incomplete-repo)
+        # Stay partial regardless of markers: repair-fail-repo's index exits non-zero;
+        # repair-incomplete-repo's index succeeds but the index never becomes complete.
         state=partial
-        initialized=true
-        ;;
-      failed-index-repo)
-        state=failed
-        initialized=true
-        ;;
-      abandoned-repo)
-        state=indexing
         initialized=true
         ;;
       *)
@@ -378,6 +411,18 @@ case "$command_name" in
     mkdir -p "$index_dir"
     : >"$state_dir/ready"
     : >"$state_dir/init-finished"
+    ;;
+  index)
+    # Repair path (index --force). Non-blocking: no release handshake.
+    [[ "${3:-}" == "--force" ]] || { echo "index called without --force" >&2; exit 64; }
+    : >"$state_dir/index-started"
+    if [[ "$repo_name" == repair-fail-repo ]]; then
+      echo "synthetic index failure" >&2
+      exit 9
+    fi
+    mkdir -p "$index_dir"
+    : >"$state_dir/ready"
+    : >"$state_dir/index-finished"
     ;;
   *)
     echo "unexpected fake CodeGraph command: $command_name" >&2
@@ -444,7 +489,7 @@ shouldStaySilentWhenHealthyAndIdempotent() {
   cleanup_processes
 }
 
-shouldWarnOrErrorWithoutRepairingUnhealthyIndexes() {
+shouldRepairUnhealthyIndexesAutomatically() {
   # Given
   local partial_root
   local failed_index_root
@@ -462,31 +507,50 @@ shouldWarnOrErrorWithoutRepairingUnhealthyIndexes() {
   request_config "$abandoned_root" "$SUITE_DIR/abandoned.config.json"
   request_config "$failed_root" "$SUITE_DIR/failed.config.json"
 
-  # Then
-  wait_for_pattern "CodeGraph index for partial-repo is incomplete (index state is partial)." "$EVENTS_FILE"
-  wait_for_pattern "CodeGraph index for failed-index-repo is incomplete (index state is failed)." "$EVENTS_FILE"
-  wait_for_pattern "CodeGraph index for abandoned-repo is incomplete (indexing appears abandoned)." "$EVENTS_FILE"
+  # Then: initialized-but-unhealthy indexes are repaired with index --force, not init.
+  wait_for_pattern "CodeGraph is repairing the partial-repo index in the background." "$EVENTS_FILE"
+  wait_for_pattern "CodeGraph index for partial-repo is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
+  wait_for_pattern "CodeGraph index for failed-index-repo is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
+  wait_for_pattern "CodeGraph index for abandoned-repo is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
   wait_for_pattern "CodeGraph indexing failed for fail-repo, but this session is still operational." "$EVENTS_FILE"
   assert_toast \
-    "CodeGraph index for partial-repo is incomplete (index state is partial). Run: codegraph index '$partial_root' --force" \
-    warning \
-    "$RECOVERY_DURATION_MS"
+    "CodeGraph is repairing the partial-repo index in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
   assert_toast \
-    "CodeGraph index for failed-index-repo is incomplete (index state is failed). Run: codegraph index '$failed_index_root' --force" \
-    warning \
-    "$RECOVERY_DURATION_MS"
+    "CodeGraph is repairing the failed-index-repo index in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
   assert_toast \
-    "CodeGraph index for abandoned-repo is incomplete (indexing appears abandoned). Run: codegraph index '$abandoned_root' --force" \
-    warning \
-    "$RECOVERY_DURATION_MS"
+    "CodeGraph is repairing the abandoned-repo index in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+  assert_toast_message_pattern \
+    "CodeGraph index for partial-repo is ready: $FAKE_FILE_COUNT files in [0-9]+\\.[0-9]s\\." \
+    success \
+    "$INFO_DURATION_MS"
+  assert_toast_message_pattern \
+    "CodeGraph index for failed-index-repo is ready: $FAKE_FILE_COUNT files in [0-9]+\\.[0-9]s\\." \
+    success \
+    "$INFO_DURATION_MS"
+  assert_toast_message_pattern \
+    "CodeGraph index for abandoned-repo is ready: $FAKE_FILE_COUNT files in [0-9]+\\.[0-9]s\\." \
+    success \
+    "$INFO_DURATION_MS"
+  # An uninitialized index still uses init, and its failure still surfaces an error toast.
   assert_toast \
     "CodeGraph indexing failed for fail-repo, but this session is still operational. Run: codegraph status '$failed_root'" \
     error \
     "$RECOVERY_DURATION_MS"
-  [[ $(count_init_calls "$partial_root") -eq 0 ]] || fail "partial index was repaired automatically"
-  [[ $(count_init_calls "$failed_index_root") -eq 0 ]] || fail "failed index was repaired automatically"
-  [[ $(count_init_calls "$abandoned_root") -eq 0 ]] || fail "abandoned index was repaired automatically"
+  [[ $(count_index_calls "$partial_root") -eq 1 ]] || fail "partial index was not repaired exactly once"
+  [[ $(count_index_calls "$failed_index_root") -eq 1 ]] || fail "failed index was not repaired exactly once"
+  [[ $(count_index_calls "$abandoned_root") -eq 1 ]] || fail "abandoned index was not repaired exactly once"
+  [[ $(count_init_calls "$partial_root") -eq 0 ]] || fail "repair used init instead of index"
+  [[ $(count_init_calls "$failed_index_root") -eq 0 ]] || fail "repair used init instead of index"
+  [[ $(count_init_calls "$abandoned_root") -eq 0 ]] || fail "repair used init instead of index"
+  [[ $(count_index_calls "$failed_root") -eq 0 ]] || fail "uninitialized repo was repaired instead of initialized"
   [[ $(count_init_calls "$failed_root") -eq 1 ]] || fail "failed case did not attempt init exactly once"
+  grep -Fxq '.codegraph/' "$partial_root/.git/info/exclude" || fail "repaired index was not Git-excluded"
   cleanup_processes
 }
 
@@ -515,10 +579,12 @@ shouldUseRecoveryOnlyWhenStatusPayloadIsUnsafe() {
     "$RECOVERY_DURATION_MS"
   [[ $(count_init_calls "$malformed_root") -eq 0 ]] || fail "malformed status triggered lifecycle mutation"
   [[ $(count_init_calls "$unknown_root") -eq 0 ]] || fail "unknown status triggered lifecycle mutation"
+  [[ $(count_index_calls "$malformed_root") -eq 0 ]] || fail "malformed status triggered index repair"
+  [[ $(count_index_calls "$unknown_root") -eq 0 ]] || fail "unknown status triggered index repair"
   cleanup_processes
 }
 
-shouldWarnWhenInitializedIndexStateIsNull() {
+shouldRepairWhenInitializedIndexStateIsNull() {
   # Given
   local root
   root=$(make_repo status-null-repo)
@@ -527,14 +593,19 @@ shouldWarnWhenInitializedIndexStateIsNull() {
   # When
   request_config "$root" "$SUITE_DIR/status-null.config.json"
 
-  # Then
-  wait_for_pattern "CodeGraph index for status-null-repo is incomplete (index state is unknown)." "$EVENTS_FILE"
+  # Then: an initialized index with an unknown (null) state is treated as unhealthy and repaired.
+  wait_for_pattern "CodeGraph is repairing the status-null-repo index in the background." "$EVENTS_FILE"
+  wait_for_pattern "CodeGraph index for status-null-repo is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
   assert_toast \
-    "CodeGraph index for status-null-repo is incomplete (index state is unknown). Run: codegraph index '$root' --force" \
-    warning \
-    "$RECOVERY_DURATION_MS" \
-    1
-  [[ $(count_init_calls "$root") -eq 0 ]] || fail "null index state triggered lifecycle mutation"
+    "CodeGraph is repairing the status-null-repo index in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+  assert_toast_message_pattern \
+    "CodeGraph index for status-null-repo is ready: $FAKE_FILE_COUNT files in [0-9]+\\.[0-9]s\\." \
+    success \
+    "$INFO_DURATION_MS"
+  [[ $(count_index_calls "$root") -eq 1 ]] || fail "null index state was not repaired exactly once"
+  [[ $(count_init_calls "$root") -eq 0 ]] || fail "null index state used init instead of index"
   cleanup_processes
 }
 
@@ -597,6 +668,139 @@ shouldExcludeIndexFromLinkedWorktreeGitMetadata() {
   cleanup_processes
 }
 
+shouldRunByDefaultWithoutEnvironmentFlag() {
+  # Given
+  local root
+  root=$(make_repo default-on-repo)
+  start_server default-on unset "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/default-on.config.json"
+
+  # Then: the initializer runs with OPENCODE_CODEGRAPH_AUTOINIT absent (default-on).
+  wait_for_file "$root/.fake-codegraph/init-started"
+  wait_for_pattern "CodeGraph is indexing default-on-repo in the background." "$EVENTS_FILE"
+  assert_toast \
+    "CodeGraph is indexing default-on-repo in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+  : >"$root/.fake-codegraph/release"
+  wait_for_file "$root/.fake-codegraph/init-finished"
+  wait_for_pattern "CodeGraph index for default-on-repo is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
+  [[ $(count_init_calls "$root") -eq 1 ]] || fail "default-on did not initialize exactly once"
+  cleanup_processes
+}
+
+shouldToastErrorWhenRepairFails() {
+  # Given
+  local fail_root
+  local incomplete_root
+  fail_root=$(make_repo repair-fail-repo)
+  incomplete_root=$(make_repo repair-incomplete-repo)
+  start_server repair-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$fail_root" "$SUITE_DIR/repair-fail.config.json"
+  request_config "$incomplete_root" "$SUITE_DIR/repair-incomplete.config.json"
+
+  # Then: a failed repair errors; a repair that leaves the index unhealthy warns.
+  wait_for_pattern "CodeGraph indexing failed for repair-fail-repo, but this session is still operational." "$EVENTS_FILE"
+  wait_for_pattern "CodeGraph index for repair-incomplete-repo is incomplete (index state is partial)." "$EVENTS_FILE"
+  assert_toast \
+    "CodeGraph is repairing the repair-fail-repo index in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+  assert_toast \
+    "CodeGraph indexing failed for repair-fail-repo, but this session is still operational. Run: codegraph status '$fail_root'" \
+    error \
+    "$RECOVERY_DURATION_MS"
+  assert_toast \
+    "CodeGraph index for repair-incomplete-repo is incomplete (index state is partial). Run: codegraph index '$incomplete_root' --force" \
+    warning \
+    "$RECOVERY_DURATION_MS"
+  [[ $(count_index_calls "$fail_root") -eq 1 ]] || fail "repair-fail did not attempt index exactly once"
+  [[ $(count_index_calls "$incomplete_root") -eq 1 ]] || fail "repair-incomplete did not attempt index exactly once"
+  [[ $(count_init_calls "$fail_root") -eq 0 ]] || fail "repair-fail used init instead of index"
+  cleanup_processes
+}
+
+shouldAggregateNestedRepositoriesUnderPlainRoot() {
+  # Given a plain (non-git) workspace root holding git repositories two levels deep.
+  local aggregate_root="$SUITE_DIR/repos/aggregate-root"
+  local repo_a="$aggregate_root/gitlab/repo-a"
+  local repo_b="$aggregate_root/gitlab/repo-b"
+  local dep_repo="$aggregate_root/node_modules/dep-repo"
+  local hidden_repo="$aggregate_root/.hidden/secret-repo"
+  mkdir -p "$repo_a" "$repo_b" "$dep_repo" "$hidden_repo"
+  git -C "$repo_a" init -q
+  git -C "$repo_b" init -q
+  git -C "$dep_repo" init -q
+  git -C "$hidden_repo" init -q
+  start_server aggregate 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$aggregate_root" "$SUITE_DIR/aggregate.config.json"
+
+  # Then: one aggregate start toast naming exactly the two discoverable repositories.
+  wait_for_pattern "CodeGraph is indexing 2 repositories under aggregate-root in the background." "$EVENTS_FILE"
+  assert_toast \
+    "CodeGraph is indexing 2 repositories under aggregate-root in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+
+  # Repositories are indexed sequentially: repo-b must not start until repo-a is released.
+  wait_for_file "$repo_a/.fake-codegraph/init-started"
+  sleep 0.3
+  [[ ! -e "$repo_b/.fake-codegraph/init-started" ]] || fail "aggregate indexing was not sequential"
+  : >"$repo_a/.fake-codegraph/release"
+  wait_for_file "$repo_a/.fake-codegraph/init-finished"
+  wait_for_file "$repo_b/.fake-codegraph/init-started"
+  : >"$repo_b/.fake-codegraph/release"
+  wait_for_file "$repo_b/.fake-codegraph/init-finished"
+
+  # And one aggregate summary toast.
+  wait_for_pattern "CodeGraph indexed 2 repositories under aggregate-root in" "$EVENTS_FILE"
+  assert_toast_message_pattern \
+    "CodeGraph indexed 2 repositories under aggregate-root in [0-9]+\\.[0-9]s\\." \
+    success \
+    "$INFO_DURATION_MS"
+
+  # Only the two gitlab repos were touched; node_modules, hidden dirs, and the root were skipped.
+  [[ $(count_init_calls "$repo_a") -eq 1 ]] || fail "repo-a was not initialized"
+  [[ $(count_init_calls "$repo_b") -eq 1 ]] || fail "repo-b was not initialized"
+  [[ $(count_init_calls "$dep_repo") -eq 0 ]] || fail "node_modules repo was initialized"
+  [[ $(count_init_calls "$hidden_repo") -eq 0 ]] || fail "hidden repo was initialized"
+  [[ $(count_init_calls "$aggregate_root") -eq 0 ]] || fail "plain workspace root was initialized"
+  grep -Fxq '.codegraph/' "$repo_a/.git/info/exclude" || fail "repo-a index was not Git-excluded"
+  grep -Fxq '.codegraph/' "$repo_b/.git/info/exclude" || fail "repo-b index was not Git-excluded"
+  ! grep -Fq "CodeGraph is indexing repo-a" "$EVENTS_FILE" || fail "aggregate emitted a per-repo start toast"
+  cleanup_processes
+}
+
+shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos() {
+  # Given a plain (non-git) directory with no nested repositories.
+  local root="$SUITE_DIR/repos/plain-fallback"
+  mkdir -p "$root"
+  : >"$root/loose-file"
+  start_server plain-fallback 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/plain-fallback.config.json"
+
+  # Then: the folder root itself is initialized as a single root.
+  wait_for_file "$root/.fake-codegraph/init-started"
+  wait_for_pattern "CodeGraph is indexing plain-fallback in the background." "$EVENTS_FILE"
+  assert_toast \
+    "CodeGraph is indexing plain-fallback in the background. You can keep working." \
+    info \
+    "$INFO_DURATION_MS"
+  : >"$root/.fake-codegraph/release"
+  wait_for_file "$root/.fake-codegraph/init-finished"
+  wait_for_pattern "CodeGraph index for plain-fallback is ready: $FAKE_FILE_COUNT files" "$EVENTS_FILE"
+  [[ $(count_init_calls "$root") -eq 1 ]] || fail "plain fallback did not initialize the folder root once"
+  cleanup_processes
+}
+
 shouldDoNothingWhenOptedOut() {
   # Given
   local root
@@ -632,12 +836,16 @@ shouldWarnWhenBinaryIsMissing() {
 
 shouldKeepConfigResponsiveWhenIndexingInBackground
 shouldStaySilentWhenHealthyAndIdempotent
-shouldWarnOrErrorWithoutRepairingUnhealthyIndexes
+shouldRepairUnhealthyIndexesAutomatically
 shouldUseRecoveryOnlyWhenStatusPayloadIsUnsafe
-shouldWarnWhenInitializedIndexStateIsNull
+shouldRepairWhenInitializedIndexStateIsNull
+shouldToastErrorWhenRepairFails
+shouldRunByDefaultWithoutEnvironmentFlag
 shouldTerminateHeldInitializerDuringCleanup
 shouldRespectCustomCodeGraphDirectory
 shouldExcludeIndexFromLinkedWorktreeGitMetadata
+shouldAggregateNestedRepositoriesUnderPlainRoot
+shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos
 shouldDoNothingWhenOptedOut
 shouldWarnWhenBinaryIsMissing
 

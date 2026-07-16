@@ -1,5 +1,7 @@
 # Dejar la adopción de CodeGraph lista para Goal
 
+> **Superseded:** the current initializer behavior lives in `docs/codegraph.md`. This document is kept as the historical adoption record.
+
 > **Estado: Ready for Goal.** Contrato cerrado para OpenCode `1.17.15` y CodeGraph `1.4.1`.
 
 ## Resultado

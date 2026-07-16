@@ -34,7 +34,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `spaghetti-code-detection` | Detect tangled flow and hidden ordering |
 | Skill | `tcr` | Apply test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
-| Plugin | `codegraph-init` | Initializes CodeGraph indexing in the background |
+| Plugin | `codegraph-init` | Initializes and repairs CodeGraph indexes in the background (default-on; aggregates non-git workspace roots) |
 
 Use common skills by reference from domain-specific agents instead of duplicating them into each domain. Common is the single home for transversal skills used by 3+ domains (`grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, `risk-assessment`); consuming domains declare the dependency in their README instead of duplicating symlinks.
 
