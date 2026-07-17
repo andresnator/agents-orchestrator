@@ -1,6 +1,6 @@
 # Docs Domain
 
-Product documentation, Jira tickets, English tutoring, summaries, and transcription-oriented skills.
+Product documentation, Jira tickets, English tutoring, summaries, slide decks, and transcription-oriented skills.
 
 ## Components
 
@@ -21,6 +21,7 @@ Product documentation, Jira tickets, English tutoring, summaries, and transcript
 | Skill | `prd` | Create rigorous high-stakes PRDs |
 | Skill | `prd-light` | Create lightweight MVP PRDs |
 | Skill | `rfc` | Create technical proposals with trade-offs |
+| Skill | `slidev-retro-deck` | Build retro Slidev decks — three switchable CRT themes with day/night schemes, themed Mermaid diagrams, and a PNG-verified export loop |
 | Skill | `summarize` | Synthesize book chapters pedagogically |
 | Skill | `usm` | Create journey-first MVP story maps |
 | Skill | `whisper-extract` | Transcribe and summarize audio or video |

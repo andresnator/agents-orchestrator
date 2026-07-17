@@ -11,7 +11,7 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 | [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (primary), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
 | [plan](domains/plan/README.md) | Fable-style planning front-door: `/deep-plan` produces ready-for-sdd bundles for executable goals or plan documents for decisions, plus `/wayfinder` multi-session discovery maps under `.ai/` | `deep-planner` (primary), `/deep-plan`, `/wayfinder` |
 | [learning](domains/learning/README.md) | Interactive multi-session learning via `/learn` | `/learn` |
-| [docs](domains/docs/README.md) | Product docs, Jira ticketing, English tutoring, summaries, and transcription | `/decide`, `/doc`, `/english`, `/prd` |
+| [docs](domains/docs/README.md) | Product docs, Jira ticketing, English tutoring, summaries, slide decks, and transcription | `/decide`, `/doc`, `/english`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt and skill maintenance utilities | `/absorb`, `/prompt-checker`, `model-configurator` (TUI plugin) |
 | [common](domains/common/README.md) | Shared engineering, quality, question UX, and output-refinement skills | `/defend`, `/grill`, transversal skills |
 

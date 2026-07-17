@@ -24,6 +24,7 @@ If the subject is missing, ask at most one clarifying question before continuing
 | Technical proposal, design doc, or RFC | `rfc` | Propose a technical change for review |
 | Product requirements, whether full or lightweight | `/prd` selector | Recommend `prd` or `prd-light`, ask confirmation, then hand off |
 | User Story Mapping, USM, story map, MVP slice, or release slicing | `usm` | Create an interactive journey-first User Story Map |
+| Slide deck or presentation (Slidev, retro console/CRT look) | `slidev-retro-deck` | Build a verified Slidev deck with the retro-console identity |
 | Research or feasibility task | `jira-spike` | Create a Jira spike for investigation |
 | Agent-ready implementation issue | `buildable-issue` | Create or enrich a buildable GitHub issue |
 | General review-facing docs | `cognitive-doc-design` | Shape clear, low-cognitive-load documentation |
