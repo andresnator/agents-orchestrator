@@ -37,7 +37,7 @@ Do not run the CodeGraph OpenCode wizard. It writes agent instructions and can r
 
 ## MCP options
 
-**Recommended: the minimal entry from step 2.** `codegraph_explore` is the default MCP tool and covers most structural questions; it is the only MCP tool this repository's agents reference (plan, refactor, and sdd domains) — agents with shell access reach the finer verbs (`callers`, `impact`, `node`, …) through the read-only CLI instead. Every extra exposed tool adds its schema to each session's context, so expose extra tools only when a workflow explicitly needs them via MCP:
+**Recommended: the minimal entry from step 2.** `codegraph_explore` is the default MCP tool and covers most structural questions; it is the only MCP tool this repository's agents reference (plan, refactor, sdd, and architecture domains) — agents with shell access reach the finer verbs (`callers`, `impact`, `node`, …) through the read-only CLI instead. Every extra exposed tool adds its schema to each session's context, so expose extra tools only when a workflow explicitly needs them via MCP:
 
 ```jsonc
 {
@@ -112,6 +112,8 @@ Other common recovery checks:
 The installed global rules make structural exploration CodeGraph-first when a healthy index exists. Agents use `codegraph_explore`, then read-only CLI queries when permitted, and finally normal LSP/filesystem tools as fallback.
 
 Domain-specific restrictions still win. SDD agents retain their stricter lifecycle and read-only rules, while `deep-planner`, `refactor-planner`, and `refactor-analyzer` use the MCP graph only and fall back, because their shell access does not allow the CodeGraph CLI. The refactor planner probes the index once and passes `codegraph: available | absent` in its analyzer briefs so fan-out instances do not re-probe.
+
+The architecture domain follows the same pattern: `architect` probes the index during its state scan — once per repository in multi-project workspaces — and passes `codegraph: available | absent` in every `arch-analyzer` brief. All three agents use the MCP graph only — `architect`'s ask-gated bash allowlist covers audit commands, not the CodeGraph CLI, and the two subagents deny bash — and fall back to read/grep/glob/lsp. In an aggregator workspace each nested repository carries its own index; agents never assume cross-repository graph queries — a repo whose probe fails is treated as unindexed.
 
 ## Measure the benefit (A/B)
 

@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.1.0"
   status: in-progress
 ---
 
@@ -33,12 +33,15 @@ Record, each with evidence:
 - Languages and runtime versions (e.g. `java.version` in `pom.xml`, `engines` in `package.json`, `requires-python`).
 - Build and dependency tooling (Maven/Gradle/npm/pnpm/pip/poetry), lockfile presence.
 - Frameworks and platforms (from dependencies, not docs).
-- Module layout: top-level modules/packages and their declared dependencies.
+- Module layout: top-level modules/packages and their declared dependencies. Resolve module layout and inter-module dependency edges from imports, build-file declarations, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file reading.
+- Nested projects: manifests and build files below the root (`package.json`, `pom.xml`, `build.gradle*`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) and nested `.git` directories. More than one independent project puts the scan in multi-project mode: record languages, toolchain, and frameworks per project. Cross-project dependencies are read only from manifests, configs, and deployment descriptors — never inferred from a per-project code graph.
 - Tests and CI: test frameworks present, CI workflows present, architecture checks present or absent.
 
 ## Style Identification
 
 Classify the dominant style with evidence: `layered`, `hexagonal/ports-adapters`, `modular monolith`, `microservices`, `event-driven`, or `big-ball-of-mud` (no discernible boundaries). Mixed styles are stated as such — dominant plus deviations.
+
+In multi-project mode, classify a style per project, plus one workspace-level composition with evidence: `monorepo` (one repo, multiple deployables/packages), `aggregator` (plain root holding independent repos), or `app-plus-tooling`. The singular `dominant` style always applies per project, never to the workspace as a whole.
 
 ## Gap Analysis
 
@@ -65,6 +68,8 @@ project_state:
   modules: [{name, path, depends_on}]
   style: {dominant, evidence, deviations}
   tests_ci: {test_framework, ci, arch_checks}
+  workspace: {layout: single | monorepo | aggregator | app-plus-tooling, evidence}   # optional
+  projects: [{name, path, languages, toolchain, style}]           # optional, multi-project mode only
 gaps: [{id, gap, evidence, impact, fitness_function}]
 ```
 
@@ -73,3 +78,4 @@ gaps: [{id, gap, evidence, impact, fitness_function}]
 - No claim without evidence; README-only claims marked `aspirational`.
 - Style has named evidence and counter-evidence when mixed.
 - Every gap has a fitness function or an explicit manual check.
+- In multi-project mode, every project has its own toolchain evidence and style; the workspace layout claim has evidence.

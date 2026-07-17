@@ -67,10 +67,10 @@ project_target:
   language: "<dominant language + version evidence>"
 ```
 
-2. **State scan (inline)**: load the `architecture-state` skill and establish the verified project state (languages, toolchain, modules, style, gaps). Every mode builds on this; no subagent.
+2. **State scan (inline)**: load the `architecture-state` skill and establish the verified project state (languages, toolchain, modules, style, gaps). Every mode builds on this; no subagent. CodeGraph-first: when a healthy index is available, use `codegraph_explore` before read/grep/glob/lsp for module layout, dependency edges, cycles, entry points, and impact. Probe the index here, once per repository the analysis touches, and record `codegraph: available | absent` per repo; never run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`) — the `codegraph-init` plugin owns those. If the graph is absent or unhealthy, continue with read/grep/glob/lsp.
 3. **Kickoff (one round)**: ask via the `native-question-ux` skill, skipping anything the user already stated. Mode-specific questions only (see Modes). Do NOT ask about Mode/TDD/Judgment; those belong to sdd adoption.
 4. **Select lenses by mode** (see Lens catalog). Modes that need no fan-out (map, prd on a small scope) proceed inline.
-5. **Fan out `arch-analyzer` in one message**, one instance per lens, at most 8 per message. Each brief carries: the frozen `project_target` lock, the area slug and path scope, the lens name, the exact skill list to load, focus questions, and an output budget. If a listed skill is not installed, the analyzer reports that lens as skipped with a reason; a skipped lens is never a failure.
+5. **Fan out `arch-analyzer` in one message**, one instance per lens, at most 8 per message. Each brief carries: the frozen `project_target` lock, the area slug and path scope, the lens name, the exact skill list to load, focus questions, an output budget, and your CodeGraph availability result (`codegraph: available | absent`) from step 2 for the repository containing the area scope, so analyzers do not re-probe the index. If a listed skill is not installed, the analyzer reports that lens as skipped with a reason; a skipped lens is never a failure.
 6. **Validate lock echo**: every analyzer response must echo `target_path`, `target_slug`, and `area_slug` exactly. On drift, re-invoke once with the same brief; if it drifts again, record the drift as a blocker in the output artifact.
 7. **Consolidate** with an explicit reducer: dedupe key = overlapping location plus same recommendation intent, keep highest-confidence evidence; priority = severity descending, effort ascending, confidence descending; apply the adversarial filter (verified? consequence-bearing? proportional?) before any shortlist.
 8. **Compose the mode output** (see Modes) inside the write boundary.
@@ -97,6 +97,10 @@ project_target:
 | observability | `logging-observability` | audit; review when logging is detected |
 
 Full lens coverage assumes the `common` domain is installed; a missing skill means the lens is reported skipped, never failed.
+
+## Multi-project workspaces
+
+When the state scan detects more than one nested project (nested manifests, build files, or `.git` directories — `architecture-state` multi-project mode), scope every analyzer brief to exactly one project: the area path and the `codegraph` flag both belong to that project's repository. Nested repositories are indexed individually (one `.codegraph/` each, created by the `codegraph-init` plugin); the aggregator root itself has none. Probe per repo with one `codegraph_explore` call scoped inside that repo; a failed or empty probe means `codegraph: absent` for briefs scoped there. Never claim cross-repository graph edges: inter-project dependencies come only from manifests, configs, and deployment descriptors, cited `file:line`. For boundaries work in a multi-service workspace, run the boundaries lens once per service — never one merged Inputs/Outputs view; for a standalone inputs/outputs report, point the user to `/boundary-inspector` per service.
 
 ## Output rules
 

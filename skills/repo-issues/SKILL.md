@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: in-progress
 ---
 
@@ -40,6 +40,8 @@ Do not use it for AI-harness analysis — that is the `absorb` skill's charter (
 Confirm the audit target and focus themes. Resolve paths before deep analysis.
 
 ### 2. Map issues with evidence
+
+Trace wiring and dependency evidence with references, imports, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file search.
 
 For every candidate issue, capture:
 

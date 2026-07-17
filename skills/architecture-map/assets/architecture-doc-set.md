@@ -64,3 +64,21 @@ sequenceDiagram
 
 {One paragraph: what this flow demonstrates and where it lives in code (file:line anchors).}
 ```
+
+## projects/{name}.md (multi-deployable workspaces only)
+
+```markdown
+# {Project} Containers
+
+```mermaid
+flowchart TB
+  subgraph project[{Project}]
+    entry[{API / entrypoint}]
+    core[{Core module}]
+    store[({Store})]
+  end
+  entry --> core --> store
+```
+
+{One paragraph: this deployable's responsibility inside the workspace and the evidence that proves it (manifest, config, entrypoint). Cross-project edges cite manifest/config evidence only.}
+```

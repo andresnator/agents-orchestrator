@@ -7,7 +7,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.1.0"
   status: in-progress
 ---
 
@@ -23,6 +23,7 @@ Do not use it for code-level design review, user story mapping (`usm`), or AI-ha
 
 - C4-lite: System Context (level 1) and Container (level 2) only. Component-level diagrams only on explicit request.
 - Every node and edge comes from code evidence: manifests, build files, configs, routes, entrypoints, deployment descriptors. Never from README claims. Unverifiable elements are marked `hypothesis`.
+- Derive containers, dependencies, and flows from imports, configs, deployment descriptors, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file search; a graph-resolved edge still cites the underlying `file:line`.
 - Budgets: at most ~30 nodes per diagram and ~120 lines per doc. Split flows into more diagrams before exceeding a budget.
 - Mermaid only (`flowchart`, `sequenceDiagram`), GitHub-renderable. No external image tooling.
 - Visual first: diagrams carry the weight; prose is one short paragraph per diagram.
@@ -38,6 +39,10 @@ Three files; concrete skeletons live in `assets/architecture-doc-set.md`:
 - `index.md`: ~10 lines — what each doc answers, generation date, source commit.
 - `overview.md`: system context diagram + container diagram, each followed by a one-paragraph narrative.
 - `flows.md`: 1-3 `sequenceDiagram`s showing how a representative request or event flows end to end, chosen for onboarding value.
+
+## Multi-Deployable Workspaces
+
+When the state scan reports multiple deployable projects, the level-2 diagram shows one container (or one subgraph) per deployable. When that would break the node budget, keep `overview.md` at workspace level (one node per project) and add `projects/<name>.md` pages under the same `architecture/` folder — one container diagram per project — linked from `index.md`. Cross-project edges carry only manifest/config evidence (URLs, topics, shared schemas); a per-project code graph never proves a cross-project edge.
 
 ## Drift Refresh
 

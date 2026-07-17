@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Skill: service-boundary-analysis
@@ -15,6 +15,8 @@ metadata:
 Use this skill when asked to inspect a backend service, microservice, worker, or API repository to identify what enters the service and what the service sends, writes, publishes, schedules, or otherwise emits.
 
 Do **not** use this skill for runtime tracing, code modification, full architecture design, security review, database schema design, or claiming complete certainty for dynamic framework behavior.
+
+This skill inspects exactly one service per report; in a multi-service workspace the caller runs it once per service and never merges services into one Inputs/Outputs pair.
 
 ## Responsibility
 
@@ -87,7 +89,7 @@ Combine multiple signals before classifying a finding:
 - Client/SDK cues: HTTP clients, database clients, queue clients, cache clients, notification SDKs, search/vector clients, object storage SDKs.
 - Method-name cues: `post`, `put`, `patch`, `delete`, `save`, `insert`, `update`, `publish`, `send`, `emit`, `enqueue`, `schedule`, `set`, `invalidate`, `index`, `upsert`.
 - Configuration cues: endpoint URLs, topic/queue names, cron expressions, bucket names, database/cache/search connection settings.
-- Cross-file wiring: a route or consumer declaration in one file connected to a handler or client call in another.
+- Cross-file wiring: a route or consumer declaration in one file connected to a handler or client call in another. Resolve these chains with references, imports, LSP, or a code-graph index (for example, CodeGraph MCP/CLI) when available; a graph-resolved chain is cross-file wiring evidence under the confidence rubric.
 
 Common frameworks/languages include but are not limited to Java/Spring, Kotlin, Node/Express/Nest/Fastify, Python/FastAPI/Django/Flask/Celery, Go net/http/Gin/Chi, Ruby/Rails, C# ASP.NET, PHP/Laravel/Symfony, Kafka/Rabbit/SQS/PubSub consumers, and cron/scheduler libraries.
 

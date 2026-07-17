@@ -23,6 +23,7 @@ Identify backend service boundary inputs and outputs from provided repository co
 - May inspect files, directory listings, and artifacts explicitly provided by the caller.
 - May reason across files to connect framework registration, handlers, clients, and configuration.
 - May classify findings using heuristic evidence and confidence labels.
+- May query the `codegraph_explore` MCP tool, when available, to resolve cross-file wiring before manual file crawling.
 
 ## Forbidden Actions
 
@@ -31,6 +32,7 @@ Identify backend service boundary inputs and outputs from provided repository co
 - Do not fetch web content or external documentation during inspection.
 - Do not claim complete certainty for dynamic routing, reflection, generated code, missing configuration, or uninspected paths.
 - Do not coordinate multi-phase workflows or delegate work.
+- Do not run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`); the graph is query-only here.
 
 ## Related Skills
 
@@ -62,7 +64,7 @@ constraints:
   - "Find all API endpoints, consumers, and side effects in this microservice."
   - "Analyze backend boundaries for these paths without running the app."
   - "What does this worker consume and publish/write?"
-- Evidence/state: reads only caller-provided files, paths, manifests, config snippets, and source excerpts; produces one Markdown report; ignores generated/vendor/test fixtures unless the caller includes them in scope.
+- Evidence/state: reads only caller-provided files, paths, manifests, config snippets, and source excerpts, plus read-only code-graph index queries when available; produces one Markdown report; ignores generated/vendor/test fixtures unless the caller includes them in scope.
 - Domain rules: terminal result is `complete` when the report includes mandatory tables plus uncertainty/not-found/limitations; `blocked` when target/context is missing; `failed` only when provided context cannot be inspected at all.
 
 ## Actions
@@ -70,10 +72,11 @@ constraints:
 1. Validate the input shape and constraints.
 2. Load and follow `service-boundary-analysis`.
 3. Identify language/framework signals from provided context.
-4. Inspect candidate input surfaces: HTTP/API, RPC, consumers/listeners, streams, WebSocket/SSE, schedulers, CLI/batch/worker entrypoints, file/object triggers, and config loading.
-5. Inspect candidate output surfaces: database writes, external calls, publishing, cache mutations, file/object writes, search/index writes, vector writes, notifications, job scheduling, and scoped observability emissions.
-6. Capture evidence for each finding: category, mechanism, source/destination, file, line/range or `unavailable`, symbol or `unavailable`, confidence, evidence excerpt, discovery method, and notes.
-7. Return the output contract without side effects.
+4. When the `codegraph_explore` MCP tool is available for the target repository, use it first to resolve cross-file wiring — registration-to-handler chains, handler-to-client calls, callers of entrypoints — before manual file crawling, and cite the resolved `file:line` as evidence. Graph-resolved wiring counts as cross-file wiring corroboration under the skill's confidence rubric; wiring the graph cannot see (runtime reflection, generated code, external config) stays low-confidence as the skill requires. If the tool is unavailable, continue with the provided context only.
+5. Inspect candidate input surfaces: HTTP/API, RPC, consumers/listeners, streams, WebSocket/SSE, schedulers, CLI/batch/worker entrypoints, file/object triggers, and config loading.
+6. Inspect candidate output surfaces: database writes, external calls, publishing, cache mutations, file/object writes, search/index writes, vector writes, notifications, job scheduling, and scoped observability emissions.
+7. Capture evidence for each finding: category, mechanism, source/destination, file, line/range or `unavailable`, symbol or `unavailable`, confidence, evidence excerpt, discovery method, and notes.
+8. Return the output contract without side effects.
 
 ## Output Contract
 

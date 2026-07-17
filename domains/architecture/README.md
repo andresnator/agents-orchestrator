@@ -8,6 +8,8 @@ Every mode starts from an inline `architecture-state` scan (toolchain with evide
 
 Deliberate precedent: `architect` is the repo's first agent with non-deny bash — an ask-gated allowlist of read-only audit commands (`npm audit`, `mvn dependency:tree`, `pip-audit`, `osv-scanner`, …) under a default `"*": deny`, used only in `/arch-audit`; a denied or missing tool degrades to manifest inspection (`method: manifest-fallback`). `arch-analyzer` stays fully read-only with `bash: deny`.
 
+Structural exploration is CodeGraph-first (`docs/codegraph.md`): `architect` probes the index once per repository during the inline state scan and passes `codegraph: available | absent` in every analyzer brief; `arch-analyzer` and `boundary-inspector` query the graph via MCP only and never run lifecycle commands. Multi-project workspaces (nested manifests or repos) are analyzed per project: per-project toolchains and styles from `architecture-state`, per-deployable containers from `architecture-map`, one `service-boundary-analysis` report per service, and no cross-repository graph claims.
+
 Full lens coverage assumes the `common` domain is installed (lens skills such as `cohesion-coupling` or `logging-observability` live there, as do the transversal `code-conventions` and `risk-assessment`); missing lens skills are reported as skipped, never as failures. Bundle composition uses the `sdd-draft-*` templates from the `sdd` domain.
 
 ## Components
