@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "1.5.0"
+  version: "1.4.0"
 ---
 
 # Learning Loop
@@ -46,7 +46,6 @@ Route the raw `/learn` arguments:
 | `teach [concept]` | teach | Feynman teach-back per `feynman-teachback`: the learner explains, the mentor plays a naive student; gaps demote cards and set return paths. |
 | `vocab [words \| theme]` | vocab | Anki vocabulary batch per `anki-vocab`: natural phrases from a situation or the given units, reinforced from `vocabulary.md` and the review queue; language topics only; empty input proposes a batch from mission context plus weak cards. |
 | `drill [unit]` | drill | Standalone bidirectional-translation session per `bidirectional-translation` on the named dialogue unit (weakest-first when empty); language topics only. |
-| `audio [unit]` | audio | Generate or refresh dialogue-unit audio per `lesson-audio` (normal + slow renditions; units with `pending` audio backfilled oldest-first when empty); language topics only. |
 | `status` | status | Rebuild `.ai/learning/dashboard.md`: per-topic progress, due/upcoming reviews, mastered counts. |
 | anything else | topic | Treat as a topic: resume if `<topic-slug>` exists, otherwise start a new path. |
 

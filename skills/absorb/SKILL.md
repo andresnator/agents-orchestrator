@@ -9,7 +9,7 @@ metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "1.2.2"
+  version: "1.2.3"
   status: testing
 ---
 
@@ -89,9 +89,11 @@ Keep only `ADOPT` or `CONDITIONAL` items in the shortlist.
 
 ### 5. Deliver
 
-When the result should be persisted, write:
+Always write the report to:
 
-`.ai/absorb/YYYY-MM-DD-external-practices.md`
+`.ai/absorb/YYYY-MM-DD-<slug>.md`
+
+where `<slug>` is a short kebab-case name of the analysis focus or target (fallback: `external-practices`). Create `.ai/absorb/` if it does not exist.
 
 The report should include:
 
@@ -102,7 +104,7 @@ The report should include:
 5. Ranked adoption shortlist with target file paths in this repository.
 6. Immediate text-only wins vs. larger follow-up work.
 
-If no file is needed, return the same structure as a concise chat summary.
+Only when the user explicitly asks not to persist, skip the file and return the same structure as a concise chat summary.
 
 ## Red Flags
 
@@ -119,6 +121,7 @@ Surface these explicitly; do not fabricate findings.
 - Each recommended practice has file-level evidence.
 - At least one `no adoption needed` or `Our Advantages` item was recorded.
 - The shortlist excludes unverified README-only claims.
+- The report file exists at the stated path (unless the user explicitly requested chat-only).
 - No commit or automatic adoption was performed.
 
 ## Output Contract
@@ -130,7 +133,7 @@ Return:
 - rejected or conditional practices with reasons;
 - our advantages;
 - shortlist with proposed target paths in this repository;
-- report path when a file was written.
+- report path (always, unless the user opted out of persistence).
 
 ## Attribution
 

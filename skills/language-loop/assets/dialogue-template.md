@@ -2,7 +2,6 @@
 
 > Topic: {topic-slug} · Created: {YYYY-MM-DD} · Wave: passive
 > Retranslation due: after unit NNNN+5 (active wave)
-> Audio: {pending | ../audio/NNNN-<slug>.mp3 + -slow · engine/voice}
 
 ## Situation
 
