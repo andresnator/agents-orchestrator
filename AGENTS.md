@@ -36,8 +36,8 @@ Each `domains/<domain>/README.md` is the authoritative description; one-liners:
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles, plus Java refactor skills.
 - `architecture`: architecture mapping, state reviews, reverse-engineered PRDs, audits, and ADR + ideation bundles.
 - `plan`: Fable-style planning front-door (`/deep-plan` → ready-for-sdd bundles for executable goals, plan docs for decisions) and `/wayfinder` multi-session discovery maps under `.ai/`.
-- `learning`: interactive multi-session learning via `/learn` (see `docs/learning-domain.md`).
-- `docs`: product docs, Jira ticketing, English tutoring, summaries, and transcription skills.
+- `learning`: interactive multi-session learning around the `mentor` primary agent (`/learn`) plus `/english` coaching (see `docs/learning-domain.md`).
+- `docs`: product docs, Jira ticketing, summaries, and transcription skills.
 - `meta`: prompt and skill maintenance utilities.
 - `common`: shared engineering, quality, question UX, and output-refinement skills.
 

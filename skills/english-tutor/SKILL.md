@@ -1,11 +1,11 @@
 ---
 name: english-tutor
-description: "Trigger: explicit English tutoring, correction, practice, or /english. Improve user-provided English while preserving intent and privacy."
+description: "Trigger: explicit English tutoring, correction, practice, or /english. Improve user-provided English while preserving intent and privacy; hand recurring gaps to the learning loop."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.4"
+  version: "2.0.0"
 ---
 
 # Skill: english-tutor
@@ -14,51 +14,43 @@ metadata:
 
 Use this skill only when the user explicitly asks for English coaching, correction, review, practice, recurring-gap feedback, or invokes `/english`.
 
-Do **not** use this skill for normal coding assistance, background monitoring, passive correction, grammar policing, or rewriting user intent.
-
-## Responsibility
-
-This skill teaches concise English improvement. It corrects user-provided English, explains the learning gap, suggests next practice, and protects the coding flow by staying silent until explicitly activated.
-
-## Required Context
-
-- The exact text or coaching request to review.
-- The desired explanation language when known: English, Spanish, or auto.
-- Whether the request is a correction, review, practice prompt, or progress summary.
-- Optional external memory reference: `English Coach Memory`.
+Do **not** use this skill for normal coding assistance, background monitoring, passive correction, grammar policing, or rewriting user intent. Full language-learning paths (dialogues, spaced repetition, vocabulary) belong to `/learn` and the `language-loop` skill; this skill is the on-demand correction surface that feeds them.
 
 ## Hard Rules
 
 - Preserve the user's intended meaning; improve clarity and correctness without changing intent.
 - Return correction output in this exact order: `Original`, `Improved`, `Explanation`, `Learning gap`, `Practice suggestion`.
-- Keep explanations concise, practical, and focused on the most useful learning point.
+- Keep explanations concise, practical, and focused on the most useful learning point — one concise explanation over exhaustive grammar lectures.
 - If there are multiple mistakes, batch them only when it improves readability; each batch item still uses the five required fields.
+- Name every learning gap as a reusable category: tense, articles, prepositions, word order, register, idiom, word choice, or structure pattern.
 - Explain in Spanish when the user asks in Spanish or context clearly prefers Spanish; keep `Original` and `Improved` focused on English text.
-- Stop tutoring when the user asks to deactivate, stop corrections, or return to normal coding flow.
-- Never inject unsolicited English corrections during unrelated work.
-- Never store learner-specific raw text, private examples, personal identifiers, or correction history in repository artifacts.
-- Treat `English Coach Memory` as a private Notion-side contract only; the public repo may document the contract name and schema, not learner contents.
-- Passive/background tutoring is a future host/orchestrator integration seam, not current runtime behavior in this repository.
+- If no text or coaching target is provided, ask one question for the text to review (through the portable question flow in `native-question-ux` when available) and stop.
+- Stop tutoring when the user asks to deactivate, stop corrections, or return to normal coding flow; never inject unsolicited English corrections during unrelated work.
+- Never store learner raw text, private examples, personal identifiers, or correction history in any artifact — repository or local state. The gaps inbox holds **categories and synthetic example patterns only**.
+- Passive/background tutoring is a future host/orchestrator integration seam, not current runtime behavior.
 
-## Decision Gates
-
-| Condition | Action |
-|---|---|
-| No text or coaching target is provided | Ask one question for the text to review. |
-| User is doing unrelated coding work | Stay silent about English unless explicitly invoked. |
-| User asks to stop tutor mode | Acknowledge and stop tutoring until reactivated. |
-| User asks for progress over time | Summarize aggregate gap categories only; do not expose raw history. |
-| Request requires learner memory | Reference `English Coach Memory` and keep details private/out-of-repo. |
-
-## Execution Steps
+## Session Flow
 
 1. Confirm the request is explicit English tutoring or `/english` usage.
 2. Identify the user's intended meaning and the most important correction targets.
-3. Produce the five-field correction contract in order.
-4. Prefer one concise explanation over exhaustive grammar lectures.
-5. Name the learning gap as a reusable category, such as tense, articles, prepositions, word order, register, or idiom.
-6. Suggest one next practice action the learner can do immediately.
-7. When memory is requested, recommend only aggregate updates to private `English Coach Memory`.
+3. Produce the five-field correction contract in order, batching when readable.
+4. Suggest one next practice action the learner can do immediately.
+5. Close with the Gap Handoff offer when the session surfaced at least one recurring-category gap.
+
+## Gap Handoff
+
+The learning domain consumes recurring gaps: the `mentor` agent (via `/learn`) adopts them as `spaced-recall` cards or `bidirectional-translation` drills. This skill is the **producer**; adoption is never its job.
+
+- After a correction session with at least one named gap category, offer **once** (one question, opt-in) to register the session's gaps in the active English/language topic's gaps inbox: `.ai/learning/<topic-slug>/gaps.md`.
+- On acceptance, append one row per gap category to the inbox table:
+
+  ```markdown
+  | YYYY-MM-DD | <category> | <synthetic example pattern> | pending |
+  ```
+
+  Dates come from the environment, never guessed. The synthetic pattern illustrates the mistake shape with invented wording — never the learner's actual sentence.
+- Write **only** inside an existing topic directory. If the topic exists but `gaps.md` is missing, create it from the `language-loop` skill's `assets/gaps-template.md`, then append. If no language topic exists under `.ai/learning/`, suggest starting one with `/learn english` and skip the write; never create the topic directory or any other topic state from this skill.
+- Rows keep `pending` status until the mentor adopts them (flipping to `adopted`); this skill never flips statuses or removes rows.
 
 ## Output Contract
 
@@ -72,31 +64,10 @@ Return one or more correction blocks:
 **Practice suggestion**: <one short exercise>
 ```
 
-For progress summaries, return:
+For progress summaries, read the active topic's `gaps.md` (pending and adopted rows) and return:
 
 ```markdown
-**Recurring gaps**: <aggregate categories only>
+**Recurring gaps**: <aggregate categories with rough frequency>
 **What to practice next**: <focused recommendation>
-**Memory note**: Use private `English Coach Memory`; do not store learner-specific examples in this repo.
+**Handoff status**: <n pending / n adopted rows in .ai/learning/<topic-slug>/gaps.md, or "no gaps inbox — start one with /learn english">
 ```
-
-## Private Memory Contract
-
-`English Coach Memory` is a private Notion-side learner memory. It may contain aggregate, learner-controlled fields such as:
-
-- `Gap Category`
-- `Frequency/Weight`
-- `Last Practiced`
-- `Example Pattern` using synthetic or anonymized wording only
-- `Practice Recommendation`
-- `Opt-in Notes`
-
-Public repository artifacts must not contain raw learner history, private examples, personal identifiers, or Notion page contents.
-
-## References
-
-None.
-
-## Assets
-
-None.

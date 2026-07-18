@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "1.3.0"
+  version: "1.5.0"
 ---
 
 # Learning Loop
@@ -16,7 +16,7 @@ metadata:
 
 Use when the user wants to learn a topic or skill over multiple sessions: starting a learning path, continuing one, quizzing, mapping, or checking progress. This is the methodology contract for the `mentor` agent and the `/learn` command.
 
-Do not use for one-off explanations, book-chapter synthesis (`summarize` skill), or English coaching (`english-tutor` skill).
+Do not use for one-off explanations, book-chapter synthesis (`summarize` skill), or on-demand English corrections outside `/learn` (`english-tutor` skill).
 
 ## Hard Rules
 
@@ -31,6 +31,7 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 - Quizzes are a low-stakes pacing instrument: they read the cue bank but never move Leitner boxes. Only scheduled `spaced-recall` reviews and `feynman-teachback` gap demotions change the queue.
 - Each lesson is completable quickly with a single tangible win, sits inside the learner's zone of proximal development (per `mission.md` prior knowledge plus quiz/review history), and cites at least one primary source.
 - Never fabricate progress: quiz results, review grades, and exercise outcomes are recorded as they actually happened.
+- **Language topics route to `language-loop`**: when `mission.md` names a target language, this skill stays the outer contract (mission, path, due-check, ZPD, output contract) but the Module Session Flow below is replaced by the `language-loop` two-wave session flow, and `bidirectional-translation` governs `drill` mode.
 
 ## Modes
 
@@ -44,6 +45,8 @@ Route the raw `/learn` arguments:
 | `map [topic]` | map | Regenerate or expand the topic's Mermaid mindmap from its notes and path. |
 | `teach [concept]` | teach | Feynman teach-back per `feynman-teachback`: the learner explains, the mentor plays a naive student; gaps demote cards and set return paths. |
 | `vocab [words \| theme]` | vocab | Anki vocabulary batch per `anki-vocab`: natural phrases from a situation or the given units, reinforced from `vocabulary.md` and the review queue; language topics only; empty input proposes a batch from mission context plus weak cards. |
+| `drill [unit]` | drill | Standalone bidirectional-translation session per `bidirectional-translation` on the named dialogue unit (weakest-first when empty); language topics only. |
+| `audio [unit]` | audio | Generate or refresh dialogue-unit audio per `lesson-audio` (normal + slow renditions; units with `pending` audio backfilled oldest-first when empty); language topics only. |
 | `status` | status | Rebuild `.ai/learning/dashboard.md`: per-topic progress, due/upcoming reviews, mastered counts. |
 | anything else | topic | Treat as a topic: resume if `<topic-slug>` exists, otherwise start a new path. |
 

@@ -1,6 +1,6 @@
 # Using the learning domain
 
-One command, one hidden agent, five methods. `/learn` drives multi-session learning paths whose state lives in the project you run it from, under `.ai/learning/`. The `mentor` agent (`mode: subagent`) never shows up in OpenCode's agent switcher — you only ever talk to it through `/learn`.
+Two commands, a primary mentor plus a hidden tutor, nine methods. `/learn` drives multi-session learning paths whose state lives in the project you run it from, under `.ai/learning/`; `/english` is the on-demand English coaching surface that feeds recurring gaps into those paths. The `mentor` is `mode: primary`, sdd-style: it shows up in OpenCode's agent switcher and you can talk to it directly (a direct message is routed like `/learn` input), with `/learn` as the front door. `english-tutor` stays `mode: subagent` and is only reachable through `/english`.
 
 ## Install
 
@@ -21,7 +21,10 @@ Do not install with `--domain learning` alone if other domains are already insta
 | `/learn map [topic]` | Regenerate or expand the topic's Mermaid mindmap. |
 | `/learn teach [concept]` | Feynman teach-back: you explain, the mentor plays a curious novice and probes for gaps. |
 | `/learn vocab [words\|theme]` | Anki vocabulary batch for a language topic: natural phrases (situation-driven, built from already-learned vocabulary), exported as `;`-separated txt under `anki/` ready for Anki import; units registered in `vocabulary.md`. |
+| `/learn drill [unit]` | Bidirectional-translation drill on a dialogue unit (weakest-first when empty): retranslate the native text into the target language from memory, compare against the original, capture the differences. Language topics only. |
+| `/learn audio [unit]` | Generate or refresh a dialogue unit's audio (`pending` units backfilled oldest-first when empty): normal + slow (~−20%) renditions of the target-language text under `audio/`, using the best available engine — a configured TTS MCP (e.g. ElevenLabs) → `edge-tts` → macOS `say` → skip with an install hint. Language topics only. |
 | `/learn status` | Dashboard across topics: progress, due and upcoming reviews, mastered counts. |
+| `/english [text]` | Explicit English coaching: five-field corrections (`Original/Improved/Explanation/Learning gap/Practice suggestion`), practice prompts, or a progress summary over the gaps inbox. Opt-in only — never passive monitoring. |
 
 Every invocation, in every mode, starts with the due-check: cards with `Next ≤ today` are offered (never forced) before new material. There is no scheduler — the queue is pull-based, so just invoking `/learn` regularly is the cadence.
 
@@ -36,6 +39,16 @@ Every invocation, in every mode, starts with the due-check: cards with `Next ≤
 When every module is ✅, the topic closes with a **capstone teach-back** against your mission's observable goal and success criteria; `mission.md` flips to `Status: completed` and `/learn status` lists it under Completed. Reviews keep surfacing until every card is Mastered — completion closes the path, not the retention loop.
 
 Materials are Markdown in English (never HTML), always with at least one Mermaid diagram — except Anki batch exports under `anki/`, plain `;`-separated `.txt`; the conversation follows your language.
+
+## Language topics (English as a learning subdomain)
+
+When a topic's `mission.md` names a target language, `language-loop` replaces the 70-20-10 module flow with an input-first, two-wave session (absorbed from Assimil, Lampariello, Kaufmann, and Krashen):
+
+- **Passive wave**: each session adds one new bilingual dialogue unit (`dialogues/NNNN-<slug>.md`) — target-language text with a natural native translation, built from your mission's situations and ~90% from vocabulary you already know (comprehensible i+1). You read for comprehension; unknowns are captured in context, not lectured. Production is invited, never forced early.
+- **Audio** (`lesson-audio`): each dialogue unit can be heard, not just read — one normal and one slow (~−20%) rendition of the target-language text only, saved under `audio/`, with one consistent voice per topic recorded in `mission.md`. With audio the passive wave runs listen-first (listen slow → listen normal while reading → read), the Assimil order. Engines are probed in a ladder — a TTS MCP you already configured (e.g. ElevenLabs) → `edge-tts` (free neural voices, also writes synced subtitles) → macOS `say` (reduced quality) — and synthesis is ask-gated, announced, and writes only under `audio/`. No engine available never fails the session: the unit is marked `Audio: pending` with a one-line install hint, and `/learn audio` backfills later.
+- **Active wave** (`bidirectional-translation`): once 5+ units exist, each session also retranslates unit N−5 — you turn the native text back into the target language from memory, then compare against the original. Differences are classified (word choice, structure/order, missing chunk, grammar pattern) and captured: chunks → Anki candidates, patterns → recall cards. Noticing over grading; the delay is the method. `/learn drill [unit]` runs one standalone.
+- **Gap handoff** (`english-tutor` + `/english`): correction sessions can, with your opt-in, append recurring gap categories with **synthetic example patterns only** (never your actual sentences) as `pending` rows in the topic's `gaps.md` inbox. The mentor scans the inbox at every due-check and offers adopting each row as a recall card or a drill, flipping it to `adopted`. No topic yet → `/english` suggests `/learn english`. The old Notion-side `English Coach Memory` is retired; `gaps.md` is the recurring-gap memory.
+- Everything transversal still applies: the due-check runs first, vocabulary goes through `anki-vocab` (Anki is its SRS — no Leitner double-tracking), grammar patterns go through `spaced-recall`, and quizzes/teach-backs work as in any topic.
 
 ## State layout (per project, created by the mentor)
 
@@ -53,13 +66,17 @@ Materials are Markdown in English (never HTML), always with at least one Mermaid
     exercises/NNNN-<name>.md   # briefs, hints, outcome log (70% + 20% debrief)
     quizzes/NNNN-YYYY-MM-DD.md # quiz results (pacing signal)
     teachbacks/NNNN-<concept>.md # Feynman sessions: gaps, return paths, analogy
+    dialogues/NNNN-<slug>.md   # language topics: bilingual units + retranslation log
+    audio/NNNN-<slug>[-slow].mp3 # language topics: unit renditions (lesson-audio; container per engine)
+    gaps.md                    # language topics: gap inbox (english-tutor -> mentor)
 ```
 
-The mentor writes only under `.ai/learning/**` — it reads your repos to design and review the 70% exercises but never edits them.
+The mentor writes only under `.ai/learning/**` — it reads your repos to design and review the 70% exercises but never edits them. The `english-tutor` agent is narrower still: its only writable path is an existing topic's `gaps.md`, append-only and opt-in.
 
 ## Troubleshooting
 
-- **Native questions don't surface from the subtask session**: the command runs the subagent via `agent: mentor` + `subtask: true`. If OpenCode doesn't show the question UI from the child session, either drop `subtask: true` from `domains/learning/commands/learn.md` or set `mentor` to `mode: primary` (it becomes visible in the switcher) and re-run the installer.
+- **Native questions don't surface from the subtask session**: only `/english` runs its agent as a subtask (`agent: english-tutor` + `subtask: true` — its opt-in gap handoff is question-driven); `/learn` runs in the `mentor` primary session, where the question UI is native. If OpenCode doesn't show the question UI from `/english`'s child session, drop `subtask: true` from `domains/learning/commands/english.md` or set `english-tutor` to `mode: primary` (it becomes visible in the switcher) and re-run the installer.
 - **Reviews pile up**: `/learn review` clears the backlog oldest-first; `/learn status` shows what's coming so you can pick session days.
 - **Wrong pacing**: the mentor adjusts from quiz/review/teach-back evidence (zone of proximal development) and records every pacing decision in the `path.md` log — override it by just saying so during a session.
-- **The mentor asks to run tests**: when you close a 70% exercise it may ask permission to run your repo's test/build command to verify the outcome. Bash is ask-gated and verification-only — it reads the date and runs your suite, never edits your code or runs mutating commands. Decline and just report the result yourself if you prefer.
+- **The mentor asks to run tests**: when you close a 70% exercise it may ask permission to run your repo's test/build command to verify the outcome. Bash is ask-gated and narrow — it reads the date, runs your suite, or synthesizes lesson audio into `.ai/learning/<topic>/audio/`; it never edits your code or runs any other mutating command. Decline and just report the result yourself if you prefer.
+- **No audio / TTS engine missing**: `lesson-audio` probes a configured ElevenLabs MCP first (only if you already set up `elevenlabs-mcp` with `ELEVENLABS_API_KEY`; free tier ~10k credits/month), then `edge-tts`, then macOS `say`. For the recommended free default, install it with `pipx install edge-tts` (or `pip install edge-tts`). Units skipped meanwhile stay `Audio: pending` — backfill them anytime with `/learn audio`.
