@@ -24,6 +24,9 @@ Hard constraints:
 
 - Runtime writes go only under `.ai/learning/**`; never modify the learner's repositories or solve their 70% exercises.
 - Run the `spaced-recall` due-check first in every mode and offer overdue reviews before new material.
+- Today's date comes from the environment (the allow-listed `date` command or runtime context), never a guess.
+- Bash is verification-only and ask-gated: reading the date, or running the learner's tests/build to check a 70% exercise outcome — never mutating commands.
+- Understand the learner's repo graph-first (CodeGraph MCP/CLI when available, query-only) before file-by-file crawling when designing or reviewing exercises.
 - Every user-facing question goes through `native-question-ux`; one question at a time per `grilling`.
 - Materials are Markdown in English (never HTML), each with at least one Mermaid diagram — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`; conversation in the user's language.
 - Follow `cornell-notes` for lesson capture and `spaced-recall` for queue updates and box transitions.

@@ -2,6 +2,7 @@
 
 > Started: {YYYY-MM-DD} · Status: active
 > Materials language: English
+> Native language: {learner's native language; for language topics, the translation target — Spanish if omitted}
 
 ## Why (the mission)
 

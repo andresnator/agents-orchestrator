@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "1.2.1"
+  version: "1.3.0"
 ---
 
 # Learning Loop
@@ -24,8 +24,11 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 - All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. The conversation follows the user's language.
 - Every user-facing question goes through `native-question-ux`; interviews follow `grilling`: one question at a time, recommendation attached, stop and wait.
 - Every path, lesson, and map embeds at least one Mermaid diagram: `mindmap` for concept overviews, `graph TD` for processes and roadmaps, `sequenceDiagram` for interactions.
-- Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall`; vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.
+- Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall` (including its interleaving and leech rules); vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.
 - 70% exercises are the learner's to solve: propose, constrain, and give escalating hints — never write the solution. Reading the learner's repos to design or review an exercise is fine; editing them is not.
+- **Understand the repo graph-first**: when designing or reviewing an exercise, resolve the learner's repo structure from a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file crawling; the graph is query-only, and every claim still cites the underlying `file:line`.
+- **Interleave retrieval**: reviews and quizzes mix cues across notes and modules rather than replaying one block — the mechanics live in `spaced-recall`.
+- Quizzes are a low-stakes pacing instrument: they read the cue bank but never move Leitner boxes. Only scheduled `spaced-recall` reviews and `feynman-teachback` gap demotions change the queue.
 - Each lesson is completable quickly with a single tangible win, sits inside the learner's zone of proximal development (per `mission.md` prior knowledge plus quiz/review history), and cites at least one primary source.
 - Never fabricate progress: quiz results, review grades, and exercise outcomes are recorded as they actually happened.
 
@@ -37,7 +40,7 @@ Route the raw `/learn` arguments:
 | --- | --- | --- |
 | empty | continue | Due-check, then resume the active topic's next module; if several topics are active, ask which one. |
 | `review [topic]` | review | Run a `spaced-recall` review session over all due cards (one topic or all). |
-| `quiz [topic]` | quiz | Retrieval quiz from the topic's Cornell cue bank; record results in `quizzes/`; results inform pacing but do not move boxes. |
+| `quiz [topic]` | quiz | Retrieval quiz from the topic's Cornell cue bank, interleaving cues across modules; record results in `quizzes/`; results inform pacing but do not move boxes. |
 | `map [topic]` | map | Regenerate or expand the topic's Mermaid mindmap from its notes and path. |
 | `teach [concept]` | teach | Feynman teach-back per `feynman-teachback`: the learner explains, the mentor plays a naive student; gaps demote cards and set return paths. |
 | `vocab [words \| theme]` | vocab | Anki vocabulary batch per `anki-vocab`: natural phrases from a situation or the given units, reinforced from `vocabulary.md` and the review queue; language topics only; empty input proposes a batch from mission context plus weak cards. |
@@ -46,7 +49,7 @@ Route the raw `/learn` arguments:
 
 ## New Topic Flow
 
-1. **Mission grounding** — short interview (why, observable goal, success criteria, time budget, prior knowledge) → `mission.md` from `assets/mission-template.md`. Failing to understand the mission means knowledge acquisition is not grounded; do not skip it.
+1. **Mission grounding** — short interview (why, observable goal, success criteria, time budget, prior knowledge; for a language topic also the learner's native language) → `mission.md` from `assets/mission-template.md`. Failing to understand the mission means knowledge acquisition is not grounded; do not skip it.
 2. **Path** — draft 4–8 modules, each with a single tangible win, ordered by dependency → `path.md` from `assets/path-template.md`, with a `graph TD` roadmap using ✅/🔄/⬜ status markers. Confirm the path with the learner before starting module 1.
 3. **Resources** — seed `resources.md` from `assets/resources-template.md` with 2–3 curated primary sources and community venues (curated with reasons, never dumped).
 
@@ -57,6 +60,14 @@ Route the raw `/learn` arguments:
 3. **70% doing** — real exercise in the learner's repo (or a self-contained kata when no repo fits) → `exercises/NNNN-<name>.md` from `assets/exercise-template.md`: brief, constraints, escalating hints, outcome log. The learner executes; the mentor coaches.
 4. **20% social** — Socratic debrief (what did you learn, what surprised you, where would you use it) recorded in the exercise's outcome log, plus any new community resources into `resources.md`. When the module's concept is load-bearing, close the debrief with a Feynman teach-back (`feynman-teachback`).
 5. **Close** — new cues go to `review-queue.md` via `spaced-recall`; update `path.md` status, roadmap markers, and log; state the next module and the next due review date.
+
+## Topic Completion
+
+When every module in `path.md` is ✅, close the topic rather than leaving it open-ended:
+
+1. **Capstone teach-back** — one `feynman-teachback` session against the `mission.md` observable goal, checking off each success criterion the learner can now demonstrate; unmet criteria stay open and reopen the nearest module.
+2. **Mark it done** — set `Status: completed` in `mission.md`; `/learn status` then lists it under Completed, separate from Active topics.
+3. **Reviews outlive completion** — the `review-queue.md` keeps surfacing due cards until every card is Mastered; completion closes the path, not the retention loop.
 
 ## Zone of Proximal Development
 

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Spaced Recall
@@ -21,8 +21,10 @@ Do not use for ungraded quizzes — quiz mode reads the same cues but never move
 - There is no scheduler: scheduling is **pull-based**. The due-check below runs at the start of every `/learn` invocation, in every mode.
 - Never reveal an answer before the learner attempts recall. Retrieval effort is the mechanism, not a formality.
 - Grading questions go through `native-question-ux`, recommended option first.
+- **Today's date comes from the environment**, never from a guess: read it from the runtime context or the agent's allow-listed `date` command. If it is genuinely unavailable, confirm the date with the learner before any due-check or box transition.
 - Dates are absolute `YYYY-MM-DD`. Compute `Next` strictly from the transition table; never invent or backfill review history.
-- Card IDs (`C-NNNN`) are unique per topic and never reused; each card links back to its source Cornell note.
+- Card IDs (`C-NNNN`) are unique per topic and never reused; each card links back to its source Cornell note. In an all-topic review, reference cards as `<topic-slug>/C-NNNN` because IDs are only unique within a topic.
+- **Interleave, don't block**: when due cards span several notes or topics, order the session by mixing sources rather than grouping all of one note's cards together — interleaving is part of the retention mechanism, not a cosmetic choice.
 
 ## Queue Format
 
@@ -50,17 +52,20 @@ Intervals: box 1 → +1d · box 2 → +3d · box 3 → +7d · box 4 → +14d · 
 | Good | Recalled correctly | → box + 1 |
 | Easy | Instant, effortless | → box + 2 (max 5) |
 
-Good or Easy at box 5 → move to `## Mastered` with the date.
+On every grade set `Last` = today and `Next` = today + the new box's interval — including `Hard`, which keeps the box but still re-dates from today. Good or Easy at box 5 → move to `## Mastered` with the date.
+
+**Leeches**: when a card is graded `Again` for the 3rd time, mark it `⚠ leech` in its `Cue` cell and stop letting it churn — propose (via `native-question-ux`) reformulating the cue in place or splitting it into two clearer cards, and log the decision in the topic's `path.md`. A leech is a signal the cue is badly formed or the underlying lesson needs a re-teach, not a card to keep failing.
 
 ## Due-Check Contract
 
 1. Read every `review-queue.md` (active topic, or all topics for `status`/bare `review`).
 2. List cards with `Next` ≤ today, oldest first.
 3. Offer — never force — to review them before new material: "You have N reviews due; do them first?" via `native-question-ux`.
+4. **Cap the backlog per session**: offer due cards in chunks of ~15, oldest-first within the chunk, and confirm before continuing to the next chunk. A large backlog is cleared over several passes, not one exhausting marathon.
 
 ## Review Session
 
-For each due card, in order: ask the Cue and wait for the learner's attempt → reveal the Notes answer (from the linked note) → ask for the grade (Good recommended by default) → apply the transition and update Box/Last/Next. Close by reporting cards reviewed, grades, promotions/demotions, mastered cards, and the next due date.
+Take up to ~15 due cards, interleaved across their source notes/topics rather than grouped. For each card, in order: ask the Cue and wait for the learner's attempt → reveal the Notes answer (from the linked note) → ask for the grade (Good recommended by default) → apply the transition and update Box/Last/Next. Watch for the 3rd `Again` on a card and apply the leech rule. Close by reporting cards reviewed, grades, promotions/demotions, mastered cards, any leeches flagged, and the next due date.
 
 ## Output Contract
 

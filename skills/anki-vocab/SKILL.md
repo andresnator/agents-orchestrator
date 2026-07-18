@@ -1,18 +1,18 @@
 ---
 name: anki-vocab
-description: "Trigger: anki, vocab, vocabulary cards, vocabulario, tarjetas anki, learn vocab. Anki-importable vocabulary batches for any target language: situation-driven natural phrases built preferentially from already-learned vocabulary, with Spanish translations, exported as ;-separated txt."
+description: "Trigger: anki, vocab, vocabulary cards, vocabulario, tarjetas anki, learn vocab. Anki-importable vocabulary batches for any target language: situation-driven natural phrases built preferentially from already-learned vocabulary, translated into the learner's native language (Spanish by default), exported as ;-separated txt."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # Anki Vocab
 
 ## Activation Contract
 
-Use for the `vocab` mode of `/learn` on **language-learning topics** — any target language (the language named in `mission.md`), always translated into Spanish: generating a batch of Anki-importable vocabulary cards from words, phrases, or a situation/theme. Owns `vocabulary.md` (the learned-unit registry, from `assets/vocabulary-template.md`) and `anki/` (batch exports, format fixture for an English-topic batch in `assets/batch-format.txt`) under each `.ai/learning/<topic-slug>/`.
+Use for the `vocab` mode of `/learn` on **language-learning topics** — any target language (the language named in `mission.md`), translated into the learner's native language (the `Native language:` line in `mission.md`, defaulting to Spanish when absent): generating a batch of Anki-importable vocabulary cards from words, phrases, or a situation/theme. Owns `vocabulary.md` (the learned-unit registry, from `assets/vocabulary-template.md`) and `anki/` (batch exports, format fixture for an English-topic batch in `assets/batch-format.txt`) under each `.ai/learning/<topic-slug>/`.
 
 Do not use for non-language topics: if `mission.md` shows the topic is not a language, say vocab mode only applies to language topics and ask (via `native-question-ux`) whether to pick a language topic or run another mode — never generate anyway. Do not create Leitner cards for exported units: Anki is their spaced-repetition system; `review-queue.md` stays for conceptual cues (add a vocab unit there only on explicit learner request).
 
@@ -37,13 +37,13 @@ Do not use for non-language topics: if `mission.md` shows the topic is not a lan
 
 One row per card, no header line, no quoting, separator `;`, five fields:
 
-`unit;meaning;part of speech;example;spanish translation`
+`unit;meaning;part of speech;example;native translation`
 
 - `unit`: the phrase/word anchor, in the target language.
 - `meaning`: short gloss of the unit, in simple target-language terms.
 - `part of speech`: of the unit (phrase, phrasal verb, verb, noun, idiom, ...).
 - `example`: one full natural target-language sentence using the unit in the situation.
-- `spanish translation`: full-sentence Spanish translation of the example.
+- `native translation`: full-sentence translation of the example into the learner's native language from `mission.md` (Spanish by default; the fixture in `assets/batch-format.txt` shows the Spanish default).
 - No `;` and no double quotes inside any field — rephrase instead.
 - File: `.ai/learning/<topic-slug>/anki/NNNN-<batch-slug>.txt`, `NNNN` sequential from `0001` within `anki/`, `<batch-slug>` from the theme or first unit.
 
