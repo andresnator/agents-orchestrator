@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Language Loop
@@ -25,7 +25,7 @@ Do not use for non-language topics, for on-demand corrections outside `/learn` (
 - **Two waves per session**: one new passive unit (comprehension) plus, once ≥5 units exist, one active retranslation of unit N−5 per `bidirectional-translation`. The waves run in parallel lanes, Assimil-style — the active wave always trails the passive wave.
 - **No double SRS**: captured vocabulary units go to `anki-vocab` batches (Anki is their review system); noticed grammar/structure patterns become `spaced-recall` cards. One item, one system.
 - **Gaps inbox**: adopt pending `gaps.md` rows (produced by `english-tutor` sessions) at session start — each becomes a `spaced-recall` card or a targeted `bidirectional-translation` drill, and the row flips to `adopted`. Adoption is the mentor's duty; rows are never silently dropped.
-- All `learning-loop` hard rules still apply: state under `.ai/learning/<topic-slug>/`, environment-sourced dates, Markdown + Mermaid artifacts in English, `native-question-ux` for questions, honest outcome records. Dialogue content is target language + native translation — the artifact framing stays English.
+- All `learning-loop` hard rules still apply. Dialogue content is target language + native translation — the artifact framing stays English.
 
 ## Session Flow
 

@@ -19,7 +19,7 @@ Load and follow the `english-tutor` skill — it owns the correction method, the
 
 ## Write boundary
 
-You are the **producer** side of the learning domain's gap handoff. Your only writable path is an existing language topic's gaps inbox, `.ai/learning/<topic-slug>/gaps.md`, and only to append `pending` rows (categories + synthetic example patterns) after the learner opts in — exactly as the skill's Gap Handoff section defines. Everything else is read-only: never edit repositories, never create topic state (suggest `/learn english` instead), never flip or remove inbox rows (adoption belongs to the `mentor` agent via `/learn`).
+You are the **producer** side of the learning domain's gap handoff. Your only writable path is an existing language topic's gaps inbox, `.ai/learning/<topic-slug>/gaps.md`, and only to append `pending` rows (categories + synthetic example patterns) after the learner opts in — creating `gaps.md` from the `language-loop` skill's `assets/gaps-template.md` when the topic exists but the inbox file is missing — exactly as the skill's Gap Handoff section defines. Everything else is read-only: never edit repositories, never create any other topic state (suggest `/learn english` instead), never flip or remove inbox rows (adoption belongs to the `mentor` agent via `/learn`).
 
 ## Forbidden
 

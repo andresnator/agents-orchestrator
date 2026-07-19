@@ -6,7 +6,7 @@ The domain has a primary agent and a hidden one: `mentor` is `mode: primary` —
 
 English is a subdomain of learning. Language topics (a `mission.md` naming a target language) swap the 70-20-10 module flow for `language-loop`'s input-first two-wave session — one new bilingual dialogue unit (passive wave, comprehensible i+1 built from known vocabulary) plus a delayed retranslation of an older unit (active wave) per `bidirectional-translation` (Lampariello: native → target from memory, compare vs the original, notice differences). The `english-tutor` skill is the on-demand correction surface (`/english`, five-field contract) and the **producer** in an sdd-style handoff: with the learner's opt-in it appends gap categories with synthetic example patterns (never learner raw text) as `pending` rows in the topic's `gaps.md` inbox; the mentor is the **consumer**, adopting pending rows as recall cards or drills in the next `/learn` session. Methodology absorbed from Assimil (two waves), Lampariello (bidirectional translation), Kaufmann (input-first compelling content), and Krashen (i+1, silent period, affective filter).
 
-All state lives under `.ai/learning/`: a `dashboard.md` plus one `<topic-slug>/` directory per topic with `mission.md`, `path.md` (Mermaid roadmap), `review-queue.md`, `resources.md`, `vocabulary.md` (Anki export inventory), and `notes/`, `exercises/`, `quizzes/`, `anki/` files — language topics add `dialogues/` (bilingual units) and the `gaps.md` inbox. Every `/learn` invocation runs the spaced-repetition due-check first — there is no scheduler; the queue is pull-based.
+All state lives under `.ai/learning/`: a `dashboard.md` plus one `<topic-slug>/` directory per topic with `mission.md`, `path.md` (Mermaid roadmap + capstone completion gate), `review-queue.md`, `resources.md`, `vocabulary.md` (Anki export inventory), and `notes/`, `exercises/`, `quizzes/`, `anki/` files — language topics add `dialogues/` (bilingual units) and the `gaps.md` inbox. Every `/learn` invocation runs the spaced-repetition due-check first — there is no scheduler; the queue is pull-based. The `recall-calc` plugin registers two read-only calculator tools (`recall_due`, `recall_schedule`) so due lists and Leitner date arithmetic come from deterministic code — the mentor transcribes the results into `review-queue.md` and falls back to `spaced-recall`'s manual tables when the plugin is absent.
 
 ## Components
 
@@ -16,6 +16,7 @@ All state lives under `.ai/learning/`: a `dashboard.md` plus one `<topic-slug>/`
 | Agent (subagent) | `english-tutor` | Provides explicit English coaching and feeds the gaps inbox |
 | Command | `/learn` | Routes learning, review, quiz, drill, and status modes |
 | Command | `/english` | Coaches English through corrections and practice |
+| Plugin | `recall-calc` | Registers read-only `recall_due`/`recall_schedule` Leitner calculator tools |
 | Skill | `anki-vocab` | Create situation-driven Anki vocabulary batches |
 | Skill | `bidirectional-translation` | Run delayed retranslation drills that surface differences |
 | Skill | `cornell-notes` | Capture micro-lessons as Cornell notes |
@@ -37,7 +38,7 @@ graph TD
     SEV --> TWE["20% Socratic debrief<br/>+ community resources"]
     TWE --> Q["New cues -> review-queue.md<br/>path.md updated"]
     Q --> DONE{All modules done?}
-    DONE -- yes --> CAP["Capstone teach-back vs mission<br/>mission.md -> completed"]
+    DONE -- yes --> CAP["Capstone teach-back vs mission<br/>path.md gate ✅ -> mission.md completed"]
     M -- teach --> F["Feynman teach-back<br/>(gaps -> cards to box 1 + return paths)"]
     F --> Q
     M -- vocab --> V["Anki batch txt (anki-vocab)<br/>+ vocabulary.md registry"]

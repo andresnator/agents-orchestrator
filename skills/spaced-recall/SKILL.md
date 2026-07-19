@@ -4,8 +4,8 @@ description: "Trigger: spaced repetition, review queue, repaso espaciado, repeti
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.1.0"
+  status: testing
+  version: "1.2.0"
 ---
 
 # Spaced Recall
@@ -23,6 +23,7 @@ Do not use for ungraded quizzes — quiz mode reads the same cues but never move
 - Grading questions go through `native-question-ux`, recommended option first.
 - **Today's date comes from the environment**, never from a guess: read it from the runtime context or the agent's allow-listed `date` command. If it is genuinely unavailable, confirm the date with the learner before any due-check or box transition.
 - Dates are absolute `YYYY-MM-DD`. Compute `Next` strictly from the transition table; never invent or backfill review history.
+- **Deterministic math over mental math**: when the runtime exposes recall calculator tools (for example `recall_due` and `recall_schedule` from the learning domain's `recall-calc` plugin), take due lists, box transitions, and every `Last`/`Next` date from them and transcribe the results into `review-queue.md` — never recompute a date the calculator already returned. Without such tools, apply the tables below manually.
 - Card IDs (`C-NNNN`) are unique per topic and never reused; each card links back to its source Cornell note. In an all-topic review, reference cards as `<topic-slug>/C-NNNN` because IDs are only unique within a topic.
 - **Interleave, don't block**: when due cards span several notes or topics, order the session by mixing sources rather than grouping all of one note's cards together — interleaving is part of the retention mechanism, not a cosmetic choice.
 
@@ -59,13 +60,13 @@ On every grade set `Last` = today and `Next` = today + the new box's interval �
 ## Due-Check Contract
 
 1. Read every `review-queue.md` (active topic, or all topics for `status`/bare `review`).
-2. List cards with `Next` ≤ today, oldest first.
+2. List cards with `Next` ≤ today, oldest first (via a due-check calculator tool such as `recall_due` when available).
 3. Offer — never force — to review them before new material: "You have N reviews due; do them first?" via `native-question-ux`.
 4. **Cap the backlog per session**: offer due cards in chunks of ~15, oldest-first within the chunk, and confirm before continuing to the next chunk. A large backlog is cleared over several passes, not one exhausting marathon.
 
 ## Review Session
 
-Take up to ~15 due cards, interleaved across their source notes/topics rather than grouped. For each card, in order: ask the Cue and wait for the learner's attempt → reveal the Notes answer (from the linked note) → ask for the grade (Good recommended by default) → apply the transition and update Box/Last/Next. Watch for the 3rd `Again` on a card and apply the leech rule. Close by reporting cards reviewed, grades, promotions/demotions, mastered cards, any leeches flagged, and the next due date.
+Take up to ~15 due cards, interleaved across their source notes/topics rather than grouped. For each card, in order: ask the Cue and wait for the learner's attempt → reveal the Notes answer (from the linked note) → ask for the grade (Good recommended by default) → apply the transition (via a calculator tool such as `recall_schedule` when available) and update Box/Last/Next. Watch for the 3rd `Again` on a card and apply the leech rule. Close by reporting cards reviewed, grades, promotions/demotions, mastered cards, any leeches flagged, and the next due date.
 
 ## Output Contract
 

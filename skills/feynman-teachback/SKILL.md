@@ -4,8 +4,8 @@ description: "Trigger: feynman, teach back, teach-back, explicamelo, metodo feyn
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.0.0"
+  status: testing
+  version: "1.0.1"
 ---
 
 # Feynman Teach-Back
@@ -28,7 +28,7 @@ Do not use as a lecture: in this skill the learner talks and the mentor listens,
 
 ## Session Flow
 
-1. Pick the concept: from `$ARGUMENTS`, or recommend the concept with the weakest recent review/quiz record.
+1. Pick the concept: the one passed by the caller (for example `/learn teach <concept>`), or recommend the concept with the weakest recent review/quiz record.
 2. Frame it: "Explain {concept} to me like I've never seen it. I'll interrupt like a curious novice."
 3. Listen and probe: naive questions only ("why?", "what happens if...?", "what does {jargon} mean?"). Let silence and struggle happen — that is the retrieval effort.
 4. Debrief: list gaps with their classification, apply the queue demotions, agree on the return path per gap.

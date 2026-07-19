@@ -6,8 +6,8 @@ metadata:
   author: Matt Pocock
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
-  status: in-progress
-  version: "1.4.0"
+  status: testing
+  version: "1.5.0"
 ---
 
 # Learning Loop
@@ -52,7 +52,7 @@ Route the raw `/learn` arguments:
 ## New Topic Flow
 
 1. **Mission grounding** — short interview (why, observable goal, success criteria, time budget, prior knowledge; for a language topic also the learner's native language) → `mission.md` from `assets/mission-template.md`. Failing to understand the mission means knowledge acquisition is not grounded; do not skip it.
-2. **Path** — draft 4–8 modules, each with a single tangible win, ordered by dependency → `path.md` from `assets/path-template.md`, with a `graph TD` roadmap using ✅/🔄/⬜ status markers. Confirm the path with the learner before starting module 1.
+2. **Path** — draft 4–8 modules, each with a single tangible win, ordered by dependency → `path.md` from `assets/path-template.md`, with a `graph TD` roadmap using ✅/🔄/⬜ status markers and the `## Completion` capstone gate created ⬜. Confirm the path with the learner before starting module 1.
 3. **Resources** — seed `resources.md` from `assets/resources-template.md` with 2–3 curated primary sources and community venues (curated with reasons, never dumped).
 
 ## Module Session Flow (70-20-10)
@@ -65,11 +65,13 @@ Route the raw `/learn` arguments:
 
 ## Topic Completion
 
-When every module in `path.md` is ✅, close the topic rather than leaving it open-ended:
+The capstone is an explicit state gate, not a prose reminder: `path.md`'s `## Completion` table (from `assets/path-template.md`) carries it as a ⬜ row from the day the path is created. When every module in `path.md` is ✅, close the topic rather than leaving it open-ended:
 
-1. **Capstone teach-back** — one `feynman-teachback` session against the `mission.md` observable goal, checking off each success criterion the learner can now demonstrate; unmet criteria stay open and reopen the nearest module.
-2. **Mark it done** — set `Status: completed` in `mission.md`; `/learn status` then lists it under Completed, separate from Active topics.
+1. **Capstone teach-back** — one `feynman-teachback` session against the `mission.md` observable goal, checking off each success criterion the learner can now demonstrate; unmet criteria stay open and reopen the nearest module (which also resets the gate to ⬜).
+2. **Flip the gate, then mark it done** — record the teach-back file path and date as the gate's Evidence, set the gate ✅, and only then set `Status: completed` in `mission.md`; `/learn status` lists it under Completed. `mission.md` never reads completed while the gate is ⬜.
 3. **Reviews outlive completion** — the `review-queue.md` keeps surfacing due cards until every card is Mastered; completion closes the path, not the retention loop.
+
+A fresh session resumes from files alone: all modules ✅ with the gate ⬜ means the capstone is due — offer it before any new material.
 
 ## Zone of Proximal Development
 

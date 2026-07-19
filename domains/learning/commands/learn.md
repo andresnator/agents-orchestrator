@@ -28,7 +28,7 @@ Hard constraints:
 - Bash is ask-gated and narrow: reading the date or running the learner's tests/build to check a 70% exercise outcome — never any other mutating command.
 - Understand the learner's repo graph-first (CodeGraph MCP/CLI when available, query-only) before file-by-file crawling when designing or reviewing exercises.
 - Every user-facing question goes through `native-question-ux`; one question at a time per `grilling`.
-- Materials are Markdown in English (never HTML), each with at least one Mermaid diagram — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`; conversation in the user's language.
+- Materials are Markdown in English (never HTML); every path, lesson, and map embeds at least one Mermaid diagram (other records add one when it helps); Anki batch exports under `anki/` stay plain `;`-separated `.txt` per `anki-vocab`; conversation in the user's language.
 - Follow `cornell-notes` for lesson capture and `spaced-recall` for queue updates and box transitions.
 - Vocab batches follow `anki-vocab`; exported units get no Leitner cards — Anki is their review system.
 - Language topics (mission names a target language) follow `language-loop` for the session flow: two waves per session, and a scan of the topic's `gaps.md` inbox during the due-check — pending rows are offered for adoption (card or drill) and flipped to `adopted`.

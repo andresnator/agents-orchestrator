@@ -4,8 +4,8 @@ description: "Trigger: anki, vocab, vocabulary cards, vocabulario, tarjetas anki
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.1.0"
+  status: testing
+  version: "1.1.1"
 ---
 
 # Anki Vocab

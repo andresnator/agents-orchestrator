@@ -4,8 +4,8 @@ description: "Trigger: cornell note, cornell notes, nota cornell, learning lesso
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.0.0"
+  status: testing
+  version: "1.0.1"
 ---
 
 # Cornell Notes
