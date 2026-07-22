@@ -28,6 +28,32 @@ Merge a block like this into your `opencode.json` (global for your default polic
 
 Putting `jd-judge-a` and `jd-judge-b` on different providers strengthens the blind adversarial review: the judges cannot share model-specific blind spots. `jd-solo` is the single light-mode judge — mapping it to a cheap fast model is the point of the tier (profile tier `judge-solo`).
 
+## Minion Setup
+
+The MinionS pattern (HazyResearch, ICML 2025) pairs a frontier supervisor that decomposes work with cheap workers that execute scoped subtasks in parallel, and reports roughly 5x lower cost at ~98% of frontier quality. The harness already implements the architecture — brief-scoped subagents, parallel waves, compact returns, supervisor-side verification — so the only missing half is the cost asymmetry, and that is pure model assignment. Without a mapping there is none: subagents inherit the invoking agent's model (see "Defaults When Unmapped"), so every worker runs on the supervisor's expensive model.
+
+Recommended classification:
+
+**Minions — cheap/fast tier.** These agents work from a complete brief, return a fixed compact format, and everything they produce is verified by the orchestrator or a downstream gate, so a weak model degrades latency more than outcomes:
+
+- `sdd-explore`, `arch-analyzer`, `refactor-analyzer`, `boundary-inspector` — context reading and compression, the core MinionS worker use case
+- `sdd-proposal`, `sdd-spec`, `sdd-tasks` — mechanical drafting from decisions already made in the brief
+- `jd-solo` — already documented as the cheap fast tier
+- `english-tutor` — utility
+
+**Frontier tier.** Decisions, judgment, and the verification that backstops the minions:
+
+- `orchestraitor`, `deep-planner`, `refactor-planner`, `architect` — supervisors (variant `high`)
+- `sdd-verify` — aggregation/verification is the "cloud side" of the pattern; a cheap verifier invalidates the safety net that makes cheap workers acceptable (variant `high`)
+- `jd-judge-a` / `jd-judge-b` — variant `high`, distinct providers (rule above)
+
+**Middle tier — do not degrade to minion:**
+
+- `sdd-implement`, `jd-fix` — write real code; medium-high quality
+- `sdd-design` — makes design decisions, not mechanical drafting; deliberately split from the other three drafters, which is the one place this classification diverges from `profiles/default.json`'s `drafting` tier
+
+Apply it with `/model-configurator` via the Domain path (or a profile plus per-agent overrides), and use **Apply and save as preset** to re-apply the whole mapping in two steps later. Serving the minion tier from a local provider (e.g. Ollama) additionally gives the paper's privacy property: the heavy context is only ever read on your machine.
+
 ## Variants
 
 OpenCode variants are partial option overrides declared per model under the provider block:
