@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 ## Activation Contract
@@ -42,14 +42,17 @@ Then always:
 | Scope spans several independent areas | Split exploration into parallel read-only briefs when the runtime supports sub-agents; otherwise explore sequentially. |
 | Edge case has no destination | Resolve it (handle, scope out, or ask) before delivering; never drop it. |
 | Task is small | Collapse the plan: Context + changes + Verification; state why edges are not relevant in one line. |
+| Goal is too big for one executor change (several independently deliverable capabilities, or the review budget blows repeatedly) | Split into an ordered roadmap of plan slices; plan only the next unblocked slice per sitting — later slices stay named entries until reached. |
 | A referenced skill is not installed | Say so and continue with the chat/plain fallback; never silently skip the discipline itself. |
 
 ## Output Contract
 
-The disciplines above are the same regardless of what you emit; the artifact has two shapes:
+The disciplines above are the same regardless of what you emit; the artifact has two base shapes:
 
 - **Plan document** (default; decisions, investigations, and any runtime without a handoff contract): one document following `assets/plan-template.md` — Context (why + decisions), Design (approach, rejected alternatives, files with their content, reused `path:symbol`), Edge Case Matrix with a destination per row, and an executable end-to-end Verification section.
 - **Executor bundle** (when the goal is an executable change and a handoff contract to an executor exists): the artifacts that contract defines, carrying the same Context / Design / Edge decisions and end-to-end Verification. Compose it by delegating each artifact to the executor's drafting sub-agents when the runtime provides them (e.g. OpenCode's `sdd-proposal` / `sdd-spec` / `sdd-design` / `sdd-tasks`); otherwise draft it inline from the executor's templates. You own the decisions and the evidence; the templates own the shape.
+
+When the too-big Decision Gate fires, the executor bundle is preceded by an ordered roadmap of slices, shaped by the executor's handoff contract; each sitting produces a bundle for only the next unblocked slice.
 
 Report outcome-first in 2-4 lines: what was planned and where the artifact is, key decisions, and the optional next steps (adversarial review, execution).
 

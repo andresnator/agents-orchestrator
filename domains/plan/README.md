@@ -1,6 +1,6 @@
 # Plan Domain
 
-The planning front-door: where rigorous, evidence-first planning happens before any code is written, so the sdd `orchestraitor` stays lean at execution time. Fable-style planning is the method; the output has two shapes. For **executable goals** (feature, change, bugfix) `/deep-plan` produces a **ready-for-sdd bundle** the orchestraitor adopts and executes. For **decisions and investigations** it produces a single **plan document** for humans. The `refactor` domain still owns refactor/hardening bundles — `deep-planner` recommends `/refactor-plan` or `/harden-plan` when a goal is purely behavior-preserving work on existing code; this domain covers everything else you want planned rigorously.
+The planning front-door: where rigorous, evidence-first planning happens before any code is written, so the sdd `orchestraitor` stays lean at execution time. Fable-style planning is the method; the output has three shapes. For **executable goals** (feature, change, bugfix) `/deep-plan` produces a **ready-for-sdd bundle** the orchestraitor adopts and executes — oversized executable goals split into an ordered **slice roadmap** of such bundles, one slice planned per sitting. For **decisions and investigations** it produces a single **plan document** for humans. The `refactor` domain still owns refactor/hardening bundles — `deep-planner` recommends `/refactor-plan` or `/harden-plan` when a goal is purely behavior-preserving work on existing code; this domain covers everything else you want planned rigorously.
 
 One primary agent: `deep-planner` (plan-only; explores inline, with optional read-only fan-out to the built-in `general` subagent when scope spans several independent areas). Commands: `/deep-plan` and `/wayfinder` (discovery on-ramp, below). The methodology lives in the `fable-planning` skill so any agent can reuse it; `grilling` + `native-question-ux` drive the single clarification round, `code-conventions` supplies the language/tool-version evidence rule, and `judgment-day` is the opt-in adversarial review of the finished plan or bundle.
 
@@ -9,6 +9,8 @@ When the effort is too big and foggy for one `/deep-plan` sitting, `/wayfinder` 
 Assumes the `common` domain is installed: `grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, and `code-conventions` live there. Bundle drafting assumes the `sdd` domain is installed: the phase subagents `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks` write the four artifacts from the deep-planner's briefs (no sdd changes required — their write boundary is brief-enforced).
 
 **Bundle output** (executable goals) lands under `.ai/deep-planner/changes/<change>/` with the four ready-for-sdd artifacts (`proposal.md` with the `Status: ready-for-sdd | Source: deep-planner` marker first line, `design.md`, `specs/<capability>/spec.md`, `tasks.md`), conforming to `docs/plan-handoff.md`. The orchestraitor discovers it on `ejecuta el plan <change>`, adopts it kickoff-lite, and runs implement onward — no re-interview, no re-drafting.
+
+**Roadmap output** (oversized executable goals) splits a goal too big for one bounded change into an ordered slice roadmap at `.ai/roadmaps/<goal>.md`, plus a ready-for-sdd bundle for the first slice only — later slices are planned just-in-time via "continúa el roadmap <goal>", so they absorb what executed slices taught. Each slice bundle carries a `Roadmap: <goal> | Slice: <n>/<total>` second line in `proposal.md`; at archive the orchestraitor flips the slice to `done` and offers the next hop in one line (the user confirms each hop). Contract in `docs/plan-handoff.md`.
 
 **Plan-document output** (decisions) is a human-readable file under `.ai/deep-planner/plans/<plan-slug>.md` with four sections: Context (why + decisions made with the user), Design (approach, rejected alternatives, files, reused `path:symbol`), an Edge Case Matrix where every edge ends in exactly one destination (handled / out of scope / open question — never silently dropped), and an end-to-end Verification section that exercises the real flow.
 
@@ -33,6 +35,9 @@ graph TD
   design --> edges[edge validation<br/>three-destinations rule]
   edges --> shape{executable goal?}
   shape -->|yes| waves[delegate in waves<br/>sdd-proposal → sdd-spec ∥ sdd-design → sdd-tasks]
+  shape -->|too big| roadmap[".ai/roadmaps/&lt;goal&gt;.md<br/>ordered slices, plan next slice only"]
+  roadmap --> waves
+  roadmap -.->|continúa el roadmap| cmd
   waves --> bundle[".ai/deep-planner/changes/&lt;change&gt;/<br/>proposal + design + specs + tasks<br/>Status: ready-for-sdd"]
   bundle -->|ejecuta el plan| orchestraitor[sdd orchestraitor adopts + executes]
   shape -->|no, a decision| plan[".ai/deep-planner/plans/&lt;slug&gt;.md<br/>Context / Design / Edge Matrix / Verification"]
