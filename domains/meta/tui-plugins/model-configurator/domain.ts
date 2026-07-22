@@ -214,7 +214,7 @@ export function calculateChanges(
 
 export function formatMapping(mapping: AgentMapping): string {
   if (!mapping.model) return "inherits"
-  return mapping.variant ? `${mapping.model} variant=${mapping.variant}` : mapping.model
+  return mapping.variant ? `${mapping.model} @${mapping.variant}` : mapping.model
 }
 
 function normalizeModels(raw: unknown): ModelOption[] {

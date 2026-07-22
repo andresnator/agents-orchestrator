@@ -85,11 +85,13 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
     return
   }
   configuratorRunning = true
+  const previousDialogSize = api.ui.dialog.size
   try {
     if (!api.state.ready || !api.state.path.directory) {
       api.ui.toast({ variant: "warning", message: "OpenCode paths are still syncing. Try again in a moment." })
       return
     }
+    api.ui.dialog.setSize("large")
 
     const agents = await discoverHarnessAgents(runtimeDataRoot)
     const profiles = await loadProfiles(runtimeDataRoot, agents.map((agent) => agent.name))
@@ -109,6 +111,7 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
     api.ui.toast({ variant: "error", title: "Model configurator failed", message: errorMessage(error), duration: 8000 })
   } finally {
     api.ui.dialog.clear()
+    api.ui.dialog.setSize(previousDialogSize)
     configuratorRunning = false
   }
 }
@@ -246,7 +249,7 @@ async function runDomainAgentsLoop(api: TuiPluginApi, state: WizardState, domain
         ...agents.map((agent) => ({
           title: decisions.has(agent.name) ? `● ${agent.name}` : agent.name,
           value: agent.name,
-          description: `${agent.mode} — ${decisionDisplay(decisions.get(agent.name), current[agent.name])}`,
+          description: `${modeLetter(agent.mode)} ${decisionDisplay(decisions.get(agent.name), current[agent.name])}`,
         })),
       ],
       DOMAINS_HINT,
@@ -611,10 +614,14 @@ function findStaleSelections(decisions: ReadonlyMap<string, AgentDecision>, mode
   return [...stale].sort()
 }
 
+function modeLetter(mode: string): string {
+  return mode === "primary" ? "M" : "S"
+}
+
 function decisionDisplay(decision: AgentDecision | undefined, current: AgentMapping | undefined): string {
-  if (!decision || decision.action === "keep") return `keep (${formatMapping(current ?? {})})`
-  if (decision.action === "inherit") return "inherit"
-  return formatMapping({ model: decision.model, variant: decision.variant })
+  if (!decision || decision.action === "keep") return `= ${formatMapping(current ?? {})}`
+  if (decision.action === "inherit") return "→ inherit"
+  return `→ ${formatMapping({ model: decision.model, variant: decision.variant })}`
 }
 
 function variantDescription(model: ModelOption): string {

@@ -5,6 +5,7 @@ import path from "node:path"
 import {
   calculateChanges,
   discoverHarnessAgents,
+  formatMapping,
   groupAgentsByDomain,
   normalizeProviderCatalog,
   validateProfile,
@@ -140,6 +141,14 @@ async function shouldCalculateOnlyChangedAssignmentsWhenDecisionsMixActions(): P
     { agent: "gamma", before: {}, after: { model: "google/gemini" }, action: "set" },
   ])
   pass("shouldCalculateOnlyChangedAssignmentsWhenDecisionsMixActions")
+}
+
+async function shouldFormatMappingCompactlyWithAtVariant(): Promise<void> {
+  // Then
+  assert.equal(formatMapping({}), "inherits")
+  assert.equal(formatMapping({ model: "openai/gpt" }), "openai/gpt")
+  assert.equal(formatMapping({ model: "openai/gpt", variant: "medium" }), "openai/gpt @medium")
+  pass("shouldFormatMappingCompactlyWithAtVariant")
 }
 
 async function shouldPreserveForeignJsoncWhenRenderingAssignmentChanges(): Promise<void> {
@@ -1657,6 +1666,7 @@ await shouldValidateProfileAsWholeContractWhenProfileIsComplete()
 await shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvalid()
 await shouldExposeOnlyConnectedProvidersWhenCatalogContainsDisconnectedEntries()
 await shouldCalculateOnlyChangedAssignmentsWhenDecisionsMixActions()
+await shouldFormatMappingCompactlyWithAtVariant()
 await shouldPreserveForeignJsoncWhenRenderingAssignmentChanges()
 await shouldWriteWithoutBackupAndPreserveModeWhenWriteSucceeds()
 await shouldRejectConcurrentEditBeforeWriting()
