@@ -14,8 +14,8 @@ description: |
 license: MIT
 metadata:
   author: andresnator
-  status: in-progress
-  version: "1.1.0"
+  status: testing
+  version: "1.1.1"
 ---
 
 # Whisper Extract
