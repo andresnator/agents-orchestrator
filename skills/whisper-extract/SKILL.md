@@ -15,7 +15,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.2"
+  version: "1.1.0"
 ---
 
 # Whisper Extract
@@ -38,7 +38,11 @@ pipx install openai-whisper
 brew install ffmpeg   # if ffmpeg is missing
 ```
 
+The `turbo` model requires `openai-whisper` >= 20240930; if the install is older, tell the
+user to run `pipx upgrade openai-whisper`.
+
 Then stop and wait — do not proceed until Whisper is available.
+
 ---
 
 ## Step 1: Gather required information
@@ -52,7 +56,7 @@ Never ask more than once, and never ask for things already mentioned in the conv
 - **Recording context** — a short description of what this is (e.g., "team meeting about Q3 roadmap", "interview with a candidate", "product demo call", "lecture on clean architecture"). This is used to write a better summary.
 
 **Optional (ask only if not obvious):**
-- **Whisper model** — default is `medium`. Options: `tiny` (fastest, less accurate), `base`, `small`, `medium` (recommended balance), `large-v3` (most accurate, ~3 GB download). Ask if the user cares about speed vs. accuracy.
+- **Whisper model** — default is `turbo` (recommended speed/accuracy balance). Options: `tiny` (fastest, less accurate), `base`, `small`, `medium`, `turbo`, `large-v3` (most accurate, slower). Ask only if the user wants a different speed/accuracy trade-off.
 - **Output directory** — where to save the `.md` file. Default: same directory as the audio file.
 - **Output language for summary** — language for the summary and headings. Default: same as the recording language. If the user wants the summary in a different language, note it.
 
@@ -63,7 +67,8 @@ Wait for the user's answers before proceeding to Step 2.
 ## Step 2: Transcribe with Whisper
 
 Run Whisper on the provided file. Use the `--output_format json` flag to capture word-level
-timing and text cleanly, and `--output_dir` to control where the raw output goes.
+timing and text cleanly, and `--output_dir` to control where the raw output goes. Clear
+`/tmp/whisper-extract-temp` first so leftovers from a previous run cannot be picked up.
 
 ```bash
 whisper "<file_path>" --model <model> --language <language_code_or_auto> --output_format json --output_dir /tmp/whisper-extract-temp
@@ -80,8 +85,8 @@ For auto-detect, omit `--language` entirely.
 **If the file is large (> 1 hour):** Whisper will take several minutes. Tell the user:
 > "Starting transcription — this may take a few minutes depending on file length and model."
 
-After the command completes, read the JSON output from `/tmp/whisper-extract-temp/` and extract
-the `text` field. This is the full raw transcript.
+After the command completes, read the JSON file in `/tmp/whisper-extract-temp/` whose basename
+matches the input file, and extract the `text` field. This is the full raw transcript.
 
 If Whisper fails (file not found, unsupported format, ffmpeg missing), report the exact error
 and suggest a fix before continuing.
@@ -182,7 +187,8 @@ search or quote from the transcript, they can open the file.
 | File not found | Ask user to confirm the path; suggest `ls` to check |
 | Unsupported format | Tell user to convert with `ffmpeg -i input.xyz output.mp3` |
 | Transcription empty / very short | Warn user — likely a silent file or wrong path |
-| Out of memory (large model) | Suggest downgrading to `medium` or `small` |
+| Unknown model `turbo` | Tell user to run `pipx upgrade openai-whisper` (needs >= 20240930) |
+| Out of memory | Suggest a smaller model (`medium`, `small`) |
 
 ---
 
