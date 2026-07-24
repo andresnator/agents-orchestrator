@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import fs from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import type { Plugin } from "@opencode-ai/plugin"
 
@@ -9,8 +10,10 @@ const CODEGRAPH_BINARY = "codegraph"
 const CODEGRAPH_PACKAGE = "@colbymchenry/codegraph@1.4.1"
 const GIT_BINARY = "git"
 const AUTOINIT_ENV = "OPENCODE_CODEGRAPH_AUTOINIT"
+const CENTRAL_ENV = "OPENCODE_CODEGRAPH_CENTRAL"
 const CODEGRAPH_DIR_ENV = "CODEGRAPH_DIR"
 const AUTOINIT_OPT_OUT = "0"
+const CENTRAL_OPT_OUT = "0"
 const STATUS_ARGS = ["status"] as const
 const INIT_ARGS = ["init"] as const
 const INDEX_ARGS = ["index"] as const
@@ -260,8 +263,91 @@ function isHealthy(status: CodeGraphStatus) {
   return status.initialized && status.index?.state === INDEX_STATES.COMPLETE
 }
 
+// Mirror CodeGraph's own CODEGRAPH_DIR validation: the override must be a plain
+// single-segment name, otherwise CodeGraph ignores it and uses the default —
+// so the plugin must too, or it would link/exclude a directory CodeGraph never touches.
+function indexDirName() {
+  const raw = process.env[CODEGRAPH_DIR_ENV]?.trim()
+  if (!raw) return DEFAULT_INDEX_DIR
+  const invalid = raw === "." || raw.includes("..") || raw.includes("/") || raw.includes("\\") || path.isAbsolute(raw)
+  return invalid ? DEFAULT_INDEX_DIR : raw
+}
+
 function resolvedIndexPath(status: CodeGraphStatus, root: string) {
-  return status.indexPath ?? path.join(root, process.env[CODEGRAPH_DIR_ENV] || DEFAULT_INDEX_DIR)
+  return status.indexPath ?? path.join(root, indexDirName())
+}
+
+function centralIndexBase() {
+  const dataHome = process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share")
+  return path.join(dataHome, "opencode", "codegraph")
+}
+
+async function realRoot(dir: string) {
+  try {
+    return await fs.realpath(dir)
+  } catch {
+    return path.resolve(dir)
+  }
+}
+
+// Mirror CodeGraph's own unsafe-root refusal (filesystem root, home directory,
+// ancestors of home; case-insensitive on macOS/Windows): `codegraph init` is
+// guaranteed to reject these roots, so a session opened there by mistake must
+// not stage a central directory or symlink for an init that will never run.
+async function isUnsafeIndexRoot(resolvedRoot: string) {
+  if (path.parse(resolvedRoot).root === resolvedRoot) return true
+  const home = await realRoot(os.homedir())
+  const caseInsensitive = process.platform === "darwin" || process.platform === "win32"
+  const norm = (value: string) => (caseInsensitive ? value.toLowerCase() : value)
+  return norm(resolvedRoot) === norm(home) || norm(home).startsWith(norm(resolvedRoot) + path.sep)
+}
+
+function slugify(value: string) {
+  return value.replaceAll(/[^A-Za-z0-9_-]/g, "-")
+}
+
+// One central directory per working tree, keyed by the repo's real absolute path
+// (Claude-style slug: /Users/x/proj -> -Users-x-proj). Realpath-keyed, so a repo
+// reached through different path spellings (a symlinked parent, an aggregator
+// session vs a direct one) always converges on the same slug. A non-default
+// CODEGRAPH_DIR exists to give one working tree separate per-environment indexes
+// (CodeGraph issue #636), so its name folds into the slug — two environments must
+// not converge on one shared central SQLite index.
+function centralIndexTarget(resolvedRoot: string) {
+  const dirName = indexDirName()
+  const suffix = dirName === DEFAULT_INDEX_DIR ? "" : `-${slugify(dirName)}`
+  return path.join(centralIndexBase(), slugify(resolvedRoot) + suffix)
+}
+
+// Make <root>/.codegraph a symlink into the central store BEFORE `codegraph init`
+// creates it as a local directory. CodeGraph itself cannot relocate its index
+// (CODEGRAPH_DIR rejects paths), so the link is the bridge; CodeGraph follows it
+// transparently. A pre-existing real directory is a deliberate local index and is
+// left untouched; a dangling link gets its target recreated. Every failure falls
+// back silently to a local index — this step must never break the session.
+async function ensureCentralIndexLink(root: string) {
+  if (process.env[CENTRAL_ENV] === CENTRAL_OPT_OUT) return
+  const linkPath = path.join(root, indexDirName())
+  try {
+    const existing = await fs.lstat(linkPath).catch(() => undefined)
+    if (existing) {
+      if (!existing.isSymbolicLink()) return
+      // Recreate a dangling target in place (central store wiped, new machine),
+      // honoring wherever the link already points instead of recomputing it.
+      const target = path.resolve(root, await fs.readlink(linkPath))
+      await fs.mkdir(target, { recursive: true })
+      return
+    }
+    const resolved = await realRoot(root)
+    if (await isUnsafeIndexRoot(resolved)) return
+    const target = centralIndexTarget(resolved)
+    await fs.mkdir(target, { recursive: true })
+    await fs.symlink(target, linkPath)
+  } catch (error) {
+    // A concurrent session creating the same link is success, not failure.
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") return
+    console.error(`${LOG_PREFIX} central index link failed for ${root}: ${errorMessage(error)}; using a local index`)
+  }
 }
 
 async function showToastBestEffort(
@@ -306,7 +392,12 @@ async function ensureGitExclude(root: string, indexPath: string) {
     return
   }
 
-  const entry = `${relativeIndexPath.split(path.sep).join("/").replace(/\/$/, "")}/`
+  // Bare name, no trailing slash: a `dir/` pattern only matches directories, and
+  // a centrally-stored index is a symlink, which git treats as a non-directory.
+  // The bare form covers both. An old `entry/` line from a previous version may
+  // coexist; it is harmless, but it never covers the symlink, so the bare entry
+  // is still appended alongside it.
+  const entry = relativeIndexPath.split(path.sep).join("/").replace(/\/$/, "")
   const excludePath = await resolveGitExcludePath(root)
   if (!excludePath) return
 
@@ -349,6 +440,9 @@ async function ensureRepoIndex(root: string, onStart: (action: RepoAction) => Pr
   if (isHealthy(initial.status)) return { kind: "healthy" }
 
   const action: RepoAction = initial.status.initialized ? "repair" : "init"
+  // Only a fresh init can still choose where the index lives; a repair targets
+  // whatever directory (or link) the existing index already occupies.
+  if (action === "init") await ensureCentralIndexLink(root)
   const args = action === "repair" ? [...INDEX_ARGS, root, FORCE_FLAG] : [...INIT_ARGS, root]
 
   await onStart(action)

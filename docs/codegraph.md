@@ -59,6 +59,7 @@ Useful environment controls:
 | Variable | Use |
 |---|---|
 | `OPENCODE_CODEGRAPH_AUTOINIT=0` | Opts this OpenCode process out of the common-domain initializer. Unset or any other value keeps it on (default). |
+| `OPENCODE_CODEGRAPH_CENTRAL=0` | Opts this OpenCode process out of central index storage; fresh indexes are created inside the repository as before. |
 | `CODEGRAPH_DIR=.codegraph-name` | Selects a different single-segment index directory. The plugin trusts the `indexPath` returned by CodeGraph. |
 | `CODEGRAPH_PARSE_WORKERS=1` | Limits parsing to one worker on memory- or CPU-constrained machines. |
 | `CODEGRAPH_TELEMETRY=0` or `DO_NOT_TRACK=1` | Disables CodeGraph's anonymous usage telemetry. `codegraph telemetry off` is the persistent CLI equivalent. |
@@ -88,6 +89,20 @@ There is no dialog, blocking spinner, or repeated progress notification. Toast d
 | CLI missing | `warning`, 8 seconds | None |
 | Status, init, or repair process fails | `error`, 8 seconds | None; the OpenCode session stays operational |
 | Non-git workspace root with nested repos | One aggregate `info`/`success`/`warning` toast | Init or repair each nested repo sequentially |
+
+## Central index storage
+
+CodeGraph itself cannot relocate an index: it hard-requires `<repo>/.codegraph` (`CODEGRAPH_DIR` rejects paths), one SQLite database per working tree, and refuses to index your home directory (a single machine-wide database is not possible). The initializer therefore centralizes storage with a symlink: before a fresh `init` it creates the real index directory under the machine-level store and links `<repo>/.codegraph` to it. CodeGraph follows the link transparently; status, repair, watching, and MCP queries are unchanged.
+
+- Store location: `$XDG_DATA_HOME/opencode/codegraph/` (default `~/.local/share/opencode/codegraph/`, next to OpenCode's own machine state).
+- One directory per working tree, named by the repo's real absolute path with non `[A-Za-z0-9_-]` characters replaced by `-` (`/Users/x/proj` → `-Users-x-proj`). Realpath-based, so an aggregator session and a later direct session on the same repo converge on the same index with no re-indexing and no conflict. A non-default `CODEGRAPH_DIR` appends its slugged name to the directory, keeping per-environment indexes for one working tree separate in the store too.
+- Only fresh inits are centralized. A pre-existing real `.codegraph/` directory is a deliberate local index and is never touched; a dangling link (store wiped, new machine) gets its target recreated before init. Any symlink failure falls back silently to a local index.
+- Machine-scope roots — the filesystem root, your home directory, or an ancestor of home — are never linked. CodeGraph itself refuses to index them (`init` rejects them without `--force`), so a session opened there by mistake produces one error toast and leaves no store artifacts. Opening a broad plain folder is still bounded: the aggregator only initializes Git repositories up to two levels deep, each at its own root.
+- Opt out per session with `OPENCODE_CODEGRAPH_CENTRAL=0`.
+
+Manual migration of an existing local index: close that repo's OpenCode sessions and CodeGraph daemon, then either move it — `mv <repo>/.codegraph ~/.local/share/opencode/codegraph/<slug> && ln -s ~/.local/share/opencode/codegraph/<slug> <repo>/.codegraph` — or simply `rm -rf <repo>/.codegraph` and reopen the repo to re-index centrally.
+
+Cleanup: deleting a repo leaves its slug directory orphaned in the store; remove it manually. `codegraph uninit` removes only the symlink (it never follows links), so the central data survives until you delete it. On Windows, creating symlinks may require privileges; the fallback keeps the index local, and the per-environment `CODEGRAPH_DIR` guidance for shared Windows/WSL checkouts still applies.
 
 ## Freshness and recovery
 

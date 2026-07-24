@@ -26,6 +26,8 @@ SUITE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/codegraph-init-test.XXXXXX")
 SUITE_DIR=$(cd "$SUITE_DIR" && pwd -P)
 HOME_DIR="$SUITE_DIR/home"
 XDG_DIR="$SUITE_DIR/xdg"
+XDG_DATA_DIR="$SUITE_DIR/xdg-data"
+CENTRAL_STORE="$XDG_DATA_DIR/opencode/codegraph"
 TARGET_DIR="$XDG_DIR/opencode"
 FAKE_BIN_DIR="$SUITE_DIR/bin"
 FAKE_LOG="$SUITE_DIR/codegraph.log"
@@ -238,6 +240,7 @@ start_server() {
   local autoinit=$2
   local path_value=$3
   local codegraph_dir=${4:-}
+  local central=${5:-unset}
 
   cleanup_processes
   PORT=$(free_port)
@@ -253,13 +256,22 @@ start_server() {
   else
     autoinit_prefix=(env "OPENCODE_CODEGRAPH_AUTOINIT=$autoinit")
   fi
+  # Same sentinel handling for OPENCODE_CODEGRAPH_CENTRAL (central storage default-on).
+  local -a central_prefix
+  if [[ "$central" == unset ]]; then
+    central_prefix=(env -u OPENCODE_CODEGRAPH_CENTRAL)
+  else
+    central_prefix=(env "OPENCODE_CODEGRAPH_CENTRAL=$central")
+  fi
 
   HOME="$HOME_DIR" \
     XDG_CONFIG_HOME="$XDG_DIR" \
+    XDG_DATA_HOME="$XDG_DATA_DIR" \
     PATH="$path_value" \
     CODEGRAPH_DIR="$codegraph_dir" \
     FAKE_CODEGRAPH_LOG="$FAKE_LOG" \
     "${autoinit_prefix[@]}" \
+    "${central_prefix[@]}" \
     "$OPENCODE_BIN" serve --hostname 127.0.0.1 --port "$PORT" --print-logs --log-level ERROR \
     >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
@@ -318,6 +330,20 @@ count_index_calls() {
   fi
   # "init|" never appears inside an "index|" line, so this counts repairs only.
   grep -Fc "index|$root|" "$FAKE_LOG" || true
+}
+
+# Mirror the plugin's central-store naming: the repo's real absolute path with
+# every character outside [A-Za-z0-9_-] replaced by '-', plus a slugged
+# "-<CODEGRAPH_DIR>" suffix when a non-default index directory name is in use.
+central_target_for() {
+  local root=$1
+  local dir_name=${2:-.codegraph}
+  local slug suffix=""
+  slug=$(python3 -c 'import re, sys; print(re.sub(r"[^A-Za-z0-9_-]", "-", sys.argv[1]))' "$root")
+  if [[ "$dir_name" != .codegraph ]]; then
+    suffix="-$(python3 -c 'import re, sys; print(re.sub(r"[^A-Za-z0-9_-]", "-", sys.argv[1]))' "$dir_name")"
+  fi
+  printf '%s/%s%s\n' "$CENTRAL_STORE" "$slug" "$suffix"
 }
 
 mkdir -p "$HOME_DIR" "$TARGET_DIR" "$FAKE_BIN_DIR" "$SUITE_DIR/repos"
@@ -461,8 +487,16 @@ shouldKeepConfigResponsiveWhenIndexingInBackground() {
     "CodeGraph index for success-repo is ready: $FAKE_FILE_COUNT files in [0-9]+\\.[0-9]s\\." \
     success \
     "$INFO_DURATION_MS"
-  grep -Fxq '.codegraph/' "$root/.git/info/exclude" || fail "default CodeGraph directory was not Git-excluded"
+  # Bare entry (no trailing slash): a dir/ pattern never matches the central symlink.
+  grep -Fxq '.codegraph' "$root/.git/info/exclude" || fail "default CodeGraph directory was not Git-excluded"
   [[ $(count_init_calls "$root") -eq 1 ]] || fail "expected one init call for background case"
+
+  # A fresh init stores the index centrally: the repo holds only a symlink into the machine store.
+  local central_target
+  central_target=$(central_target_for "$root")
+  [[ -L "$root/.codegraph" ]] || fail "fresh index was not created as a central symlink"
+  [[ $(readlink "$root/.codegraph") == "$central_target" ]] || fail "central symlink does not point into the machine store"
+  [[ -d "$central_target" ]] || fail "central index directory was not created"
   cleanup_processes
 }
 
@@ -550,7 +584,9 @@ shouldRepairUnhealthyIndexesAutomatically() {
   [[ $(count_init_calls "$abandoned_root") -eq 0 ]] || fail "repair used init instead of index"
   [[ $(count_index_calls "$failed_root") -eq 0 ]] || fail "uninitialized repo was repaired instead of initialized"
   [[ $(count_init_calls "$failed_root") -eq 1 ]] || fail "failed case did not attempt init exactly once"
-  grep -Fxq '.codegraph/' "$partial_root/.git/info/exclude" || fail "repaired index was not Git-excluded"
+  grep -Fxq '.codegraph' "$partial_root/.git/info/exclude" || fail "repaired index was not Git-excluded"
+  # A repair targets the existing local index; it must never rewire storage.
+  [[ ! -L "$partial_root/.codegraph" ]] || fail "repair converted an existing local index into a central symlink"
   cleanup_processes
 }
 
@@ -642,7 +678,10 @@ shouldRespectCustomCodeGraphDirectory() {
   wait_for_file "$root/.fake-codegraph/init-finished"
   wait_for_pattern "CodeGraph index for custom-dir-repo is ready" "$EVENTS_FILE"
   grep -Fq "init|$root|CODEGRAPH_DIR=.cg-custom" "$FAKE_LOG" || fail "CODEGRAPH_DIR was not passed to CodeGraph"
-  grep -Fxq '.cg-custom/' "$root/.git/info/exclude" || fail "custom CodeGraph directory was not Git-excluded"
+  grep -Fxq '.cg-custom' "$root/.git/info/exclude" || fail "custom CodeGraph directory was not Git-excluded"
+  [[ -L "$root/.cg-custom" ]] || fail "custom index directory was not centrally linked"
+  # The custom directory name folds into the slug so per-environment indexes stay separate.
+  [[ $(readlink "$root/.cg-custom") == "$(central_target_for "$root" .cg-custom)" ]] || fail "custom central symlink does not point into the machine store"
   cleanup_processes
 }
 
@@ -663,7 +702,7 @@ shouldExcludeIndexFromLinkedWorktreeGitMetadata() {
   # Then
   wait_for_file "$root/.fake-codegraph/init-finished"
   wait_for_pattern "CodeGraph index for linked-worktree-repo is ready" "$EVENTS_FILE"
-  grep -Fxq '.codegraph/' "$exclude_path" || fail "linked worktree index was not added to the real Git exclude file"
+  grep -Fxq '.codegraph' "$exclude_path" || fail "linked worktree index was not added to the real Git exclude file"
   [[ ! -d "$root/.git" ]] || fail "linked worktree fixture unexpectedly used a .git directory"
   cleanup_processes
 }
@@ -771,8 +810,12 @@ shouldAggregateNestedRepositoriesUnderPlainRoot() {
   [[ $(count_init_calls "$dep_repo") -eq 0 ]] || fail "node_modules repo was initialized"
   [[ $(count_init_calls "$hidden_repo") -eq 0 ]] || fail "hidden repo was initialized"
   [[ $(count_init_calls "$aggregate_root") -eq 0 ]] || fail "plain workspace root was initialized"
-  grep -Fxq '.codegraph/' "$repo_a/.git/info/exclude" || fail "repo-a index was not Git-excluded"
-  grep -Fxq '.codegraph/' "$repo_b/.git/info/exclude" || fail "repo-b index was not Git-excluded"
+  grep -Fxq '.codegraph' "$repo_a/.git/info/exclude" || fail "repo-a index was not Git-excluded"
+  grep -Fxq '.codegraph' "$repo_b/.git/info/exclude" || fail "repo-b index was not Git-excluded"
+  # Central links are keyed by each nested repo's own path, not the aggregate session
+  # root, so a later direct session on the same repo converges on the same index.
+  [[ $(readlink "$repo_a/.codegraph") == "$(central_target_for "$repo_a")" ]] || fail "repo-a central link is not keyed by the repo's own path"
+  [[ $(readlink "$repo_b/.codegraph") == "$(central_target_for "$repo_b")" ]] || fail "repo-b central link is not keyed by the repo's own path"
   ! grep -Fq "CodeGraph is indexing repo-a" "$EVENTS_FILE" || fail "aggregate emitted a per-repo start toast"
   cleanup_processes
 }
@@ -819,6 +862,87 @@ shouldDoNothingWhenOptedOut() {
   cleanup_processes
 }
 
+shouldKeepPreexistingLocalIndexDirectory() {
+  # Given a repo whose index directory already exists locally (pre-central layout).
+  local root
+  root=$(make_repo local-index-repo)
+  mkdir "$root/.codegraph"
+  start_server local-index 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/local-index.config.json"
+  wait_for_file "$root/.fake-codegraph/init-started"
+  : >"$root/.fake-codegraph/release"
+
+  # Then: the deliberate local index is respected; nothing is centralized.
+  wait_for_file "$root/.fake-codegraph/init-finished"
+  wait_for_pattern "CodeGraph index for local-index-repo is ready" "$EVENTS_FILE"
+  [[ ! -L "$root/.codegraph" ]] || fail "pre-existing local index was replaced by a central symlink"
+  [[ -d "$root/.codegraph" ]] || fail "pre-existing local index directory disappeared"
+  [[ ! -e "$(central_target_for "$root")" ]] || fail "local-index repo leaked a central store directory"
+  cleanup_processes
+}
+
+shouldRecreateDanglingCentralSymlinkTarget() {
+  # Given a central symlink whose target vanished (store wiped, new machine).
+  local root
+  local target
+  root=$(make_repo dangling-link-repo)
+  target="$CENTRAL_STORE/dangling-link-manual-target"
+  ln -s "$target" "$root/.codegraph"
+  start_server dangling-link 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/dangling-link.config.json"
+  wait_for_file "$root/.fake-codegraph/init-started"
+  : >"$root/.fake-codegraph/release"
+
+  # Then: the target is recreated where the link already points, and init proceeds.
+  wait_for_file "$root/.fake-codegraph/init-finished"
+  wait_for_pattern "CodeGraph index for dangling-link-repo is ready" "$EVENTS_FILE"
+  [[ -L "$root/.codegraph" ]] || fail "dangling central symlink was removed"
+  [[ $(readlink "$root/.codegraph") == "$target" ]] || fail "dangling symlink was repointed instead of repaired in place"
+  [[ -d "$target" ]] || fail "dangling central target was not recreated"
+  cleanup_processes
+}
+
+shouldNotStageCentralArtifactsForHomeSessionRoot() {
+  # Given a session opened on the (isolated) home directory itself — CodeGraph
+  # refuses such roots, so the plugin must not pre-stage a central link for them.
+  start_server home-root 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$HOME_DIR" "$SUITE_DIR/home-root.config.json"
+  wait_for_file "$HOME_DIR/.fake-codegraph/init-started"
+  : >"$HOME_DIR/.fake-codegraph/release"
+
+  # Then: no symlink and no central store directory for the home root.
+  wait_for_file "$HOME_DIR/.fake-codegraph/init-finished"
+  [[ ! -L "$HOME_DIR/.codegraph" ]] || fail "home session root was centrally linked"
+  [[ ! -e "$(central_target_for "$HOME_DIR")" ]] || fail "home session root leaked a central store directory"
+  cleanup_processes
+}
+
+shouldKeepIndexLocalWhenCentralStorageOptedOut() {
+  # Given OPENCODE_CODEGRAPH_CENTRAL=0 with the initializer itself still on.
+  local root
+  root=$(make_repo central-opt-out-repo)
+  start_server central-opt-out 1 "$FAKE_BIN_DIR:/usr/bin:/bin" "" 0
+
+  # When
+  request_config "$root" "$SUITE_DIR/central-opt-out.config.json"
+  wait_for_file "$root/.fake-codegraph/init-started"
+  : >"$root/.fake-codegraph/release"
+
+  # Then: pre-central behavior — a plain local index directory, nothing in the store.
+  wait_for_file "$root/.fake-codegraph/init-finished"
+  wait_for_pattern "CodeGraph index for central-opt-out-repo is ready" "$EVENTS_FILE"
+  [[ ! -L "$root/.codegraph" ]] || fail "central opt-out still created a symlink"
+  [[ -d "$root/.codegraph" ]] || fail "central opt-out did not leave a local index directory"
+  [[ ! -e "$(central_target_for "$root")" ]] || fail "central opt-out leaked a central store directory"
+  cleanup_processes
+}
+
 shouldWarnWhenBinaryIsMissing() {
   # Given
   local root
@@ -846,6 +970,10 @@ shouldRespectCustomCodeGraphDirectory
 shouldExcludeIndexFromLinkedWorktreeGitMetadata
 shouldAggregateNestedRepositoriesUnderPlainRoot
 shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos
+shouldKeepPreexistingLocalIndexDirectory
+shouldRecreateDanglingCentralSymlinkTarget
+shouldNotStageCentralArtifactsForHomeSessionRoot
+shouldKeepIndexLocalWhenCentralStorageOptedOut
 shouldDoNothingWhenOptedOut
 shouldWarnWhenBinaryIsMissing
 
