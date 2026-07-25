@@ -298,6 +298,20 @@ function projectRoot(input: { worktree?: string; directory: string }) {
   return worktree
 }
 
+// Deterministic test seam consumed by scripts/skill-registry-contracts.ts; not part of the runtime contract.
+export const skillRegistryContracts = {
+  scalar,
+  triggerFrom,
+  listSkillFiles,
+  discoverSkills,
+  collectConventions,
+  renderRegistry,
+  ensureInfoExclude,
+  migrateLegacyAtl,
+  generateRegistry,
+  projectRoot,
+}
+
 export const SkillRegistryPlugin: Plugin = async (input) => {
   const root = projectRoot(input)
   let failed = false

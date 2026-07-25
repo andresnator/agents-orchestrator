@@ -32,6 +32,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `single-responsibility` | Detect multiple reasons to change |
 | Skill | `small-functions` | Detect oversized and extractable functions |
 | Skill | `spaghetti-code-detection` | Detect tangled flow and hidden ordering |
+| Skill | `systematic-debugging` | Root-cause debugging: reproduce, evidence, one hypothesis, minimal fix |
 | Skill | `tcr` | Apply test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
 | Plugin | `codegraph-init` | Initializes and repairs CodeGraph indexes in the background (default-on; aggregates non-git workspace roots) |

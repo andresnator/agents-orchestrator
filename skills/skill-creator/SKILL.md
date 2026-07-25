@@ -8,7 +8,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.1.3"
+  version: "1.2.0"
   status: in-progress
 ---
 
@@ -134,6 +134,12 @@ Need edge cases?            → references/
 - Include lengthy explanations (link to docs)
 - Add troubleshooting sections (keep focused)
 - Use web URLs in references (use local paths)
+
+---
+
+## Behavioral Evaluation (Conditional)
+
+Structural checks (`scripts/validate-harness.sh`) validate metadata and links, not model behavior. When a high-impact discipline skill shows a reproducible agent failure despite being available, run the bounded evaluation pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, and reported variance and cost. It is never a routine step or a CI gate.
 
 ---
 

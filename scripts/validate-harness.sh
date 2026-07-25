@@ -219,6 +219,13 @@ if [ -x scripts/test-model-configurator.sh ] && command -v python3 >/dev/null 2>
     fail scripts/test-model-configurator.sh "shell contracts failed"
 fi
 
+# --- Deterministic skill-registry plugin contracts (Node >= 22.18-gated) ---
+if [ -x scripts/test-skill-registry.sh ] && command -v node >/dev/null 2>&1 &&
+  node -e 'process.exit(process.features && process.features.typescript ? 0 : 1)' >/dev/null 2>&1; then
+  scripts/test-skill-registry.sh >/dev/null ||
+    fail scripts/test-skill-registry.sh "skill-registry plugin contracts failed"
+fi
+
 if [ "$FAILS" -gt 0 ]; then
   printf 'FAIL: %d violation(s) across %d agents, %d commands, %d TUI plugins, %d skills, %d domain skill links, %d profiles.\n' \
     "$FAILS" "$AGENTS" "$COMMANDS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
