@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.5.1"
+  version: "1.6.0"
 ---
 
 # Learning Loop
@@ -52,8 +52,8 @@ Route the raw `/learn` arguments:
 
 ## New Topic Flow
 
-1. **Mission grounding** — short interview (why, observable goal, success criteria, time budget, prior knowledge; for a language topic also the learner's native language) → `mission.md` from `assets/mission-template.md`. Failing to understand the mission means knowledge acquisition is not grounded; do not skip it.
-2. **Path** — draft 4–8 modules, each with a single tangible win, ordered by dependency → `path.md` from `assets/path-template.md`, with a `graph TD` roadmap using ✅/🔄/⬜ status markers and the `## Completion` capstone gate created ⬜. Confirm the path with the learner before starting module 1.
+1. **Mission grounding (propose-first)** — infer everything the topic and visible context already answer; interview only the essentials per `grilling` (why / observable goal; for a language topic also the learner's native language). Estimate the total effort the observable goal requires (e.g. ~20 h) and recommend a cadence (e.g. 3×30 min/week ≈ 3 months) — never ask for a time budget as a bare question; present the recommendation, let the learner adjust freely in chat, and the learner owns the final cadence. Then draft the full `mission.md` from `assets/mission-template.md` — inferred success criteria, prior-knowledge assumptions, and the effort estimate plus recommended and agreed cadence — and present it for correction. Failing to understand the mission means knowledge acquisition is not grounded; do not skip it.
+2. **Path** — draft 4–8 modules, each with a single tangible win, ordered by dependency and sized against the mission's agreed cadence (the path draft states the estimated session count) → `path.md` from `assets/path-template.md`, with a `graph TD` roadmap using ✅/🔄/⬜ status markers and the `## Completion` capstone gate created ⬜. Confirm the path with the learner before starting module 1.
 3. **Resources** — seed `resources.md` from `assets/resources-template.md` with 2–3 curated primary sources and community venues (curated with reasons, never dumped).
 
 ## Module Session Flow (70-20-10)

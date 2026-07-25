@@ -18,7 +18,7 @@ Run this workflow as the `mentor` agent with the exact raw arguments above. The 
 | `vocab [words \| theme]` | Anki vocabulary batch for a language topic: `;`-separated txt under `anki/`, units registered in `vocabulary.md` (`anki-vocab`). |
 | `drill [unit]` | Bidirectional-translation drill on a dialogue unit, weakest-first when empty (`bidirectional-translation`); language topics only. |
 | `status` | Progress dashboard across topics plus upcoming reviews. |
-| anything else | A topic: resume it if its slug exists, otherwise start a new path (mission interview first). |
+| anything else | A topic: resume it if its slug exists, otherwise start a new path (propose-first mission: infer, ask the essentials, draft `mission.md` for correction). |
 
 Hard constraints:
 

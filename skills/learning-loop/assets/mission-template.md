@@ -19,7 +19,9 @@
 
 ## Time budget
 
-{Cadence and horizon, e.g. 3 sessions/week × 30 min, review by {date}.}
+- Estimated total effort: {mentor's estimate to reach the observable goal, e.g. ~20 h}
+- Recommended cadence: {mentor's recommendation, e.g. 3 × 30 min/week ≈ ~3 months}
+- Agreed cadence: {learner's decision — cadence and horizon, e.g. 3 sessions/week × 30 min, review by {YYYY-MM-DD}}
 
 ## Prior knowledge
 

@@ -15,7 +15,7 @@ permission:
   list: allow
   lsp: allow
   skill: allow
-  question: deny
+  question: allow
   webfetch: allow
   task: allow
   external_directory: deny

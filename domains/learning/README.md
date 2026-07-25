@@ -32,7 +32,7 @@ graph TD
     D -- yes --> R["Review session<br/>(spaced-recall: grade, move boxes)"]
     D -- no --> M{Mode}
     R --> M
-    M -- new topic --> MI["Mission interview -> mission.md<br/>path.md roadmap"]
+    M -- new topic --> MI["Mission proposal: infer + essentials<br/>-> mission.md draft for correction<br/>path.md roadmap"]
     M -- continue --> TEN["10% micro-lesson<br/>Cornell note + Mermaid map"]
     TEN --> SEV["70% exercise in the learner's repo<br/>(mentor coaches + ask-gated test run, never solves)"]
     SEV --> TWE["20% Socratic debrief<br/>+ community resources"]

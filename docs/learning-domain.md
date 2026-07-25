@@ -14,7 +14,7 @@ Do not install with `--domain learning` alone if other domains are already insta
 
 | Invocation | What happens |
 | --- | --- |
-| `/learn spring-security` | New topic: short mission interview (why, observable goal, success criteria, time budget, prior knowledge) → `mission.md`, then a 4–8 module `path.md` with a Mermaid roadmap you confirm before module 1. If the slug already exists, it resumes. |
+| `/learn spring-security` | New topic: the mentor infers what it can, asks only the essentials (why and observable goal; native language for language topics), estimates the total effort and recommends a cadence — you adjust freely and own the final cadence — then drafts `mission.md` (success criteria and time budget included) for your correction, then a 4–8 module `path.md` with a Mermaid roadmap you confirm before module 1. If the slug already exists, it resumes. |
 | `/learn` | Continue: overdue-review check, then the active topic's next module (asks which topic if several are active). |
 | `/learn review` | Spaced-repetition session over all due cards (add a topic to scope it). |
 | `/learn quiz [topic]` | Retrieval quiz from the topic's Cornell cue bank. Recorded in `quizzes/`, informs pacing, never moves boxes. |
