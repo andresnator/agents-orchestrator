@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TARGET=""
 MIN_TUI_OPENCODE_VERSION="1.17.15"
-MODEL_CONFIGURATOR_SPEC="./tui-plugins/model-configurator.tsx"
+MODEL_CONFIGURATOR_SPEC="./plugins/model-configurator.tsx"
 JSONC_PARSER_VERSION="3.3.1"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 INSTALL_TX_DIR=""
@@ -102,11 +102,17 @@ runtime_ensure_dirs() {
   ensure_dir "$TARGET/commands" "$1"
   ensure_dir "$TARGET/skills" "$1"
   ensure_dir "$TARGET/plugins" "$1"
-  ensure_dir "$TARGET/tui-plugins" "$1"
 }
 
+# Both plugin types install into OpenCode's plugin folder. The runtime loader
+# globs {plugin,plugins}/*.{ts,js}, so a TUI plugin's .tsx entrypoint and its
+# companion subdirectory sitting there are never picked up as runtime plugins;
+# the TUI loads them only through the exact tui.json path entry.
 runtime_dest() {
-  DEST_PATH="$TARGET/$1/$2"
+  case "$1" in
+    tui-plugins) DEST_PATH="$TARGET/plugins/$2" ;;
+    *) DEST_PATH="$TARGET/$1/$2" ;;
+  esac
 }
 
 runtime_install_component() {
@@ -187,7 +193,9 @@ runtime_pre_install() {
 
   while IFS=$'\t' read -r type name domain status src; do
     [ "$type" = "tui-plugins" ] || continue
-    dest="$TARGET/$type/$name"
+    DEST_PATH=""
+    runtime_dest "$type" "$name"
+    dest="$DEST_PATH"
     preflight_tui_source "$src" "$dest"
     companion="${src%.tsx}"
     if [ -d "$companion" ]; then
@@ -226,7 +234,6 @@ runtime_begin_install() {
   snapshot_created_directory "$TARGET/commands"
   snapshot_created_directory "$TARGET/skills"
   snapshot_created_directory "$TARGET/plugins"
-  snapshot_created_directory "$TARGET/tui-plugins"
   snapshot_install_path "$TARGET/tui.json"
   snapshot_install_path "$TARGET/tui.json.bak"
   snapshot_install_path "$TARGET/package.json"

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FIXTURES="$ROOT/scripts/fixtures/model-configurator"
 INSTALLER="$ROOT/installers/opencode.sh"
-PLUGIN_SPEC="./tui-plugins/model-configurator.tsx"
+PLUGIN_SPEC="./plugins/model-configurator.tsx"
 JSONC_VERSION="3.3.1"
 MIN_OPENCODE_VERSION="1.17.15"
 OPENCODE_PLUGIN_VERSION="1.17.15"
@@ -156,11 +156,11 @@ shouldInstallReinstallStatusAndUninstallWithoutOwningForeignConfig() {
   # Then only exact installer-owned values and links are managed
   OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
   OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
-  [ -f "$target/tui-plugins/model-configurator.tsx" ] && [ ! -L "$target/tui-plugins/model-configurator.tsx" ] ||
+  [ -f "$target/plugins/model-configurator.tsx" ] && [ ! -L "$target/plugins/model-configurator.tsx" ] ||
     fail "TUI entrypoint was not generated locally"
-  [ -d "$target/tui-plugins/model-configurator" ] && [ ! -L "$target/tui-plugins/model-configurator" ] ||
+  [ -d "$target/plugins/model-configurator" ] && [ ! -L "$target/plugins/model-configurator" ] ||
     fail "TUI companion directory was not generated locally"
-  assert_json_value "$target/tui-plugins/model-configurator/agents.json" \
+  assert_json_value "$target/plugins/model-configurator/agents.json" \
     '.[0] | (has("name") and has("domain") and has("mode"))' "true" "agent catalog entries lost the domain shape"
   [ -f "$target/tui.json.bak" ] || fail "install did not keep a single fixed tui.json backup"
   if ls "$target"/tui.json.bak.* >/dev/null 2>&1; then fail "install accumulated timestamped tui.json backups"; fi
@@ -178,8 +178,8 @@ shouldInstallReinstallStatusAndUninstallWithoutOwningForeignConfig() {
   assert_contains "$status_output" "opencode >= $MIN_OPENCODE_VERSION is required" "status did not report runtime incompatibility"
 
   "$INSTALLER" uninstall --target "$target" >/dev/null
-  [ ! -e "$target/tui-plugins/model-configurator.tsx" ] || fail "uninstall retained the TUI entrypoint"
-  [ ! -e "$target/tui-plugins/model-configurator" ] || fail "uninstall retained the TUI companion"
+  [ ! -e "$target/plugins/model-configurator.tsx" ] || fail "uninstall retained the TUI entrypoint"
+  [ ! -e "$target/plugins/model-configurator" ] || fail "uninstall retained the TUI companion"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 &&
     fail "uninstall retained the owned TUI entry"
   assert_contains "$target/tui.json" '"./foreign.tsx"' "uninstall removed a foreign TUI plugin"
@@ -302,7 +302,7 @@ shouldSyncAwayManagedTuiValuesWhenMetaIsDeselected() {
   # Then stale links and narrowly owned config values are removed
   OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
   "$INSTALLER" install --domain common --target "$target" >/dev/null
-  [ ! -e "$target/tui-plugins/model-configurator.tsx" ] || fail "sync retained stale TUI entrypoint"
+  [ ! -e "$target/plugins/model-configurator.tsx" ] || fail "sync retained stale TUI entrypoint"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 &&
     fail "sync retained stale managed TUI value"
   assert_json_value "$target/package.json" '.dependencies["jsonc-parser"] // "absent"' "absent" "sync retained stale dependency"
@@ -328,10 +328,78 @@ shouldUpgradeFromLegacyManifestWithoutTouchingAssignments() {
   OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
   [ ! -e "$target/plugins/retired-exporter.ts" ] && [ ! -L "$target/plugins/retired-exporter.ts" ] ||
     fail "legacy-owned retired plugin link survived the sync"
-  [ -f "$target/tui-plugins/model-configurator.tsx" ] || fail "upgrade did not install the TUI entrypoint"
+  [ -f "$target/plugins/model-configurator.tsx" ] || fail "upgrade did not install the TUI entrypoint"
   assert_file_equals "$user_config" "$scratch/config-before" "upgrade touched user agent assignments"
   rm -rf "$scratch"
   pass "shouldUpgradeFromLegacyManifestWithoutTouchingAssignments"
+}
+
+# Seeds a target in the retired layout: TUI artifacts under tui-plugins/ with a
+# manifest owning those files, their directories, and the old tui.json value.
+seed_legacy_tui_layout() {
+  local target manifest
+  target="$1"
+  manifest="$target/.agents-orchestrator-manifest"
+  mkdir -p "$target/tui-plugins/model-configurator/profiles"
+  printf 'export const retired = true\n' > "$target/tui-plugins/model-configurator.tsx"
+  printf 'export const presets = []\n' > "$target/tui-plugins/model-configurator/presets.ts"
+  printf '{}\n' > "$target/tui-plugins/model-configurator/agents.json"
+  printf '{}\n' > "$target/tui-plugins/model-configurator/profiles/balanced.json"
+  printf '{\n  "plugin": ["./tui-plugins/model-configurator.tsx"]\n}\n' > "$target/tui.json"
+  {
+    printf 'dir\t%s\n' "$target/tui-plugins"
+    printf 'dir\t%s\n' "$target/tui-plugins/model-configurator"
+    printf 'dir\t%s\n' "$target/tui-plugins/model-configurator/profiles"
+    printf 'file\t%s\n' "$target/tui-plugins/model-configurator.tsx"
+    printf 'file\t%s\n' "$target/tui-plugins/model-configurator/presets.ts"
+    printf 'file\t%s\n' "$target/tui-plugins/model-configurator/agents.json"
+    printf 'file\t%s\n' "$target/tui-plugins/model-configurator/profiles/balanced.json"
+    printf 'managed-array\t%s\t%s\t%s\n' "$target/tui.json" plugin "./tui-plugins/model-configurator.tsx"
+  } > "$manifest"
+}
+
+shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync() {
+  local scratch target binary
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-migrate.XXXXXX")"
+  target="$scratch/target"
+  mkdir -p "$target"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  seed_legacy_tui_layout "$target"
+
+  # Given a target installed under the retired tui-plugins layout
+  # When the new installer syncs the meta domain
+  # Then the TUI plugin moves into plugins/ and the old tree disappears entirely
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+  [ -f "$target/plugins/model-configurator.tsx" ] && [ ! -L "$target/plugins/model-configurator.tsx" ] ||
+    fail "migration did not install the TUI entrypoint under plugins/"
+  [ -d "$target/plugins/model-configurator/profiles" ] || fail "migration did not install the TUI companion under plugins/"
+  [ ! -e "$target/tui-plugins" ] || fail "migration left the retired tui-plugins directory behind"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null ||
+    fail "migration did not register the new plugin path in tui.json"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "./tui-plugins/model-configurator.tsx" >/dev/null 2>&1 &&
+    fail "migration retained the retired tui.json plugin path"
+  rm -rf "$scratch"
+  pass "shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync"
+}
+
+shouldKeepStaleDirectoryWhenItStillHoldsUserContent() {
+  local scratch target binary
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-keepdir.XXXXXX")"
+  target="$scratch/target"
+  mkdir -p "$target"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  seed_legacy_tui_layout "$target"
+  printf 'user notes\n' > "$target/tui-plugins/NOTES.md"
+
+  # Given a retired directory that also holds a file the installer never owned
+  # When the migrating sync prunes stale directories
+  # Then the directory and the user's file survive because rmdir refuses non-empty trees
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+  [ -f "$target/tui-plugins/NOTES.md" ] || fail "directory pruning deleted user content"
+  [ ! -e "$target/tui-plugins/model-configurator.tsx" ] || fail "sync retained the stale TUI entrypoint"
+  [ ! -e "$target/tui-plugins/model-configurator" ] || fail "sync retained the stale TUI companion directory"
+  rm -rf "$scratch"
+  pass "shouldKeepStaleDirectoryWhenItStillHoldsUserContent"
 }
 
 shouldReloadRunningServersOnlyWhenRequested() {
@@ -419,7 +487,7 @@ shouldInstallOnlyInsideProjectTarget() {
   # When meta is installed
   # Then all runtime artifacts stay under .opencode
   (cd "$project" && OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --project >/dev/null)
-  [ -f "$project/.opencode/tui-plugins/model-configurator.tsx" ] || fail "project entrypoint missing"
+  [ -f "$project/.opencode/plugins/model-configurator.tsx" ] || fail "project entrypoint missing"
   [ -f "$project/.opencode/tui.json" ] || fail "project tui.json missing"
   [ ! -e "$project/tui.json" ] || fail "project install escaped .opencode"
   rm -rf "$scratch"
@@ -444,6 +512,8 @@ run_shell_contracts() {
   shouldRollbackStaleRemovalWhenSyncFails
   shouldSyncAwayManagedTuiValuesWhenMetaIsDeselected
   shouldUpgradeFromLegacyManifestWithoutTouchingAssignments
+  shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync
+  shouldKeepStaleDirectoryWhenItStillHoldsUserContent
   shouldReloadRunningServersOnlyWhenRequested
   shouldInstallOnlyInsideProjectTarget
 }
@@ -476,7 +546,7 @@ run_typescript_contracts() {
 
 inspect_install() {
   local target="$1"
-  [ -f "$target/tui-plugins/model-configurator.tsx" ] || fail "installed entrypoint missing"
+  [ -f "$target/plugins/model-configurator.tsx" ] || fail "installed entrypoint missing"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 || fail "installed TUI value missing"
   assert_json_value "$target/package.json" '.dependencies["jsonc-parser"]' "$JSONC_VERSION" "installed dependency missing"
   pass "inspect-install"
@@ -484,7 +554,7 @@ inspect_install() {
 
 inspect_uninstall() {
   local target="$1"
-  [ ! -e "$target/tui-plugins/model-configurator.tsx" ] || fail "uninstalled entrypoint remains"
+  [ ! -e "$target/plugins/model-configurator.tsx" ] || fail "uninstalled entrypoint remains"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 && fail "uninstalled TUI value remains"
   pass "inspect-uninstall"
 }

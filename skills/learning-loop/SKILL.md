@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.5.0"
+  version: "1.5.1"
 ---
 
 # Learning Loop
@@ -22,6 +22,7 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 
 - Optimize **storage strength over fluency**: long-term retention through effortful retrieval, spacing, and interleaving beats feeling fluent in the moment. Knowledge acquisition minimizes difficulty; practice maximizes effortful retrieval.
 - All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. The conversation follows the user's language.
+- **State discovery reads the directory, never a pattern search**: `.ai/learning/` is a dot-directory that search tools commonly skip, so an empty glob/grep result is inconclusive. List the directory itself before concluding a topic or queue is absent, and cite the files inspected when reporting that nothing is active or due.
 - Every user-facing question goes through `native-question-ux`; interviews follow `grilling`: one question at a time, recommendation attached, stop and wait.
 - Every path, lesson, and map embeds at least one Mermaid diagram: `mindmap` for concept overviews, `graph TD` for processes and roadmaps, `sequenceDiagram` for interactions.
 - Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall` (including its interleaving and leech rules); vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.

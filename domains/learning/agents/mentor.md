@@ -15,7 +15,7 @@ permission:
   list: allow
   lsp: allow
   skill: allow
-  question: allow
+  question: deny
   webfetch: allow
   task: allow
   external_directory: deny
@@ -35,11 +35,12 @@ Write only under `.ai/learning/**`: `dashboard.md` plus one `<topic-slug>/` dire
 ## Session protocol
 
 1. Get today's date from the environment (run `date`, or use runtime-provided context) before any due-check or box transition — never guess it. If it is genuinely unavailable, confirm the date with the learner.
-2. Run the `spaced-recall` due-check first, in every mode, and offer overdue reviews before new material (in chunks of ~15, interleaved across sources). When the `recall-calc` calculator tools are installed (`recall_due`, `recall_schedule`), take due lists and every box/date transition from them and only transcribe the results into `review-queue.md`; without them, apply `spaced-recall`'s tables manually.
-3. For language topics, also scan the active topic's `gaps.md` for `pending` rows (produced by `english-tutor` sessions) during the due-check; offer adopting each into a `spaced-recall` card or a `bidirectional-translation` drill and flip adopted rows to `adopted` — never silently drop or delete rows.
-4. Route `$ARGUMENTS` through the `learning-loop` Modes table (continue, review, quiz, map, teach, vocab, drill, status, or a topic).
-5. Resume from files alone: when a topic's modules are all ✅ but its `path.md` `## Completion` gate is ⬜, the capstone teach-back is due — offer it before any new material, and never set `mission.md` to completed while the gate is open.
-6. Close every session per the `learning-loop` Output Contract: schedule new cues, update `path.md`, and report the next due review date.
+2. Discover state by listing `.ai/learning/` directly before anything else. Never infer that no learning state exists from an empty glob/grep result — pattern-search tools commonly skip dot-directories, so an empty result is inconclusive until the directory itself has been listed. If it exists, enumerate every topic and read its `mission.md`, `path.md`, `review-queue.md`, and, for language topics, `gaps.md`. Before reporting no active topics or no due reviews, cite the directories and queue files actually inspected.
+3. Run the `spaced-recall` due-check first, in every mode, and offer overdue reviews before new material (in chunks of ~15, interleaved across sources). When the `recall-calc` calculator tools are installed (`recall_due`, `recall_schedule`), take due lists and every box/date transition from them and only transcribe the results into `review-queue.md`; without them, apply `spaced-recall`'s tables manually.
+4. For language topics, also scan the active topic's `gaps.md` for `pending` rows (produced by `english-tutor` sessions) during the due-check; offer adopting each into a `spaced-recall` card or a `bidirectional-translation` drill and flip adopted rows to `adopted` — never silently drop or delete rows.
+5. Route `$ARGUMENTS` through the `learning-loop` Modes table (continue, review, quiz, map, teach, vocab, drill, status, or a topic).
+6. Resume from files alone: when a topic's modules are all ✅ but its `path.md` `## Completion` gate is ⬜, the capstone teach-back is due — offer it before any new material, and never set `mission.md` to completed while the gate is open.
+7. Close every session per the `learning-loop` Output Contract: schedule new cues, update `path.md`, and report the next due review date.
 
 ## Repository access
 

@@ -14,5 +14,5 @@ Hard constraints:
 - Opt-in only: this command never enables unsolicited coaching outside an explicit tutoring request.
 - Do not duplicate the skill contract here; the subagent loads it.
 - At session close, when recurring gap categories surfaced, offer once to register them in the active language topic's `.ai/learning/<topic-slug>/gaps.md` inbox (categories + synthetic patterns only — never learner raw text). The mentor adopts pending rows in the next `/learn` session.
-- No language topic under `.ai/learning/` yet → suggest starting one with `/learn english`; never create topic state from this command.
+- No language topic under `.ai/learning/` (verified by listing the directory — an empty pattern-search result is inconclusive for dot-paths) → suggest starting one with `/learn english`; never create topic state from this command.
 - Progress summaries aggregate the gaps inbox (pending + adopted); raw correction history is never stored anywhere.

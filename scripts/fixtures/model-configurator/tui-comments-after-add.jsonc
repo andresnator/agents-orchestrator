@@ -5,7 +5,7 @@
   "plugin": [
     "./foreign.tsx", // Keep this inline comment.
   
-    "./tui-plugins/model-configurator.tsx"
+    "./plugins/model-configurator.tsx"
   ],
   "label": "Configuración ágil",
 }

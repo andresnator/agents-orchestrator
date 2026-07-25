@@ -353,9 +353,10 @@ file_state() {
 
 # Removes link/file entries present in the old manifest but absent from the
 # new one. Type-guarded: a stale link is removed only if still a symlink, a
-# stale file only if still a regular non-symlink file.
+# stale file only if still a regular non-symlink file, and a stale directory
+# only if rmdir succeeds, i.e. it is empty of anything the user kept there.
 remove_stale() {
-  local old_manifest new_manifest old_entries new_entries kind dest field value
+  local old_manifest new_manifest old_entries new_entries old_dirs new_dirs kind dest field value dir
   old_manifest="$1"
   new_manifest="$2"
   [ -f "$old_manifest" ] || return 0
@@ -384,7 +385,20 @@ remove_stale() {
     esac
   done
 
-  rm -f "$old_entries" "$new_entries"
+  # Directories last, deepest-first, so a tree the sync just emptied (an install
+  # layout that moved) disappears instead of leaving orphan empty directories.
+  old_dirs="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-old-dirs.XXXXXX")"
+  new_dirs="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-new-dirs.XXXXXX")"
+  awk -F '\t' '$1 == "dir" { print $NF }' "$old_manifest" | sort -u > "$old_dirs"
+  awk -F '\t' '$1 == "dir" { print $NF }' "$new_manifest" | sort -u > "$new_dirs"
+
+  comm -23 "$old_dirs" "$new_dirs" | sort -r | while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
+    [ -d "$dir" ] && [ ! -L "$dir" ] || continue
+    if [ "$DRY_RUN" -eq 1 ]; then printf 'rmdir %s\n' "$dir"; else rmdir "$dir" 2>/dev/null || true; fi
+  done
+
+  rm -f "$old_entries" "$new_entries" "$old_dirs" "$new_dirs"
 }
 
 install_action() {
