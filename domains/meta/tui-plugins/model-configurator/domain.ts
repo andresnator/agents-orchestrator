@@ -1,18 +1,38 @@
-import { readdir, readFile, realpath, stat } from "fs/promises"
+import { readdir, readFile, realpath } from "fs/promises"
 import path from "path"
 import { fileURLToPath } from "url"
 
 export const DEFAULT_PROFILE_NAME = "default"
 
-export type CatalogAgent = {
-  name: string
-  domain: string
-  mode: "primary" | "subagent"
+const AGENT_LIST_ERROR = "This OpenCode server did not return an agent list (GET /agent). Update OpenCode and retry."
+
+export type AgentMode = "primary" | "subagent" | "all"
+
+export type TaskAction = "allow" | "deny" | "ask"
+
+export type TaskRule = {
+  pattern: string
+  action: TaskAction
 }
 
-export type DomainGroup = {
-  domain: string
-  agents: CatalogAgent[]
+export type LiveAgent = {
+  name: string
+  description?: string
+  mode: AgentMode
+  native: boolean
+  hidden: boolean
+  taskRules: TaskRule[]
+}
+
+export type AgentGroup = {
+  parent: LiveAgent
+  children: LiveAgent[]
+  openDelegation: boolean
+}
+
+export type AgentHierarchy = {
+  groups: AgentGroup[]
+  otherSubagents: LiveAgent[]
 }
 
 export type AgentMapping = {
@@ -66,62 +86,138 @@ export type ProfileFile = {
   warnings: string[]
 }
 
-export async function resolveRuntimeDataRoot(moduleUrl: string): Promise<string> {
-  const root = path.join(path.dirname(await realpath(fileURLToPath(moduleUrl))), "model-configurator")
-  const [agents, profiles] = await Promise.all([stat(path.join(root, "agents.json")), stat(path.join(root, "profiles"))])
-  if (!agents.isFile() || !profiles.isDirectory()) throw new Error("Installed model configurator data is incomplete")
-  return root
+export type InvalidProfile = {
+  path: string
+  errors: string[]
 }
 
-export async function discoverHarnessAgents(runtimeDataRoot: string): Promise<CatalogAgent[]> {
-  const raw = JSON.parse(await readFile(path.join(runtimeDataRoot, "agents.json"), "utf8")) as unknown
-  if (!Array.isArray(raw)) throw new Error("Installed model configurator agent catalog is invalid")
-  const byName = new Map<string, CatalogAgent>()
-  for (const entry of raw) {
-    if (!isRecord(entry) || typeof entry.name !== "string" || entry.name.length === 0) {
-      throw new Error("Installed model configurator agent catalog is invalid")
-    }
-    if (typeof entry.domain !== "string" || entry.domain.length === 0) {
-      throw new Error("Installed model configurator agent catalog is invalid")
-    }
-    byName.set(entry.name, {
+export type ProfileLoad = {
+  profiles: ProfileFile[]
+  invalid: InvalidProfile[]
+}
+
+export async function resolveProfilesRoot(moduleUrl: string): Promise<string> {
+  const companion = path.join(path.dirname(await realpath(fileURLToPath(moduleUrl))), "model-configurator")
+  return path.join(companion, "profiles")
+}
+
+/**
+ * Normalizes the response of the OpenCode `GET /agent` endpoint, which already merges built-in,
+ * repo and user agents. Entries without a usable name are skipped rather than aborting the wizard;
+ * only an unusable envelope (an older server that cannot answer at all) throws.
+ */
+export function normalizeLiveAgents(result: unknown): LiveAgent[] {
+  const root = isRecord(result) && "data" in result ? result.data : result
+  if (!Array.isArray(root)) throw new Error(AGENT_LIST_ERROR)
+
+  const byName = new Map<string, LiveAgent>()
+  for (const entry of root) {
+    if (!isRecord(entry) || typeof entry.name !== "string" || entry.name.length === 0) continue
+    const agent: LiveAgent = {
       name: entry.name,
-      domain: entry.domain,
-      mode: entry.mode === "primary" ? "primary" : "subagent",
+      mode: entry.mode === "primary" || entry.mode === "all" ? entry.mode : "subagent",
+      native: entry.native === true,
+      hidden: entry.hidden === true,
+      taskRules: normalizeTaskRules(entry.permission),
+    }
+    if (typeof entry.description === "string" && entry.description.length > 0) agent.description = entry.description
+    byName.set(agent.name, agent)
+  }
+  return [...byName.values()].sort(byAgentName)
+}
+
+export function visibleAgents(agents: readonly LiveAgent[], showHidden: boolean): LiveAgent[] {
+  return showHidden ? [...agents] : agents.filter((agent) => !agent.hidden)
+}
+
+/** Mirrors OpenCode's permission evaluation: the last matching rule wins, absent rules allow. */
+export function effectiveTaskAction(rules: readonly TaskRule[], subagent: string): TaskRule {
+  for (let index = rules.length - 1; index >= 0; index -= 1) {
+    if (wildcardMatch(subagent, rules[index].pattern)) return rules[index]
+  }
+  return { pattern: "*", action: "allow" }
+}
+
+/**
+ * Builds the parent/child view of the live agent list. A subagent is a child of a primary only when
+ * a rule with a specific pattern permits it, so a primary that simply inherits the catch-all `allow`
+ * (every built-in) is flagged as open delegation instead of adopting every subagent on the server.
+ */
+export function buildAgentHierarchy(agents: readonly LiveAgent[]): AgentHierarchy {
+  const parents = agents.filter((agent) => agent.mode === "primary" || agent.mode === "all")
+  const delegable = agents.filter((agent) => agent.mode === "subagent" || agent.mode === "all")
+  const claimed = new Set<string>()
+
+  const groups = parents
+    .map((parent) => {
+      const children: LiveAgent[] = []
+      for (const candidate of delegable) {
+        if (candidate.name === parent.name) continue
+        const rule = effectiveTaskAction(parent.taskRules, candidate.name)
+        if (rule.action === "deny" || rule.pattern === "*") continue
+        children.push(candidate)
+        claimed.add(candidate.name)
+      }
+      return {
+        parent,
+        children: children.sort(byAgentName),
+        openDelegation: catchAllTaskAction(parent.taskRules) !== "deny",
+      }
     })
-  }
-  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name))
+    .sort(
+      (left, right) =>
+        Number(left.parent.native) - Number(right.parent.native) || left.parent.name.localeCompare(right.parent.name),
+    )
+
+  const otherSubagents = agents
+    .filter((agent) => agent.mode === "subagent" && !claimed.has(agent.name))
+    .sort(byAgentName)
+
+  return { groups, otherSubagents }
 }
 
-export function groupAgentsByDomain(agents: readonly CatalogAgent[]): DomainGroup[] {
-  const groups = new Map<string, CatalogAgent[]>()
-  for (const agent of agents) {
-    const group = groups.get(agent.domain)
-    if (group) group.push(agent)
-    else groups.set(agent.domain, [agent])
-  }
-  return [...groups.entries()]
-    .map(([domain, domainAgents]) => ({ domain, agents: domainAgents }))
-    .sort((left, right) => right.agents.length - left.agents.length || left.domain.localeCompare(right.domain))
+/** Anchored glob match with OpenCode's semantics: `*` spans anything, `?` spans one character. */
+export function wildcardMatch(value: string, pattern: string): boolean {
+  if (pattern === "*") return true
+  const source = pattern
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".")
+  return new RegExp(`^${source}$`, "s").test(value)
 }
 
-export async function loadProfiles(runtimeDataRoot: string, agents: readonly string[]): Promise<ProfileFile[]> {
-  const profilesRoot = path.join(runtimeDataRoot, "profiles")
-  const files = (await readdir(profilesRoot, { withFileTypes: true }))
+export async function loadProfiles(profilesRoot: string, agents: readonly string[]): Promise<ProfileLoad> {
+  let entries
+  try {
+    entries = await readdir(profilesRoot, { withFileTypes: true })
+  } catch (error) {
+    if (isMissingPath(error)) return { profiles: [], invalid: [] }
+    throw error
+  }
+
+  const files = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
     .sort((left, right) => left.name.localeCompare(right.name))
 
   const profiles: ProfileFile[] = []
+  const invalid: InvalidProfile[] = []
   for (const file of files) {
     const profilePath = path.join(profilesRoot, file.name)
-    const raw = JSON.parse(await readFile(profilePath, "utf8")) as unknown
+    let raw: unknown
+    try {
+      raw = JSON.parse(await readFile(profilePath, "utf8")) as unknown
+    } catch (error) {
+      invalid.push({ path: profilePath, errors: [error instanceof Error ? error.message : "unreadable profile"] })
+      continue
+    }
     const validation = validateProfile(raw, agents)
     if (!validation.profile) {
-      throw new Error(`${profilePath}: ${validation.errors.join("; ")}`)
+      invalid.push({ path: profilePath, errors: validation.errors })
+      continue
     }
     profiles.push({ path: profilePath, profile: validation.profile, warnings: validation.warnings })
   }
-  return profiles
+  return { profiles, invalid }
 }
 
 export function validateProfile(raw: unknown, agents: readonly string[]): ProfileValidation {
@@ -141,21 +237,27 @@ export function validateProfile(raw: unknown, agents: readonly string[]): Profil
     }
     const tierAgents = tierValue.agents.filter((agent): agent is string => typeof agent === "string")
     if (tierAgents.length !== tierValue.agents.length) errors.push(`tier '${tierName}' contains a non-string agent`)
+    // Unknown agents only warn: a profile authored for the full harness stays usable on a partial install.
+    const unknown: string[] = []
+    const knownTierAgents: string[] = []
     for (const agent of tierAgents) {
+      if (!knownAgents.has(agent)) {
+        unknown.push(agent)
+        continue
+      }
       if (coveredAgents.has(agent)) errors.push(`agent '${agent}' appears in more than one tier`)
-      if (!knownAgents.has(agent)) errors.push(`tier '${tierName}' references unknown agent '${agent}'`)
       coveredAgents.add(agent)
+      knownTierAgents.push(agent)
     }
+    if (unknown.length > 0) warnings.push(`tier '${tierName}' skips agents missing on this server: ${unknown.join(", ")}`)
     const tier: TierProfile = {
       description: typeof tierValue.description === "string" ? tierValue.description : "",
-      agents: tierAgents,
+      agents: knownTierAgents,
     }
     if (typeof tierValue.variant === "string") tier.variant = tierValue.variant
     tiers[tierName] = tier
   }
 
-  const uncovered = agents.filter((agent) => !coveredAgents.has(agent))
-  if (uncovered.length > 0) warnings.push(`agents not covered by a tier: ${uncovered.join(", ")}`)
   if (errors.length > 0) return { errors, warnings }
 
   return {
@@ -215,6 +317,34 @@ export function calculateChanges(
 export function formatMapping(mapping: AgentMapping): string {
   if (!mapping.model) return "inherits"
   return mapping.variant ? `${mapping.model} @${mapping.variant}` : mapping.model
+}
+
+function normalizeTaskRules(raw: unknown): TaskRule[] {
+  if (!Array.isArray(raw)) return []
+  const rules: TaskRule[] = []
+  for (const rule of raw) {
+    if (!isRecord(rule) || typeof rule.permission !== "string" || typeof rule.pattern !== "string") continue
+    if (!wildcardMatch("task", rule.permission)) continue
+    if (rule.action !== "allow" && rule.action !== "deny" && rule.action !== "ask") continue
+    rules.push({ pattern: rule.pattern, action: rule.action })
+  }
+  return rules
+}
+
+function catchAllTaskAction(rules: readonly TaskRule[]): TaskAction {
+  for (let index = rules.length - 1; index >= 0; index -= 1) {
+    if (rules[index].pattern === "*") return rules[index].action
+  }
+  return "allow"
+}
+
+function byAgentName(left: LiveAgent, right: LiveAgent): number {
+  return left.name.localeCompare(right.name)
+}
+
+function isMissingPath(error: unknown): boolean {
+  const code = isRecord(error) ? error.code : undefined
+  return code === "ENOENT" || code === "ENOTDIR"
 }
 
 function normalizeModels(raw: unknown): ModelOption[] {

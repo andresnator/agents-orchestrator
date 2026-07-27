@@ -136,7 +136,6 @@ runtime_install_component() {
       [ -f "$profile" ] || continue
       install_tui_source "$profile" "$profiles_dest/$(basename "$profile")" "$manifest"
     done
-    generate_file "$REPO_ROOT" "${dest%.tsx}/agents.json" "$manifest" render_agent_catalog
   fi
   maybe_fail_install "after-links"
   ensure_managed_array_entry "$TARGET/tui.json" plugin "$MODEL_CONFIGURATOR_SPEC" "$manifest"
@@ -163,8 +162,6 @@ runtime_component_state() {
       support_state="$(file_state "$profile" "${dest%.tsx}/profiles/$(basename "$profile")" copy_source)"
       [ "$support_state" = "generated" ] || companion_state="$support_state"
     done
-    support_state="$(file_state "$REPO_ROOT" "${dest%.tsx}/agents.json" render_agent_catalog)"
-    [ "$support_state" = "generated" ] || companion_state="$support_state"
   fi
   if [ "$state" = "generated" ] && [ "$companion_state" = "generated" ] &&
     managed_array_has "$TARGET/tui.json" plugin "$MODEL_CONFIGURATOR_SPEC" &&
@@ -209,7 +206,6 @@ runtime_pre_install() {
         [ -f "$profile" ] || continue
         preflight_tui_source "$profile" "${dest%.tsx}/profiles/$(basename "$profile")"
       done
-      preflight_generated_source "$REPO_ROOT" "${dest%.tsx}/agents.json" render_agent_catalog
     fi
   done < "$selected"
 }
@@ -427,27 +423,6 @@ prepare_tui_directory() {
 
 copy_source() {
   cat "$1"
-}
-
-render_agent_catalog() {
-  local agent domain mode
-  for agent in "$REPO_ROOT"/domains/*/agents/*.md; do
-    [ -f "$agent" ] || continue
-    domain="$(basename "$(dirname "$(dirname "$agent")")")"
-    mode="$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } $1 == "mode:" { print $2; exit }' "$agent")"
-    jq -n --arg name "$(basename "$agent" .md)" --arg domain "$domain" --arg mode "${mode:-subagent}" \
-      '{name: $name, domain: $domain, mode: $mode}'
-  done | jq -s 'unique_by(.name)'
-}
-
-preflight_generated_source() {
-  local src="$1" dest="$2" transform="$3" state
-  state="$(file_state "$src" "$dest" "$transform")"
-  if [ "$state" = "stale" ] && manifest_owns_file "$OLD_MANIFEST" "$dest"; then return 0; fi
-  case "$state" in
-    generated|not\ installed) return 0 ;;
-  esac
-  [ "$FORCE" -eq 1 ] || die "$dest exists and is not an installer-owned generated source"
 }
 
 manifest_owns_link() {

@@ -1,15 +1,17 @@
 import type { TuiDialogSelectOption, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import {
+  buildAgentHierarchy,
   calculateChanges,
-  discoverHarnessAgents,
   flattenModels,
   formatMapping,
-  groupAgentsByDomain,
   loadProfiles,
+  normalizeLiveAgents,
   normalizeProviderCatalog,
+  visibleAgents,
   type AgentDecision,
   type AgentMapping,
-  type CatalogAgent,
+  type AgentMode,
+  type LiveAgent,
   type ModelOption,
   type ProfileFile,
 } from "./domain"
@@ -50,25 +52,37 @@ const DELETE_PRESET = "__delete_preset__"
 const OVERWRITE_PRESET = "__overwrite_preset__"
 const RENAME_PRESET = "__rename_preset__"
 const PRESET_PREFIX = "__preset__:"
-const DOMAIN_PREFIX = "__domain__:"
+const GROUP_PREFIX = "__group__:"
+const OTHER_GROUP = "__other_subagents__"
+const TOGGLE_HIDDEN = "__toggle_hidden__"
 const REVIEW_CHANGES = "__review_changes__"
 const BACK_HINT = "esc: back"
 const CLOSE_HINT = "esc: close"
-const DOMAINS_HINT = "esc: back to domains"
+const AGENTS_HINT = "esc: back to agents"
+const OTHER_GROUP_TITLE = "Other subagents"
 let configuratorRunning = false
 
 type StepOutcome = "next" | "back" | "exit" | "done"
 
+/** One selectable block of the agent hub: a primary with its delegates, or the unclaimed bucket. */
+type AgentSection = {
+  key: string
+  title: string
+  description: string
+  agents: LiveAgent[]
+}
+
 type WizardState = {
-  agents: CatalogAgent[]
+  agents: LiveAgent[]
   profiles: ProfileFile[]
   presets: StoredPreset[]
   models: ModelOption[]
   presetsPath: string
+  showHidden: boolean
   scope?: ConfigScope
   configFile?: string
   snapshot?: ConfigSnapshot
-  source?: { kind: "profile" | "preset" | "domains" }
+  source?: { kind: "profile" | "preset" | "agents" }
   selectedProfile?: ProfileFile
   tierDecisions?: Map<string, AgentDecision>
   decisions?: Map<string, AgentDecision>
@@ -79,7 +93,7 @@ type WizardStep = {
   run: (state: WizardState) => Promise<StepOutcome>
 }
 
-export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: string): Promise<void> {
+export async function runModelConfigurator(api: TuiPluginApi, profilesRoot: string): Promise<void> {
   if (configuratorRunning) {
     api.ui.toast({ variant: "warning", message: "The model configurator is already open." })
     return
@@ -93,8 +107,16 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
     }
     api.ui.dialog.setSize("large")
 
-    const agents = await discoverHarnessAgents(runtimeDataRoot)
-    const profiles = await loadProfiles(runtimeDataRoot, agents.map((agent) => agent.name))
+    const agents = await loadAgents(api)
+    if (agents.length === 0) {
+      api.ui.toast({ variant: "warning", message: "This OpenCode server reported no agents to configure." })
+      return
+    }
+
+    const { profiles, invalid } = await loadProfiles(profilesRoot, agents.map((agent) => agent.name))
+    for (const entry of invalid) {
+      api.ui.toast({ variant: "warning", message: `Skipped profile ${entry.path}: ${entry.errors.join("; ")}` })
+    }
     const presetsPath = presetsFile(api.state.path)
     const presets = await loadPresets(presetsPath)
 
@@ -105,7 +127,7 @@ export async function runModelConfigurator(api: TuiPluginApi, runtimeDataRoot: s
     }
     const models = flattenModels(catalog)
 
-    const state: WizardState = { agents, profiles, presets, models, presetsPath }
+    const state: WizardState = { agents, profiles, presets, models, presetsPath, showHidden: false }
     await runSteps(api, state)
   } catch (error) {
     api.ui.toast({ variant: "error", title: "Model configurator failed", message: errorMessage(error), duration: 8000 })
@@ -176,12 +198,22 @@ async function runHubStep(api: TuiPluginApi, state: WizardState): Promise<StepOu
         description: "Continue to the apply confirmation",
       })
     }
-    for (const group of groupAgentsByDomain(state.agents)) {
+    const sections = hubSections(state)
+    for (const section of sections) {
       options.push({
-        title: group.domain,
-        value: DOMAIN_PREFIX + group.domain,
-        description: `${group.agents.length} agent${group.agents.length === 1 ? "" : "s"}`,
-        category: "Domains",
+        title: section.title,
+        value: GROUP_PREFIX + section.key,
+        description: section.description,
+        category: "Agents",
+      })
+    }
+    const hiddenCount = state.agents.filter((agent) => agent.hidden).length
+    if (hiddenCount > 0) {
+      options.push({
+        title: state.showHidden ? "Hide internal agents" : "Show internal agents",
+        value: TOGGLE_HIDDEN,
+        description: `${hiddenCount} agent${hiddenCount === 1 ? "" : "s"} OpenCode marks as internal`,
+        category: "Agents",
       })
     }
     for (const file of state.profiles) {
@@ -203,16 +235,23 @@ async function runHubStep(api: TuiPluginApi, state: WizardState): Promise<StepOu
       })
     }
 
-    const selected = await select(api, "Select domain", options, BACK_HINT)
+    const selected = await select(api, "Agents", options, BACK_HINT)
     if (!selected) return "back"
 
+    if (selected === TOGGLE_HIDDEN) {
+      state.showHidden = !state.showHidden
+      continue
+    }
+
     if (selected === REVIEW_CHANGES) {
-      state.source = { kind: "domains" }
+      state.source = { kind: "agents" }
       return "next"
     }
 
-    if (selected.startsWith(DOMAIN_PREFIX)) {
-      await runDomainAgentsLoop(api, state, selected.slice(DOMAIN_PREFIX.length))
+    if (selected.startsWith(GROUP_PREFIX)) {
+      const key = selected.slice(GROUP_PREFIX.length)
+      const section = sections.find((entry) => entry.key === key)
+      if (section) await runGroupAgentsLoop(api, state, section)
       continue
     }
 
@@ -234,31 +273,57 @@ async function runHubStep(api: TuiPluginApi, state: WizardState): Promise<StepOu
   }
 }
 
-async function runDomainAgentsLoop(api: TuiPluginApi, state: WizardState, domain: string): Promise<void> {
-  const agents = state.agents.filter((agent) => agent.domain === domain)
+function hubSections(state: WizardState): AgentSection[] {
+  const hierarchy = buildAgentHierarchy(visibleAgents(state.agents, state.showHidden))
+  const sections: AgentSection[] = hierarchy.groups.map((group) => ({
+    key: group.parent.name,
+    title: group.parent.name,
+    description: sectionDescription(group.children.length, group.openDelegation),
+    agents: [group.parent, ...group.children],
+  }))
+  const others = hierarchy.otherSubagents
+  if (others.length > 0) {
+    sections.push({
+      key: OTHER_GROUP,
+      title: OTHER_GROUP_TITLE,
+      description: `${others.length} subagent${others.length === 1 ? "" : "s"} no primary delegates to explicitly`,
+      agents: others,
+    })
+  }
+  return sections
+}
+
+function sectionDescription(children: number, openDelegation: boolean): string {
+  if (children === 0) return openDelegation ? "Delegates to any subagent" : "No delegates"
+  const base = `${children} subagent${children === 1 ? "" : "s"}`
+  return openDelegation ? `${base} + any other subagent` : base
+}
+
+async function runGroupAgentsLoop(api: TuiPluginApi, state: WizardState, section: AgentSection): Promise<void> {
+  const agents = section.agents
   const decisions = (state.decisions ??= new Map())
   const current = state.snapshot!.mappings
 
   while (true) {
     const selected = await select(
       api,
-      `${domain} agents`,
+      section.title,
       [
         { title: "Done", value: DONE },
-        { title: "All agents", value: ALL_AGENTS, description: "Set model/variant for every agent in this domain" },
+        { title: "All agents", value: ALL_AGENTS, description: "Set model/variant for every agent in this group" },
         ...agents.map((agent) => ({
           title: decisions.has(agent.name) ? `● ${agent.name}` : agent.name,
           value: agent.name,
           description: `${modeLetter(agent.mode)} ${decisionDisplay(decisions.get(agent.name), current[agent.name])}`,
         })),
       ],
-      DOMAINS_HINT,
+      AGENTS_HINT,
     )
     if (!selected || selected === DONE) return
 
     if (selected === ALL_AGENTS) {
       const summary = agents.map((agent) => `${agent.name}: ${formatMapping(current[agent.name] ?? {})}`).join("; ")
-      const decision = await selectDecision(api, `Configure all ${domain} agents`, state.models, undefined, summary)
+      const decision = await selectDecision(api, `Configure every agent in ${section.title}`, state.models, undefined, summary)
       if (decision === undefined) continue
       if (decision.action === "keep") for (const agent of agents) decisions.delete(agent.name)
       else for (const agent of agents) decisions.set(agent.name, decision)
@@ -369,7 +434,7 @@ async function runOverridesStep(api: TuiPluginApi, state: WizardState): Promise<
 }
 
 async function runAgentOverrideLoop(api: TuiPluginApi, state: WizardState): Promise<boolean> {
-  const agents = state.agents.map((agent) => agent.name)
+  const agents = visibleAgents(state.agents, state.showHidden).map((agent) => agent.name)
   const decisions = state.decisions!
   const tierDecisions = state.tierDecisions!
   const current = state.snapshot!.mappings
@@ -455,10 +520,10 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
   }
 
   const warning = higherPrecedenceWarning()
-  const domainOf = new Map(state.agents.map((agent) => [agent.name, agent.domain]))
+  const categoryOf = reviewCategories(state.agents)
   const rows = [...changes].sort(
     (left, right) =>
-      (domainOf.get(left.agent) ?? "other").localeCompare(domainOf.get(right.agent) ?? "other") ||
+      (categoryOf.get(left.agent) ?? "other").localeCompare(categoryOf.get(right.agent) ?? "other") ||
       left.agent.localeCompare(right.agent),
   )
   const title = `Apply ${changes.length} model change${changes.length === 1 ? "" : "s"}?`
@@ -473,7 +538,7 @@ async function runReviewStep(api: TuiPluginApi, state: WizardState): Promise<Ste
         title: change.agent,
         value: `__change__:${change.agent}`,
         description: `${formatMapping(change.before)} -> ${formatMapping(change.after)}`,
-        category: domainOf.get(change.agent) ?? "other",
+        category: categoryOf.get(change.agent) ?? "other",
         disabled: true,
       })),
     ],
@@ -603,6 +668,34 @@ async function loadCatalog(api: TuiPluginApi) {
   return normalizeProviderCatalog(result)
 }
 
+/**
+ * The agent list comes live from the server, so built-in, repo and user agents are all configurable.
+ * The v2 SDK groups are class instances reading `this.client`: call `agents` on its own receiver.
+ */
+async function loadAgents(api: TuiPluginApi): Promise<LiveAgent[]> {
+  const app = (api.client as { app?: { agents?: (input: { directory?: string }) => Promise<unknown> } }).app
+  if (typeof app?.agents !== "function") {
+    throw new Error("This OpenCode server does not expose the agent list (GET /agent). Update OpenCode and retry.")
+  }
+  return normalizeLiveAgents(await app.agents({ directory: api.state.path.directory }))
+}
+
+/** Review rows are grouped under the first primary in hub order that delegates to them explicitly. */
+function reviewCategories(agents: readonly LiveAgent[]): Map<string, string> {
+  const hierarchy = buildAgentHierarchy(agents)
+  const category = new Map<string, string>()
+  for (const group of hierarchy.groups) category.set(group.parent.name, group.parent.name)
+  for (const group of hierarchy.groups) {
+    for (const child of group.children) {
+      if (!category.has(child.name)) category.set(child.name, group.parent.name)
+    }
+  }
+  for (const agent of hierarchy.otherSubagents) {
+    if (!category.has(agent.name)) category.set(agent.name, OTHER_GROUP_TITLE)
+  }
+  return category
+}
+
 function findStaleSelections(decisions: ReadonlyMap<string, AgentDecision>, models: readonly ModelOption[]): string[] {
   const live = new Map(models.map((model) => [model.id, new Set(model.variants)]))
   const stale = new Set<string>()
@@ -614,8 +707,9 @@ function findStaleSelections(decisions: ReadonlyMap<string, AgentDecision>, mode
   return [...stale].sort()
 }
 
-function modeLetter(mode: string): string {
-  return mode === "primary" ? "M" : "S"
+function modeLetter(mode: AgentMode): string {
+  if (mode === "primary") return "M"
+  return mode === "all" ? "A" : "S"
 }
 
 function decisionDisplay(decision: AgentDecision | undefined, current: AgentMapping | undefined): string {

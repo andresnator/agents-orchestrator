@@ -160,8 +160,10 @@ shouldInstallReinstallStatusAndUninstallWithoutOwningForeignConfig() {
     fail "TUI entrypoint was not generated locally"
   [ -d "$target/plugins/model-configurator" ] && [ ! -L "$target/plugins/model-configurator" ] ||
     fail "TUI companion directory was not generated locally"
-  assert_json_value "$target/plugins/model-configurator/agents.json" \
-    '.[0] | (has("name") and has("domain") and has("mode"))' "true" "agent catalog entries lost the domain shape"
+  [ -f "$target/plugins/model-configurator/profiles/default.json" ] ||
+    fail "TUI companion lost the profiles snapshot"
+  [ ! -e "$target/plugins/model-configurator/agents.json" ] ||
+    fail "install still generates the retired agent catalog"
   [ -f "$target/tui.json.bak" ] || fail "install did not keep a single fixed tui.json backup"
   if ls "$target"/tui.json.bak.* >/dev/null 2>&1; then fail "install accumulated timestamped tui.json backups"; fi
   if ls "$target"/package.json.bak.* >/dev/null 2>&1; then fail "install accumulated timestamped package.json backups"; fi
@@ -373,6 +375,7 @@ shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync() {
   [ -f "$target/plugins/model-configurator.tsx" ] && [ ! -L "$target/plugins/model-configurator.tsx" ] ||
     fail "migration did not install the TUI entrypoint under plugins/"
   [ -d "$target/plugins/model-configurator/profiles" ] || fail "migration did not install the TUI companion under plugins/"
+  [ ! -e "$target/plugins/model-configurator/agents.json" ] || fail "migration recreated the retired agent catalog"
   [ ! -e "$target/tui-plugins" ] || fail "migration left the retired tui-plugins directory behind"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_SPEC" >/dev/null ||
     fail "migration did not register the new plugin path in tui.json"
@@ -380,6 +383,30 @@ shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync() {
     fail "migration retained the retired tui.json plugin path"
   rm -rf "$scratch"
   pass "shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync"
+}
+
+shouldRemoveRetiredAgentCatalogFromExistingInstallOnSync() {
+  local scratch target binary manifest
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-catalog.XXXXXX")"
+  target="$scratch/target"
+  manifest="$target/.agents-orchestrator-manifest"
+  mkdir -p "$target"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+
+  # Given an install from a version that still generated the agent catalog
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+  printf '[]\n' > "$target/plugins/model-configurator/agents.json"
+  printf 'file\t%s\n' "$target/plugins/model-configurator/agents.json" >> "$manifest"
+
+  # When the current installer syncs
+  # Then the manifest-owned catalog is removed and the companion survives
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+  [ ! -e "$target/plugins/model-configurator/agents.json" ] ||
+    fail "sync kept the retired agent catalog"
+  [ -f "$target/plugins/model-configurator/profiles/default.json" ] ||
+    fail "sync dropped the profiles snapshot while cleaning the catalog"
+  rm -rf "$scratch"
+  pass "shouldRemoveRetiredAgentCatalogFromExistingInstallOnSync"
 }
 
 shouldKeepStaleDirectoryWhenItStillHoldsUserContent() {
@@ -513,6 +540,7 @@ run_shell_contracts() {
   shouldSyncAwayManagedTuiValuesWhenMetaIsDeselected
   shouldUpgradeFromLegacyManifestWithoutTouchingAssignments
   shouldMigrateTuiPluginsDirectoryIntoPluginsOnSync
+  shouldRemoveRetiredAgentCatalogFromExistingInstallOnSync
   shouldKeepStaleDirectoryWhenItStillHoldsUserContent
   shouldReloadRunningServersOnlyWhenRequested
   shouldInstallOnlyInsideProjectTarget

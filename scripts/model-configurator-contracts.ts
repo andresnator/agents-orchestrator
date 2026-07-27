@@ -3,14 +3,16 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/
 import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 import {
+  buildAgentHierarchy,
   calculateChanges,
-  discoverHarnessAgents,
   formatMapping,
-  groupAgentsByDomain,
+  normalizeLiveAgents,
   normalizeProviderCatalog,
   validateProfile,
+  visibleAgents,
+  wildcardMatch,
   type AgentChange,
-  type CatalogAgent,
+  type LiveAgent,
 } from "../domains/meta/tui-plugins/model-configurator/domain"
 import {
   applyConfigChanges,
@@ -71,12 +73,12 @@ async function shouldValidateProfileAsWholeContractWhenProfileIsComplete(): Prom
   assert.deepEqual(actual, {
     profile,
     errors: [],
-    warnings: ["agents not covered by a tier: gamma"],
+    warnings: [],
   })
   pass("shouldValidateProfileAsWholeContractWhenProfileIsComplete")
 }
 
-async function shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvalid(): Promise<void> {
+async function shouldRejectDuplicateAndMalformedAgentsWhenProfileIsInvalid(): Promise<void> {
   // Given
   const profile = {
     tiers: {
@@ -90,14 +92,27 @@ async function shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvali
 
   // Then
   assert.deepEqual(actual, {
-    errors: [
-      "tier 'first' contains a non-string agent",
-      "tier 'first' references unknown agent 'missing'",
-      "agent 'alpha' appears in more than one tier",
-    ],
-    warnings: ["agents not covered by a tier: beta"],
+    errors: ["tier 'first' contains a non-string agent", "agent 'alpha' appears in more than one tier"],
+    warnings: ["tier 'first' skips agents missing on this server: missing"],
   })
-  pass("shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvalid")
+  pass("shouldRejectDuplicateAndMalformedAgentsWhenProfileIsInvalid")
+}
+
+async function shouldKeepKnownAgentsAndWarnWhenTierReferencesAgentsMissingOnThisServer(): Promise<void> {
+  // Given a profile authored for the full harness loaded on a partial install
+  const profile = {
+    name: "default",
+    tiers: { high: { description: "High", agents: ["alpha", "missing"] } },
+  }
+
+  // When
+  const actual = validateProfile(profile, ["alpha"])
+
+  // Then
+  assert.deepEqual(actual.errors, [])
+  assert.deepEqual(actual.warnings, ["tier 'high' skips agents missing on this server: missing"])
+  assert.deepEqual(actual.profile?.tiers.high.agents, ["alpha"])
+  pass("shouldKeepKnownAgentsAndWarnWhenTierReferencesAgentsMissingOnThisServer")
 }
 
 async function shouldExposeOnlyConnectedProvidersWhenCatalogContainsDisconnectedEntries(): Promise<void> {
@@ -258,7 +273,7 @@ async function shouldCompleteStagedWizardAndPersistSelectedChanges(): Promise<vo
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -277,7 +292,7 @@ async function shouldCompleteStagedWizardAndPersistSelectedChanges(): Promise<vo
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then
     const persisted = await readConfigSnapshot(configFile)
@@ -301,7 +316,7 @@ async function shouldLeaveConfigUntouchedWhenFinalReviewIsCancelled(): Promise<v
     const api = createFakeApi(scratch, [], {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -315,7 +330,7 @@ async function shouldLeaveConfigUntouchedWhenFinalReviewIsCancelled(): Promise<v
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then
     assert.equal(await readFile(configFile, "utf8"), original)
@@ -337,7 +352,7 @@ async function shouldReshowPreviousDialogWhenEscapingBack(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
           return option(options, "default")
         }
@@ -357,9 +372,9 @@ async function shouldReshowPreviousDialogWhenEscapingBack(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
-    // Then esc on the first tier returned to the domain hub, which re-showed both dialogs
+    // Then esc on the first tier returned to the agent hub, which re-showed both dialogs
     assert.equal(hubVisits, 2)
     assert.equal(highTierVisits, 2)
     const persisted = await readConfigSnapshot(configFile)
@@ -391,7 +406,7 @@ async function shouldExitWithoutWritingWhenScopeIsEscaped(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then esc on the first dialog exits silently, touching nothing
     assert.equal(await readFile(configFile, "utf8"), original)
@@ -412,7 +427,7 @@ async function shouldSavePresetWhenApplyingAndSaving(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -435,7 +450,7 @@ async function shouldSavePresetWhenApplyingAndSaving(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the config is written and a preset with only concrete (non-inherited) assignments is saved
     const persisted = await readConfigSnapshot(configFile)
@@ -466,7 +481,7 @@ async function shouldApplyPresetSkippingTiersAndOverrides(): Promise<void> {
       // No tier/override handlers: reaching one throws and fails the test
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "__preset__:saved")
+        if (title === "Agents") return option(options, "__preset__:saved")
         if (title === "Preset: saved") return option(options, "__apply_preset__")
         if (title.startsWith("Apply ")) return option(options, "__apply__")
         throw new Error(`unexpected select dialog: ${title}`)
@@ -477,7 +492,7 @@ async function shouldApplyPresetSkippingTiersAndOverrides(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the preset assignments are applied without visiting tiers or overrides
     const persisted = await readConfigSnapshot(configFile)
@@ -513,7 +528,7 @@ async function shouldDeletePresetWithoutTouchingConfig(): Promise<void> {
           scopeVisits += 1
           return scopeVisits === 1 ? option(options, "project") : "escape"
         }
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
           return hubVisits === 1 ? option(options, "__preset__:saved") : "escape"
         }
@@ -526,7 +541,7 @@ async function shouldDeletePresetWithoutTouchingConfig(): Promise<void> {
     })
 
     // When: apply project, delete the preset, esc back through the hub and scope dialogs to exit
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the preset is gone and the config is untouched
     assert.deepEqual(await loadPresets(presetsPath), [])
@@ -549,7 +564,7 @@ async function shouldOpenAdjacentAgentViaNextAgent(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "__keep_current__")
         if (title === "Tier: low") return option(options, "__keep_current__")
         if (title === "Individual overrides") return option(options, "__override_yes__")
@@ -572,7 +587,7 @@ async function shouldOpenAdjacentAgentViaNextAgent(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then "→ Next agent" opened beta's override dialog without selecting it in the chooser
     assert.equal(sawOverrideBeta, true)
@@ -598,7 +613,7 @@ async function shouldPreserveOverridesWhenEscapingAgentChooser(): Promise<void> 
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "__keep_current__")
         if (title === "Tier: low") return option(options, "__keep_current__")
         if (title === "Individual overrides") {
@@ -622,7 +637,7 @@ async function shouldPreserveOverridesWhenEscapingAgentChooser(): Promise<void> 
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then esc re-showed the Yes/No prompt (not tiers) and the alpha override survived
     assert.equal(individualOverridesVisits, 2)
@@ -639,24 +654,24 @@ async function shouldPreserveOverridesWhenEscapingAgentChooser(): Promise<void> 
   }
 }
 
-async function shouldConfigureAgentThroughDomainBrowseAndApply(): Promise<void> {
+async function shouldConfigureAgentThroughGroupBrowseAndApply(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given a run that browses domain "one", configures alpha, and applies from the hub
+    // Given a run that browses the alpha group, configures alpha, and applies from the hub
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const toasts: TuiToast[] = []
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     let sawPendingMarker = false
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           const review = options.find((candidate) => candidate.value === "__review_changes__")
-          return review ?? option(options, "__domain__:one")
+          return review ?? option(options, "__group__:alpha")
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
-          if (domainAgentsVisits === 1) return option(options, "alpha")
+        if (title === "alpha") {
+          groupAgentsVisits += 1
+          if (groupAgentsVisits === 1) return option(options, "alpha")
           sawPendingMarker = options.some((candidate) => candidate.title === "● alpha")
           return option(options, "__done__")
         }
@@ -671,9 +686,9 @@ async function shouldConfigureAgentThroughDomainBrowseAndApply(): Promise<void> 
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
-    // Then the domain-browsed decision is applied and the pending marker was visible
+    // Then the group-browsed decision is applied and the pending marker was visible
     assert.equal(sawPendingMarker, true)
     const persisted = await readConfigSnapshot(configFile)
     assert.deepEqual(persisted.mappings, {
@@ -681,41 +696,41 @@ async function shouldConfigureAgentThroughDomainBrowseAndApply(): Promise<void> 
       beta: { model: "anthropic/old", variant: undefined },
     })
     assert.equal(toasts.at(-1)?.variant, "success")
-    pass("shouldConfigureAgentThroughDomainBrowseAndApply")
+    pass("shouldConfigureAgentThroughGroupBrowseAndApply")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
 }
 
-async function shouldApplyDecisionToAllDomainAgentsThroughAllOption(): Promise<void> {
+async function shouldApplyDecisionToEveryAgentInGroupThroughAllOption(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given domain "one" holds two agents and the run configures them through "All agents"
-    await writeJson(path.join(scratch.data, "agents.json"), [
-      { name: "alpha", domain: "one", mode: "primary" },
-      { name: "gamma", domain: "one", mode: "subagent" },
-      { name: "beta", domain: "two", mode: "subagent" },
-    ])
+    // Given alpha claims gamma and the run configures both through "All agents"
+    scratch.agents = [
+      { name: "alpha", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "gamma", action: "allow" }] },
+      { name: "gamma", mode: "subagent" },
+      { name: "beta", mode: "subagent" },
+    ]
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const toasts: TuiToast[] = []
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     let sawAllPendingMarkers = false
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           const review = options.find((candidate) => candidate.value === "__review_changes__")
-          return review ?? option(options, "__domain__:one")
+          return review ?? option(options, "__group__:alpha")
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
-          if (domainAgentsVisits === 1) return option(options, "__all_agents__")
+        if (title === "alpha") {
+          groupAgentsVisits += 1
+          if (groupAgentsVisits === 1) return option(options, "__all_agents__")
           sawAllPendingMarkers =
             options.some((candidate) => candidate.title === "● alpha") &&
             options.some((candidate) => candidate.title === "● gamma")
           return option(options, "__done__")
         }
-        if (title === "Configure all one agents") return option(options, "openai/new")
+        if (title === "Configure every agent in alpha") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title.startsWith("Apply ")) return option(options, "__apply__")
         throw new Error(`unexpected select dialog: ${title}`)
@@ -726,9 +741,9 @@ async function shouldApplyDecisionToAllDomainAgentsThroughAllOption(): Promise<v
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
-    // Then one decision fanned out to every agent in the domain and beta stayed untouched
+    // Then one decision fanned out to every agent in the group and beta stayed untouched
     assert.equal(sawAllPendingMarkers, true)
     const persisted = await readConfigSnapshot(configFile)
     assert.deepEqual(persisted.mappings, {
@@ -737,24 +752,24 @@ async function shouldApplyDecisionToAllDomainAgentsThroughAllOption(): Promise<v
       beta: { model: "anthropic/old", variant: undefined },
     })
     assert.equal(toasts.at(-1)?.variant, "success")
-    pass("shouldApplyDecisionToAllDomainAgentsThroughAllOption")
+    pass("shouldApplyDecisionToEveryAgentInGroupThroughAllOption")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
 }
 
-async function shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent(): Promise<void> {
+async function shouldClearGroupDecisionsWhenAllAgentsKeepsCurrent(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given "All agents" sets a decision for the whole domain and then keeps current
-    await writeJson(path.join(scratch.data, "agents.json"), [
-      { name: "alpha", domain: "one", mode: "primary" },
-      { name: "gamma", domain: "one", mode: "subagent" },
-      { name: "beta", domain: "two", mode: "subagent" },
-    ])
+    // Given "All agents" sets a decision for the whole group and then keeps current
+    scratch.agents = [
+      { name: "alpha", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "gamma", action: "allow" }] },
+      { name: "gamma", mode: "subagent" },
+      { name: "beta", mode: "subagent" },
+    ]
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const original = await readFile(configFile, "utf8")
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     let configureAllVisits = 0
     let hubVisits = 0
     let scopeVisits = 0
@@ -767,23 +782,23 @@ async function shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent(): Promise
           scopeVisits += 1
           return scopeVisits === 1 ? option(options, "project") : "escape"
         }
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
-          if (hubVisits === 1) return option(options, "__domain__:one")
+          if (hubVisits === 1) return option(options, "__group__:alpha")
           sawReviewAfterKeep = options.some((candidate) => candidate.value === "__review_changes__")
           return "escape"
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
-          if (domainAgentsVisits === 1) return option(options, "__all_agents__")
-          if (domainAgentsVisits === 2) {
+        if (title === "alpha") {
+          groupAgentsVisits += 1
+          if (groupAgentsVisits === 1) return option(options, "__all_agents__")
+          if (groupAgentsVisits === 2) {
             sawMarkersAfterSet = options.some((candidate) => candidate.title === "● alpha")
             return option(options, "__all_agents__")
           }
           sawMarkersAfterKeep = options.some((candidate) => candidate.title.startsWith("● "))
           return option(options, "__done__")
         }
-        if (title === "Configure all one agents") {
+        if (title === "Configure every agent in alpha") {
           configureAllVisits += 1
           return configureAllVisits === 1 ? option(options, "openai/new") : option(options, "__keep_current__")
         }
@@ -796,14 +811,14 @@ async function shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent(): Promise
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
-    // Then keep-current cleared every pending domain decision and nothing was written
+    // Then keep-current cleared every pending group decision and nothing was written
     assert.equal(sawMarkersAfterSet, true)
     assert.equal(sawMarkersAfterKeep, false)
     assert.equal(sawReviewAfterKeep, false)
     assert.equal(await readFile(configFile, "utf8"), original)
-    pass("shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent")
+    pass("shouldClearGroupDecisionsWhenAllAgentsKeepsCurrent")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
@@ -815,18 +830,18 @@ async function shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant(): P
     // Given a model whose provider catalog itself ships a real "none" variant
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const toasts: TuiToast[] = []
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     let variantOptions: PolicyOption[] = []
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           const review = options.find((candidate) => candidate.value === "__review_changes__")
-          return review ?? option(options, "__domain__:one")
+          return review ?? option(options, "__group__:alpha")
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
-          return domainAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
+        if (title === "alpha") {
+          groupAgentsVisits += 1
+          return groupAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
         }
         if (title === "Configure: alpha") return option(options, "openai/new")
         if (title === "Variant for openai/new") {
@@ -842,7 +857,7 @@ async function shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant(): P
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the synthetic no-variant entry is labelled distinctly from the catalog "none"
     const syntheticEntries = variantOptions.filter((candidate) => candidate.value === "__no_variant__")
@@ -870,17 +885,17 @@ async function shouldSkipVariantDialogWhenModelHasNoVariants(): Promise<void> {
     // Given anthropic/old exposes no variants; any variant dialog would fail the policy
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const toasts: TuiToast[] = []
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           const review = options.find((candidate) => candidate.value === "__review_changes__")
-          return review ?? option(options, "__domain__:one")
+          return review ?? option(options, "__group__:alpha")
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
-          return domainAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
+        if (title === "alpha") {
+          groupAgentsVisits += 1
+          return groupAgentsVisits === 1 ? option(options, "alpha") : option(options, "__done__")
         }
         if (title === "Configure: alpha") return option(options, "anthropic/old")
         if (title.startsWith("Apply ")) return option(options, "__apply__")
@@ -892,7 +907,7 @@ async function shouldSkipVariantDialogWhenModelHasNoVariants(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the model applied without a variant dialog and without a variant key
     const persisted = await readConfigSnapshot(configFile)
@@ -907,27 +922,27 @@ async function shouldSkipVariantDialogWhenModelHasNoVariants(): Promise<void> {
   }
 }
 
-async function shouldWalkBackFromDomainAgentsToScopeWithoutWriting(): Promise<void> {
+async function shouldWalkBackFromGroupAgentsToScopeWithoutWriting(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given esc pressed at each level: domain agents → hub → scope
+    // Given esc pressed at each level: group agents → hub → scope
     const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
     const original = await readFile(configFile, "utf8")
     let scopeVisits = 0
     let hubVisits = 0
-    let domainAgentsVisits = 0
+    let groupAgentsVisits = 0
     const api = createFakeApi(scratch, [], {
       select(title, options) {
         if (title === "Configuration scope") {
           scopeVisits += 1
           return scopeVisits === 1 ? option(options, "project") : "escape"
         }
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
-          return hubVisits === 1 ? option(options, "__domain__:one") : "escape"
+          return hubVisits === 1 ? option(options, "__group__:alpha") : "escape"
         }
-        if (title === "one agents") {
-          domainAgentsVisits += 1
+        if (title === "alpha") {
+          groupAgentsVisits += 1
           return "escape"
         }
         throw new Error(`unexpected select dialog: ${title}`)
@@ -938,74 +953,190 @@ async function shouldWalkBackFromDomainAgentsToScopeWithoutWriting(): Promise<vo
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then each esc stepped back exactly one level and nothing was written
-    assert.equal(domainAgentsVisits, 1)
+    assert.equal(groupAgentsVisits, 1)
     assert.equal(hubVisits, 2)
     assert.equal(scopeVisits, 2)
     assert.equal(await readFile(configFile, "utf8"), original)
     assert.deepEqual((await readdir(path.dirname(configFile))).sort(), ["opencode.jsonc"])
-    pass("shouldWalkBackFromDomainAgentsToScopeWithoutWriting")
+    pass("shouldWalkBackFromGroupAgentsToScopeWithoutWriting")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
 }
 
-async function shouldParseDomainCatalogWhenDiscoveringAgents(): Promise<void> {
-  const scratch = await mkdtemp(path.join(tmpdir(), "model-configurator-catalog."))
-  try {
-    // Given duplicate names, a missing mode, and unsorted entries
-    await writeJson(path.join(scratch, "agents.json"), [
-      { name: "beta", domain: "two" },
-      { name: "alpha", domain: "one", mode: "primary" },
-      { name: "beta", domain: "two", mode: "primary" },
-    ])
-
-    // When
-    const agents = await discoverHarnessAgents(scratch)
-
-    // Then names are deduplicated (last entry wins), sorted, and mode falls back to subagent
-    assert.deepEqual(agents, [
-      { name: "alpha", domain: "one", mode: "primary" },
-      { name: "beta", domain: "two", mode: "primary" },
-    ])
-
-    // And legacy flat string catalogs are rejected
-    await writeJson(path.join(scratch, "agents.json"), ["alpha"])
-    await assert.rejects(() => discoverHarnessAgents(scratch), /agent catalog is invalid/)
-
-    // And entries without a domain are rejected
-    await writeJson(path.join(scratch, "agents.json"), [{ name: "alpha" }])
-    await assert.rejects(() => discoverHarnessAgents(scratch), /agent catalog is invalid/)
-    pass("shouldParseDomainCatalogWhenDiscoveringAgents")
-  } finally {
-    await rm(scratch, { recursive: true, force: true })
+async function shouldNormalizeLiveAgentsWhenServerAnswersAgentList(): Promise<void> {
+  // Given duplicate names, a nameless entry, junk, and permission rules of every shape
+  const response = {
+    data: [
+      { name: "beta" },
+      {
+        name: "alpha",
+        description: "First",
+        mode: "primary",
+        native: true,
+        hidden: true,
+        permission: [
+          { permission: "*", pattern: "*", action: "allow" },
+          { permission: "bash", pattern: "*", action: "deny" },
+          { permission: "task", pattern: "beta", action: "ask" },
+          { permission: "task", pattern: "gamma", action: "sometimes" },
+          { permission: "task" },
+        ],
+      },
+      { name: "beta", mode: "all", permission: [] },
+      { name: "", mode: "primary" },
+      "not an agent",
+    ],
   }
-}
-
-async function shouldGroupAgentsByDomainOrderedBySizeThenName(): Promise<void> {
-  // Given
-  const agents: CatalogAgent[] = [
-    { name: "a1", domain: "small-b", mode: "subagent" },
-    { name: "a2", domain: "big", mode: "primary" },
-    { name: "a3", domain: "big", mode: "subagent" },
-    { name: "a4", domain: "small-a", mode: "subagent" },
-  ]
 
   // When
-  const groups = groupAgentsByDomain(agents)
+  const actual = normalizeLiveAgents(response)
 
-  // Then bigger domains come first and ties break alphabetically
+  // Then unusable entries are skipped, names deduplicate with the last entry winning, and the list sorts
+  assert.deepEqual(actual, [
+    {
+      name: "alpha",
+      description: "First",
+      mode: "primary",
+      native: true,
+      hidden: true,
+      // Only task-scoped rules with a valid action survive; the catch-all default matches `task` too.
+      taskRules: [
+        { pattern: "*", action: "allow" },
+        { pattern: "beta", action: "ask" },
+      ],
+    },
+    { name: "beta", mode: "all", native: false, hidden: false, taskRules: [] },
+  ])
+
+  // And a bare array is accepted while an unusable envelope fails loudly
+  assert.deepEqual(normalizeLiveAgents([{ name: "solo" }]), [
+    { name: "solo", mode: "subagent", native: false, hidden: false, taskRules: [] },
+  ])
+  assert.throws(() => normalizeLiveAgents({ data: "nope" }), /did not return an agent list/)
+  assert.throws(() => normalizeLiveAgents(undefined), /did not return an agent list/)
+  pass("shouldNormalizeLiveAgentsWhenServerAnswersAgentList")
+}
+
+async function shouldDeriveParentChildGroupsFromTaskPermissions(): Promise<void> {
+  // Given a native catch-all primary, a primary with an allowlist, and a dual-mode agent
+  const agents = liveAgents(
+    { name: "builder", mode: "primary", native: true },
+    {
+      name: "orchestrator",
+      mode: "primary",
+      task: [
+        { pattern: "*", action: "deny" },
+        { pattern: "sdd-*", action: "allow" },
+        { pattern: "flip", action: "allow" },
+        { pattern: "flip", action: "deny" },
+        { pattern: "hybrid", action: "ask" },
+      ],
+    },
+    {
+      name: "hybrid",
+      mode: "all",
+      task: [
+        { pattern: "*", action: "deny" },
+        { pattern: "sdd-one", action: "allow" },
+      ],
+    },
+    { name: "sdd-one" },
+    { name: "sdd-two" },
+    { name: "flip" },
+    { name: "orphan" },
+  )
+
+  // When
+  const hierarchy = buildAgentHierarchy(agents)
+
+  // Then custom parents come before native ones, each alphabetically
   assert.deepEqual(
-    groups.map((group) => group.domain),
-    ["big", "small-a", "small-b"],
+    hierarchy.groups.map((group) => group.parent.name),
+    ["hybrid", "orchestrator", "builder"],
+  )
+  // And a glob claims every match, `ask` still claims, and the last matching rule wins
+  assert.deepEqual(
+    hierarchy.groups[1].children.map((agent) => agent.name),
+    ["hybrid", "sdd-one", "sdd-two"],
+  )
+  assert.equal(hierarchy.groups[1].openDelegation, false)
+  // And a dual-mode agent is both a parent and a claimable child
+  assert.deepEqual(
+    hierarchy.groups[0].children.map((agent) => agent.name),
+    ["sdd-one"],
+  )
+  // And a catch-all primary delegates openly instead of adopting every subagent on the server
+  assert.deepEqual(hierarchy.groups[2].children, [])
+  assert.equal(hierarchy.groups[2].openDelegation, true)
+  // And subagents nobody claims explicitly stay reachable through the leftover bucket
+  assert.deepEqual(
+    hierarchy.otherSubagents.map((agent) => agent.name),
+    ["flip", "orphan"],
+  )
+  pass("shouldDeriveParentChildGroupsFromTaskPermissions")
+}
+
+async function shouldRepeatSubagentUnderEveryParentThatClaimsIt(): Promise<void> {
+  // Given two primaries claiming the same subagent
+  const agents = liveAgents(
+    { name: "one", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "shared", action: "allow" }] },
+    { name: "two", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "shared", action: "allow" }] },
+    { name: "shared" },
+  )
+
+  // When
+  const hierarchy = buildAgentHierarchy(agents)
+
+  // Then it appears under both and never lands in the leftover bucket
+  assert.deepEqual(
+    hierarchy.groups.map((group) => group.children.map((agent) => agent.name)),
+    [["shared"], ["shared"]],
+  )
+  assert.deepEqual(hierarchy.otherSubagents, [])
+  pass("shouldRepeatSubagentUnderEveryParentThatClaimsIt")
+}
+
+async function shouldExcludeInternalAgentsUntilTheyAreRevealed(): Promise<void> {
+  // Given an internal agent claimed by a visible primary
+  const agents = liveAgents(
+    { name: "visible", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "secret", action: "allow" }] },
+    { name: "secret", hidden: true },
+  )
+
+  // When / Then the default view hides it, both in the list and in the group it belongs to
+  assert.deepEqual(
+    visibleAgents(agents, false).map((agent) => agent.name),
+    ["visible"],
+  )
+  assert.deepEqual(buildAgentHierarchy(visibleAgents(agents, false)).groups[0].children, [])
+
+  // And revealing internals restores it
+  assert.deepEqual(
+    visibleAgents(agents, true).map((agent) => agent.name),
+    ["secret", "visible"],
   )
   assert.deepEqual(
-    groups[0].agents.map((agent) => agent.name),
-    ["a2", "a3"],
+    buildAgentHierarchy(visibleAgents(agents, true)).groups[0].children.map((agent) => agent.name),
+    ["secret"],
   )
-  pass("shouldGroupAgentsByDomainOrderedBySizeThenName")
+  pass("shouldExcludeInternalAgentsUntilTheyAreRevealed")
+}
+
+async function shouldMatchAnchoredGlobsWhenEvaluatingPermissionPatterns(): Promise<void> {
+  // Given OpenCode's wildcard semantics
+  assert.equal(wildcardMatch("sdd-plan", "*"), true)
+  assert.equal(wildcardMatch("sdd-plan", "sdd-*"), true)
+  assert.equal(wildcardMatch("sdd-p", "sdd-?"), true)
+  assert.equal(wildcardMatch("sdd-plan", "sdd-?"), false)
+  // And matching is anchored and treats regex metacharacters literally
+  assert.equal(wildcardMatch("plan-b", "plan"), false)
+  assert.equal(wildcardMatch("a.b", "a.b"), true)
+  assert.equal(wildcardMatch("axb", "a.b"), false)
+  pass("shouldMatchAnchoredGlobsWhenEvaluatingPermissionPatterns")
 }
 
 async function shouldRoundTripAndOverwritePresetsWhenSaved(): Promise<void> {
@@ -1064,7 +1195,7 @@ async function shouldOverwritePresetWhenSavingUnderExistingName(): Promise<void>
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "__preset__:saved")
+        if (title === "Agents") return option(options, "__preset__:saved")
         if (title === "Preset: saved") return option(options, "__apply_preset__")
         if (title.startsWith("Apply ")) return option(options, "__apply_save__")
         if (title === 'Overwrite preset "saved"?') return option(options, "__overwrite_preset__")
@@ -1081,7 +1212,7 @@ async function shouldOverwritePresetWhenSavingUnderExistingName(): Promise<void>
     })
 
     // When the preset is re-applied and saved back under its existing name
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the prompt opened empty (no default), the config was written, and the preset was overwritten in place
     assert.equal(promptedValue, undefined)
@@ -1106,22 +1237,22 @@ async function shouldOverwritePresetWhenSavingUnderExistingName(): Promise<void>
 async function shouldToastAndRepromptWhenPresetNameIsEmpty(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given a domain-browse run that ends in "Apply and save as preset"
+    // Given a group-browse run that ends in "Apply and save as preset"
     const presetsPath = path.join(scratch.global, "model-configurator-presets.json")
     const toasts: TuiToast[] = []
     let hubVisits = 0
-    let domainVisits = 0
+    let groupVisits = 0
     let prompts = 0
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
-          return option(options, hubVisits === 1 ? "__domain__:one" : "__review_changes__")
+          return option(options, hubVisits === 1 ? "__group__:alpha" : "__review_changes__")
         }
-        if (title === "one agents") {
-          domainVisits += 1
-          return option(options, domainVisits === 1 ? "alpha" : "__done__")
+        if (title === "alpha") {
+          groupVisits += 1
+          return option(options, groupVisits === 1 ? "alpha" : "__done__")
         }
         if (title === "Configure: alpha") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
@@ -1139,7 +1270,7 @@ async function shouldToastAndRepromptWhenPresetNameIsEmpty(): Promise<void> {
     })
 
     // When the first name is blank
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then a warning toast fires, the prompt re-opens, and the second name is saved
     assert.equal(prompts, 2)
@@ -1155,10 +1286,14 @@ async function shouldToastAndRepromptWhenPresetNameIsEmpty(): Promise<void> {
   }
 }
 
-async function shouldGroupReviewChangesByDomain(): Promise<void> {
+async function shouldGroupReviewChangesByParentAgent(): Promise<void> {
   const scratch = await createWizardFixture()
   try {
-    // Given pending changes in two domains
+    // Given pending changes in a claimed group and in the leftover bucket
+    scratch.agents = [
+      { name: "alpha", mode: "primary", task: [{ pattern: "*", action: "deny" }] },
+      { name: "beta", mode: "subagent" },
+    ]
     const toasts: TuiToast[] = []
     let hubVisits = 0
     let oneVisits = 0
@@ -1167,17 +1302,17 @@ async function shouldGroupReviewChangesByDomain(): Promise<void> {
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") {
+        if (title === "Agents") {
           hubVisits += 1
-          if (hubVisits === 1) return option(options, "__domain__:one")
-          if (hubVisits === 2) return option(options, "__domain__:two")
+          if (hubVisits === 1) return option(options, "__group__:alpha")
+          if (hubVisits === 2) return option(options, "__group__:__other_subagents__")
           return option(options, "__review_changes__")
         }
-        if (title === "one agents") {
+        if (title === "alpha") {
           oneVisits += 1
           return option(options, oneVisits === 1 ? "alpha" : "__done__")
         }
-        if (title === "two agents") {
+        if (title === "Other subagents") {
           twoVisits += 1
           return option(options, twoVisits === 1 ? "beta" : "__done__")
         }
@@ -1197,18 +1332,193 @@ async function shouldGroupReviewChangesByDomain(): Promise<void> {
     })
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
-    // Then each change row is categorized by its agent's domain
+    // Then each change row is categorized by its parent group
     assert.deepEqual(
       reviewRows.map((row) => ({ value: row.value, category: row.category })),
       [
-        { value: "__change__:alpha", category: "one" },
-        { value: "__change__:beta", category: "two" },
+        { value: "__change__:alpha", category: "alpha" },
+        { value: "__change__:beta", category: "Other subagents" },
       ],
     )
     assert.equal(toasts.at(-1)?.variant, "success")
-    pass("shouldGroupReviewChangesByDomain")
+    pass("shouldGroupReviewChangesByParentAgent")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldRevealInternalAgentsWhenHubTogglesThem(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given an agent OpenCode marks as internal
+    scratch.agents = [
+      { name: "alpha", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "beta", action: "allow" }] },
+      { name: "beta", mode: "subagent" },
+      { name: "summary", mode: "subagent", hidden: true },
+    ]
+    let scopeVisits = 0
+    let hubVisits = 0
+    let titlesBefore: string[] = []
+    let titlesAfter: string[] = []
+    const api = createFakeApi(scratch, [], {
+      select(title, options) {
+        if (title === "Configuration scope") {
+          scopeVisits += 1
+          return scopeVisits === 1 ? option(options, "project") : "escape"
+        }
+        if (title === "Agents") {
+          hubVisits += 1
+          if (hubVisits === 1) {
+            titlesBefore = options.map((candidate) => candidate.title)
+            return option(options, "__toggle_hidden__")
+          }
+          titlesAfter = options.map((candidate) => candidate.title)
+          return "escape"
+        }
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.profiles)
+
+    // Then internal agents stay out of the hub until the toggle brings them back
+    assert.equal(titlesBefore.includes("Other subagents"), false)
+    assert.ok(titlesBefore.includes("Show internal agents"))
+    assert.ok(titlesAfter.includes("Other subagents"))
+    assert.ok(titlesAfter.includes("Hide internal agents"))
+    pass("shouldRevealInternalAgentsWhenHubTogglesThem")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldConfigureAgentsWhenProfilesDirectoryIsMissing(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a standalone install that ships no profiles
+    await rm(scratch.profiles, { recursive: true, force: true })
+    const configFile = path.join(scratch.project, ".opencode", "opencode.jsonc")
+    const toasts: TuiToast[] = []
+    let hubVisits = 0
+    let agentVisits = 0
+    let hubCategories: Array<string | undefined> = []
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") return option(options, "project")
+        if (title === "Agents") {
+          hubVisits += 1
+          hubCategories = (options as Array<{ category?: string }>).map((candidate) => candidate.category)
+          return hubVisits === 1 ? option(options, "__group__:alpha") : option(options, "__review_changes__")
+        }
+        if (title === "alpha") {
+          agentVisits += 1
+          return option(options, agentVisits === 1 ? "alpha" : "__done__")
+        }
+        if (title === "Configure: alpha") return option(options, "openai/new")
+        if (title === "Variant for openai/new") return option(options, "high")
+        if (title.startsWith("Apply ")) return option(options, "__apply__")
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.profiles)
+
+    // Then the hub offers no profile rows and the agent flow still writes
+    assert.equal(hubCategories.includes("Profiles"), false)
+    const persisted = await readConfigSnapshot(configFile)
+    assert.deepEqual(persisted.mappings.alpha, { model: "openai/new", variant: "high" })
+    assert.equal(toasts.at(-1)?.variant, "success")
+    pass("shouldConfigureAgentsWhenProfilesDirectoryIsMissing")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldSkipInvalidProfileWithWarningAndKeepTheRest(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a malformed profile next to a valid one
+    await writeJson(path.join(scratch.profiles, "broken.json"), { tiers: { high: 5 } })
+    const toasts: TuiToast[] = []
+    let scopeVisits = 0
+    let hubTitles: string[] = []
+    const api = createFakeApi(scratch, toasts, {
+      select(title, options) {
+        if (title === "Configuration scope") {
+          scopeVisits += 1
+          return scopeVisits === 1 ? option(options, "project") : "escape"
+        }
+        if (title === "Agents") {
+          hubTitles = options.map((candidate) => candidate.title)
+          return "escape"
+        }
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+
+    // When
+    await runModelConfigurator(api, scratch.profiles)
+
+    // Then the broken file only warns and the valid profile stays selectable
+    const warning = toasts.find((toast) => toast.variant === "warning")
+    assert.match(String(warning?.message), /Skipped profile .*broken\.json: tier 'high' must contain an agents array/)
+    assert.ok(hubTitles.includes("default"))
+    pass("shouldSkipInvalidProfileWithWarningAndKeepTheRest")
+  } finally {
+    await rm(scratch.root, { recursive: true, force: true })
+  }
+}
+
+async function shouldStopWithGuidanceWhenServerCannotListAgents(): Promise<void> {
+  const scratch = await createWizardFixture()
+  try {
+    // Given a server too old to answer GET /agent
+    const toasts: TuiToast[] = []
+    const api = createFakeApi(scratch, toasts, {
+      select(title) {
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+    ;(api as unknown as { client: { app: Record<string, unknown> } }).client.app = {}
+
+    // When
+    await runModelConfigurator(api, scratch.profiles)
+
+    // Then the run stops before any dialog with actionable guidance
+    assert.equal(toasts.at(-1)?.variant, "error")
+    assert.match(String(toasts.at(-1)?.message), /does not expose the agent list/)
+
+    // And a server that answers with an empty list stops just as early
+    scratch.agents = []
+    const emptyToasts: TuiToast[] = []
+    const emptyApi = createFakeApi(scratch, emptyToasts, {
+      select(title) {
+        throw new Error(`unexpected select dialog: ${title}`)
+      },
+      confirm() {
+        return true
+      },
+    })
+    await runModelConfigurator(emptyApi, scratch.profiles)
+    assert.equal(emptyToasts.at(-1)?.variant, "warning")
+    assert.match(String(emptyToasts.at(-1)?.message), /reported no agents to configure/)
+    pass("shouldStopWithGuidanceWhenServerCannotListAgents")
   } finally {
     await rm(scratch.root, { recursive: true, force: true })
   }
@@ -1229,8 +1539,10 @@ async function shouldPartitionPresetAssignmentsByLiveCatalog(): Promise<void> {
       known1: { model: "openai/gone" },
       known2: { model: "openai/new", variant: "gone" },
       gamma: { model: "openai/new" },
+      // A built-in agent is as configurable as any other now that the catalog comes from the server.
+      plan: { model: "openai/new", variant: "low" },
     },
-    ["alpha", "beta", "known1", "known2"],
+    ["alpha", "beta", "known1", "known2", "plan"],
     models,
   )
 
@@ -1238,6 +1550,7 @@ async function shouldPartitionPresetAssignmentsByLiveCatalog(): Promise<void> {
   assert.deepEqual(valid, {
     alpha: { model: "openai/new", variant: "high" },
     beta: { model: "anthropic/old" },
+    plan: { model: "openai/new", variant: "low" },
   })
   assert.deepEqual(stale, ["gamma", "known1", "known2"])
   pass("shouldPartitionPresetAssignmentsByLiveCatalog")
@@ -1452,7 +1765,7 @@ async function shouldToastLiveApplyWhenProjectInstanceDisposalSucceeds(): Promis
     const api = createFakeApi(scratch, toasts, {
       select(title, options) {
         if (title === "Configuration scope") return option(options, "project")
-        if (title === "Select domain") return option(options, "default")
+        if (title === "Agents") return option(options, "default")
         if (title === "Tier: high") return option(options, "openai/new")
         if (title === "Variant for openai/new") return option(options, "high")
         if (title === "Tier: low") return option(options, "__keep_current__")
@@ -1467,7 +1780,7 @@ async function shouldToastLiveApplyWhenProjectInstanceDisposalSucceeds(): Promis
     ;(api.client as unknown as Record<string, unknown>).instance = instanceGroup
 
     // When
-    await runModelConfigurator(api, scratch.data)
+    await runModelConfigurator(api, scratch.profiles)
 
     // Then the success toast reports a live apply and the project instance was disposed
     assert.deepEqual(instanceGroup.disposedDirectories, [scratch.project])
@@ -1498,11 +1811,23 @@ async function shouldShortenConfigFilePathsForDisplay(): Promise<void> {
   pass("shouldShortenConfigFilePathsForDisplay")
 }
 
+/** Fixture shorthand for a server agent: `task` rules are appended after OpenCode's catch-all default. */
+type FixtureAgent = {
+  name: string
+  mode?: "primary" | "subagent" | "all"
+  native?: boolean
+  hidden?: boolean
+  task?: Array<{ pattern: string; action: "allow" | "deny" | "ask" }>
+}
+
 type WizardFixture = {
   root: string
   data: string
+  profiles: string
   project: string
   global: string
+  /** Mutable so a contract can reshape the live agent list before running the wizard. */
+  agents: FixtureAgent[]
 }
 
 type PolicyOption = { title: string; value: string }
@@ -1516,14 +1841,11 @@ type DialogPolicy = {
 async function createWizardFixture(): Promise<WizardFixture> {
   const root = await mkdtemp(path.join(tmpdir(), "model-configurator-wizard."))
   const data = path.join(root, "runtime-data")
+  const profiles = path.join(data, "profiles")
   const project = path.join(root, "project")
   const global = path.join(root, "global")
   await Promise.all([
-    writeJson(path.join(data, "agents.json"), [
-      { name: "alpha", domain: "one", mode: "primary" },
-      { name: "beta", domain: "two", mode: "subagent" },
-    ]),
-    writeJson(path.join(data, "profiles", "default.json"), {
+    writeJson(path.join(profiles, "default.json"), {
       name: "default",
       description: "Fixture profile",
       tiers: {
@@ -1536,7 +1858,37 @@ async function createWizardFixture(): Promise<WizardFixture> {
       '{\n  // Preserve me.\n  "agent": {\n    "alpha": {"model": "openai/old"},\n    "beta": {"model": "anthropic/old"}\n  },\n  "foreign": true\n}\n',
     ),
   ])
-  return { root, data, project, global }
+  return {
+    root,
+    data,
+    profiles,
+    project,
+    global,
+    // `alpha` allowlists `beta`, so the hub shows one group holding both.
+    agents: [
+      { name: "alpha", mode: "primary", task: [{ pattern: "*", action: "deny" }, { pattern: "beta", action: "allow" }] },
+      { name: "beta", mode: "subagent" },
+    ],
+  }
+}
+
+/** Builds the same agent list the wizard sees, through the same normalizer. */
+function liveAgents(...agents: FixtureAgent[]): LiveAgent[] {
+  return normalizeLiveAgents({ data: agents.map(toServerAgent) })
+}
+
+/** Mirrors how OpenCode resolves a ruleset: the catch-all default first, agent rules after it. */
+function toServerAgent(agent: FixtureAgent): Record<string, unknown> {
+  return {
+    name: agent.name,
+    mode: agent.mode ?? "subagent",
+    native: agent.native ?? false,
+    hidden: agent.hidden ?? false,
+    permission: [
+      { permission: "*", pattern: "*", action: "allow" },
+      ...(agent.task ?? []).map((rule) => ({ permission: "task", pattern: rule.pattern, action: rule.action })),
+    ],
+  }
 }
 
 function createFakeApi(
@@ -1562,6 +1914,11 @@ function createFakeApi(
       path: { state: fixture.root, config: fixture.global, worktree: fixture.project, directory: fixture.project },
     },
     client: {
+      app: {
+        async agents() {
+          return { data: fixture.agents.map(toServerAgent) }
+        },
+      },
       provider: {
         async list() {
           return {
@@ -1663,7 +2020,8 @@ function pass(name: string): void {
 }
 
 await shouldValidateProfileAsWholeContractWhenProfileIsComplete()
-await shouldRejectDuplicateUnknownAndMalformedAgentsWhenProfileIsInvalid()
+await shouldRejectDuplicateAndMalformedAgentsWhenProfileIsInvalid()
+await shouldKeepKnownAgentsAndWarnWhenTierReferencesAgentsMissingOnThisServer()
 await shouldExposeOnlyConnectedProvidersWhenCatalogContainsDisconnectedEntries()
 await shouldCalculateOnlyChangedAssignmentsWhenDecisionsMixActions()
 await shouldFormatMappingCompactlyWithAtVariant()
@@ -1680,18 +2038,25 @@ await shouldApplyPresetSkippingTiersAndOverrides()
 await shouldDeletePresetWithoutTouchingConfig()
 await shouldOpenAdjacentAgentViaNextAgent()
 await shouldPreserveOverridesWhenEscapingAgentChooser()
-await shouldConfigureAgentThroughDomainBrowseAndApply()
-await shouldApplyDecisionToAllDomainAgentsThroughAllOption()
-await shouldClearAllDomainDecisionsWhenAllAgentsKeepsCurrent()
+await shouldConfigureAgentThroughGroupBrowseAndApply()
+await shouldApplyDecisionToEveryAgentInGroupThroughAllOption()
+await shouldClearGroupDecisionsWhenAllAgentsKeepsCurrent()
 await shouldOfferSingleDefaultOptionWhenCatalogIncludesNoneVariant()
 await shouldSkipVariantDialogWhenModelHasNoVariants()
-await shouldWalkBackFromDomainAgentsToScopeWithoutWriting()
-await shouldParseDomainCatalogWhenDiscoveringAgents()
-await shouldGroupAgentsByDomainOrderedBySizeThenName()
+await shouldWalkBackFromGroupAgentsToScopeWithoutWriting()
+await shouldNormalizeLiveAgentsWhenServerAnswersAgentList()
+await shouldDeriveParentChildGroupsFromTaskPermissions()
+await shouldRepeatSubagentUnderEveryParentThatClaimsIt()
+await shouldExcludeInternalAgentsUntilTheyAreRevealed()
+await shouldMatchAnchoredGlobsWhenEvaluatingPermissionPatterns()
 await shouldRoundTripAndOverwritePresetsWhenSaved()
 await shouldOverwritePresetWhenSavingUnderExistingName()
 await shouldToastAndRepromptWhenPresetNameIsEmpty()
-await shouldGroupReviewChangesByDomain()
+await shouldGroupReviewChangesByParentAgent()
+await shouldRevealInternalAgentsWhenHubTogglesThem()
+await shouldConfigureAgentsWhenProfilesDirectoryIsMissing()
+await shouldSkipInvalidProfileWithWarningAndKeepTheRest()
+await shouldStopWithGuidanceWhenServerCannotListAgents()
 await shouldPartitionPresetAssignmentsByLiveCatalog()
 await shouldPlanGlobalHotApplyAsPatchWithLocalPreludeForDeletions()
 await shouldPlanWriteOnlyWhenGlobalChangesAreRemovalOnly()
