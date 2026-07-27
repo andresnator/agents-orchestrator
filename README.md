@@ -39,14 +39,14 @@ installers/opencode.sh install --project
 installers/opencode.sh status --domain sdd
 ```
 
-## CodeGraph (optional)
+## Graphify (optional)
 
-CodeGraph gives agents a local structural index for symbol, caller, and impact exploration. Install only the pinned CLI; then merge the MCP entry into your OpenCode config manually:
+Graphify gives agents a local structural graph for symbol, caller, and impact exploration, plus one machine-wide graph spanning every indexed repository. Install only the CLI:
 
 ```bash
-npm install -g @colbymchenry/codegraph@1.4.1
+uv tool install graphifyy   # or: pipx install graphifyy
 ```
 
-Do not run the CodeGraph OpenCode wizard: it can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. See [docs/codegraph.md](docs/codegraph.md) for the safe JSONC merge, default-on background indexing and repair, recovery, and A/B measurement procedure.
+Do not run `graphify opencode install` (or `graphify claude install`): it writes its own agent instructions and plugin, and can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. See [docs/graphify.md](docs/graphify.md) for default-on background graph building, the cross-repository global graph, query usage, the optional MCP entry, and recovery.
 
 See `AGENTS.md` for the editing contract before changing components.

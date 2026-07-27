@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
   status: in-progress
 ---
 
@@ -41,7 +41,7 @@ Confirm the audit target and focus themes. Resolve paths before deep analysis.
 
 ### 2. Map issues with evidence
 
-Trace wiring and dependency evidence with references, imports, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file search.
+Trace wiring and dependency evidence with references, imports, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file search.
 
 For every candidate issue, capture:
 

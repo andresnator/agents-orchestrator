@@ -24,14 +24,14 @@ One disposable analysis instance for `architect`. Everything specific comes from
 - `area`: `area_slug` plus resolved path scope.
 - `lens`: name, exact skill list to load, focus questions.
 - Output budget.
-- Optional `codegraph: available | absent` — the architect's index probe result for the repository containing the area scope; trust it instead of re-checking.
+- Optional `graphify: available | absent` — the architect's graph probe result for the repository containing the area scope; trust it instead of re-checking.
 
 If a required input (any of the first four) is missing, return `blockers` naming it and stop.
 
 ## Procedure
 
 1. Load exactly the skills listed in the brief, no more. If a listed skill is unavailable, report the lens as skipped in `nf` with the reason instead of failing.
-2. For structural context (module dependencies, callers of a boundary, cycles, impact), be CodeGraph-first: unless the brief says `codegraph: absent`, use the `codegraph_explore` MCP tool before grep, glob, or file crawling; if the tool is unavailable, continue with read/grep/glob/lsp. Never run CodeGraph lifecycle commands (`codegraph init`, index rebuilds). Needing more than 3 files for one lens question means the question is too broad — narrow the CodeGraph query instead of reading more files.
+2. For structural context (module dependencies, callers of a boundary, cycles, impact), be Graphify-first: unless the brief says `graphify: absent`, use the Graphify MCP tools (`query_graph`, `get_neighbors`, `shortest_path`, `god_nodes`) before grep, glob, or file crawling; if the tools are unavailable, continue with read/grep/glob/lsp. Never run Graphify lifecycle commands (`graphify extract`, `update`, `watch`, `global add|remove`, and any `install` variant) — those belong to the `graphify-init` plugin. When the `graphify-cli` skill is installed, it is the detailed contract for these tools. Needing more than 3 files for one lens question means the question is too broad — narrow the Graphify query instead of reading more files.
 3. Analyze only the given area through the given lens, at architecture level: boundaries, dependencies between modules, guardrails, operational posture. Code-style findings are out of scope.
 4. Treat the lock as authoritative: never re-resolve the target. Echo `target_path` (from `project_target.resolved_path`), `target_slug`, and `area_slug` exactly as received.
 5. Read-only: no edits, writes, shell commands, web fetches, or nested tasks.

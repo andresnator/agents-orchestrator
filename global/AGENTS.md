@@ -30,12 +30,13 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 - When writing or planning code or tests, load the `code-conventions` skill: Andres's personal contract (constants over literals, Should/When test names with `// Given // When // Then` sections, unified and whole-object asserts, separate characterization classes, top-level DTOs, SRP/OCP first).
 - An established consistent convention in the target repo wins; note the deviation instead of fighting it.
 
-## CodeGraph
+## Graphify
 
-- In a repository with a healthy CodeGraph index, explore structure CodeGraph-first: use `codegraph_explore` before grep, glob, or file-by-file reading for symbols, callers, callees, flows, and impact.
-- If the MCP tool is unavailable, use only read-only CodeGraph CLI queries (`status`, `query`, `explore`, `node`, `files`, `callers`, `callees`, `impact`, `affected`) when the agent has shell access.
-- Never run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`) on your own. The `codegraph-init` plugin owns initialization and automatic repair; leave any remaining recovery to the user.
-- If the index is absent, unhealthy, or unavailable, continue with the runtime's normal read, LSP, grep, and glob tools without friction.
+- In a repository holding `.ai/graphify-out/graph.json`, explore structure graph-first: query the graph before grep, glob, or file-by-file reading for symbols, callers, callees, flows, and impact. The `graphify-cli` skill, when installed, is the detailed contract.
+- With shell access, use only read-only Graphify CLI queries: `query "<question>"`, `path "<a>" "<b>"`, `explain "<node>"`, `affected "<node>"`, `god-nodes` — always with `--graph .ai/graphify-out/graph.json` (the CLI's default path no longer exists). Use `--graph ~/.graphify/global-graph.json` for open-ended cross-repository questions; keep symbol-addressed queries on the repository's own graph, where labels are unambiguous.
+- Without shell access, use the Graphify MCP tools when that server is configured (`query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path`).
+- Never run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, any `install`) on your own. The `graphify-init` plugin owns building and refreshing; leave any remaining recovery to the user.
+- If the graph is absent, stale, or unavailable, continue with the runtime's normal read, LSP, grep, and glob tools without friction.
 - More restrictive domain rules win. In particular, SDD agents keep their own read-only and authorization boundaries.
 
 ## Evidence Before Completion

@@ -43,7 +43,7 @@ No finding without a failure scenario. If you cannot describe how it fails, it i
 ## Procedure
 
 1. Read the diff named in the task prompt (default: current working-tree diff via `git diff`).
-2. For structural context, be CodeGraph-first: check `.codegraph/` and use the `codegraph_explore` MCP tool before grep or file crawling; if the MCP tool is unavailable, use the read-only CodeGraph CLI via bash (`codegraph status | query | explore | node | files | callers | callees | impact | affected`); fall back to filesystem tools only if both fail and say so in your findings. Never run CodeGraph lifecycle commands (`codegraph init`, index rebuilds) — they mutate state. Needing more than 3 files for one question means the question is too broad — narrow the CodeGraph query.
+2. For structural context, be Graphify-first: check `.ai/graphify-out/graph.json` and use the Graphify MCP tools (`query_graph`, `get_node`, `get_neighbors`, `shortest_path`, `graph_stats`) before grep or file crawling; if the MCP tools are unavailable, use the read-only Graphify CLI via bash (`graphify query | explain | path | affected | god-nodes` with `--graph .ai/graphify-out/graph.json`); fall back to filesystem tools only if both fail and say so in your findings. Never run Graphify lifecycle commands (`graphify extract`, `update`, `watch`, `global add|remove`, and any `install` variant) — they mutate state and belong to the `graphify-init` plugin. When the `graphify-cli` skill is installed, it is the detailed contract for these tools. Needing more than 3 files for one question means the question is too broad — narrow the Graphify query.
 3. Run tests via bash when they can confirm or refute a suspicion; cite the output.
 
 ## No re-judge rounds

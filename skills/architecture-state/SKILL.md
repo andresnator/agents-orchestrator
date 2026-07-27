@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.0"
+  version: "1.1.1"
   status: in-progress
 ---
 
@@ -33,7 +33,7 @@ Record, each with evidence:
 - Languages and runtime versions (e.g. `java.version` in `pom.xml`, `engines` in `package.json`, `requires-python`).
 - Build and dependency tooling (Maven/Gradle/npm/pnpm/pip/poetry), lockfile presence.
 - Frameworks and platforms (from dependencies, not docs).
-- Module layout: top-level modules/packages and their declared dependencies. Resolve module layout and inter-module dependency edges from imports, build-file declarations, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file reading.
+- Module layout: top-level modules/packages and their declared dependencies. Resolve module layout and inter-module dependency edges from imports, build-file declarations, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file reading.
 - Nested projects: manifests and build files below the root (`package.json`, `pom.xml`, `build.gradle*`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) and nested `.git` directories. More than one independent project puts the scan in multi-project mode: record languages, toolchain, and frameworks per project. Cross-project dependencies are read only from manifests, configs, and deployment descriptors — never inferred from a per-project code graph.
 - Tests and CI: test frameworks present, CI workflows present, architecture checks present or absent.
 
