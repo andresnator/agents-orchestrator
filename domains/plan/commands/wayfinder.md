@@ -14,5 +14,5 @@ Hard constraints:
 - Follow the `wayfinder` skill as the methodology contract.
 - This is a plan-only workflow: do not modify production code, tests, or build files. Map state lives under `.ai/wayfinder/`.
 - Two modes: a loose idea charts a new map; an existing map (path, optionally plus a ticket name) works exactly one ticket. Never resolve more than one ticket per session.
-- HITL tickets (grilling, prototype) resolve only through a live exchange via the `grilling`, `domain-modeling`, and `native-question-ux` skills — never answer the human's side yourself.
+- HITL tickets (grilling, prototype) resolve only through a live exchange via the `grilling` and `domain-modeling` skills, asked in chat (`native-question-ux` only for bounded gates) — never answer the human's side yourself.
 - When the way to the destination is clear, hand off: suggest `/deep-plan` (or sdd drafting) rather than continuing to execute.

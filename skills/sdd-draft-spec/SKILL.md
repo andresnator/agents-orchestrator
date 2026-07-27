@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.1"
+  version: "2.1.0"
 ---
 
 ## Activation Contract
@@ -17,7 +17,7 @@ Use when drafting OpenSpec capability specs from an approved proposal or direct 
 ## Hard Rules
 
 - Follow the `grilling` skill: one question at a time, recommendation attached, stop and wait; read discoverable proposal/spec context first.
-- Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
+- Interview questions are open-ended: ask them in normal chat, one at a time, and stop after each answer. Use the `native-question-ux` native branch only for this flow's bounded gates (approval to write, resume vs rename).
 - Artifacts default to English; interview/summaries/gates use the user's language.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
 - One file per capability: `specs/{capability}/spec.md`. In `.ai/orchestrator/changes/`, new and modified capabilities both use delta sections; new behavior goes under ADDED Requirements.

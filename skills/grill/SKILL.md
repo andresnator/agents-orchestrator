@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.1"
+  version: "2.1.0"
 ---
 
 ## Activation Contract
@@ -18,13 +18,13 @@ Select exactly one mode:
 
 | Trigger shape | Mode | Behavior |
 | --- | --- | --- |
-| `grill me`, `grill code`, `entrevistame` | `plain` | Run `grilling` with native question UX. |
-| `grill with docs`, `grill docs open` | `docs` | Run `grilling` plus `domain-modeling` with native question UX. |
+| `grill me`, `grill code`, `entrevistame` | `plain` | Run `grilling`, questions in chat. |
+| `grill with docs`, `grill docs open` | `docs` | Run `grilling` plus `domain-modeling`, questions in chat. |
 | `grill me sdd`, `entrevistame sdd`, SDD planning interview | `sdd` | Interview, then draft OpenSpec `proposal.md`, specs, `design.md`, and `tasks.md`. |
 
 ## Hard Rules
 
-- Every user-facing question MUST go through the `native-question-ux` skill. Use its fallback if the runtime has no native question tool.
+- Interview questions are open-ended: ask them in normal chat. Reserve the `native-question-ux` native branch for this flow's bounded gates (resume vs rename, write vs discard, mode confirmations) — never for the interview itself.
 - Follow the `grilling` skill in every mode: one question at a time, attach a recommendation, stop and wait, and explore the codebase instead of asking when possible.
 - Preserve open-ended interview semantics; do not turn the flow into generic code review.
 - `docs` mode also follows `domain-modeling` to capture terms, decisions, and context as they emerge.
@@ -35,14 +35,14 @@ Select exactly one mode:
 ## Plain Mode
 
 1. Load `grilling`.
-2. Ask each interview question through `native-question-ux`.
+2. Ask each interview question in chat, one at a time.
 3. Stop after each question and wait for the answer.
 4. Return the next question, recommendation, or conclusion from the active grilling flow.
 
 ## Docs Mode
 
 1. Load `grilling` and `domain-modeling`.
-2. Ask each interview question through `native-question-ux`.
+2. Ask each interview question in chat, one at a time.
 3. Capture useful terminology, decisions, and context through the `domain-modeling` flow when the user approves documentation.
 4. Stop after each question and wait for the answer.
 5. Return the next question, recommendation, captured-doc status, or conclusion from the active flow.

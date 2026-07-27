@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 ## Activation Contract
@@ -17,7 +17,7 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 ## Hard Rules
 
 - Follow the `grilling` skill: one question at a time, recommendation attached, stop and wait; read spec/design context instead of asking when possible.
-- Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
+- Interview questions are open-ended: ask them in normal chat, one at a time, and stop after each answer. Use the `native-question-ux` native branch only for this flow's bounded gates (approval to write, resume vs rename).
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
 - Every task line MUST be `- [ ] X.Y {concrete action naming real files}`: Specific, Actionable, Verifiable, Small enough for one session. Never vague ("implement feature"). Testing tasks reference specific spec scenarios.

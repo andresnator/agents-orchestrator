@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # Skill: english-tutor
@@ -24,7 +24,7 @@ Do **not** use this skill for normal coding assistance, background monitoring, p
 - If there are multiple mistakes, batch them only when it improves readability; each batch item still uses the five required fields.
 - Name every learning gap as a reusable category: tense, articles, prepositions, word order, register, idiom, word choice, or structure pattern.
 - Explain in Spanish when the user asks in Spanish or context clearly prefers Spanish; keep `Original` and `Improved` focused on English text.
-- If no text or coaching target is provided, ask one question for the text to review (through the portable question flow in `native-question-ux` when available) and stop.
+- If no text or coaching target is provided, ask one open question in chat for the text to review and stop.
 - Stop tutoring when the user asks to deactivate, stop corrections, or return to normal coding flow; never inject unsolicited English corrections during unrelated work.
 - Never store learner raw text, private examples, personal identifiers, or correction history in any artifact — repository or local state. The gaps inbox holds **categories and synthetic example patterns only**.
 - Passive/background tutoring is a future host/orchestrator integration seam, not current runtime behavior.

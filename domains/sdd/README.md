@@ -27,7 +27,7 @@ Spec-driven development around one primary coordinator: `orchestraitor`. The SDD
 
 Code written in either mode follows the shared `code-conventions` skill (Andres's style contract: constants, test format, whole-object asserts, separate characterization classes); a consistent repo convention wins on conflict.
 
-Assumes the `common` domain is installed: the transversal `grilling`, `judgment-day`, `native-question-ux` (every user-facing question in the flow), `code-conventions`, `work-unit-commits` (commit shape under `Delivery: commit-per-wave`), and `tcr` (opt-in commit cadence for `sdd-implement`) skills live there.
+Assumes the `common` domain is installed: the transversal `grilling`, `judgment-day`, `native-question-ux` (question routing: bounded gates native, open questions in chat), `code-conventions`, `work-unit-commits` (commit shape under `Delivery: commit-per-wave`), and `tcr` (opt-in commit cadence for `sdd-implement`) skills live there.
 
 The orchestraitor keeps the interview, confirmation gates, integration, checkbox updates, and archive in the main session. Phase work goes to dedicated subagents so each phase can receive its own model/provider via the user's `opencode.json` (see `docs/agent-models.md`) without changing the flow. The built-in `general` subagent remains allowlisted only for auxiliary self-contained chores such as lateral research, fixtures, or background test suites; it must not draft, implement, or verify SDD phases.
 

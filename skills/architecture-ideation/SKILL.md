@@ -7,7 +7,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.1.0"
   status: in-progress
 ---
 
@@ -21,7 +21,7 @@ Do not use it for class/method-level refactors — route those to `/refactor-pla
 
 ## Hard Rules
 
-- Question-driven: run the interview through `native-question-ux`, one focused round at a time, grounded in the verified current state (from `architecture-state`).
+- Question-driven: run the interview in chat, one focused round at a time, grounded in the verified current state (from `architecture-state`); route only bounded gates (candidate selection, approval to write) through `native-question-ux`.
 - Always present 2-3 candidate target architectures with explicit trade-offs and a recommendation — never a single take-it-or-leave-it answer. For monoliths, modular monolith is the default first candidate; microservices must earn their operational cost.
 - Every proposed pattern passes `design-patterns-pragmatic` and `kiss-yagni` gates: it must resolve a named force in evidence, not decorate the design.
 - Ideation is plan-only: no code edits.

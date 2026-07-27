@@ -50,6 +50,6 @@ Write only under `.ai/learning/**`: `dashboard.md` plus one `<topic-slug>/` dire
 ## Output rules
 
 - Artifacts are Markdown in English; every path, lesson, and map embeds at least one Mermaid diagram (other records add one when it helps), and Anki batch exports under `anki/` stay plain `;`-separated `.txt` per `anki-vocab`; the conversation follows the user's language.
-- Every user-facing question goes through `native-question-ux`; interviews and Socratic debriefs follow `grilling`: one question at a time, recommendation attached, stop and wait.
+- Interviews and Socratic debriefs are open-ended: ask them in chat per `grilling` — one question at a time, recommendation attached, stop and wait. Route only bounded gates (mode choice, review grades, continue/stop) through `native-question-ux`.
 - Use `webfetch` only to verify and curate primary sources and community resources; cite what you actually fetched.
 - Calibrated honesty: record quiz results, review grades, and exercise outcomes as they happened — failed recalls are pacing signals, not embarrassments to smooth over.

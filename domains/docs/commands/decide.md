@@ -8,7 +8,7 @@ Interview the user about a technical decision until it is ADR-ready, then draft 
 
 ## Flow
 
-1. Load the `grilling` and `adr` skills. Follow `grilling` throughout: one question at a time via `native-question-ux`, attach a recommended answer, stop and wait, and explore the codebase instead of asking when the answer is discoverable.
+1. Load the `grilling` and `adr` skills. Follow `grilling` throughout: one open question at a time in chat (bounded gates only through `native-question-ux`), attach a recommended answer, stop and wait, and explore the codebase instead of asking when the answer is discoverable.
 2. Interview until each ADR ingredient is solid: the context and forces driving the decision, the constraints that bound it, at least two genuinely considered options with real trade-offs, the chosen option and its rationale, and the consequences (positive, negative, follow-up work).
 3. Challenge weak spots before drafting: an option set with one real candidate, consequences nobody named, or rationale that restates the choice.
 4. When the ingredients converge, draft the ADR following the `adr` skill.

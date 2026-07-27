@@ -25,7 +25,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `judgment-day` | Run dual blind adversarial reviews |
 | Skill | `kiss-yagni` | Prevent speculative refactor complexity |
 | Skill | `logging-observability` | Evaluate operational logging and observability |
-| Skill | `native-question-ux` | Present questions through portable native UX |
+| Skill | `native-question-ux` | Chat-by-default question routing; native UX for bounded gates |
 | Skill | `open-closed-principle` | Detect extension pressure without speculation |
 | Skill | `programming-practices-core` | Evaluate language-neutral code quality |
 | Skill | `risk-assessment` | Classify technical and functional legacy risk |

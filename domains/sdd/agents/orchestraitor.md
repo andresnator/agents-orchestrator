@@ -136,4 +136,4 @@ External planners (e.g. `refactor-planner`) leave complete change bundles under 
 
 ## Questions
 
-Every user-facing question goes through the `native-question-ux` skill. In automatic mode, ask only when genuinely blocked (contradictory requirements, missing access); otherwise decide, and record the decision in `design.md`.
+Every user-facing question follows the `native-question-ux` skill: this flow's gates (kickoff answers, verify continue/re-scope/stop, judgment loop gates) are bounded and use its native branch; anything open-ended is asked in chat. In automatic mode, ask only when genuinely blocked (contradictory requirements, missing access); otherwise decide, and record the decision in `design.md`.

@@ -52,7 +52,7 @@ Assess which shape the goal wants — including whether an executable goal is ov
 
 ## /wayfinder mode
 
-When invoked via `/wayfinder`, the `wayfinder` skill replaces `fable-planning` as your methodology contract: chart a discovery map from a loose idea, or claim and resolve exactly one ticket of an existing map, then stop. HITL tickets run through `grilling`, `domain-modeling`, and `native-question-ux` — never answer the human's side yourself. For research tickets needing sources beyond the repo, fan out a read-only brief to the `general` subagent and link its summary from the ticket. When the way to the destination is clear, hand off to `/deep-plan` (which routes to a bundle or a plan document by goal) instead of executing.
+When invoked via `/wayfinder`, the `wayfinder` skill replaces `fable-planning` as your methodology contract: chart a discovery map from a loose idea, or claim and resolve exactly one ticket of an existing map, then stop. HITL tickets run through `grilling` and `domain-modeling` as an open exchange in chat (`native-question-ux` only for bounded gates) — never answer the human's side yourself. For research tickets needing sources beyond the repo, fan out a read-only brief to the `general` subagent and link its summary from the ticket. When the way to the destination is clear, hand off to `/deep-plan` (which routes to a bundle or a plan document by goal) instead of executing.
 
 ## Planning (shared steps 1–5)
 
@@ -60,7 +60,7 @@ Every output shape plans the same way — the Fable methodology is HOW you plan 
 
 1. Parse `$ARGUMENTS`: the goal, plus any scope hints the user included. Load the `fable-planning` skill. Assess whether the goal is executable (→ bundle) or a decision/investigation (→ plan document), and whether an executable goal is oversized (→ Roadmap workflow).
 2. **Explore inline, CodeGraph-first**: when a healthy index is available, use `codegraph_explore` before read/grep/glob/lsp for existing implementations, reusable utilities, contracts, callers, and impact. Never run CodeGraph lifecycle commands. If the graph is absent or unhealthy, continue with read/grep/glob/lsp. Only when the scope spans several independent areas, fan out at most 3 read-only briefs to the `general` subagent in one message, each with a disjoint focus and an output budget; cite their findings with `path:line` like your own.
-3. **Clarify** per the skill's Method 2, presenting the round via the `grilling` and `native-question-ux` skills. If the output shape is ambiguous, resolve it here as one recommended-answer question; a roadmap split (and the slice cut) is likewise confirmed here as one recommended-answer question — never split without confirmation.
+3. **Clarify** per the skill's Method 2, presenting the round via the `grilling` skill: open questions in chat, and only fixed-option decisions through `native-question-ux`. If the output shape is ambiguous, resolve it here as one recommended-answer question; a roadmap split (and the slice cut) is likewise confirmed here as one recommended-answer question — never split without confirmation.
 4. **Design** per the skill's Methods 1 and 4. Detect language and toolchain versions with evidence, per the Plans section of the `code-conventions` skill.
 5. **Edge validation** per the skill's Method 3.
 

@@ -25,6 +25,14 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 - Check the available skills before delegating work or answering "can you do X" questions; do not guess.
 - When persisting any memory, transcript, or summary of a skill invocation, record the user's original intent and the selected skill name — never the full expanded skill body.
 
+## Asking The User
+
+- Chat is the default channel for questions. A runtime's native question UX (selectable options) is the exception, reserved for decisions whose complete option set the flow already fixed: gates, confirmations, grades, mode choices.
+- The test: if you must invent plausible answers to fill the options, the question is open — ask it in chat. Scope, goals, opinions, explanations, and interview questions are open even when options can be fabricated for them.
+- A built-in custom/freeform answer field does not turn an open question into a bounded one.
+- When in doubt, ask in chat.
+- `native-question-ux` holds the full contract, including the per-runtime mapping.
+
 ## Code Conventions
 
 - When writing or planning code or tests, load the `code-conventions` skill: Andres's personal contract (constants over literals, Should/When test names with `// Given // When // Then` sections, unified and whole-object asserts, separate characterization classes, top-level DTOs, SRP/OCP first).
