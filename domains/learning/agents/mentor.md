@@ -44,7 +44,7 @@ Write only under `.ai/learning/**`: `dashboard.md` plus one `<topic-slug>/` dire
 
 ## Repository access
 
-- **CodeGraph-first**: when designing or reviewing a 70% exercise, query the `codegraph_explore` MCP tool, when available, to understand the learner's repo before manual file crawling. The graph is query-only — never run CodeGraph lifecycle commands (`init`, `index`, `sync`, `unlock`).
+- **Graphify-first**: when designing or reviewing a 70% exercise, query the Graphify MCP tools (`query_graph`, `get_neighbors`, `graph_stats`), when available, to answer exploration, discovery, and inventory questions about the learner's repo before manual file crawling. The graph is query-only — never run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, or any `install` variant); first indexing belongs to the human-run `/graphify-index` command and refreshing to the `graphify-init` plugin. When the `graphify-cli` skill is installed, it is the detailed contract for these tools.
 - **Verification-only bash**: bash is restricted to reading the date and running the learner's tests/build to check a 70% exercise outcome. Announce the exact command before running it, never run any other mutating command (installs, migrations, formatters, git writes), and record the real result honestly — a failed test is a pacing signal, not something to smooth over. You still never write the solution; running the learner's suite verifies their work, it does not replace it.
 
 ## Output rules

@@ -7,6 +7,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Type | Name | Purpose |
 |---|---|---|
 | Command | `/defend` | Reviews decisions through Socratic defense |
+| Command | `/graphify-index` | First-time Graphify indexing with human consent (docs vs code-only); records the per-repo mode the plugin honors |
 | Command | `/grill` | Routes plain, docs, or SDD interviews |
 | Skill | `chained-pr` | Split oversized work into reviewable PR slices |
 | Skill | `code-conventions` | Apply Andres's code and test conventions |
@@ -19,6 +20,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `dry-business-knowledge` | Distinguish knowledge duplication from similarity |
 | Skill | `general-naming-readability` | Improve language-neutral naming and readability |
 | Skill | `god-object-detection` | Detect oversized multi-responsibility objects |
+| Skill | `graphify-cli` | Query Graphify code graphs read-only (local and global MCP tools, manual CLI) |
 | Skill | `grill` | Route relentless interview modes |
 | Skill | `grilling` | Stress-test plans through relentless interviews |
 | Skill | `input-validation-preconditions` | Detect missing or duplicated preconditions |
@@ -35,7 +37,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `systematic-debugging` | Root-cause debugging: reproduce, evidence, one hypothesis, minimal fix |
 | Skill | `tcr` | Apply test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
-| Plugin | `codegraph-init` | Initializes and repairs CodeGraph indexes in the background (default-on; aggregates non-git workspace roots) |
+| Plugin | `graphify-init` | Refreshes Graphify code graphs under `.ai/graphify-out/` in the background, honoring the per-repo mode recorded by `/graphify-index` (default-on; never first-indexes; concurrency lock; kills its extracts on shutdown; aggregates non-git workspace roots; merges into the global graph) |
 
 Use common skills by reference from domain-specific agents instead of duplicating them into each domain. Common is the single home for transversal skills used by 3+ domains (`grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, `risk-assessment`); consuming domains declare the dependency in their README instead of duplicating symlinks.
 
@@ -46,5 +48,6 @@ graph TD
   practices[engineering practices] --> sdd[SDD domain]
   native[native-question-ux] --> meta[meta domain]
   output[cognitive-output-refiner] --> docs[docs domain]
-  codegraph[codegraph-init plugin] --> index[background project index]
+  graphifycmd[/graphify-index/] --> index[first code graph + recorded mode]
+  graphify[graphify-init plugin] --> refresh[background graph refresh]
 ```

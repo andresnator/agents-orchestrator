@@ -15,7 +15,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
-- `domains/common/plugins/codegraph-init.ts` is the default-on (opt out with `OPENCODE_CODEGRAPH_AUTOINIT=0`), non-blocking CodeGraph initializer and repairer; setup and recovery live in `docs/codegraph.md`.
+- `domains/common/plugins/graphify-init.ts` is the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph **refresher** (per-repo output under `.ai/graphify-out/`); first indexing is human-gated behind the `domains/common/commands/graphify-index.md` command, which records the per-repo mode in `.ai/graphify-out/.opencode-index-mode`. Setup, the cross-repository global graph, and recovery live in `docs/graphify.md`.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores reference docs for live mechanisms.
@@ -110,7 +110,7 @@ Adding a component must not require editing any installer.
 - For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files.
 - For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command/TUI-plugin name uniqueness, TUI companion-directory layout, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), script syntax (plus `shellcheck -x` when available) for all installers and every `scripts/*.sh`, the deterministic model-configurator shell contracts (python3/jq-gated), and the deterministic skill-registry plugin contracts (Node >= 22.18-gated).
 - For model-configurator changes, run `scripts/test-model-configurator.sh contracts` (shell + TypeScript suites; the TypeScript half needs `npm`) and, with a real binary, `OPENCODE_BIN=<path> scripts/test-model-configurator.sh smoke`.
-- For CodeGraph initializer changes, run `scripts/test-codegraph-init.sh`; it uses isolated HOME/XDG state, a fake CodeGraph binary, and OpenCode's `/global/event` stream.
+- For Graphify initializer changes, run `scripts/test-graphify-init.sh`; it uses isolated HOME/XDG state, a fake Graphify binary, and OpenCode's `/global/event` stream.
 - For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
 - For skill-registry plugin changes, run `scripts/test-skill-registry.sh`; it runs inside a throwaway HOME/worktree (project-over-user precedence, symlink-cycle dedupe, hash no-op, legacy `.atl` migration, retry after failure, `.git/info/exclude` ownership) and needs Node >= 22.18.
 - Do not commit unless explicitly asked.

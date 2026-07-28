@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.6.0"
+  version: "1.6.1"
 ---
 
 # Learning Loop
@@ -27,7 +27,7 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 - Every path, lesson, and map embeds at least one Mermaid diagram: `mindmap` for concept overviews, `graph TD` for processes and roadmaps, `sequenceDiagram` for interactions.
 - Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall` (including its interleaving and leech rules); vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.
 - 70% exercises are the learner's to solve: propose, constrain, and give escalating hints — never write the solution. Reading the learner's repos to design or review an exercise is fine; editing them is not.
-- **Understand the repo graph-first**: when designing or reviewing an exercise, resolve the learner's repo structure from a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file crawling; the graph is query-only, and every claim still cites the underlying `file:line`.
+- **Understand the repo graph-first**: when designing or reviewing an exercise, resolve the learner's repo structure from a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file crawling; the graph is query-only, and every claim still cites the underlying `file:line`.
 - **Interleave retrieval**: reviews and quizzes mix cues across notes and modules rather than replaying one block — the mechanics live in `spaced-recall`.
 - Quizzes are a low-stakes pacing instrument: they read the cue bank but never move Leitner boxes. Only scheduled `spaced-recall` reviews and `feynman-teachback` gap demotions change the queue.
 - Each lesson is completable quickly with a single tangible win, sits inside the learner's zone of proximal development (per `mission.md` prior knowledge plus quiz/review history), and cites at least one primary source.

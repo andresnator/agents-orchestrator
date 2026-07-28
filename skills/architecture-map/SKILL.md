@@ -7,7 +7,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.0"
+  version: "1.1.1"
   status: in-progress
 ---
 
@@ -23,7 +23,7 @@ Do not use it for code-level design review, user story mapping (`usm`), or AI-ha
 
 - C4-lite: System Context (level 1) and Container (level 2) only. Component-level diagrams only on explicit request.
 - Every node and edge comes from code evidence: manifests, build files, configs, routes, entrypoints, deployment descriptors. Never from README claims. Unverifiable elements are marked `hypothesis`.
-- Derive containers, dependencies, and flows from imports, configs, deployment descriptors, or a code-graph index (for example, CodeGraph MCP/CLI) when available, before file-by-file search; a graph-resolved edge still cites the underlying `file:line`.
+- Derive containers, dependencies, and flows from imports, configs, deployment descriptors, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file search; a graph-resolved edge still cites the underlying `file:line`.
 - Budgets: at most ~30 nodes per diagram and ~120 lines per doc. Split flows into more diagrams before exceeding a budget.
 - Mermaid only (`flowchart`, `sequenceDiagram`), GitHub-renderable. No external image tooling.
 - Visual first: diagrams carry the weight; prose is one short paragraph per diagram.

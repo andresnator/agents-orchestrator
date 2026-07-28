@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.1.1"
+  version: "1.1.2"
   status: testing
 ---
 
@@ -24,7 +24,7 @@ Decide whether the target problem is local or architectural.
 - Hidden business rules.
 - Boundary-crossing dependencies.
 
-Verify coupling, cycles, and boundary crossings from imports, build-file dependencies, or a code-graph index (for example, CodeGraph MCP/CLI) when available; every boundary claim cites `file:line`.
+Verify coupling, cycles, and boundary crossings from imports, build-file dependencies, or a code-graph index (for example, Graphify MCP/CLI) when available; every boundary claim cites `file:line`.
 
 Keep broad architectural cleanup as follow-up unless it is required for safe characterization.
 
