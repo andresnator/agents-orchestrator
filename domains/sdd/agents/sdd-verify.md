@@ -50,4 +50,6 @@ gaps:                         # FAIL rows only; each row is a ready fix-brief se
 blockers: []                  # missing or contradictory input; stop without verifying
 ```
 
-When every scenario passes, put this terminal line first, then the receipt: `VERIFY: ALL PASS — <n>/<n> scenarios.`
+Include one `scenarios` row for every scenario named in the brief — a scenario you could not evaluate is a FAIL row with its reason in `gaps` (or a `blockers` entry when the whole check cannot run), never an omission. The orchestraitor reconciles the id set against the brief; a receipt missing scenarios is re-delegated.
+
+When every scenario passes, put this terminal line first, then the receipt: `VERIFY: ALL PASS — <n>/<n> scenarios.` — `<n>` is the count of scenarios assigned in the brief, never the count you chose to evaluate.
