@@ -45,7 +45,7 @@ On an aggregator workspace (a plain folder holding cloned repos), the command di
 
 ## Background refresher
 
-Installing the `common` domain installs `domains/common/plugins/graphify-init.ts`. It runs by default (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`). On OpenCode startup the plugin returns immediately, then works in the background:
+Installing the `common` domain installs `domains/common/plugins/graphify-init.ts` (to install this plugin manually without the repo installer, see `docs/manual-plugin-install.md`). It runs by default (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`). On OpenCode startup the plugin returns immediately, then works in the background:
 
 1. Decide what each root needs using only local signals — no Graphify process is spawned to answer this.
 2. Stay silent when the graph is up to date. An already-indexed session never invokes Graphify at all.
