@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 
 ## Activation Contract
@@ -46,7 +46,7 @@ Use when drafting an OpenSpec `design.md` after proposal/spec context exists or 
 
 ## Output Contract
 
-Return approved/unapproved status, design draft, explored evidence, decisions, unresolved questions, and write recommendation. If a referenced skill cannot be resolved by name in the current runtime, say so instead of silently continuing.
+When the caller owns the write (standalone or delegated by grill): return approved/unapproved status, design draft, explored evidence, decisions, unresolved questions, and write recommendation. When loaded by a phase agent that writes the artifact itself: the drafting rules and template above apply, and the return is the caller's own output contract — never the full artifact. If a referenced skill cannot be resolved by name in the current runtime, say so instead of silently continuing.
 
 ## References
 

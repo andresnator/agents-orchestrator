@@ -35,4 +35,14 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return a 1-3 line summary with the path written, capability binding, and any open questions. Never return the full artifact.
+Return exactly this receipt — never the full artifact:
+
+```yaml
+path: "<proposal.md path written>"
+first_line: "<verbatim first line of the file>"
+capabilities: ["<capability>", ...]
+summary: "<=2 lines"
+open_questions: []
+```
+
+When the brief asks for it (roadmap mode), also include `second_line: "<verbatim second line of the file>"`.

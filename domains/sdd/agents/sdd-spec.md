@@ -33,4 +33,12 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return a 1-3 line summary with files written, requirements covered, and any open questions. Never return full spec dumps.
+Return exactly this receipt — never full spec dumps:
+
+```yaml
+paths: ["<spec.md path written>", ...]
+capabilities: ["<capability>", ...]
+first_line: "<verbatim first line of the first spec file>"
+summary: "<=2 lines: requirements covered>"
+open_questions: []
+```

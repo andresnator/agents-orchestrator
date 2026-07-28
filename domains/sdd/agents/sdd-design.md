@@ -48,4 +48,12 @@ Bash is for read-only exploration only. Do not run builds, tests, package instal
 
 ## Output
 
-Return a 1-3 line summary with path written, key files inspected, chosen design, and any open questions. Never return the full artifact.
+Return exactly this receipt — never the full artifact:
+
+```yaml
+path: "<design.md path written>"
+first_line: "<verbatim first line of the file>"
+inspected: ["file:line", ...]         # key files inspected, max 5
+summary: "<=2 lines: chosen design>"
+open_questions: []
+```

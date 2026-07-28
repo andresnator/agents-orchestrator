@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.1"
+  version: "2.0.2"
 ---
 
 ## Activation Contract
@@ -45,7 +45,7 @@ Use when drafting OpenSpec capability specs from an approved proposal or direct 
 
 ## Output Contract
 
-Return approved/unapproved status, capability files, spec drafts, parked design notes, and open questions. If a referenced skill cannot be resolved by name in the current runtime, say so instead of silently continuing.
+When the caller owns the write (standalone or delegated by grill): return approved/unapproved status, capability files, spec drafts, parked design notes, and open questions. When loaded by a phase agent that writes the artifacts itself: the drafting rules and template above apply, and the return is the caller's own output contract — never full spec dumps. If a referenced skill cannot be resolved by name in the current runtime, say so instead of silently continuing.
 
 ## References
 

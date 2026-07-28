@@ -41,4 +41,14 @@ You never ask the user anything. If the findings list is missing, ambiguous, or 
 
 ## Summary (mandatory final message format)
 
-Report, per listed finding: finding id, resulting status (`fixed`, or `open` with the precise reason when skipped), files changed, what was done, and the test result. Then list any new defects you observed but did not touch. End by recommending a re-judge (judges A and B in parallel, blind).
+Return exactly this receipt — no diffs, no logs, no code blocks — followed by the terminal line `FIX: <n> fixed, <m> open.`
+
+```yaml
+fixes:                        # one row per listed finding, same ids, same order
+  - id: JA-001
+    status: fixed | open
+    reason: "<only when open: the precise reason it was skipped>"
+    files: ["path", ...]
+    tests: "pass | <failing target, one line>"
+observed: ["file:line — <one line>", ...]   # defects seen but not touched; max 3
+```

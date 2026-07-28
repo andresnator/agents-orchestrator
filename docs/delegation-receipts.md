@@ -1,0 +1,28 @@
+# Delegation Receipts
+
+A delegation receipt is the compact, machine-scannable return a subagent sends back to its caller instead of prose or a full artifact. Subagent returns are injected verbatim into the parent's context, so their size is a direct token cost multiplied by every delegation; receipts keep that cost flat and let the parent branch on fields instead of re-reading files. The pattern was adapted from the Caveman project's cavecrew agents onto the receipt idiom this repo already used in `refactor-analyzer` and `arch-analyzer`.
+
+## Conventions
+
+Every receipt in this repo follows the same conventions; the concrete schema lives inline in each agent's Output section, not in a shared skill.
+
+- **Compact YAML.** One block, keys the caller branches on, no surrounding prose.
+- **Identity echo.** The receipt starts by echoing the identity keys from the brief (`change`, `wave`, `diff_range`, …) so the caller can match returns to briefs without inference.
+- **Evidence stays pointers.** `file:line` references and one-line test results only — never logs, code blocks, or diff excerpts. The parent verifies by following pointers, not by trusting pasted output.
+- **Terminal token for the clean case.** A fixed string the caller can match exactly: `VERDICT: CLEAN — No issues found.` (judges), `VERIFY: ALL PASS — <n>/<n> scenarios.` (verify), `FIX: <n> fixed, <m> open.` (fix rounds). Callers key control flow on these strings; change them only as a breaking contract change.
+- **`blockers: []` as the refusal channel.** A subagent that cannot proceed says why in `blockers` (or `open_questions` for drafting agents, `nf: <reason>` for read-only fan-outs) instead of guessing or returning partial prose.
+- **Per-item size caps, not count caps.** Findings are capped in size (scenario ≤ 2 lines, fix = 1 line of intent), and repeated instances of one defect collapse into one row with multiple `evidence` entries. Real defects are never dropped to fit a count.
+- **Never return the artifact.** An agent that writes a file returns its path plus assertion fields (`first_line`, `forecast_guards`, …) the caller checks instead of re-reading the file wholesale.
+
+## Where it is used
+
+- `domains/sdd/agents/sdd-verify.md` — scenario receipt with `gaps` rows that seed fix briefs directly.
+- `domains/sdd/agents/sdd-implement.md` — wave receipt; a non-empty `out_of_scope` triggers re-planning.
+- `domains/sdd/agents/jd-judge-a.md`, `jd-judge-b.md`, `jd-solo.md` — findings receipt (plus `verdicts` in re-judge rounds); consumed by the `judgment-day` synthesis.
+- `domains/sdd/agents/jd-fix.md` — fixes receipt.
+- `domains/sdd/agents/sdd-proposal.md`, `sdd-spec.md`, `sdd-design.md`, `sdd-tasks.md` — drafting receipts with path + assertion fields; consumed by the sdd `orchestraitor` and the plan `deep-planner` (step 8 reconciles from receipts and re-reads only `tasks.md`).
+- `domains/refactor/agents/refactor-analyzer.md`, `domains/architecture/agents/arch-analyzer.md` — the pre-existing analyzer idiom (max 7 findings, `Output budget` brief field) this pattern generalizes.
+
+## Writing a new one
+
+Give the subagent's Output section a receipt matched to what its caller actually branches on — nothing more. Echo identity keys, define the clean-case terminal token, add the refusal channel, and cap per-item size. In the caller, briefs say "return your Output receipt" and never restate the shape; skill or registry context injected into a brief stays capped at the 3–5 most relevant skills as distilled rules.

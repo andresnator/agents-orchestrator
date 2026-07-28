@@ -38,4 +38,14 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return a 1-3 line summary with tasks completed, files changed, and validation result. List any file you touched outside the wave's declared `Files:` scope — the orchestraitor re-plans scheduling on it. Include blockers or open questions only when they prevent completion.
+Return exactly this receipt — no diffs, no logs, no code blocks. The orchestraitor re-plans wave scheduling on a non-empty `out_of_scope`.
+
+```yaml
+wave: "<task ids>"
+tasks_done: ["1.1", "1.2"]
+files_changed: ["path", ...]
+out_of_scope: []              # files touched outside the wave's declared Files: scope
+validation: "pass | fail:<one line>"
+commit: "<sha> | none"
+blockers: []                  # blockers or open questions, only when they prevent completion
+```
