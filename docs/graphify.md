@@ -112,11 +112,11 @@ Global nodes carry a `repo` tag and repo-scoped ids, so source-bearing nodes fro
 
 The global graph also answers "where does that repository live": `~/.graphify/global-manifest.json` records each tag's `source_path` (the repo's `.ai/graphify-out/graph.json`, so the repository root is two directories up). Agents read it when a question names another indexed repository — the tie-break against treating the name as a public library — and answer content questions (documentation, file text) from the files at that location.
 
-Reading `~/.graphify/` with session tools trips OpenCode's `external_directory` permission (default `ask`). Grant it once in `~/.config/opencode/opencode.jsonc` — read-only, since agents never mutate Graphify state:
+Reading `~/.graphify/` or another repository's files trips OpenCode's `external_directory` permission (default `ask`) on every different target path — a per-repo allowlist does not scale since the target repository depends on the question. Grant it globally once in `~/.config/opencode/opencode.jsonc`:
 
 ```jsonc
 "permission": {
-  "external_directory": { "~/.graphify/**": "allow" },
+  "external_directory": "allow",
   "edit": { "~/.graphify/**": "deny" }
 }
 ```
