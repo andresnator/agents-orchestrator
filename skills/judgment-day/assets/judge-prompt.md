@@ -33,14 +33,16 @@ findings:
     evidence: ["file:line", ...]
     scenario: "<=2 lines: triggering input/state; expected vs actual"
     fix: "<one line of intent>"
-    theoretical: true         # only when no concrete failure scenario exists
+notes: ["file:line — <one-line hypothesis>", ...]   # optional, max 3
+
+notes rows are report-only theoretical observations with no concrete failure scenario: they never count as findings, are excluded from validity and synthesis, and may accompany the CLEAN verdict.
 
 Always include at the end: **Skill Resolution**: {injected|fallback-registry|fallback-path|none} — {details}
 
 If you find NO issues, return:
 VERDICT: CLEAN — No issues found.
 
-That exact CLEAN string is the ONLY valid empty result. Never return an empty or partial message: if you cannot review the target, say why instead.
+That exact CLEAN string is the ONLY valid empty result (optionally followed by a notes block, which does not change the verdict). Never return an empty or partial message: if you cannot review the target, say why instead.
 
 ## Re-judge Return Format (only when this prompt includes a findings ledger and a fix diff)
 This is verification, not discovery. Verdict each ledger row against the fix diff, keeping its original id. Return exactly one row per ledger id — never omit or add ids. The CLEAN string is NOT a valid re-judge result: an all-fixed round is the full verdicts list.

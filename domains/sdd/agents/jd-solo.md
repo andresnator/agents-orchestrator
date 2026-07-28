@@ -38,7 +38,7 @@ Every finding gets a stable id (`JS-001`, `JS-002`, …) and must include:
 - The concrete failure scenario: the input, state, or sequence that triggers the defect
 - Why it is a defect (expected vs actual behavior)
 
-No finding without a failure scenario. If you cannot describe how it fails, it is a note, not a finding — leave it out or mark it explicitly as `theoretical`.
+No finding without a failure scenario. If you cannot describe how it fails, it is not a finding — leave it out, or report it as a `notes` row (below), never as a finding.
 
 ## Procedure
 
@@ -66,7 +66,9 @@ findings:
     evidence: ["file:line", ...]
     scenario: "<=2 lines: triggering input/state; expected vs actual"
     fix: "<one line of intent>"
-    theoretical: true         # only when no concrete failure scenario exists
+notes: ["file:line — <one-line hypothesis>", ...]   # optional, max 3
 ```
 
-If you find no issues, return exactly: `VERDICT: CLEAN — No issues found.` That exact string is the only valid empty result — never return an empty or partial message; if you cannot review, say why.
+`notes` rows are report-only theoretical observations with no concrete failure scenario: they never count as findings, are excluded from validity and synthesis, and may accompany the CLEAN token.
+
+If you find no issues, return exactly: `VERDICT: CLEAN — No issues found.` — optionally followed by a `notes` block, which does not change the CLEAN verdict. That exact string is the only valid empty result — never return an empty or partial message; if you cannot review, say why.
