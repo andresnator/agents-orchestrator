@@ -9,8 +9,15 @@ PROCESS_TERMINATION_TIMEOUT_SECONDS=2
 FAKE_NODE_COUNT=11
 STALE_COMMIT=0000000000000000000000000000000000000000
 INFO_DURATION_MS=5000
+HINT_DURATION_MS=8000
 RECOVERY_DURATION_MS=8000
 INSTALL_HINT="uv tool install graphifyy (or pipx install graphifyy)"
+# The plugin queues toasts until the first bus event or a fallback delay (real default 10s,
+# because pre-subscription bus events never reach the TUI). The suite's SSE listener attaches
+# right after boot, so a short fallback keeps every toast assertion fast; the two queue tests
+# override this to pin each flush trigger separately.
+TOAST_FLUSH_DELAY_MS_DEFAULT=200
+TOAST_DELAY_MS=$TOAST_FLUSH_DELAY_MS_DEFAULT
 
 if [[ -z "$OPENCODE_BIN" ]]; then
   echo "FAIL: opencode is required (set OPENCODE_BIN to override)" >&2
@@ -130,6 +137,17 @@ wait_for_pattern() {
     sleep "$POLL_INTERVAL_SECONDS"
   done
   fail "timed out waiting for '$pattern' in $file"
+}
+
+wait_for_pid_exit() {
+  local pid=$1
+  local attempts=$((TEST_TIMEOUT_SECONDS * 10))
+  local attempt
+  for ((attempt = 0; attempt < attempts; attempt++)); do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep "$POLL_INTERVAL_SECONDS"
+  done
+  fail "timed out waiting for pid $pid to exit"
 }
 
 assert_toast() {
@@ -269,7 +287,10 @@ start_server() {
   else
     global_prefix=(env "OPENCODE_GRAPHIFY_GLOBAL=$global_registry")
   fi
-  # Same sentinel handling for the docs-indexing opt-in and its backend pin.
+  # OPENCODE_GRAPHIFY_DOCS never decides refresh flags anymore (the per-repo mode file does);
+  # it stays injectable so tests can prove the recorded decision beats the environment.
+  # OPENCODE_GRAPHIFY_BACKEND is still read as the backend pin when the semantic-marker
+  # fallback derives docs mode for a pre-command graph.
   local -a docs_prefix
   if [[ "$docs_mode" == unset ]]; then
     docs_prefix=(env -u OPENCODE_GRAPHIFY_DOCS)
@@ -289,6 +310,7 @@ start_server() {
     PATH="$path_value" \
     FAKE_GRAPHIFY_LOG="$FAKE_LOG" \
     FAKE_GRAPHIFY_NODE_COUNT="$FAKE_NODE_COUNT" \
+    OPENCODE_GRAPHIFY_TOAST_DELAY_MS="$TOAST_DELAY_MS" \
     "${autoinit_prefix[@]}" \
     "${global_prefix[@]}" \
     "${docs_prefix[@]}" \
@@ -309,6 +331,19 @@ request_config() {
   curl -fsS --max-time 5 --get --data-urlencode "directory=$root" \
     "http://127.0.0.1:$PORT/config" >"$output"
   jq -e . "$output" >/dev/null
+}
+
+# Publishes a client-driven bus event (tui.toast.show) for the root's instance — the cue the
+# plugin's event hook needs to flush queued toasts. A synthetic toast is the lightest such
+# event: unlike session creation it needs no provider or model resolution, which hangs in
+# this suite's hermetic HOME.
+publish_client_event() {
+  local root=$1
+  local encoded_root
+  encoded_root=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$root")
+  curl -fsS --max-time 5 -X POST -H 'Content-Type: application/json' \
+    -d '{"message":"suite client activity probe","variant":"info","duration":100}' \
+    "http://127.0.0.1:$PORT/tui/show-toast?directory=$encoded_root" >/dev/null
 }
 
 git_init() {
@@ -365,6 +400,37 @@ if commit:
 with open(target, "w", encoding="utf-8") as handle:
     json.dump(graph, handle)
 PY
+}
+
+# Plant the human consent record written by /graphify-index: its presence is what authorizes
+# the plugin to (re)build this repository; its content decides the refresh flags.
+plant_mode() {
+  local root=$1
+  local mode=$2
+  local backend=${3:-}
+  mkdir -p "$root/.ai/graphify-out"
+  if [[ -n "$backend" ]]; then
+    printf '{"mode":"%s","backend":"%s"}\n' "$mode" "$backend" >"$root/.ai/graphify-out/.opencode-index-mode"
+  else
+    printf '{"mode":"%s"}\n' "$mode" >"$root/.ai/graphify-out/.opencode-index-mode"
+  fi
+}
+
+# Plant the marker real Graphify writes only when a semantic (LLM) docs pass spent tokens:
+# the fallback signal for graphs indexed before the mode file existed.
+plant_semantic_marker() {
+  local root=$1
+  mkdir -p "$root/.ai/graphify-out"
+  : >"$root/.ai/graphify-out/.graphify_semantic_marker"
+}
+
+assert_mode_file() {
+  local root=$1
+  local expected=$2
+  local mode_file="$root/.ai/graphify-out/.opencode-index-mode"
+  [[ -f "$mode_file" ]] || fail "index-mode file missing for $root"
+  [[ "$(jq -c . "$mode_file")" == "$expected" ]] ||
+    fail "index-mode mismatch for $root: expected $expected, found $(cat "$mode_file")"
 }
 
 make_linked_worktree() {
@@ -431,11 +497,11 @@ register_global() {
 
 write_graph() {
   local root=$1
-  local out_base=$2
+  local out_dir=$2
   local head
   head=$(git -C "$root" rev-parse HEAD 2>/dev/null || printf '')
-  mkdir -p "$out_base/graphify-out"
-  python3 - "$out_base/graphify-out/graph.json" "$head" "${FAKE_GRAPHIFY_NODE_COUNT:-11}" <<'PY'
+  mkdir -p "$out_dir"
+  python3 - "$out_dir/graph.json" "$head" "${FAKE_GRAPHIFY_NODE_COUNT:-11}" <<'PY'
 import json
 import sys
 
@@ -465,13 +531,16 @@ case "$command_name" in
     state_dir="$root/.fake-graphify"
     mkdir -p "$state_dir"
     printf '%s|%s|%s\n' "$command_name" "$root" "$*" >>"$FAKE_GRAPHIFY_LOG"
+    # Record the inherited GRAPHIFY_OUT so tests can assert the plugin exported it: it is
+    # what makes the MCP server resolve a project_path query to the same relocated graph.
+    printf 'env|%s|%s\n' "$command_name" "${GRAPHIFY_OUT-<unset>}" >>"$FAKE_GRAPHIFY_LOG"
 
-    # --out relocates the whole output tree; the graphify-out leaf name stays fixed.
-    out_base=$root
+    # GRAPHIFY_OUT relocates the whole output tree, relative to the indexed root, exactly
+    # as the real CLI resolves it. Unset means the CLI default at the repository root.
+    out_dir="$root/${GRAPHIFY_OUT:-graphify-out}"
     global_tag=""
     previous=""
     for argument in "$@"; do
-      [[ "$previous" == --out ]] && out_base=$argument
       [[ "$previous" == --as ]] && global_tag=$argument
       previous=$argument
     done
@@ -520,13 +589,13 @@ case "$command_name" in
     # zero-node-repo exits 0 with a graph holding no nodes.
     if [[ "$repo_name" != incomplete-repo ]]; then
       if [[ "$repo_name" == zero-node-repo ]]; then
-        FAKE_GRAPHIFY_NODE_COUNT=0 write_graph "$root" "$out_base"
+        FAKE_GRAPHIFY_NODE_COUNT=0 write_graph "$root" "$out_dir"
       else
-        write_graph "$root" "$out_base"
+        write_graph "$root" "$out_dir"
       fi
       # `extract --global --as <tag>` merges into the global graph in the same call.
       if [[ " $* " == *" --global "* && -n "$global_tag" ]]; then
-        register_global "$global_tag" "$out_base/graphify-out/graph.json"
+        register_global "$global_tag" "$out_dir/graph.json"
       fi
     fi
     : >"$state_dir/build-finished"
@@ -544,10 +613,12 @@ HOME="$HOME_DIR" XDG_CONFIG_HOME="$XDG_DIR" \
   "$ROOT_DIR/installers/opencode.sh" install --domain common --target "$TARGET_DIR" >/dev/null
 
 shouldKeepConfigResponsiveWhileBuildingInBackground() {
-  # Given
+  # Given standing consent (mode file) with no graph yet: exactly what a deleted or
+  # never-completed first pass leaves behind — the plugin rebuilds automatically.
   local root
   local response="$SUITE_DIR/background.config.json"
   root=$(make_committed_repo success-repo)
+  plant_mode "$root" code-only
   hold_builds "$root"
   start_server background 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
@@ -573,10 +644,18 @@ shouldKeepConfigResponsiveWhileBuildingInBackground() {
   grep -Fxq '.ai/graphify-out' "$root/.git/info/exclude" || fail "graph output was not Git-excluded"
   [[ $(count_extract_calls "$root") -eq 1 ]] || fail "expected one extract call for background case"
   # A fresh extract relocates output under .ai/ and registers the repo globally inline.
-  grep -Fxq "extract|$root|extract $root --code-only --out $root/.ai --global --as success-repo" "$FAKE_LOG" ||
+  grep -Fxq "extract|$root|extract $root --code-only --global --as success-repo" "$FAKE_LOG" ||
     fail "extract did not request a relocated code-only build merged into the global graph"
+  # The relocation travels as GRAPHIFY_OUT, not --out: only the env var is also read by the
+  # MCP server when it resolves a project_path query, so writer and reader stay in agreement.
+  grep -Fxq 'env|extract|.ai/graphify-out' "$FAKE_LOG" ||
+    fail "extract did not inherit GRAPHIFY_OUT=.ai/graphify-out"
+  ! grep -Fq -- '--out' "$FAKE_LOG" || fail "extract still passes the --out flag, which double-nests under GRAPHIFY_OUT"
   [[ -f "$root/.ai/graphify-out/graph.json" ]] || fail "graph was not written under .ai/"
   [[ ! -e "$root/graphify-out" ]] || fail "a root-level graphify-out/ leaked outside .ai/"
+  # The extract lock lives only as long as the extract, and the consent record round-trips.
+  [[ ! -e "$root/.ai/graphify-out/.opencode-extract-lock" ]] || fail "extract lock was left behind"
+  assert_mode_file "$root" '{"mode":"code-only"}'
   cleanup_processes
 }
 
@@ -599,8 +678,96 @@ shouldStaySilentWhenGraphMatchesHeadCommit() {
   cleanup_processes
 }
 
+shouldHintOncePerSessionInsteadOfFirstIndexing() {
+  # Given a repository that has never been through /graphify-index: no graph, no mode file.
+  local root
+  local size_before
+  root=$(make_committed_repo unindexed-repo)
+  size_before=$(log_size)
+  start_server unindexed 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/unindexed.config.json"
+
+  # Then: one informative hint, zero Graphify processes (not even the version probe), and
+  # no state written — first indexing belongs to the human-run command.
+  wait_for_pattern "No Graphify graph exists for unindexed-repo yet." "$EVENTS_FILE"
+  assert_toast \
+    "No Graphify graph exists for unindexed-repo yet. Run /graphify-index to build one: code-only takes seconds; docs mode takes minutes and spends LLM tokens. Refreshes after that are incremental and automatic." \
+    info \
+    "$HINT_DURATION_MS"
+  [[ $(log_size) -eq "$size_before" ]] || fail "consentless repository still invoked Graphify"
+  [[ ! -e "$root/.ai" ]] || fail "the hint created graph state"
+  cleanup_processes
+}
+
+shouldQueueToastsUntilFirstBusEvent() {
+  # Given a fallback delay far beyond the test window: only client activity can flush.
+  local root
+  root=$(make_committed_repo queue-until-event-repo)
+  TOAST_DELAY_MS=60000
+  start_server queue-until-event 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  TOAST_DELAY_MS=$TOAST_FLUSH_DELAY_MS_DEFAULT
+
+  # When: the plugin scans and queues its hint, but no client has interacted yet.
+  request_config "$root" "$SUITE_DIR/queue-until-event.config.json"
+  sleep 1
+
+  # Then: nothing surfaces until the first bus event, which releases the queued hint.
+  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "toast surfaced before any client activity"
+  publish_client_event "$root"
+  wait_for_pattern "No Graphify graph exists for queue-until-event-repo yet." "$EVENTS_FILE"
+  cleanup_processes
+}
+
+shouldFlushQueuedToastsAfterFallbackDelay() {
+  # Given a fallback delay long enough to observe the queue, short enough to wait out.
+  local root
+  root=$(make_committed_repo queue-fallback-repo)
+  TOAST_DELAY_MS=3000
+  start_server queue-fallback 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  TOAST_DELAY_MS=$TOAST_FLUSH_DELAY_MS_DEFAULT
+
+  # When: no client ever interacts with the session.
+  request_config "$root" "$SUITE_DIR/queue-fallback.config.json"
+  sleep 1
+
+  # Then: the hint stays queued during the delay and surfaces on its own after it — the
+  # user who opens a TUI and just looks at the home screen still gets the hint.
+  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "toast surfaced before the fallback delay"
+  wait_for_pattern "No Graphify graph exists for queue-fallback-repo yet." "$EVENTS_FILE"
+  cleanup_processes
+}
+
+shouldAggregateHintWhenNestedRepositoriesHaveNoConsent() {
+  # Given a plain workspace whose nested repositories were never indexed.
+  local aggregate_root="$SUITE_DIR/repos/aggregate-hint-root"
+  local repo_a="$aggregate_root/gitlab/hint-a"
+  local repo_b="$aggregate_root/gitlab/hint-b"
+  local size_before
+  mkdir -p "$repo_a" "$repo_b"
+  git_init "$repo_a"
+  git_init "$repo_b"
+  size_before=$(log_size)
+  start_server aggregate-hint 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$aggregate_root" "$SUITE_DIR/aggregate-hint.config.json"
+
+  # Then: exactly one aggregate hint, zero extracts, no per-repo hints.
+  wait_for_pattern "2 repositories under aggregate-hint-root have no Graphify graph yet." "$EVENTS_FILE"
+  assert_toast \
+    "2 repositories under aggregate-hint-root have no Graphify graph yet. Run /graphify-index from aggregate-hint-root to build them; refreshes after that are incremental and automatic." \
+    info \
+    "$HINT_DURATION_MS"
+  [[ $(log_size) -eq "$size_before" ]] || fail "consentless aggregate still invoked Graphify"
+  ! grep -Fq "No Graphify graph exists for" "$EVENTS_FILE" || fail "aggregate emitted a per-repo hint"
+  cleanup_processes
+}
+
 shouldRefreshStaleGraphWithIncrementalExtract() {
-  # Given a graph stamped with a commit that is no longer HEAD.
+  # Given a stale graph with NO mode file and NO semantic marker: the fallback derivation
+  # must classify this legacy graph as code-only.
   local root
   root=$(make_committed_repo stale-graph-repo)
   plant_graph "$root" "$STALE_COMMIT"
@@ -618,21 +785,83 @@ shouldRefreshStaleGraphWithIncrementalExtract() {
     "$INFO_DURATION_MS"
   wait_for_pattern "Graphify graph for stale-graph-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
   [[ $(count_extract_calls "$root") -eq 1 ]] || fail "stale graph was not refreshed by exactly one extract"
-  grep -Fxq "extract|$root|extract $root --code-only --out $root/.ai --global --as stale-graph-repo" "$FAKE_LOG" ||
-    fail "refresh did not run as a relocated extract with inline global merge"
+  grep -Fxq "extract|$root|extract $root --code-only --global --as stale-graph-repo" "$FAKE_LOG" ||
+    fail "refresh did not run as a relocated code-only extract with inline global merge"
   # The inline --global merge replaces the old standalone `global add` step entirely.
   [[ $(count_global_add_calls "$root") -eq 0 ]] || fail "refresh still used a standalone global add"
   grep -Fq "stale-graph-repo $root/.ai/graphify-out/graph.json" "$GLOBAL_GRAPH" ||
     fail "refreshed graph was not re-registered globally"
   [[ ! -e "$root/graphify-out" ]] || fail "refresh recreated a root-level graphify-out/"
+  # The fallback-derived decision is persisted, migrating the legacy repo off the derivation.
+  assert_mode_file "$root" '{"mode":"code-only"}'
+  cleanup_processes
+}
+
+shouldRefreshCodeOnlyDespiteAmbientDocsEnvironment() {
+  # Given a stale code-only graph while the shell exports docs-mode variables: the recorded
+  # per-repo decision must win over the environment on every refresh.
+  local root
+  root=$(make_committed_repo env-loses-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_mode "$root" code-only
+  start_server env-loses 1 "$FAKE_BIN_DIR:/usr/bin:/bin" unset 1 opencode
+
+  # When
+  request_config "$root" "$SUITE_DIR/env-loses.config.json"
+
+  # Then
+  wait_for_pattern "Graphify graph for env-loses-repo is ready" "$EVENTS_FILE"
+  grep -Fxq "extract|$root|extract $root --code-only --global --as env-loses-repo" "$FAKE_LOG" ||
+    fail "ambient docs environment overrode the recorded code-only mode"
+  cleanup_processes
+}
+
+shouldRefreshWithDocsBackendWhenModeFileRecordsDocs() {
+  # Given a stale graph whose mode file records the docs decision with a pinned backend.
+  local root
+  root=$(make_committed_repo docs-refresh-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_mode "$root" docs zen
+  start_server docs-refresh 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/docs-refresh.config.json"
+
+  # Then the refresh keeps the docs pass and the recorded backend, without any env help.
+  wait_for_pattern "Graphify graph for docs-refresh-repo is ready" "$EVENTS_FILE"
+  grep -Fxq "extract|$root|extract $root --backend zen --global --as docs-refresh-repo" "$FAKE_LOG" ||
+    fail "docs refresh did not honour the recorded backend"
+  cleanup_processes
+}
+
+shouldDeriveDocsRefreshFromSemanticMarkerWhenModeFileIsAbsent() {
+  # Given a pre-command docs graph: stale, no mode file, but the semantic marker Graphify
+  # writes when an LLM pass spent tokens. The backend pin comes from the same env var that
+  # built the graph, so credentials keep routing to the original backend.
+  local root
+  root=$(make_committed_repo legacy-docs-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_semantic_marker "$root"
+  start_server legacy-docs 1 "$FAKE_BIN_DIR:/usr/bin:/bin" unset unset opencode
+
+  # When
+  request_config "$root" "$SUITE_DIR/legacy-docs.config.json"
+
+  # Then the refresh runs in docs mode and the derived decision is persisted.
+  wait_for_pattern "Graphify graph for legacy-docs-repo is ready" "$EVENTS_FILE"
+  grep -Fxq "extract|$root|extract $root --backend opencode --global --as legacy-docs-repo" "$FAKE_LOG" ||
+    fail "semantic marker did not derive a docs refresh"
+  assert_mode_file "$root" '{"mode":"docs","backend":"opencode"}'
   cleanup_processes
 }
 
 shouldRebuildWhenGraphFileIsUnreadable() {
-  # Given a truncated graph.json: worse than no graph, so a full rebuild is the repair.
+  # Given a truncated graph.json next to a mode file: worse than no graph, and the recorded
+  # consent authorizes the automatic full rebuild.
   local root
   root=$(make_committed_repo corrupt-graph-repo)
   plant_graph "$root" head corrupt
+  plant_mode "$root" code-only
   start_server corrupt-graph 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -664,9 +893,10 @@ shouldKeepExistingGraphWhenRepositoryHasNoCommits() {
 }
 
 shouldToastErrorWhenBuildFails() {
-  # Given
+  # Given standing consent for a repository whose extract will fail.
   local root
   root=$(make_committed_repo build-fail-repo)
+  plant_mode "$root" code-only
   start_server build-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -675,7 +905,7 @@ shouldToastErrorWhenBuildFails() {
   # Then
   wait_for_pattern "Graphify indexing failed for build-fail-repo, but this session is still operational." "$EVENTS_FILE"
   assert_toast \
-    "Graphify indexing failed for build-fail-repo, but this session is still operational. Run: graphify extract '$root' --code-only --out '$root/.ai'" \
+    "Graphify indexing failed for build-fail-repo, but this session is still operational. Run: GRAPHIFY_OUT=.ai/graphify-out graphify extract '$root' --code-only" \
     error \
     "$RECOVERY_DURATION_MS"
   [[ $(count_global_add_calls "$root") -eq 0 ]] || fail "failed build was registered globally"
@@ -696,7 +926,7 @@ shouldToastErrorWhenRefreshFails() {
   wait_for_pattern "Graphify is updating the refresh-fail-repo code graph in the background." "$EVENTS_FILE"
   wait_for_pattern "Graphify indexing failed for refresh-fail-repo, but this session is still operational." "$EVENTS_FILE"
   assert_toast \
-    "Graphify indexing failed for refresh-fail-repo, but this session is still operational. Run: graphify extract '$root' --code-only --out '$root/.ai'" \
+    "Graphify indexing failed for refresh-fail-repo, but this session is still operational. Run: GRAPHIFY_OUT=.ai/graphify-out graphify extract '$root' --code-only" \
     error \
     "$RECOVERY_DURATION_MS"
   [[ $(count_extract_calls "$root") -eq 1 ]] || fail "expected exactly one refresh attempt"
@@ -743,6 +973,7 @@ shouldReportEmptyWhenBuildProducesZeroNodeGraph() {
   # not observed from the real binary, but the plugin guards it defensively.
   local root
   root=$(make_committed_repo zero-node-repo)
+  plant_mode "$root" code-only
   start_server zero-node 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -771,6 +1002,7 @@ shouldWarnWhenGraphIsMissingAfterSuccessfulBuild() {
   # Given a build that exits zero but never produces a readable graph.
   local root
   root=$(make_committed_repo incomplete-repo)
+  plant_mode "$root" code-only
   start_server incomplete 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -779,17 +1011,18 @@ shouldWarnWhenGraphIsMissingAfterSuccessfulBuild() {
   # Then
   wait_for_pattern "Graphify graph for incomplete-repo is incomplete" "$EVENTS_FILE"
   assert_toast \
-    "Graphify graph for incomplete-repo is incomplete (.ai/graphify-out/graph.json is missing or unreadable). Run: graphify extract '$root' --code-only --out '$root/.ai'" \
+    "Graphify graph for incomplete-repo is incomplete (.ai/graphify-out/graph.json is missing or unreadable). Run: GRAPHIFY_OUT=.ai/graphify-out graphify extract '$root' --code-only" \
     warning \
     "$RECOVERY_DURATION_MS"
   cleanup_processes
 }
 
 shouldNotRetryARepositoryWithNothingToIndex() {
-  # Given a repository holding no code Graphify can index.
+  # Given a consented repository holding no code Graphify can index.
   local root
   local calls_after_first
   root=$(make_committed_repo docs-only-repo)
+  plant_mode "$root" code-only
   start_server docs-only 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -823,10 +1056,211 @@ shouldNotRetryARepositoryWithNothingToIndex() {
   cleanup_processes
 }
 
+shouldRecordSentinelMarkerForEmptyRootWithoutHead() {
+  # Given a consented plain directory (no git, no nested repositories) with nothing to index:
+  # `git rev-parse HEAD` resolves nothing, so the marker must fall back to its sentinel
+  # instead of being skipped — skipping it would re-extract and re-toast every session.
+  local root="$SUITE_DIR/repos/plain-nocode"
+  mkdir -p "$root"
+  : >"$root/README.md"
+  plant_mode "$root" code-only
+  start_server plain-nocode 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/plain-nocode.config.json"
+
+  # Then: reported once as information, with the sentinel recorded in the marker.
+  wait_for_pattern "Graphify found no indexable code in plain-nocode" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify found no indexable code in plain-nocode; skipping the code graph." \
+    info \
+    "$INFO_DURATION_MS"
+  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "HEAD-less empty root did not record a marker"
+  grep -Fxq none "$root/.ai/graphify-out/.opencode-empty-corpus" || fail "HEAD-less marker does not hold the sentinel"
+
+  # And reopening stays silent instead of retrying the same empty corpus forever.
+  start_server plain-nocode-reopen 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/plain-nocode-reopen.config.json"
+  sleep 1
+  [[ $(count_extract_calls "$root") -eq 1 ]] || fail "HEAD-less empty root was retried on reopen"
+  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "reopened HEAD-less empty root emitted a toast"
+  cleanup_processes
+}
+
+shouldClassifyEmptyCorpusBehindVerboseOutput() {
+  # Given an extract that buries the empty-corpus signal behind kilobytes of progress
+  # output on both streams; only the stream TAILS reveal the classification, so a
+  # head-truncating capture would misread this as a hard failure and retry forever.
+  local root
+  root=$(make_committed_repo noisy-empty-repo)
+  plant_mode "$root" code-only
+  start_server noisy-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/noisy-empty.config.json"
+
+  # Then: still classified as information, never as a failure.
+  wait_for_pattern "Graphify found no indexable code in noisy-empty-repo" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify found no indexable code in noisy-empty-repo; skipping the code graph." \
+    info \
+    "$INFO_DURATION_MS"
+  ! grep -Fq '"variant":"error"' "$EVENTS_FILE" || fail "verbose empty corpus was misclassified as a failure"
+  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "verbose empty corpus did not record the marker"
+  cleanup_processes
+}
+
+shouldClearEmptyMarkerOnceRepositoryGainsCode() {
+  # Given a consented repository that is empty at its first commit.
+  local root
+  local empty_commit
+  root=$(make_committed_repo regrow-repo)
+  plant_mode "$root" code-only
+  empty_commit=$(git -C "$root" rev-parse HEAD)
+  start_server regrow-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/regrow-empty.config.json"
+  wait_for_pattern "Graphify found no indexable code in regrow-repo" "$EVENTS_FILE"
+  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "empty phase did not record the marker"
+
+  # When a later commit adds code and the repository is reopened.
+  : >"$root/code.py"
+  git -C "$root" add code.py
+  git -C "$root" commit -qm "add code"
+  start_server regrow-build 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/regrow-build.config.json"
+
+  # Then the build succeeds and clears the now-stale marker...
+  wait_for_pattern "Graphify graph for regrow-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
+  [[ ! -e "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "successful build left the empty-corpus marker behind"
+
+  # ...so checking the empty commit out again is re-examined instead of silently
+  # serving the newer graph as if it matched.
+  git -C "$root" checkout -q "$empty_commit"
+  start_server regrow-recheckout 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/regrow-recheckout.config.json"
+  wait_for_pattern "Graphify found no indexable code in regrow-repo" "$EVENTS_FILE"
+  [[ $(count_extract_calls "$root") -eq 3 ]] || fail "re-checkout of the empty commit was not re-examined"
+  cleanup_processes
+}
+
+shouldSummarizeAggregateWhenAllNestedRepositoriesAreEmpty() {
+  # Given a plain workspace whose every consented nested repository has nothing to index.
+  local aggregate_root="$SUITE_DIR/repos/aggregate-empty-root"
+  local repo_a="$aggregate_root/gitlab/alpha-nocode"
+  local repo_b="$aggregate_root/gitlab/beta-nocode"
+  mkdir -p "$repo_a" "$repo_b"
+  git_init "$repo_a"
+  git_init "$repo_b"
+  plant_mode "$repo_a" code-only
+  plant_mode "$repo_b" code-only
+  start_server aggregate-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$aggregate_root" "$SUITE_DIR/aggregate-empty.config.json"
+
+  # Then the start toast resolves into an aggregate empty summary instead of silence.
+  wait_for_pattern "Graphify is building code graphs for 2 repositories under aggregate-empty-root in the background." "$EVENTS_FILE"
+  wait_for_pattern "Graphify found no indexable code in the repositories under aggregate-empty-root" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify found no indexable code in the repositories under aggregate-empty-root; skipping the code graphs." \
+    info \
+    "$INFO_DURATION_MS"
+  ! grep -Fq '"variant":"success"' "$EVENTS_FILE" || fail "all-empty aggregate produced a success toast"
+  ! grep -Fq '"variant":"error"' "$EVENTS_FILE" || fail "all-empty aggregate produced an error toast"
+  cleanup_processes
+}
+
+shouldSummarizeAggregateFailuresWithIndexCommandHint() {
+  # Given a plain workspace where one consented nested repository builds and another fails.
+  local aggregate_root="$SUITE_DIR/repos/aggregate-fail-root"
+  local repo_ok="$aggregate_root/gitlab/repo-ok"
+  local repo_fail="$aggregate_root/gitlab/build-fail-repo"
+  mkdir -p "$repo_ok" "$repo_fail"
+  git_init "$repo_ok"
+  git_init "$repo_fail"
+  plant_mode "$repo_ok" code-only
+  plant_mode "$repo_fail" code-only
+  start_server aggregate-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$aggregate_root" "$SUITE_DIR/aggregate-fail.config.json"
+
+  # Then one warning summary names the failed repository and points back at the command.
+  wait_for_pattern "Graphify built 1 of 2 code graphs under aggregate-fail-root." "$EVENTS_FILE"
+  assert_toast \
+    "Graphify built 1 of 2 code graphs under aggregate-fail-root. Failed: gitlab/build-fail-repo. Reopen the session to retry, or run /graphify-index." \
+    warning \
+    "$RECOVERY_DURATION_MS"
+  [[ $(count_extract_calls "$repo_ok") -eq 1 ]] || fail "healthy sibling was not indexed"
+  cleanup_processes
+}
+
+shouldBuildDocsGraphWhenModeFileRequestsDocsWithBackend() {
+  # Given a first build (graph deleted after /graphify-index, say) whose recorded decision
+  # is docs mode with a pinned backend — no docs env vars anywhere.
+  local root
+  root=$(make_committed_repo docs-mode-repo)
+  plant_mode "$root" docs opencode
+  start_server docs-mode 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/docs-mode.config.json"
+
+  # Then extract drops --code-only (the semantic docs pass is on) and pins the backend.
+  wait_for_pattern "Graphify graph for docs-mode-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
+  grep -Fxq "extract|$root|extract $root --backend opencode --global --as docs-mode-repo" "$FAKE_LOG" ||
+    fail "docs mode did not run a full extract with the recorded backend"
+  assert_mode_file "$root" '{"mode":"docs","backend":"opencode"}'
+  cleanup_processes
+}
+
+shouldBuildDocsGraphWithAutoDetectedBackendWhenUnpinned() {
+  # Given a recorded docs decision without a backend pin: Graphify auto-detects one.
+  local root
+  root=$(make_committed_repo docs-auto-repo)
+  plant_mode "$root" docs
+  start_server docs-auto 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/docs-auto.config.json"
+
+  # Then extract carries neither --code-only nor --backend.
+  wait_for_pattern "Graphify graph for docs-auto-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
+  grep -Fxq "extract|$root|extract $root --global --as docs-auto-repo" "$FAKE_LOG" ||
+    fail "unpinned docs mode did not run a plain full extract"
+  assert_mode_file "$root" '{"mode":"docs"}'
+  cleanup_processes
+}
+
+shouldMirrorDocsModeInRecoveryCommand() {
+  # Given a failing build under a recorded docs decision: the advertised manual command must
+  # reproduce what the plugin ran, not fall back to --code-only.
+  local root="$SUITE_DIR/repos/docs-fail/build-fail-repo"
+  mkdir -p "$root"
+  git_init "$root"
+  : >"$root/tracked"
+  git -C "$root" add tracked
+  git -C "$root" commit -qm initial
+  plant_mode "$root" docs opencode
+  start_server docs-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/docs-fail.config.json"
+
+  # Then
+  wait_for_pattern "Graphify indexing failed for build-fail-repo" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify indexing failed for build-fail-repo, but this session is still operational. Run: GRAPHIFY_OUT=.ai/graphify-out graphify extract '$root' --backend opencode" \
+    error \
+    "$RECOVERY_DURATION_MS"
+  cleanup_processes
+}
+
 shouldRunByDefaultWithoutEnvironmentFlag() {
   # Given
   local root
   root=$(make_committed_repo default-on-repo)
+  plant_mode "$root" code-only
   start_server default-on unset "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -840,7 +1274,7 @@ shouldRunByDefaultWithoutEnvironmentFlag() {
 }
 
 shouldDoNothingWhenOptedOut() {
-  # Given
+  # Given an unindexed repository with the initializer opted out: not even the hint fires.
   local root
   local size_before
   root=$(make_committed_repo opt-out-repo)
@@ -861,6 +1295,7 @@ shouldSkipGlobalRegistrationWhenOptedOut() {
   # Given OPENCODE_GRAPHIFY_GLOBAL=0 with the initializer itself still on.
   local root
   root=$(make_committed_repo global-opt-out-repo)
+  plant_mode "$root" code-only
   start_server global-opt-out 1 "$FAKE_BIN_DIR:/usr/bin:/bin" 0
 
   # When
@@ -868,7 +1303,7 @@ shouldSkipGlobalRegistrationWhenOptedOut() {
 
   # Then: the graph is built for local use only.
   wait_for_pattern "Graphify graph for global-opt-out-repo is ready" "$EVENTS_FILE"
-  grep -Fxq "extract|$root|extract $root --code-only --out $root/.ai" "$FAKE_LOG" ||
+  grep -Fxq "extract|$root|extract $root --code-only" "$FAKE_LOG" ||
     fail "opted-out build did not run as a plain local extract"
   [[ $(count_global_add_calls "$root") -eq 0 ]] || fail "opted-out build still registered globally"
   ! grep -Fq "global-opt-out-repo $root/.ai/graphify-out/graph.json" "$GLOBAL_GRAPH" 2>/dev/null ||
@@ -877,11 +1312,13 @@ shouldSkipGlobalRegistrationWhenOptedOut() {
 }
 
 shouldRegisterEveryRepositoryInTheGlobalGraph() {
-  # Given two independent repositories indexed in separate sessions.
+  # Given two independent consented repositories indexed in separate sessions.
   local first
   local second
   first=$(make_committed_repo global-first-repo)
   second=$(make_committed_repo global-second-repo)
+  plant_mode "$first" code-only
+  plant_mode "$second" code-only
   start_server global-registry 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -904,6 +1341,7 @@ shouldExcludeGraphOutputFromLinkedWorktreeGitMetadata() {
   local root
   local exclude_path
   root=$(make_linked_worktree linked-worktree-repo)
+  plant_mode "$root" code-only
   exclude_path=$(git -C "$root" rev-parse --git-path info/exclude)
   [[ "$exclude_path" == /* ]] || exclude_path="$root/$exclude_path"
   start_server linked-worktree 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
@@ -919,7 +1357,7 @@ shouldExcludeGraphOutputFromLinkedWorktreeGitMetadata() {
 }
 
 shouldAggregateNestedRepositoriesUnderPlainRoot() {
-  # Given a plain (non-git) workspace root holding git repositories two levels deep.
+  # Given a plain (non-git) workspace root holding consented git repositories two levels deep.
   local aggregate_root="$SUITE_DIR/repos/aggregate-root"
   local repo_a="$aggregate_root/gitlab/repo-a"
   local repo_b="$aggregate_root/gitlab/repo-b"
@@ -930,6 +1368,8 @@ shouldAggregateNestedRepositoriesUnderPlainRoot() {
   git_init "$repo_b"
   git_init "$dep_repo"
   git_init "$hidden_repo"
+  plant_mode "$repo_a" code-only
+  plant_mode "$repo_b" code-only
   hold_builds "$repo_a"
   hold_builds "$repo_b"
   start_server aggregate 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
@@ -971,19 +1411,20 @@ shouldAggregateNestedRepositoriesUnderPlainRoot() {
   grep -Fxq '.ai/graphify-out' "$repo_b/.git/info/exclude" || fail "repo-b output was not Git-excluded"
   # Each nested repository is registered under its own tag, not the aggregate root's,
   # and each keeps its output under its own .ai/.
-  grep -Fxq "extract|$repo_a|extract $repo_a --code-only --out $repo_a/.ai --global --as repo-a" "$FAKE_LOG" ||
+  grep -Fxq "extract|$repo_a|extract $repo_a --code-only --global --as repo-a" "$FAKE_LOG" ||
     fail "repo-a was not registered under its own global tag"
-  grep -Fxq "extract|$repo_b|extract $repo_b --code-only --out $repo_b/.ai --global --as repo-b" "$FAKE_LOG" ||
+  grep -Fxq "extract|$repo_b|extract $repo_b --code-only --global --as repo-b" "$FAKE_LOG" ||
     fail "repo-b was not registered under its own global tag"
   ! grep -Fq "Graphify is building the code graph for repo-a" "$EVENTS_FILE" || fail "aggregate emitted a per-repo start toast"
   cleanup_processes
 }
 
 shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos() {
-  # Given a plain (non-git) directory with no nested repositories.
+  # Given a consented plain (non-git) directory with no nested repositories.
   local root="$SUITE_DIR/repos/plain-fallback"
   mkdir -p "$root"
   : >"$root/loose-file"
+  plant_mode "$root" code-only
   start_server plain-fallback 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
@@ -996,47 +1437,76 @@ shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos() {
   cleanup_processes
 }
 
-shouldRefuseUnsafeHomeSessionRoot() {
-  # Given a session opened on the (isolated) home directory itself. Graphify has no
-  # unsafe-root refusal of its own, so the plugin must never start that walk.
-  local size_before
-  size_before=$(log_size)
-  start_server home-root 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+shouldSkipExtractWhileAnotherLiveSessionHoldsTheLock() {
+  # Given a stale consented graph whose lock names a LIVE process (this test shell).
+  local root
+  root=$(make_committed_repo locked-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_mode "$root" code-only
+  printf '%s\n' "$$" >"$root/.ai/graphify-out/.opencode-extract-lock"
+  start_server locked 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
-  request_config "$HOME_DIR" "$SUITE_DIR/home-root.config.json"
+  request_config "$root" "$SUITE_DIR/locked.config.json"
   sleep 1
 
-  # Then
-  [[ $(log_size) -eq "$size_before" ]] || fail "home session root invoked Graphify"
-  [[ ! -e "$HOME_DIR/.ai" && ! -e "$HOME_DIR/graphify-out" ]] || fail "home session root produced graph output"
-  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "home session root emitted a toast"
+  # Then: no concurrent extract, no toasts (the lock-holding session owns them), and the
+  # live lock is left untouched.
+  [[ $(count_extract_calls "$root") -eq 0 ]] || fail "live lock did not prevent a concurrent extract"
+  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "locked repository emitted a toast"
+  grep -Fxq "$$" "$root/.ai/graphify-out/.opencode-extract-lock" || fail "live lock was clobbered"
   cleanup_processes
 }
 
-shouldTerminateHeldBuildDuringCleanup() {
-  # Given
+shouldReplaceStaleLockLeftByDeadSession() {
+  # Given a stale graph whose lock names a PID that no longer exists (crashed session).
   local root
-  local builder_pid
-  root=$(make_committed_repo cleanup-repo)
-  hold_builds "$root"
-  start_server cleanup-held-build 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-  request_config "$root" "$SUITE_DIR/cleanup-held-build.config.json"
-  wait_for_file "$root/.fake-graphify/build.pid"
-  builder_pid=$(<"$root/.fake-graphify/build.pid")
-  kill -0 "$builder_pid" 2>/dev/null || fail "fake builder was not running before cleanup"
+  local dead_pid
+  root=$(make_committed_repo stale-lock-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_mode "$root" code-only
+  ( : ) &
+  dead_pid=$!
+  wait "$dead_pid"
+  printf '%s\n' "$dead_pid" >"$root/.ai/graphify-out/.opencode-extract-lock"
+  start_server stale-lock 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
 
   # When
-  cleanup_processes
+  request_config "$root" "$SUITE_DIR/stale-lock.config.json"
 
-  # Then
-  ! kill -0 "$builder_pid" 2>/dev/null || fail "fake builder survived cleanup"
+  # Then the dead lock is replaced, the refresh runs, and the lock is released after it.
+  wait_for_pattern "Graphify graph for stale-lock-repo is ready" "$EVENTS_FILE"
+  [[ $(count_extract_calls "$root") -eq 1 ]] || fail "stale lock blocked the refresh"
+  [[ ! -e "$root/.ai/graphify-out/.opencode-extract-lock" ]] || fail "lock was not released after the refresh"
+  cleanup_processes
+}
+
+shouldKillRunningExtractWhenServerIsTerminated() {
+  # Given a held extract in flight.
+  local root
+  local builder_pid
+  root=$(make_committed_repo shutdown-repo)
+  plant_mode "$root" code-only
+  hold_builds "$root"
+  start_server shutdown-kill 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/shutdown-kill.config.json"
+  wait_for_file "$root/.fake-graphify/build.pid"
+  builder_pid=$(<"$root/.fake-graphify/build.pid")
+  kill -0 "$builder_pid" 2>/dev/null || fail "fake builder was not running before shutdown"
+
+  # When the OpenCode server itself is terminated — never the builder directly.
+  kill -TERM "$SERVER_PID" 2>/dev/null || fail "could not signal the server"
+
+  # Then the plugin's shutdown hooks kill the spawned extract instead of orphaning it.
+  wait_for_pid_exit "$builder_pid"
+  cleanup_processes
 }
 
 shouldWarnWhenBinaryIsMissing() {
-  # Given
+  # Given a consented repository with real work but no graphify on PATH.
   local root
   root=$(make_committed_repo missing-binary-repo)
+  plant_mode "$root" code-only
   start_server missing-binary 1 "/usr/bin:/bin"
 
   # When
@@ -1051,196 +1521,16 @@ shouldWarnWhenBinaryIsMissing() {
   cleanup_processes
 }
 
-shouldRecordSentinelMarkerForEmptyRootWithoutHead() {
-  # Given a plain directory (no git, no nested repositories) with nothing to index:
-  # `git rev-parse HEAD` resolves nothing, so the marker must fall back to its sentinel
-  # instead of being skipped — skipping it would re-extract and re-toast every session.
-  local root="$SUITE_DIR/repos/plain-nocode"
-  mkdir -p "$root"
-  : >"$root/README.md"
-  start_server plain-nocode 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-
-  # When
-  request_config "$root" "$SUITE_DIR/plain-nocode.config.json"
-
-  # Then: reported once as information, with the sentinel recorded in the marker.
-  wait_for_pattern "Graphify found no indexable code in plain-nocode" "$EVENTS_FILE"
-  assert_toast \
-    "Graphify found no indexable code in plain-nocode; skipping the code graph." \
-    info \
-    "$INFO_DURATION_MS"
-  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "HEAD-less empty root did not record a marker"
-  grep -Fxq none "$root/.ai/graphify-out/.opencode-empty-corpus" || fail "HEAD-less marker does not hold the sentinel"
-
-  # And reopening stays silent instead of retrying the same empty corpus forever.
-  start_server plain-nocode-reopen 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-  request_config "$root" "$SUITE_DIR/plain-nocode-reopen.config.json"
-  sleep 1
-  [[ $(count_extract_calls "$root") -eq 1 ]] || fail "HEAD-less empty root was retried on reopen"
-  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "reopened HEAD-less empty root emitted a toast"
-  cleanup_processes
-}
-
-shouldClassifyEmptyCorpusBehindVerboseOutput() {
-  # Given an extract that buries the empty-corpus signal behind kilobytes of progress
-  # output on both streams; only the stream TAILS reveal the classification, so a
-  # head-truncating capture would misread this as a hard failure and retry forever.
-  local root
-  root=$(make_committed_repo noisy-empty-repo)
-  start_server noisy-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-
-  # When
-  request_config "$root" "$SUITE_DIR/noisy-empty.config.json"
-
-  # Then: still classified as information, never as a failure.
-  wait_for_pattern "Graphify found no indexable code in noisy-empty-repo" "$EVENTS_FILE"
-  assert_toast \
-    "Graphify found no indexable code in noisy-empty-repo; skipping the code graph." \
-    info \
-    "$INFO_DURATION_MS"
-  ! grep -Fq '"variant":"error"' "$EVENTS_FILE" || fail "verbose empty corpus was misclassified as a failure"
-  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "verbose empty corpus did not record the marker"
-  cleanup_processes
-}
-
-shouldClearEmptyMarkerOnceRepositoryGainsCode() {
-  # Given a repository that is empty at its first commit.
-  local root
-  local empty_commit
-  root=$(make_committed_repo regrow-repo)
-  empty_commit=$(git -C "$root" rev-parse HEAD)
-  start_server regrow-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-  request_config "$root" "$SUITE_DIR/regrow-empty.config.json"
-  wait_for_pattern "Graphify found no indexable code in regrow-repo" "$EVENTS_FILE"
-  [[ -f "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "empty phase did not record the marker"
-
-  # When a later commit adds code and the repository is reopened.
-  : >"$root/code.py"
-  git -C "$root" add code.py
-  git -C "$root" commit -qm "add code"
-  start_server regrow-build 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-  request_config "$root" "$SUITE_DIR/regrow-build.config.json"
-
-  # Then the build succeeds and clears the now-stale marker...
-  wait_for_pattern "Graphify graph for regrow-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
-  [[ ! -e "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "successful build left the empty-corpus marker behind"
-
-  # ...so checking the empty commit out again is re-examined instead of silently
-  # serving the newer graph as if it matched.
-  git -C "$root" checkout -q "$empty_commit"
-  start_server regrow-recheckout 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-  request_config "$root" "$SUITE_DIR/regrow-recheckout.config.json"
-  wait_for_pattern "Graphify found no indexable code in regrow-repo" "$EVENTS_FILE"
-  [[ $(count_extract_calls "$root") -eq 3 ]] || fail "re-checkout of the empty commit was not re-examined"
-  cleanup_processes
-}
-
-shouldSummarizeAggregateWhenAllNestedRepositoriesAreEmpty() {
-  # Given a plain workspace whose every nested repository has nothing to index.
-  local aggregate_root="$SUITE_DIR/repos/aggregate-empty-root"
-  local repo_a="$aggregate_root/gitlab/alpha-nocode"
-  local repo_b="$aggregate_root/gitlab/beta-nocode"
-  mkdir -p "$repo_a" "$repo_b"
-  git_init "$repo_a"
-  git_init "$repo_b"
-  start_server aggregate-empty 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-
-  # When
-  request_config "$aggregate_root" "$SUITE_DIR/aggregate-empty.config.json"
-
-  # Then the start toast resolves into an aggregate empty summary instead of silence.
-  wait_for_pattern "Graphify is building code graphs for 2 repositories under aggregate-empty-root in the background." "$EVENTS_FILE"
-  wait_for_pattern "Graphify found no indexable code in the repositories under aggregate-empty-root" "$EVENTS_FILE"
-  assert_toast \
-    "Graphify found no indexable code in the repositories under aggregate-empty-root; skipping the code graphs." \
-    info \
-    "$INFO_DURATION_MS"
-  ! grep -Fq '"variant":"success"' "$EVENTS_FILE" || fail "all-empty aggregate produced a success toast"
-  ! grep -Fq '"variant":"error"' "$EVENTS_FILE" || fail "all-empty aggregate produced an error toast"
-  cleanup_processes
-}
-
-shouldSummarizeAggregateFailuresWithRecoveryCommand() {
-  # Given a plain workspace where one nested repository builds and another fails.
-  local aggregate_root="$SUITE_DIR/repos/aggregate-fail-root"
-  local repo_ok="$aggregate_root/gitlab/repo-ok"
-  local repo_fail="$aggregate_root/gitlab/build-fail-repo"
-  mkdir -p "$repo_ok" "$repo_fail"
-  git_init "$repo_ok"
-  git_init "$repo_fail"
-  start_server aggregate-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
-
-  # When
-  request_config "$aggregate_root" "$SUITE_DIR/aggregate-fail.config.json"
-
-  # Then one warning summary names the failed repository and the generic recovery command.
-  wait_for_pattern "Graphify built 1 of 2 code graphs under aggregate-fail-root." "$EVENTS_FILE"
-  assert_toast \
-    "Graphify built 1 of 2 code graphs under aggregate-fail-root. Failed: gitlab/build-fail-repo. Run: graphify extract <repo> --code-only --out <repo>/.ai" \
-    warning \
-    "$RECOVERY_DURATION_MS"
-  [[ $(count_extract_calls "$repo_ok") -eq 1 ]] || fail "healthy sibling was not indexed"
-  cleanup_processes
-}
-
-shouldIndexDocumentationWhenDocsModeIsEnabled() {
-  # Given the docs-indexing opt-in with the backend pinned.
-  local root
-  root=$(make_committed_repo docs-mode-repo)
-  start_server docs-mode 1 "$FAKE_BIN_DIR:/usr/bin:/bin" unset 1 opencode
-
-  # When
-  request_config "$root" "$SUITE_DIR/docs-mode.config.json"
-
-  # Then extract drops --code-only (the semantic docs pass is on) and pins the backend.
-  wait_for_pattern "Graphify graph for docs-mode-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
-  grep -Fxq "extract|$root|extract $root --backend opencode --out $root/.ai --global --as docs-mode-repo" "$FAKE_LOG" ||
-    fail "docs mode did not run a full extract with the pinned backend"
-  cleanup_processes
-}
-
-shouldIndexDocumentationWithAutoDetectedBackendWhenUnpinned() {
-  # Given the docs-indexing opt-in without a backend pin: Graphify auto-detects one.
-  local root
-  root=$(make_committed_repo docs-auto-repo)
-  start_server docs-auto 1 "$FAKE_BIN_DIR:/usr/bin:/bin" unset 1
-
-  # When
-  request_config "$root" "$SUITE_DIR/docs-auto.config.json"
-
-  # Then extract carries neither --code-only nor --backend.
-  wait_for_pattern "Graphify graph for docs-auto-repo is ready: $FAKE_NODE_COUNT nodes" "$EVENTS_FILE"
-  grep -Fxq "extract|$root|extract $root --out $root/.ai --global --as docs-auto-repo" "$FAKE_LOG" ||
-    fail "unpinned docs mode did not run a plain full extract"
-  cleanup_processes
-}
-
-shouldMirrorDocsModeInRecoveryCommand() {
-  # Given a failing build while docs mode is active: the advertised manual command must
-  # reproduce what the plugin ran, not fall back to --code-only.
-  local root="$SUITE_DIR/repos/docs-fail/build-fail-repo"
-  mkdir -p "$root"
-  git_init "$root"
-  : >"$root/tracked"
-  git -C "$root" add tracked
-  git -C "$root" commit -qm initial
-  start_server docs-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin" unset 1 opencode
-
-  # When
-  request_config "$root" "$SUITE_DIR/docs-fail.config.json"
-
-  # Then
-  wait_for_pattern "Graphify indexing failed for build-fail-repo" "$EVENTS_FILE"
-  assert_toast \
-    "Graphify indexing failed for build-fail-repo, but this session is still operational. Run: graphify extract '$root' --backend opencode --out '$root/.ai'" \
-    error \
-    "$RECOVERY_DURATION_MS"
-  cleanup_processes
-}
-
 shouldKeepConfigResponsiveWhileBuildingInBackground
 shouldStaySilentWhenGraphMatchesHeadCommit
+shouldHintOncePerSessionInsteadOfFirstIndexing
+shouldQueueToastsUntilFirstBusEvent
+shouldFlushQueuedToastsAfterFallbackDelay
+shouldAggregateHintWhenNestedRepositoriesHaveNoConsent
 shouldRefreshStaleGraphWithIncrementalExtract
+shouldRefreshCodeOnlyDespiteAmbientDocsEnvironment
+shouldRefreshWithDocsBackendWhenModeFileRecordsDocs
+shouldDeriveDocsRefreshFromSemanticMarkerWhenModeFileIsAbsent
 shouldRebuildWhenGraphFileIsUnreadable
 shouldKeepExistingGraphWhenRepositoryHasNoCommits
 shouldToastErrorWhenBuildFails
@@ -1253,9 +1543,9 @@ shouldRecordSentinelMarkerForEmptyRootWithoutHead
 shouldClassifyEmptyCorpusBehindVerboseOutput
 shouldClearEmptyMarkerOnceRepositoryGainsCode
 shouldSummarizeAggregateWhenAllNestedRepositoriesAreEmpty
-shouldSummarizeAggregateFailuresWithRecoveryCommand
-shouldIndexDocumentationWhenDocsModeIsEnabled
-shouldIndexDocumentationWithAutoDetectedBackendWhenUnpinned
+shouldSummarizeAggregateFailuresWithIndexCommandHint
+shouldBuildDocsGraphWhenModeFileRequestsDocsWithBackend
+shouldBuildDocsGraphWithAutoDetectedBackendWhenUnpinned
 shouldMirrorDocsModeInRecoveryCommand
 shouldRunByDefaultWithoutEnvironmentFlag
 shouldDoNothingWhenOptedOut
@@ -1264,8 +1554,9 @@ shouldRegisterEveryRepositoryInTheGlobalGraph
 shouldExcludeGraphOutputFromLinkedWorktreeGitMetadata
 shouldAggregateNestedRepositoriesUnderPlainRoot
 shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos
-shouldRefuseUnsafeHomeSessionRoot
-shouldTerminateHeldBuildDuringCleanup
+shouldSkipExtractWhileAnotherLiveSessionHoldsTheLock
+shouldReplaceStaleLockLeftByDeadSession
+shouldKillRunningExtractWhenServerIsTerminated
 shouldWarnWhenBinaryIsMissing
 
-echo "PASS: graphify-init background and notification contracts"
+echo "PASS: graphify-init consent, refresh, and notification contracts"

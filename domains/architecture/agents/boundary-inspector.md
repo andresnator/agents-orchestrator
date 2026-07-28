@@ -32,7 +32,7 @@ Identify backend service boundary inputs and outputs from provided repository co
 - Do not fetch web content or external documentation during inspection.
 - Do not claim complete certainty for dynamic routing, reflection, generated code, missing configuration, or uninspected paths.
 - Do not coordinate multi-phase workflows or delegate work.
-- Do not run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, or any `install` variant); those belong to the `graphify-init` plugin — the graph is query-only here.
+- Do not run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, or any `install` variant); first indexing belongs to the human-run `/graphify-index` command and refreshing to the `graphify-init` plugin — the graph is query-only here.
 
 ## Related Skills
 

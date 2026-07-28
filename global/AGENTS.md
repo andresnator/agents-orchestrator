@@ -25,6 +25,14 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 - Check the available skills before delegating work or answering "can you do X" questions; do not guess.
 - When persisting any memory, transcript, or summary of a skill invocation, record the user's original intent and the selected skill name — never the full expanded skill body.
 
+## Hidden State Directories
+
+Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/wayfinder/`, `.ai/absorb/`) — and default file search skips them:
+
+- Wildcard globs and file-finding tools do not descend into dot-directories by default. An empty result for a `.ai/...` pattern is inconclusive, never proof the state is absent.
+- To check state under `.ai/` (or any dot-directory), read the literal path directly (`.ai/<subpath>`), list it explicitly (`ls -la .ai/`), or search with hidden files enabled (`rg --hidden`, a glob with the dot option on).
+- Never report tool state as missing — and never recreate or re-initialize it — until a literal-path check has confirmed the absence.
+
 ## Code Conventions
 
 - When writing or planning code or tests, load the `code-conventions` skill: Andres's personal contract (constants over literals, Should/When test names with `// Given // When // Then` sections, unified and whole-object asserts, separate characterization classes, top-level DTOs, SRP/OCP first).
@@ -32,10 +40,10 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 
 ## Graphify
 
-- In a repository holding `.ai/graphify-out/graph.json`, explore structure graph-first: query the graph before grep, glob, or file-by-file reading for symbols, callers, callees, flows, and impact. The `graphify-cli` skill, when installed, is the detailed contract.
-- With shell access, use only read-only Graphify CLI queries: `query "<question>"`, `path "<a>" "<b>"`, `explain "<node>"`, `affected "<node>"`, `god-nodes` — always with `--graph .ai/graphify-out/graph.json` (the CLI's default path no longer exists). Use `--graph ~/.graphify/global-graph.json` for open-ended cross-repository questions; keep symbol-addressed queries on the repository's own graph, where labels are unambiguous.
-- Without shell access, use the Graphify MCP tools when that server is configured (`query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path`).
-- Never run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, any `install`) on your own. The `graphify-init` plugin owns building and refreshing; leave any remaining recovery to the user.
+- In a repository holding `.ai/graphify-out/graph.json`, explore graph-first for any repository exploration, discovery, or inventory question — documentation, files, modules, project structure, symbols, callers, callees, flows, impact: query the graph before grep, glob, LSP, or file-by-file reading. Check that literal path directly — a wildcard glob (`**/graphify-out/graph.json`) skips dot-directories, so an empty result is inconclusive, not proof the graph is absent. For exhaustive file inventories, use Graphify as the first discovery step and verify completeness with filesystem tools. Documentation coverage depends on the recorded indexing mode — read `.ai/graphify-out/.opencode-index-mode` (one JSON line) to know it: `docs` means markdown and other documents are indexed as document and concept nodes, so documentation questions are graph-first too; `code-only` (or a missing mode file) means the graph holds no documentation and docs questions go straight to filesystem tools. The `graphify-cli` skill, when installed, is the detailed contract.
+- Query the repository's graph through the Graphify MCP tools (`query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path`) — the only agent path to the local graph, with or without shell access. If the tools are unavailable, fall back to the runtime's filesystem tools directly; do not detour through the CLI. Omit their optional `project_path` argument unless you need a different repository: it makes the server resolve its own path instead of the graph it was started with, and can report no graph for a repository that has one.
+- Cross-repository questions go through the `graphify-global` MCP tools — the same tool set served over `~/.graphify/global-graph.json`. Trigger them whenever a question names a repository or project other than the current one, not only when it explicitly spans several: read `~/.graphify/global-manifest.json` first — before Context7, web search, or a clarifying question — to see whether that name is an indexed tag. An indexed tag also settles the tie-break when a name could be either a local repository or a public library: answer from the local repository, not from library documentation. For content questions (what its documentation says, what a file contains), the manifest entry's `source_path` points at that repo's `.ai/graphify-out/graph.json` — the repository root is two directories up; read the actual files there. Keep symbol-addressed queries on the repository's own graph, where labels are unambiguous. The read-only CLI is for hand-run use only, never an agent path.
+- Never run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, any `install`) on your own. First indexing is human-gated behind the `/graphify-index` command (mention it once when a repository has no graph, then continue without it); the `graphify-init` plugin owns refreshing; leave any remaining recovery to the user.
 - If the graph is absent, stale, or unavailable, continue with the runtime's normal read, LSP, grep, and glob tools without friction.
 - More restrictive domain rules win. In particular, SDD agents keep their own read-only and authorization boundaries.
 
@@ -67,7 +75,7 @@ All documentation generated by agents or skills must avoid cognitive overload:
 <!-- context7 -->
 Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
 
-Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, general programming concepts, or questions about a locally indexed repository — when a name could be either a local repository or a public library, check `~/.graphify/global-manifest.json` first; an indexed tag means it is a local repo question, answered per the Graphify rules above, not with library documentation.
 
 ## Steps
 

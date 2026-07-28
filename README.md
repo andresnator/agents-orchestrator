@@ -47,6 +47,6 @@ Graphify gives agents a local structural graph for symbol, caller, and impact ex
 uv tool install graphifyy   # or: pipx install graphifyy
 ```
 
-Do not run `graphify opencode install` (or `graphify claude install`): it writes its own agent instructions and plugin, and can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. See [docs/graphify.md](docs/graphify.md) for default-on background graph building, the cross-repository global graph, query usage, the optional MCP entry, and recovery.
+Do not run `graphify opencode install` (or `graphify claude install`): it writes its own agent instructions and plugin, and can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. First indexing is human-gated: run `/graphify-index` once per repository (it asks docs vs code-only and records the mode); the `graphify-init` plugin then refreshes automatically. See [docs/graphify.md](docs/graphify.md) for the lifecycle, the cross-repository global graph, query usage, the optional MCP entry, and recovery.
 
 See `AGENTS.md` for the editing contract before changing components.

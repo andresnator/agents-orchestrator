@@ -15,7 +15,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
 - `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
-- `domains/common/plugins/graphify-init.ts` is the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph builder and refresher (per-repo output under `.ai/graphify-out/`); setup, the cross-repository global graph, and recovery live in `docs/graphify.md`.
+- `domains/common/plugins/graphify-init.ts` is the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph **refresher** (per-repo output under `.ai/graphify-out/`); first indexing is human-gated behind the `domains/common/commands/graphify-index.md` command, which records the per-repo mode in `.ai/graphify-out/.opencode-index-mode`. Setup, the cross-repository global graph, and recovery live in `docs/graphify.md`.
 - `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores reference docs for live mechanisms.
