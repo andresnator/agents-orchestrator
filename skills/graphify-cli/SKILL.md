@@ -4,7 +4,7 @@ description: Query a Graphify code graph safely — MCP tools for both the repos
 license: MIT
 metadata:
   author: andresnator
-  version: "1.5.0"
+  version: "1.6.0"
   status: testing
 ---
 
@@ -23,7 +23,8 @@ Reusable contract for querying a Graphify code graph. The graph is read-only mat
 
 1. The per-repository graph lives at `.ai/graphify-out/graph.json` (repo root). Check that literal path. If the file exists and parses, the graph is available; record `graphify: available`.
 2. If the graph file is missing, record `graphify: absent` and skip Graphify entirely. Do not build it: first indexing is human-gated behind the `/graphify-index` command, and the `graphify-init` OpenCode plugin owns refreshes afterwards. Mention `/graphify-index` to the user once as the way to enable the graph, then continue without it.
-3. Documentation coverage depends on the recorded indexing mode — read `.ai/graphify-out/.opencode-index-mode` (one JSON line): `docs` means markdown and other documents are indexed as document and concept nodes, so documentation questions are graph-first too; `code-only` (or a missing mode file) means the graph holds no documentation and docs questions go straight to filesystem tools.
+3. Check freshness: compare the graph's `built_at_commit` with `git rev-parse HEAD`, and check whether `.ai/graphify-out/.opencode-extract-lock` exists (a refresh is in flight). On a commit mismatch or a present lock, downgrade the record to `graphify: stale`: still query the graph, but treat every answer as an approximate locator — verify each claim against the current files before citing it, and never base impact or blast-radius conclusions on the stale graph alone. The `graphify-init` plugin refreshes it on the next session; never refresh it yourself.
+4. Documentation coverage depends on the recorded indexing mode — read `.ai/graphify-out/.opencode-index-mode` (one JSON line): `docs` means markdown and other documents are indexed as document and concept nodes, so documentation questions are graph-first too; `code-only` means the graph holds no documentation and docs questions go straight to filesystem tools. When the mode file is missing (a graph indexed before it existed), fall back to `.ai/graphify-out/.graphify_semantic_marker` — Graphify writes it only when a semantic docs pass ran, so present means `docs` coverage, absent means `code-only`.
 
 Never conclude "no graph" from a wildcard search. Patterns like `**/graphify-out/graph.json` do not match inside dot-directories, so they silently miss `.ai/graphify-out/graph.json`. An empty glob is inconclusive, not evidence of absence — check the literal path before reporting `graphify: absent`.
 

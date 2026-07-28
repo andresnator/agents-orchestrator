@@ -37,8 +37,9 @@ const MODE_DOCS = "docs"
 // indexed before MODE_FILE existed.
 const SEMANTIC_MARKER_FILE = ".graphify_semantic_marker"
 // Guards against two OpenCode sessions extracting the same repository at once. Holds the
-// session's PID; a lock whose PID is no longer alive is stale (crashed or killed session)
-// and is silently replaced.
+// session's PID plus, once spawned, the extract child's PID (one per line): a SIGKILLed
+// server orphans a still-running child, so the lock is stale only when EVERY recorded PID
+// is dead — then it belonged to a fully crashed session and is silently replaced.
 const LOCK_FILE = ".opencode-extract-lock"
 const INDEX_COMMAND = "/graphify-index"
 // Marker value for roots where `git rev-parse HEAD` resolves nothing (plain directories,
@@ -46,8 +47,13 @@ const INDEX_COMMAND = "/graphify-index"
 // would re-extract and re-toast the same empty corpus every session.
 const EMPTY_MARKER_NO_COMMIT = "none"
 // A repository holding no indexable code is not a failure, but Graphify reports it as one
-// (exit 1, no graph.json). These are its two signals for that case.
-const EMPTY_CORPUS_PATTERN = /produced no nodes|found 0 code[,\s]/i
+// (exit 1, no graph.json). Only the end-of-run empty-graph line is unambiguous: the census
+// line ("found N code, N docs, ...") also appears when a docs-mode run dies later on a
+// backend/credential error, and matching it would suppress retries of a fixable failure.
+const EMPTY_CORPUS_PATTERN = /produced no nodes/i
+// Graphify 0.9.28 swallows a failed global merge: it prints this warning to stderr and
+// still exits 0, so a successful local build can silently skip global registration.
+const GLOBAL_MERGE_WARNING_PATTERN = /\[graphify global\] warning/i
 const EXTRACT_ARGS = ["extract"] as const
 const CODE_ONLY_FLAG = "--code-only"
 const BACKEND_FLAG = "--backend"
@@ -139,6 +145,11 @@ const zeroNodeMessage = (repo: string) =>
 
 const aggregateEmptyMessage = (rootName: string) =>
   `Graphify found no indexable code in the repositories under ${rootName}; skipping the code graphs.`
+
+// The local graph IS ready in this case — only its cross-repository registration failed,
+// and Graphify exits 0 after that failure, so without this toast it would go unnoticed.
+const globalMergeWarningMessage = (repo: string, command: string) =>
+  `Graphify could not merge ${repo} into the global graph; cross-repository queries stay stale. Run: ${command}`
 
 const missingBinaryMessage = () => `Graphify CLI was not found. Run: ${GRAPHIFY_INSTALL_HINT}`
 
@@ -248,6 +259,7 @@ function runCommand(
   args: readonly string[],
   root: string,
   extraEnv?: Record<string, string>,
+  onSpawn?: (child: ChildProcess) => void,
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
     installShutdownHooks()
@@ -258,6 +270,7 @@ function runCommand(
       stdio: ["ignore", "pipe", "pipe"],
     })
     liveChildren.add(child)
+    onSpawn?.(child)
     let stdout = ""
     let stderr = ""
     let spawnError: Error | undefined
@@ -280,8 +293,8 @@ function runCommand(
 
 // Every Graphify call carries GRAPHIFY_OUT, including the --version probe: the value is what
 // makes the CLI and the MCP server agree on where this repository's graph lives.
-function runGraphify(args: readonly string[], root: string) {
-  return runCommand(GRAPHIFY_BINARY, args, root, { [GRAPHIFY_OUT_ENV]: OUT_RELATIVE })
+function runGraphify(args: readonly string[], root: string, onSpawn?: (child: ChildProcess) => void) {
+  return runCommand(GRAPHIFY_BINARY, args, root, { [GRAPHIFY_OUT_ENV]: OUT_RELATIVE }, onSpawn)
 }
 
 function isMissingBinary(result: CommandResult) {
@@ -457,9 +470,9 @@ function isPidAlive(pid: number) {
 }
 
 // Best-effort mutual exclusion between sessions: only a lock held by a LIVE process blocks;
-// any filesystem trouble here must never block indexing itself. The lock stores this
-// session's PID, so a session killed mid-extract leaves a stale lock that the next session
-// detects (dead PID) and replaces.
+// any filesystem trouble here must never block indexing itself. The lock lists the holding
+// session's PID and its extract child's PID; a lock is stale only when all of them are dead,
+// so a SIGKILLed server whose orphaned child is still extracting keeps blocking new sessions.
 async function acquireExtractLock(root: string) {
   const lockPath = lockFilePath(root)
   try {
@@ -473,15 +486,30 @@ async function acquireExtractLock(root: string) {
       return true
     } catch (error) {
       if (!isRecord(error) || error.code !== "EEXIST") return true
-      const pid = Number.parseInt(await fs.readFile(lockPath, "utf8").catch(() => ""), 10)
-      if (Number.isFinite(pid) && isPidAlive(pid)) {
-        console.error(`${LOG_PREFIX} another session (pid ${pid}) is already extracting ${root}; skipping`)
+      const pids = (await fs.readFile(lockPath, "utf8").catch(() => ""))
+        .split(/\s+/)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isFinite(value))
+      const livePid = pids.find(isPidAlive)
+      if (livePid !== undefined) {
+        console.error(`${LOG_PREFIX} another session (pid ${livePid}) is already extracting ${root}; skipping`)
         return false
       }
       await fs.rm(lockPath, { force: true }).catch(() => {})
     }
   }
   return true
+}
+
+// Called once the extract child exists: from then on the lock survives a SIGKILL of the
+// server, because the orphaned child's PID keeps it live until the extract itself ends.
+async function recordLockChildPid(root: string, childPid: number | undefined) {
+  if (childPid === undefined) return
+  try {
+    await fs.writeFile(lockFilePath(root), `${process.pid}\n${childPid}\n`)
+  } catch (error) {
+    console.error(`${LOG_PREFIX} cannot record extract child pid: ${errorMessage(error)}`)
+  }
 }
 
 async function releaseExtractLock(root: string) {
@@ -655,12 +683,18 @@ async function ensureGitExclude(root: string, artifactPath: string) {
 }
 
 type RepoOutcome =
-  | { kind: "ready"; action: RepoAction; nodeCount: number | undefined }
+  | { kind: "ready"; action: RepoAction; nodeCount: number | undefined; globalRecovery?: string }
   | { kind: "empty" }
-  | { kind: "zero-nodes" }
+  | { kind: "zero-nodes"; globalRecovery?: string }
   | { kind: "locked" }
   | { kind: "action-failed"; action: RepoAction }
   | { kind: "incomplete"; action: RepoAction }
+
+// `graphify global add` is a human-lifecycle verb, so it belongs only in recovery text.
+function recoveryGlobalAddCommand(root: string, tag: string) {
+  const graphPath = path.join(root, OUT_RELATIVE, GRAPH_FILE)
+  return [GRAPHIFY_BINARY, "global", "add", quoteForDisplay(graphPath), AS_FLAG, tag].join(" ")
+}
 
 // Build or refresh one repository's graph. The caller emits toasts; onStart runs immediately
 // before the Graphify process spawns so a presenter can time it and announce it.
@@ -684,26 +718,47 @@ async function buildRepoGraph(
     await ensureGitExclude(root, outDirPath(root))
 
     await onStart(action)
-    const run = await runGraphify(args, root)
-    if (run.error || run.exitCode !== 0) {
-      if (!run.error && EMPTY_CORPUS_PATTERN.test(`${run.stdout}\n${run.stderr}`)) {
-        await writeEmptyMarker(root, await gitValue(root, GIT_HEAD_ARGS))
-        return { kind: "empty" }
+    // Graphify stamps built_at_commit at EXPORT time, after scanning: a commit landing
+    // mid-extract yields old content under a fresh stamp, which the staleness check would
+    // then trust forever. Comparing HEAD around the run catches that; one bounded retry
+    // (incremental, so cheap) absorbs the common single-commit race.
+    for (let attempt = 0; ; attempt += 1) {
+      const headBefore = await gitValue(root, GIT_HEAD_ARGS)
+      // Awaited after the run so releasing the lock can never race a still-pending write.
+      let childPidRecorded: Promise<void> = Promise.resolve()
+      const run = await runGraphify(args, root, (child) => {
+        childPidRecorded = recordLockChildPid(root, child.pid)
+      })
+      await childPidRecorded
+      if (run.error || run.exitCode !== 0) {
+        if (!run.error && EMPTY_CORPUS_PATTERN.test(`${run.stdout}\n${run.stderr}`)) {
+          await writeEmptyMarker(root, await gitValue(root, GIT_HEAD_ARGS))
+          return { kind: "empty" }
+        }
+        const detail = run.error ? errorMessage(run.error) : run.stderr.trim()
+        if (detail) console.error(`${LOG_PREFIX} ${action} failed for ${root}: ${detail}`)
+        return { kind: "action-failed", action }
       }
-      const detail = run.error ? errorMessage(run.error) : run.stderr.trim()
-      if (detail) console.error(`${LOG_PREFIX} ${action} failed for ${root}: ${detail}`)
-      return { kind: "action-failed", action }
+
+      const graph = await readGraph(root)
+      if (!graph) return { kind: "incomplete", action }
+      if (headBefore !== (await gitValue(root, GIT_HEAD_ARGS))) {
+        if (attempt === 0) continue
+        console.error(`${LOG_PREFIX} HEAD kept moving during extraction of ${root}; giving up for this session`)
+        return { kind: "action-failed", action }
+      }
+
+      const globalRecovery = GLOBAL_MERGE_WARNING_PATTERN.test(`${run.stdout}\n${run.stderr}`)
+        ? recoveryGlobalAddCommand(root, tag)
+        : undefined
+      await persistIndexMode(root, mode)
+      // A repository whose code was all deleted refreshes to a 0-node graph with exit 0; that is
+      // "nothing to index", not a success. No marker: the freshly stamped graph keeps reopens quiet.
+      if (graph.nodeCount === 0) return { kind: "zero-nodes", globalRecovery }
+
+      await clearEmptyMarker(root)
+      return { kind: "ready", action, nodeCount: graph.nodeCount, globalRecovery }
     }
-
-    const graph = await readGraph(root)
-    if (!graph) return { kind: "incomplete", action }
-    await persistIndexMode(root, mode)
-    // A repository whose code was all deleted refreshes to a 0-node graph with exit 0; that is
-    // "nothing to index", not a success. No marker: the freshly stamped graph keeps reopens quiet.
-    if (graph.nodeCount === 0) return { kind: "zero-nodes" }
-
-    await clearEmptyMarker(root)
-    return { kind: "ready", action, nodeCount: graph.nodeCount }
   } finally {
     await releaseExtractLock(root)
   }
@@ -719,12 +774,17 @@ async function presentSingleRoot(input: ToastInput, root: string, action: RepoAc
   }
 
   const outcome = await buildRepoGraph(root, action, mode, onStart)
+  const warnGlobalMerge = async (recovery: string | undefined) => {
+    if (!recovery) return
+    await showToastBestEffort(input, globalMergeWarningMessage(repo, recovery), TOAST_VARIANTS.WARNING, WARNING_DURATION_MS)
+  }
   switch (outcome.kind) {
     case "empty":
       await showToastBestEffort(input, emptyCorpusMessage(repo), TOAST_VARIANTS.INFO, INFO_DURATION_MS)
       return
     case "zero-nodes":
       await showToastBestEffort(input, zeroNodeMessage(repo), TOAST_VARIANTS.INFO, INFO_DURATION_MS)
+      await warnGlobalMerge(outcome.globalRecovery)
       return
     case "locked":
       // Another live session is already extracting this repository; it owns the toasts.
@@ -752,6 +812,7 @@ async function presentSingleRoot(input: ToastInput, root: string, action: RepoAc
         TOAST_VARIANTS.SUCCESS,
         INFO_DURATION_MS,
       )
+      await warnGlobalMerge(outcome.globalRecovery)
       return
   }
 }
@@ -771,6 +832,15 @@ async function presentAggregate(input: ToastInput, root: string, work: WorkItem[
     if (outcome.kind === "ready") built += 1
     else if (outcome.kind === "locked") locked += 1
     else if (outcome.kind !== "empty" && outcome.kind !== "zero-nodes") failed.push(item.root)
+    // A failed global merge exits 0, so it never lands in `failed`; it gets its own toast.
+    if ((outcome.kind === "ready" || outcome.kind === "zero-nodes") && outcome.globalRecovery) {
+      await showToastBestEffort(
+        input,
+        globalMergeWarningMessage(repoName(item.root), outcome.globalRecovery),
+        TOAST_VARIANTS.WARNING,
+        WARNING_DURATION_MS,
+      )
+    }
   }
 
   if (failed.length === 0) {

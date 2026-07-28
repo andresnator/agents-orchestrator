@@ -549,14 +549,23 @@ case "$command_name" in
       echo "synthetic extract failure" >&2
       exit 9
     fi
+    # A docs-mode run that dies on backend credentials AFTER the census line: the census
+    # reports "0 code, 1 docs" but this is a fixable failure, never an empty corpus.
+    if [[ "$repo_name" == credential-fail-repo ]]; then
+      printf '[graphify extract] found 0 code, 1 docs, 0 papers, 0 images\n'
+      echo "[graphify extract] error: backend 'zen' rejected the request: invalid API key" >&2
+      exit 1
+    fi
     # Real Graphify reports a corpus with nothing to index as a failure (exit 1), both on a
     # first build and on a refresh after every code file was deleted — in the refresh case it
     # leaves the previous graph on disk untouched. Any *-nocode repository behaves the same,
     # so aggregate fixtures can hold several empty repositories without new arms here.
     # regrow-repo is empty only until a code file appears, then builds normally.
+    # The census deliberately reports NONZERO docs: a docs-only repository has documents, and
+    # classification must key on the end-of-run "produced no nodes" line, not on the census.
     if [[ "$repo_name" == docs-only-repo || "$repo_name" == shrink-empty-repo || "$repo_name" == *-nocode ]] ||
       [[ "$repo_name" == regrow-repo && ! -f "$root/code.py" ]]; then
-      printf '[graphify extract] found 0 code, 0 docs, 0 papers, 0 images\n'
+      printf '[graphify extract] found 0 code, 2 docs, 0 papers, 0 images\n'
       echo "[graphify extract] graph is empty — extraction produced no nodes." >&2
       exit 1
     fi
@@ -567,7 +576,7 @@ case "$command_name" in
         printf '[graphify extract] scanning some/deeply/nested/path/module-%03d.py ... parsed, 0 symbols\n' "$line_number"
         printf '[graphify extract] warning: some/deeply/nested/path/module-%03d.py matched no code language\n' "$line_number" >&2
       done
-      printf '[graphify extract] found 0 code, 0 docs, 0 papers, 0 images\n'
+      printf '[graphify extract] found 0 code, 2 docs, 0 papers, 0 images\n'
       echo "[graphify extract] graph is empty — extraction produced no nodes." >&2
       exit 1
     fi
@@ -585,6 +594,15 @@ case "$command_name" in
       : >"$state_dir/build-started"
     fi
 
+    # head-race-repo lands a commit mid-run, once: like real Graphify, write_graph stamps
+    # the HEAD read at export time, so the first graph carries new-HEAD over old content.
+    if [[ "$repo_name" == head-race-repo && ! -f "$state_dir/raced" ]]; then
+      : >"$state_dir/raced"
+      : >"$root/landed-mid-extract.py"
+      git -C "$root" add landed-mid-extract.py
+      git -C "$root" commit -qm mid-extract
+    fi
+
     # incomplete-repo exits 0 without ever producing a readable graph;
     # zero-node-repo exits 0 with a graph holding no nodes.
     if [[ "$repo_name" != incomplete-repo ]]; then
@@ -594,8 +612,14 @@ case "$command_name" in
         write_graph "$root" "$out_dir"
       fi
       # `extract --global --as <tag>` merges into the global graph in the same call.
+      # global-warn-repo reproduces Graphify 0.9.28 swallowing a failed merge: the
+      # warning goes to stderr and the run still exits 0.
       if [[ " $* " == *" --global "* && -n "$global_tag" ]]; then
-        register_global "$global_tag" "$out_dir/graph.json"
+        if [[ "$repo_name" == global-warn-repo ]]; then
+          echo "[graphify global] warning: failed to merge into global graph: synthetic merge failure" >&2
+        else
+          register_global "$global_tag" "$out_dir/graph.json"
+        fi
       fi
     fi
     : >"$state_dir/build-finished"
@@ -794,6 +818,27 @@ shouldRefreshStaleGraphWithIncrementalExtract() {
   [[ ! -e "$root/graphify-out" ]] || fail "refresh recreated a root-level graphify-out/"
   # The fallback-derived decision is persisted, migrating the legacy repo off the derivation.
   assert_mode_file "$root" '{"mode":"code-only"}'
+  cleanup_processes
+}
+
+shouldReExtractWhenCommitLandsMidExtract() {
+  # Given standing consent for a repository where a commit lands while the extract runs:
+  # real Graphify stamps built_at_commit at export time, after scanning, so the first
+  # graph carries the new HEAD over content read from the old tree.
+  local root
+  root=$(make_committed_repo head-race-repo)
+  plant_mode "$root" code-only
+  start_server head-race 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/head-race.config.json"
+
+  # Then: the plugin detects the moved HEAD and runs exactly one incremental re-extract,
+  # ending with a graph honestly stamped at the commit whose content it read.
+  wait_for_pattern "Graphify graph for head-race-repo is ready" "$EVENTS_FILE"
+  [[ $(count_extract_calls "$root") -eq 2 ]] || fail "mid-extract commit did not trigger a re-extract"
+  [[ "$(jq -r .built_at_commit "$root/.ai/graphify-out/graph.json")" == "$(git -C "$root" rev-parse HEAD)" ]] ||
+    fail "final graph is not stamped at the current HEAD"
   cleanup_processes
 }
 
@@ -1110,6 +1155,34 @@ shouldClassifyEmptyCorpusBehindVerboseOutput() {
   cleanup_processes
 }
 
+shouldTreatDocsCensusWithBackendErrorAsFailureNotEmptyCorpus() {
+  # Given a docs-mode run that dies on backend credentials after a census reporting
+  # "0 code, 1 docs": a fixable failure. Classifying it by the census would brand the
+  # repository an empty corpus and suppress every retry at this commit.
+  local root
+  root=$(make_committed_repo credential-fail-repo)
+  plant_mode "$root" docs zen
+  start_server credential-fail 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/credential-fail.config.json"
+
+  # Then: reported as a failure with the docs recovery command, never as an empty corpus.
+  wait_for_pattern "Graphify indexing failed for credential-fail-repo" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify indexing failed for credential-fail-repo, but this session is still operational. Run: GRAPHIFY_OUT=.ai/graphify-out graphify extract '$root' --backend zen" \
+    error \
+    "$RECOVERY_DURATION_MS"
+  [[ ! -e "$root/.ai/graphify-out/.opencode-empty-corpus" ]] || fail "backend failure recorded an empty-corpus marker"
+
+  # And the next session retries instead of honoring a marker that should not exist.
+  start_server credential-fail-retry 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  request_config "$root" "$SUITE_DIR/credential-fail-retry.config.json"
+  wait_for_pattern "Graphify indexing failed for credential-fail-repo" "$EVENTS_FILE"
+  [[ $(count_extract_calls "$root") -eq 2 ]] || fail "backend failure was not retried on the next session"
+  cleanup_processes
+}
+
 shouldClearEmptyMarkerOnceRepositoryGainsCode() {
   # Given a consented repository that is empty at its first commit.
   local root
@@ -1336,6 +1409,30 @@ shouldRegisterEveryRepositoryInTheGlobalGraph() {
   cleanup_processes
 }
 
+shouldWarnWhenGlobalMergeFailsDespiteExitZero() {
+  # Given an extract whose --global merge fails: real Graphify 0.9.28 prints the warning
+  # to stderr and still exits 0, so a success-only reading would stamp the local graph
+  # fresh and never retry the registration.
+  local root
+  root=$(make_committed_repo global-warn-repo)
+  plant_mode "$root" code-only
+  start_server global-warn 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/global-warn.config.json"
+
+  # Then: the local graph is honestly ready, AND the swallowed merge failure surfaces
+  # with the human-lifecycle recovery command.
+  wait_for_pattern "Graphify graph for global-warn-repo is ready" "$EVENTS_FILE"
+  wait_for_pattern "Graphify could not merge global-warn-repo into the global graph" "$EVENTS_FILE"
+  assert_toast \
+    "Graphify could not merge global-warn-repo into the global graph; cross-repository queries stay stale. Run: graphify global add '$root/.ai/graphify-out/graph.json' --as global-warn-repo" \
+    warning \
+    "$RECOVERY_DURATION_MS"
+  ! grep -Fq "global-warn-repo " "$GLOBAL_GRAPH" 2>/dev/null || fail "failed merge unexpectedly landed in the global graph"
+  cleanup_processes
+}
+
 shouldExcludeGraphOutputFromLinkedWorktreeGitMetadata() {
   # Given
   local root
@@ -1481,6 +1578,36 @@ shouldReplaceStaleLockLeftByDeadSession() {
   cleanup_processes
 }
 
+shouldKeepLockWhileOrphanedExtractChildIsAlive() {
+  # Given a lock naming a dead server PID plus a LIVE extract child: exactly what a
+  # SIGKILLed server leaves behind (shutdown hooks cannot run). Treating it as stale
+  # would start a duplicate, token-spending extraction beside the orphan.
+  local root
+  local dead_pid
+  local child_pid
+  root=$(make_committed_repo orphan-lock-repo)
+  plant_graph "$root" "$STALE_COMMIT"
+  plant_mode "$root" code-only
+  ( : ) &
+  dead_pid=$!
+  wait "$dead_pid"
+  sleep 60 &
+  child_pid=$!
+  printf '%s\n%s\n' "$dead_pid" "$child_pid" >"$root/.ai/graphify-out/.opencode-extract-lock"
+  start_server orphan-lock 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+
+  # When
+  request_config "$root" "$SUITE_DIR/orphan-lock.config.json"
+  sleep 1
+
+  # Then: the live child keeps the lock authoritative — no extract, no toast, lock intact.
+  [[ $(count_extract_calls "$root") -eq 0 ]] || fail "live orphan child did not prevent a concurrent extract"
+  ! grep -Fq '"type":"tui.toast.show"' "$EVENTS_FILE" || fail "orphan-locked repository emitted a toast"
+  grep -Fq "$child_pid" "$root/.ai/graphify-out/.opencode-extract-lock" || fail "orphan lock was clobbered"
+  terminate_pid "$child_pid"
+  cleanup_processes
+}
+
 shouldKillRunningExtractWhenServerIsTerminated() {
   # Given a held extract in flight.
   local root
@@ -1528,6 +1655,7 @@ shouldQueueToastsUntilFirstBusEvent
 shouldFlushQueuedToastsAfterFallbackDelay
 shouldAggregateHintWhenNestedRepositoriesHaveNoConsent
 shouldRefreshStaleGraphWithIncrementalExtract
+shouldReExtractWhenCommitLandsMidExtract
 shouldRefreshCodeOnlyDespiteAmbientDocsEnvironment
 shouldRefreshWithDocsBackendWhenModeFileRecordsDocs
 shouldDeriveDocsRefreshFromSemanticMarkerWhenModeFileIsAbsent
@@ -1541,6 +1669,7 @@ shouldWarnWhenGraphIsMissingAfterSuccessfulBuild
 shouldNotRetryARepositoryWithNothingToIndex
 shouldRecordSentinelMarkerForEmptyRootWithoutHead
 shouldClassifyEmptyCorpusBehindVerboseOutput
+shouldTreatDocsCensusWithBackendErrorAsFailureNotEmptyCorpus
 shouldClearEmptyMarkerOnceRepositoryGainsCode
 shouldSummarizeAggregateWhenAllNestedRepositoriesAreEmpty
 shouldSummarizeAggregateFailuresWithIndexCommandHint
@@ -1551,11 +1680,13 @@ shouldRunByDefaultWithoutEnvironmentFlag
 shouldDoNothingWhenOptedOut
 shouldSkipGlobalRegistrationWhenOptedOut
 shouldRegisterEveryRepositoryInTheGlobalGraph
+shouldWarnWhenGlobalMergeFailsDespiteExitZero
 shouldExcludeGraphOutputFromLinkedWorktreeGitMetadata
 shouldAggregateNestedRepositoriesUnderPlainRoot
 shouldFallBackToSingleRootWhenPlainDirHasNoNestedRepos
 shouldSkipExtractWhileAnotherLiveSessionHoldsTheLock
 shouldReplaceStaleLockLeftByDeadSession
+shouldKeepLockWhileOrphanedExtractChildIsAlive
 shouldKillRunningExtractWhenServerIsTerminated
 shouldWarnWhenBinaryIsMissing
 
