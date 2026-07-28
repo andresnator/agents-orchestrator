@@ -69,7 +69,8 @@ Synthesize verdict (Confirmed = both judges; Emphasis-confirmed = one judge, ins
 │       ├── Escalate now → JUDGMENT: ESCALATED ⚠️ (history so far)
 │       ├── Stop here → JUDGMENT: STOPPED 🛑 (report state)
 │       └── Continue ▼
-│       Re-launch Judge A + Judge B in parallel (Round 2 — re-judge: ledger + fix diff in both prompts)
+│       Re-launch Judge A + Judge B in parallel (Round 2 — re-judge: fixer-scoped ledger
+│       (confirmed + emphasis-confirmed ids ONLY — suspects keep their triage state) + fix diff in both prompts)
 │       ▼
 │       Both re-judge results valid? (one `verdicts` row per ledger id — CLEAN string is NEVER valid here)
 │       ├── NO → relaunch only the invalid judge once → still invalid → JUDGMENT: INVALID ROUND ⚠️ (stop)

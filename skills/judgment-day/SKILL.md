@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.9.1"
+  version: "1.9.2"
   status: in-progress
 ---
 
@@ -45,12 +45,12 @@ Resolve project standards before launching ANY sub-agent. In OpenCode installs, 
 - Each judge receives the **same target** but works **independently** — neither knows about the other, no cross-contamination.
 - If the user provides custom review criteria, include them identically in BOTH judge prompts.
 - **Review budget**: each judge performs exactly ONE full sweep of the target — two sweeps only when the diff exceeds ~400 changed lines or the brief flags hot paths. No loop-until-dry: when the sweep budget is spent, the judge reports what it has.
-- **Return shape**: judges return the compact YAML findings receipt defined in their agent files (`findings` rows with id, severity, category, `evidence` as `file:line` list, a ≤2-line scenario, and a one-line fix; `verdicts` rows in re-judge rounds). The fallback prompt in `assets/judge-prompt.md` mirrors the same receipt.
+- **Return shape**: judges return the compact YAML findings receipt defined in their agent files (`findings` rows with id, severity, category, `evidence` as `file:line` list, a ≤2-line scenario, and a one-line fix; `verdicts` rows in re-judge rounds; an optional `notes` list — max 3 `file:line — hypothesis` rows — for theoretical observations with no concrete failure scenario). The fallback prompt in `assets/judge-prompt.md` mirrors the same receipt.
 - Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict.
 
-**Result validity**: a judge result is valid only if it is exactly `VERDICT: CLEAN — No issues found.` or contains at least one well-formed finding (stable id + severity + `file:line` + failure scenario). An empty, truncated, or malformed response is **invalid — never CLEAN**. Relaunch only that judge once (fresh delegate, same blind prompt). If the retry is still invalid, the round is invalid: emit `JUDGMENT: INVALID ROUND` (see `assets/output-formats.md`) preserving the valid judge's findings in the ledger as unsynthesized — never synthesize a verdict from one judge, never report clean.
+**Result validity**: a judge result is valid only if it is exactly `VERDICT: CLEAN — No issues found.` (optionally followed by a `notes` block) or contains at least one well-formed finding (stable id + severity + `file:line` + failure scenario). `notes` rows are report-only: they never count as findings for validity, never enter the ledger or synthesis, and are never fixed — a response carrying only notes without the CLEAN token is invalid. An empty, truncated, or malformed response is **invalid — never CLEAN**. Relaunch only that judge once (fresh delegate, same blind prompt). If the retry is still invalid, the round is invalid: emit `JUDGMENT: INVALID ROUND` (see `assets/output-formats.md`) preserving the valid judge's findings in the ledger as unsynthesized — never synthesize a verdict from one judge, never report clean.
 
-**Re-judge validity** (rounds 2+): the rule above applies to discovery rounds only. In a re-judge round the CLEAN token is **not** a valid result — a valid re-judge result is a `verdicts` list carrying exactly one row (`fixed | open | refuted`, with `file:line` evidence) for **every** ledger id named in the brief; a missing or extra id is malformed. `findings` rows may appear only for defects introduced by the fix diff. The same retry-once / `JUDGMENT: INVALID ROUND` handling applies to an invalid re-judge result.
+**Re-judge validity** (rounds 2+): the rule above applies to discovery rounds only. In a re-judge round the CLEAN token is **not** a valid result — a valid re-judge result is a `verdicts` list carrying exactly one row (`fixed | open | refuted`, with `file:line` evidence) for **every** ledger id named in the brief; a missing or extra id is malformed. The re-judge brief names **only the ids that were sent to the fixer** (confirmed and emphasis-confirmed rows) — suspect and contradiction rows keep their triage state, are never sent to a re-judge, and never enter the automatic loop. `findings` rows may appear only for defects introduced by the fix diff. The same retry-once / `JUDGMENT: INVALID ROUND` handling applies to an invalid re-judge result.
 
 ### Pattern 2: Verdict Synthesis
 
@@ -89,7 +89,7 @@ Round 1 and the verdict synthesis always run. **After the verdict, nothing touch
 5. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history; do not loop forever.
 6. If the re-judge round is clean (per the reconciliation below) → JUDGMENT: APPROVED ✅
 
-**Re-judge reconciliation**: the orchestrator reconciles the two judges' `verdicts` lists per ledger id — any `open` keeps the row `open` (a confirmed issue for the loop); both `fixed` → `verified`; both `refuted` → `refuted`; a `fixed`-vs-`refuted` disagreement closes the row as `fixed` with a contradiction note (either way the defect no longer reproduces). New `findings` from a re-judge enter Pattern 2 synthesis normally (both judges saw the same fix diff). The round is **clean** when every ledger row reconciles to `verified` or `refuted` and the round produced no new confirmed or emphasis-confirmed findings.
+**Re-judge reconciliation**: the orchestrator reconciles the two judges' `verdicts` lists per re-judged id (the fixer-scoped set only) — any `open` keeps the row `open` (a confirmed issue for the loop); both `fixed` → `verified`; both `refuted` → `refuted`; a `fixed`-vs-`refuted` disagreement closes the row as `fixed` with a contradiction note (either way the defect no longer reproduces). New `findings` from a re-judge enter Pattern 2 synthesis normally (both judges saw the same fix diff). The round is **clean** when every re-judged row reconciles to `verified` or `refuted` and the round produced no new confirmed or emphasis-confirmed findings. Suspect rows stay in the ledger with their triage state and are reported alongside the final verdict for human triage; they never gate APPROVED.
 
 **Pre-set mode**: when the caller declares a mode (e.g. the SDD `Judgment: light | verdict-only | full` line in `proposal.md`), skip the verdict gate: `light` runs Light Mode (below) with its automatic CRITICAL-only fix; `verdict-only` stops after the verdict report without asking; `full` proceeds as if "Fix and re-judge" was chosen. The loop gates still apply either way.
 
