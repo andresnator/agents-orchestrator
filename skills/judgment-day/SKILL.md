@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.8.1"
+  version: "1.9.0"
   status: in-progress
 ---
 
@@ -45,6 +45,7 @@ Resolve project standards before launching ANY sub-agent. In OpenCode installs, 
 - Each judge receives the **same target** but works **independently** — neither knows about the other, no cross-contamination.
 - If the user provides custom review criteria, include them identically in BOTH judge prompts.
 - **Review budget**: each judge performs exactly ONE full sweep of the target — two sweeps only when the diff exceeds ~400 changed lines or the brief flags hot paths. No loop-until-dry: when the sweep budget is spent, the judge reports what it has.
+- **Return shape**: judges return the compact YAML findings receipt defined in their agent files (`findings` rows with id, severity, category, `evidence` as `file:line` list, a ≤2-line scenario, and a one-line fix; `verdicts` rows in re-judge rounds). The fallback prompt in `assets/judge-prompt.md` mirrors the same receipt.
 - Always wait for BOTH judges to complete before synthesizing — never accept a partial verdict.
 
 **Result validity**: a judge result is valid only if it is exactly `VERDICT: CLEAN — No issues found.` or contains at least one well-formed finding (stable id + severity + `file:line` + failure scenario). An empty, truncated, or malformed response is **invalid — never CLEAN**. Relaunch only that judge once (fresh delegate, same blind prompt). If the retry is still invalid, the round is invalid: emit `JUDGMENT: INVALID ROUND` (see `assets/output-formats.md`) preserving the valid judge's findings in the ledger as unsynthesized — never synthesize a verdict from one judge, never report clean.

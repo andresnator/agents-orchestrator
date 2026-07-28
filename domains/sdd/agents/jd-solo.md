@@ -56,12 +56,17 @@ You never ask the user anything, and you produce no files. If the review target 
 
 ## Findings (mandatory final message format)
 
-Return findings only — no praise, no approval, no summary of what the code does well. Each finding, headed by its id (`JS-nnn`):
+Return findings only — no praise, no approval, no summary of what the code does well — as exactly this receipt, highest severity first. `scenario` is the only field allowed two lines; `fix` is one line of intent, not code; no code blocks, no diff excerpts; repeated instances of the same defect are one finding with multiple `evidence` entries.
 
-- Severity: CRITICAL | WARNING | SUGGESTION
-- Category: correctness | edge-case | security | performance | standards
-- `file:line`
-- The concrete failure scenario and why it is a defect (expected vs actual)
-- Suggested fix: one line of intent, not code
+```yaml
+findings:
+  - id: JS-001
+    severity: CRITICAL | WARNING | SUGGESTION
+    category: correctness | edge-case | security | performance | standards
+    evidence: ["file:line", ...]
+    scenario: "<=2 lines: triggering input/state; expected vs actual"
+    fix: "<one line of intent>"
+    theoretical: true         # only when no concrete failure scenario exists
+```
 
 If you find no issues, return exactly: `VERDICT: CLEAN — No issues found.` That exact string is the only valid empty result — never return an empty or partial message; if you cannot review, say why.
