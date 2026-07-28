@@ -47,7 +47,7 @@ Kickoff runs only after explicit SDD activation and skips anything already state
 
 ```mermaid
 graph TD
-  user[Usuario: vamos con sdd] --> orch[orchestraitor]
+  user[User: vamos con sdd] --> orch[orchestraitor]
   intake[".ai/*/changes: ready-for-sdd bundles"] -->|ejecuta el plan| orch
   orch --> explore[sdd-explore]
   orch -->|Depth light: explore + change.md inline| implement
@@ -67,7 +67,7 @@ Full session sequence (gates, waves, judgment):
 
 ```mermaid
 sequenceDiagram
-  participant U as Usuario
+  participant U as User
   participant O as orchestraitor
   participant E as sdd-explore
   participant P as sdd-proposal
@@ -82,54 +82,54 @@ sequenceDiagram
   participant JF as jd-fix
 
   U->>O: vamos con sdd / usa SDD
-  O->>O: kickoff + migracion legacy
+  O->>O: kickoff + legacy migration
   alt depth full
-    O->>E: explorar si el area es amplia o desconocida
-    E-->>O: resumen breve
-    O->>P: brief de requisitos y decisiones
-    P-->>O: proposal.md escrito
-    O->>U: gate de proposal
+    O->>E: explore when the area is broad or unknown
+    E-->>O: concise summary
+    O->>P: requirements and decisions brief
+    P-->>O: proposal.md written
+    O->>U: proposal gate
     par specs
-      O->>S: proposal + specs canonicas
-      S-->>O: deltas escritos
+      O->>S: proposal + canonical specs
+      S-->>O: deltas written
     and design
-      O->>D: proposal + specs + decisiones
-      D-->>O: design.md escrito
+      O->>D: proposal + specs + decisions
+      D-->>O: design.md written
     end
-    O->>U: gate de specs + design
+    O->>U: specs + design gate
     O->>T: proposal + specs + design
-    T-->>O: tasks.md escrito
+    T-->>O: tasks.md written
   else depth light
-    O->>O: explora y redacta change.md inline
-    O->>U: gate de change.md
+    O->>O: explore and draft change.md inline
+    O->>U: change.md gate
   end
-  loop olas de tareas
-    O->>I: una ola con escenarios, design y tests
-    I-->>O: resumen + validacion
+  loop task waves
+    O->>I: one wave with scenarios, design, and tests
+    I-->>O: summary + validation
   end
-  O->>V: cold-check contra escenarios de spec
+  O->>V: cold-check against spec scenarios
   V-->>O: pass/fail + gaps
   opt gaps
-    O->>I: brief de fix por gap
-    I-->>O: resumen + validacion
+    O->>I: fix brief for each gap
+    I-->>O: summary + validation
   end
   opt judgment
     alt light
-      O->>JS: review blind (un solo juez)
+      O->>JS: blind review (single judge)
       JS-->>O: findings
       opt CRITICALs
-        O->>JF: solo CRITICALs (max 1 ronda, sin re-juicio)
+        O->>JF: CRITICALs only (max 1 round, no re-judge)
         JF-->>O: fixes + tests
       end
     else verdict-only / full
-      par juicio ciego
-        O->>JA: review blind
+      par blind review
+        O->>JA: blind review
         JA-->>O: findings
-      and juicio ciego
-        O->>JB: review blind
+      and blind review
+        O->>JB: blind review
         JB-->>O: findings
       end
-      opt full (o el usuario elige fix en el verdict gate)
+      opt full
         O->>JF: findings confirmed + emphasis-confirmed
         JF-->>O: fixes + tests
       end

@@ -25,7 +25,7 @@ Do not install with `--domain learning` alone if other domains are already insta
 | `/learn status` | Dashboard across topics: progress, due and upcoming reviews, mastered counts. |
 | `/english [text]` | Explicit English coaching: five-field corrections (`Original/Improved/Explanation/Learning gap/Practice suggestion`), practice prompts, or a progress summary over the gaps inbox. Opt-in only — never passive monitoring. |
 
-Every invocation, in every mode, starts with the due-check: cards with `Next ≤ today` are offered (never forced) before new material. There is no scheduler — the queue is pull-based, so just invoking `/learn` regularly is the cadence.
+Every `/learn` invocation, in every `/learn` mode, starts with the due-check: cards with `Next ≤ today` are offered (never forced) before new material. There is no scheduler — the queue is pull-based, so just invoking `/learn` regularly is the cadence.
 
 ## The methods, and where they bite
 

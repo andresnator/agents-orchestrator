@@ -1,6 +1,15 @@
 # Manual Plugin Installation (Without The Repo Installer)
 
-Every plugin in this repository can be installed into OpenCode by hand, without `installers/opencode.sh`. The three runtime plugins are self-contained single files; the one TUI plugin needs three extra steps. This page documents the exact manual procedure per plugin.
+Every plugin in this repository can be installed into OpenCode by hand, without `installers/opencode.sh`. The three runtime plugins are self-contained single files; the one TUI plugin needs three extra steps.
+
+## Quick Start
+
+Choose one target and create its plugin directory before running any procedure below:
+
+```bash
+TARGET="$HOME/.config/opencode"   # global; use "$PWD/.opencode" for this project only
+mkdir -p "$TARGET/plugins" "$TARGET/commands"
+```
 
 ## Shared Facts
 
@@ -12,7 +21,7 @@ Every plugin in this repository can be installed into OpenCode by hand, without 
 
 ## `graphify-init` (runtime)
 
-Source: `domains/common/plugins/graphify-init.ts`. Imports only Node builtins plus `@opencode-ai/plugin`; reads and writes only per-repo state under `.ai/graphify-out/`.
+Source: `domains/common/plugins/graphify-init.ts`. Imports only Node builtins plus `@opencode-ai/plugin`. It writes per-repository graph state under `.ai/graphify-out/`, maintains the matching `.git/info/exclude` entry, and registers graphs under `~/.graphify/` unless `OPENCODE_GRAPHIFY_GLOBAL=0`.
 
 1. Copy or symlink the single file to `$TARGET/plugins/graphify-init.ts`.
 2. Install the Graphify CLI so `graphify` is on PATH: `uv tool install graphifyy` (or `pipx install graphifyy`). See `docs/graphify.md` for the full lifecycle and the warning against `graphify opencode install`.
@@ -39,7 +48,7 @@ It exposes the read-only `recall_due` / `recall_schedule` tools. The learning do
 
 ## `skill-registry` (runtime)
 
-Source: `domains/meta/plugins/skill-registry.ts`. No prerequisites and no other files (needs Node >= 22.18, which a running OpenCode already implies).
+Source: `domains/meta/plugins/skill-registry.ts`. No additional runtime prerequisites or files. Node >= 22.18 is required only by the repository's standalone test harness.
 
 1. Copy or symlink the single file to `$TARGET/plugins/skill-registry.ts`.
 

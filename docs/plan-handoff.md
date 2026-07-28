@@ -42,7 +42,7 @@ Outcome: <one line: the end state when every slice is done>
 ```
 
 - Slice `Status`: `pending` (row only) → `planned` (planner drafts the bundle, fills `Bundle`) → `adopted` (orchestraitor, at adoption) → `done` (orchestraitor, at archive; `Bundle` points at the archive folder). Any non-`done` slice may also become `dropped` (either agent, only on the user's say-so): dropped slices are excluded from offers, and a dependent of a dropped slice is blocked until the user re-slices or also drops it.
-- Roadmap `Status`: `active` → `done` (orchestraitor, when the last slice archives) or `abandoned` (either agent, only on the user's say-so; abandoned roadmaps get no offers or mentions).
+- Roadmap `Status`: `active` → `done` when every slice is `done` or `dropped`, or `abandoned` (either agent, only on the user's say-so; abandoned roadmaps get no offers or mentions). The actor that closes the final outstanding slice sets `done`.
 - The **next unblocked slice** is the first row by `#` that is not `done` (skipping `dropped`), with every `Depends on` entry `done`. Every offer, scan, and re-entry below resolves against this definition.
 - Slices are planned just-in-time — one slice per planning sitting; later slices stay `pending` rows so they absorb what executed slices taught. "continúa el roadmap <goal>" is the deep-planner re-entry trigger.
 
@@ -63,7 +63,7 @@ Consumer semantics (orchestraitor):
 
 - All four artifacts conform to the `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, and `sdd-draft-tasks` templates, including the Review Workload Forecast guard lines in `tasks.md`.
 - Tasks are small, ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves.
-- Task groups SHOULD carry the `Files:` scope line and the forecast SHOULD include the `Shared hotspots:` guard line (see `sdd-draft-tasks` >= 2.1.0); bundles without them still adopt — the orchestraitor simply serializes those waves instead of parallelizing.
+- Every task group MUST carry a `Files:` scope line, and the forecast MUST include the `Shared hotspots:` guard line (see `sdd-draft-tasks` >= 2.1.0). Intake still accepts legacy or malformed bundles without them, but the orchestraitor serializes those waves instead of parallelizing.
 - Every claim is evidence-backed or marked hypothesis; hypotheses and behavior changes stay out of `tasks.md`.
 - Do not write the `Mode: … | TDD: … | Judgment: … | Depth: … | Delivery: …` kickoff line; those choices belong to the user at adoption.
 - Bundles are always full depth — the four-artifact shape is the contract; the light-mode `change.md` is not a valid bundle format, and adoption never asks Depth.

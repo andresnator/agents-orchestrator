@@ -5,8 +5,8 @@ How to validate the Graphify integration end to end: two automated regression sc
 ## Regression (run first)
 
 ```bash
-bash scripts/test-graphify-init.sh   # 37 cases against a real `opencode serve` — consent, refresh, toasts, locks, shutdown
-bash scripts/validate-harness.sh     # agents, commands, skills, links, script syntax
+bash scripts/test-graphify-init.sh   # isolated regression cases against a real `opencode serve`
+bash scripts/validate-harness.sh     # agents, commands, skills, profiles, plugins, and script syntax
 ```
 
 - [ ] `test-graphify-init.sh` ends with `PASS: graphify-init consent, refresh, and notification contracts`
@@ -19,7 +19,7 @@ The suite runs hermetically (own HOME/XDG, fake `graphify` binary) and covers wh
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
 | A1 | Open OpenCode on a repo with no graph and no mode file | One info toast (8 s) pointing at `/graphify-index`, once per session; zero extracts, zero files written | ✅ 2026-07-28 |
-| A2 | `/graphify-index`, code-only mode | Asks mode in chat; writes `.opencode-index-mode` **before** extracting; Git-excludes `.ai/graphify-out`; builds graph; merges into the global graph under the repo tag | ✅ 2026-07-28 |
+| A2 | `/graphify-index`, code-only mode | Asks mode in chat; takes the lock, writes `.opencode-index-mode`, then extracts; Git-excludes `.ai/graphify-out`; builds graph; merges into the global graph under the repo tag | ✅ 2026-07-28 |
 | A3 | `/graphify-index`, docs mode | States duration and token cost before running; records `{"mode":"docs","backend":"<b>"}`; docs indexed as document/concept nodes | ✅ 2026-07-28 |
 | A4 | `/graphify-index` on an already-indexed repo | Reports the healthy graph and skips — no re-index without an explicit mode change | ✅ 2026-07-28 |
 | A5 | `/graphify-index` on an aggregator folder with nested repos | Discovers git repos ≤2 levels deep (skips hidden dirs, `node_modules`, symlinks), lists them, confirms the set before acting | ✅ 2026-07-28 |
@@ -51,7 +51,7 @@ The suite runs hermetically (own HOME/XDG, fake `graphify` binary) and covers wh
 | D1 | Two sessions on the same repo mid-extract | Only the lock-holding session extracts and toasts; the second stays silent | ✅ 2026-07-28 |
 | D2 | Close OpenCode mid-extract (docs mode makes it visible) | Child `graphify` process dies with the server; next session resumes incrementally via the stale-lock check | ✅ 2026-07-28 |
 
-## E. Query paths (MCP local / CLI global)
+## E. Agent query paths (local and cross-repository MCP)
 
 | ID | Scenario | Expected | Status |
 |---|---|---|---|
@@ -74,9 +74,9 @@ Known limitation (accepted): small-model agents (e.g. the built-in Build agent o
 ## Invariants to watch in every scenario
 
 - [ ] No `graphify-out/` directory ever appears at the repo root (only `.ai/graphify-out/`).
-- [ ] No extract ever runs on a repo without `.opencode-index-mode`.
+- [ ] No first indexing runs without `.opencode-index-mode`; a pre-existing legacy graph may refresh once from its semantic marker and then persist the mode file.
 - [ ] Environment variables never change a recorded mode.
-- [ ] Prompt changes require a **new** OpenCode session — agents load at startup.
+- [ ] Reinstalled prompt changes are applied with `install --reload` when available; otherwise start a new session. Plugin and TUI code changes always require a restart.
 
 ## Next step
 

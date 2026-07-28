@@ -4,7 +4,7 @@ Turn off tool-permission prompts for the sdd domain in one command:
 
 ```bash
 scripts/sdd-automode.sh on     # zero tool-permission prompts during SDD runs
-scripts/sdd-automode.sh off    # restore the previous prompting behavior
+scripts/sdd-automode.sh off    # remove auto-mode overrides
 scripts/sdd-automode.sh show   # per-agent state: on / custom / off
 ```
 
@@ -14,7 +14,7 @@ Restart OpenCode sessions after `on`/`off`; the config is read at startup.
 
 ## What `on` writes
 
-A complete `agent.<name>.permission` block in your user `opencode.json` (default `~/.config/opencode/opencode.json`) for every agent under `domains/sdd/agents/` plus the built-in `general` agent. Agents are discovered by glob, so new sdd agents are covered without editing the script. Every OpenCode permission key is set to `allow`, except keys the agent's repo frontmatter already sets, which are copied verbatim:
+A complete `agent.<name>.permission` block in the selected target config (preferring `opencode.jsonc` when present) for every agent under `domains/sdd/agents/` plus the built-in `general` agent. Agents are discovered by glob, so new sdd agents are covered without editing the script. Every OpenCode permission key is set to `allow`, except keys the agent's repo frontmatter already sets, which are copied verbatim:
 
 - `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify` keep `edit`/`write: deny`.
 - `sdd-proposal`, `sdd-spec`, `sdd-tasks` keep `bash: deny`.
@@ -23,11 +23,11 @@ A complete `agent.<name>.permission` block in your user `opencode.json` (default
 
 Invariants:
 
-- Workflow gates still ask. Kickoff (Mode/TDD/Judgment), proposal/design confirmations, and judgment re-judge gates run through the orchestraitor's `question: allow` — only tool-permission prompts disappear.
+- Workflow gates still ask. Kickoff (`Depth`, `Mode`, `TDD`, `Judgment`, and `Delivery`), proposal/design confirmations, and judgment re-judge gates run through the orchestraitor's `question: allow` — only tool-permission prompts disappear.
 - `agent.<name>.model`/`variant` assignments (however they were written — the model configurator TUI or by hand), non-sdd agents, and top-level config keys are never touched (see [agent-models.md](agent-models.md)).
 - Repo agent frontmatter is never modified; the toggle is user-side config only.
 
-`off` deletes exactly those `permission` blocks (`general` included, always, even with `--no-general`) and prunes emptied objects; agents revert to frontmatter plus your global config.
+`off` deletes exactly those `permission` blocks (`general` included, always, even with `--no-general`) and prunes emptied objects; agents then use frontmatter plus global config. It does not restore overwritten custom blocks. Recover those from the timestamped backup described below.
 
 ## Caveats
 

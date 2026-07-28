@@ -2,13 +2,21 @@
 
 Repo agents never hardcode `model:` in frontmatter. Every agent file under `domains/*/agents/` stays provider-agnostic so the same artifacts work for any user, provider set, or budget. Model assignment is user state and lives in the user's OpenCode config, exactly like API keys.
 
+## Quick Path
+
+1. Install the `meta` domain, then open `/model-configurator` from OpenCode.
+2. Choose global or project scope, select an agent group or profile, and assign models and variants.
+3. Review and apply. The current server hot-applies supported changes; the wizard tells you when a restart is still required.
+
+Use the manual configuration below only when the TUI plugin is unavailable or you need to manage the JSON directly.
+
 ## How It Works
 
 OpenCode merges agent definitions by name: a Markdown agent installed by this repo and an `agent.<name>` block in `opencode.json` combine into one agent. Global config (`~/.config/opencode/opencode.json`) and project config merge too, with the project taking precedence. That native merge already covers static per-agent assignment — no repo mechanism is required.
 
 Model syntax is `provider_id/model_id`. A per-agent `variant` picks a model variant by name (it applies only when the agent uses its configured `model`). Per-agent `options` are still passed through to the provider for anything a variant does not cover.
 
-## Recipe
+## Manual Configuration
 
 Merge a block like this into your `opencode.json` (global for your default policy, project-level to override per repo):
 
