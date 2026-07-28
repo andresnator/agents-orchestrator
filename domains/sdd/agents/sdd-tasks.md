@@ -33,4 +33,14 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return a 1-3 line summary with path written, task group count, wave/dependency notes, and any open questions. Never return the full artifact.
+Return exactly this receipt — never the full artifact:
+
+```yaml
+path: "<tasks.md path written>"
+first_line: "<verbatim first line of the file>"
+groups: <n>
+files_scopes: all | missing:["<group>", ...]
+forecast_guards: present | missing:["<guard line>", ...]
+summary: "<=2 lines: wave/dependency notes>"
+open_questions: []
+```
