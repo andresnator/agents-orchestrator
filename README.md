@@ -46,6 +46,7 @@ installers/opencode.sh status --domain sdd
 | Guide | Use it for |
 |---|---|
 | [Agent models](docs/agent-models.md) | Assigning models and variants per agent |
+| [Delegation receipts](docs/delegation-receipts.md) | Writing compact machine-scannable subagent returns |
 | [Graphify](docs/graphify.md) | Indexing, refreshing, querying, and recovering graphs |
 | [Graphify test plan](docs/graphify-testing.md) | Validating Graphify integration changes |
 | [Hot reload](docs/hot-reload.md) | Applying supported changes without restarting OpenCode |
