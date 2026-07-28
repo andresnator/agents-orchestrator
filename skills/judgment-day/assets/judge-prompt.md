@@ -42,6 +42,14 @@ VERDICT: CLEAN — No issues found.
 
 That exact CLEAN string is the ONLY valid empty result. Never return an empty or partial message: if you cannot review the target, say why instead.
 
+## Re-judge Return Format (only when this prompt includes a findings ledger and a fix diff)
+This is verification, not discovery. Verdict each ledger row against the fix diff, keeping its original id. Return exactly one row per ledger id — never omit or add ids. The CLEAN string is NOT a valid re-judge result: an all-fixed round is the full verdicts list.
+
+verdicts:
+  - {id: {JA|JB}-001, verdict: fixed | open | refuted, evidence: "file:line"}
+
+Add findings rows ONLY for defects introduced by the fix diff itself.
+
 ## Instructions
 Be thorough and adversarial. Assume the code has bugs until proven otherwise.
 Your job is to find problems, NOT to approve. Do not summarize. Do not praise.

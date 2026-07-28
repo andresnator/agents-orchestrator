@@ -69,11 +69,15 @@ Synthesize verdict (Confirmed = both judges; Emphasis-confirmed = one judge, ins
 │       ├── Escalate now → JUDGMENT: ESCALATED ⚠️ (history so far)
 │       ├── Stop here → JUDGMENT: STOPPED 🛑 (report state)
 │       └── Continue ▼
-│       Re-launch Judge A + Judge B in parallel (Round 2)
+│       Re-launch Judge A + Judge B in parallel (Round 2 — re-judge: ledger + fix diff in both prompts)
 │       ▼
-│       Synthesize verdict
+│       Both re-judge results valid? (one `verdicts` row per ledger id — CLEAN string is NEVER valid here)
+│       ├── NO → relaunch only the invalid judge once → still invalid → JUDGMENT: INVALID ROUND ⚠️ (stop)
+│       └── YES ▼
+│       Reconcile verdicts per id (any open → open; both fixed → verified; both refuted → refuted;
+│       fixed vs refuted → fixed + contradiction note) + synthesize any new findings (Pattern 2)
 │       │
-│       ├── Clean → JUDGMENT: APPROVED ✅
+│       ├── Clean (all rows verified/refuted, no new confirmed/emphasis-confirmed) → JUDGMENT: APPROVED ✅
 │       │
 │       └── Still issues →
 │           [loop gate via native-question-ux] — apply Fix 2?
@@ -86,9 +90,9 @@ Synthesize verdict (Confirmed = both judges; Emphasis-confirmed = one judge, ins
 │           ├── Escalate now → JUDGMENT: ESCALATED ⚠️
 │           ├── Stop here → JUDGMENT: STOPPED 🛑
 │           └── Continue ▼
-│           Re-launch Judge A + Judge B in parallel (Round 3)
+│           Re-launch Judge A + Judge B in parallel (Round 3 — same re-judge validity + reconciliation as Round 2)
 │           ▼
-│           Synthesize verdict
+│           Reconcile verdicts per id + synthesize any new findings
 │           │
 │           ├── Clean → JUDGMENT: APPROVED ✅
 │           └── Still issues → JUDGMENT: ESCALATED ⚠️ (report to user)

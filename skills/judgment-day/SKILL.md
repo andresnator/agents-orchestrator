@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.9.0"
+  version: "1.9.1"
   status: in-progress
 ---
 
@@ -50,6 +50,8 @@ Resolve project standards before launching ANY sub-agent. In OpenCode installs, 
 
 **Result validity**: a judge result is valid only if it is exactly `VERDICT: CLEAN — No issues found.` or contains at least one well-formed finding (stable id + severity + `file:line` + failure scenario). An empty, truncated, or malformed response is **invalid — never CLEAN**. Relaunch only that judge once (fresh delegate, same blind prompt). If the retry is still invalid, the round is invalid: emit `JUDGMENT: INVALID ROUND` (see `assets/output-formats.md`) preserving the valid judge's findings in the ledger as unsynthesized — never synthesize a verdict from one judge, never report clean.
 
+**Re-judge validity** (rounds 2+): the rule above applies to discovery rounds only. In a re-judge round the CLEAN token is **not** a valid result — a valid re-judge result is a `verdicts` list carrying exactly one row (`fixed | open | refuted`, with `file:line` evidence) for **every** ledger id named in the brief; a missing or extra id is malformed. `findings` rows may appear only for defects introduced by the fix diff. The same retry-once / `JUDGMENT: INVALID ROUND` handling applies to an invalid re-judge result.
+
 ### Pattern 2: Verdict Synthesis
 
 The **orchestrator** (NOT a sub-agent) compares both judges' returned results:
@@ -85,7 +87,9 @@ Round 1 and the verdict synthesis always run. **After the verdict, nothing touch
 3. Full loop: delegate a **Fix Agent** (a separate sub-agent, never one of the judges; fallback prompt in `assets/fix-prompt.md`); the fixer only touches confirmed and emphasis-confirmed findings. After Fix 1 completes → **loop gate** → re-launch **both judges in parallel** (same blind protocol, fresh delegates).
 4. If the re-judge still finds confirmed issues → **loop gate** → Fix 2 → **loop gate** → re-judge (Round 3).
 5. **Max 2 fix iterations.** If still failing → JUDGMENT: ESCALATED — report to user with full history; do not loop forever.
-6. If both judges return clean → JUDGMENT: APPROVED ✅
+6. If the re-judge round is clean (per the reconciliation below) → JUDGMENT: APPROVED ✅
+
+**Re-judge reconciliation**: the orchestrator reconciles the two judges' `verdicts` lists per ledger id — any `open` keeps the row `open` (a confirmed issue for the loop); both `fixed` → `verified`; both `refuted` → `refuted`; a `fixed`-vs-`refuted` disagreement closes the row as `fixed` with a contradiction note (either way the defect no longer reproduces). New `findings` from a re-judge enter Pattern 2 synthesis normally (both judges saw the same fix diff). The round is **clean** when every ledger row reconciles to `verified` or `refuted` and the round produced no new confirmed or emphasis-confirmed findings.
 
 **Pre-set mode**: when the caller declares a mode (e.g. the SDD `Judgment: light | verdict-only | full` line in `proposal.md`), skip the verdict gate: `light` runs Light Mode (below) with its automatic CRITICAL-only fix; `verdict-only` stops after the verdict report without asking; `full` proceeds as if "Fix and re-judge" was chosen. The loop gates still apply either way.
 

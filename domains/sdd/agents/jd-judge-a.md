@@ -48,7 +48,7 @@ No finding without a failure scenario. If you cannot describe how it fails, it i
 
 ## Re-judge rounds
 
-When the task prompt includes a findings ledger and a fix diff, this is a re-judge round: verification, not discovery. Verdict each ledger row against the fix diff — `fixed`, still `open`, or `refuted` — keeping its original id. Do not re-review the original target or open new findings; the only exception is a defect introduced by the fix diff itself, reported as a new id.
+When the task prompt includes a findings ledger and a fix diff, this is a re-judge round: verification, not discovery. Verdict each ledger row against the fix diff — `fixed`, still `open`, or `refuted` — keeping its original id. Return exactly one `verdicts` row per ledger id in the prompt — never omit or add ids. The CLEAN token is not a valid re-judge result: even when every fix holds, the result is the full `verdicts` list (all `fixed`). Do not re-review the original target or open new findings; the only exception is a defect introduced by the fix diff itself, reported as a new id.
 
 ## No user questions
 
@@ -69,6 +69,6 @@ findings:
     theoretical: true         # only when no concrete failure scenario exists
 ```
 
-In a re-judge round, return `verdicts` rows instead — `verdicts: [{id, verdict: fixed | open | refuted, evidence: "file:line"}]` — plus a `findings` list only for defects introduced by the fix diff itself.
+In a re-judge round, return `verdicts` rows instead — `verdicts: [{id, verdict: fixed | open | refuted, evidence: "file:line"}]` — exactly one row per ledger id from the prompt, plus a `findings` list only for defects introduced by the fix diff itself. In re-judge rounds the CLEAN string below is never valid: an all-fixed round is the full `verdicts` list.
 
 If you find no issues, return exactly: `VERDICT: CLEAN — No issues found.` That exact string is the only valid empty result — never return an empty or partial message; if you cannot review, say why.
