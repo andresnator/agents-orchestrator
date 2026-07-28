@@ -34,4 +34,20 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return a concise pass/fail summary by scenario plus actionable gaps. Keep it short; do not dump logs.
+Return exactly this receipt — no logs, no prose narration, no code blocks. Evidence stays a `file:line` or one-line test pointer the orchestraitor can spot-check.
+
+```yaml
+change: "<change>"
+diff_range: "<range | working-tree>"
+scenarios:                    # one row per spec scenario, nothing else
+  - id: "<capability>/<scenario-slug>"
+    result: PASS | FAIL
+    evidence: "file:line | test:<one-line result>"
+gaps:                         # FAIL rows only; each row is a ready fix-brief seed
+  - scenario: "<id>"
+    files: ["path", ...]
+    fix: "<one line of intent>"
+blockers: []                  # missing or contradictory input; stop without verifying
+```
+
+When every scenario passes, put this terminal line first, then the receipt: `VERIFY: ALL PASS — <n>/<n> scenarios.`
