@@ -2,7 +2,7 @@
 
 This repo stores reusable agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
 
-**OpenCode is the runtime and the authoring format.** Components are written in OpenCode format and installed into OpenCode via `installers/opencode.sh`. The repo stores no runtime state — the installer writes into targets like `~/.config/opencode`, but those directories never become repo artifacts.
+**OpenCode is the runtime and the authoring format.** Components are written in OpenCode format and installed into OpenCode via `installers/opencode.sh`. The repo stores no tracked runtime state — the installer writes into targets like `~/.config/opencode`, but those directories never become repo artifacts.
 
 ## Repo Shape
 
@@ -24,7 +24,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `scripts/sdd-automode.sh` toggles SDD auto-mode: per-agent `permission` blocks in user OpenCode config, never repo artifacts (see `docs/sdd-automode.md`).
 - `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
-- There is no root package manifest, lockfile, CI workflow, or documented test command in this repo.
+- There is no root package manifest, lockfile, CI workflow, or single root test command. Component-specific validation commands are documented below.
 - `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
 - Runtime state directories such as `.engram/`, `.claude/`, `.cursor/`, or tool-local memory chunks must not become managed repo artifacts unless explicitly adopted as an OpenCode component.
 
@@ -92,7 +92,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 
 ## Adding A Component
 
-1. Pick the domain first: `sdd`, `refactor`, `architecture`, `plan`, `docs`, `meta`, or `common`.
+1. Pick the domain first: `sdd`, `refactor`, `architecture`, `plan`, `learning`, `docs`, `meta`, or `common`.
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
 3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
 4. For skills, bump `metadata.version` when changing an existing skill.

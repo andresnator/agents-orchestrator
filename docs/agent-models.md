@@ -2,13 +2,21 @@
 
 Repo agents never hardcode `model:` in frontmatter. Every agent file under `domains/*/agents/` stays provider-agnostic so the same artifacts work for any user, provider set, or budget. Model assignment is user state and lives in the user's OpenCode config, exactly like API keys.
 
+## Quick Path
+
+1. Install the `meta` domain, then open `/model-configurator` from OpenCode.
+2. Choose global or project scope, select an agent group or profile, and assign models and variants.
+3. Review and apply. The current server hot-applies supported changes; the wizard tells you when a restart is still required.
+
+Use the manual configuration below only when the TUI plugin is unavailable or you need to manage the JSON directly.
+
 ## How It Works
 
 OpenCode merges agent definitions by name: a Markdown agent installed by this repo and an `agent.<name>` block in `opencode.json` combine into one agent. Global config (`~/.config/opencode/opencode.json`) and project config merge too, with the project taking precedence. That native merge already covers static per-agent assignment — no repo mechanism is required.
 
 Model syntax is `provider_id/model_id`. A per-agent `variant` picks a model variant by name (it applies only when the agent uses its configured `model`). Per-agent `options` are still passed through to the provider for anything a variant does not cover.
 
-## Recipe
+## Manual Configuration
 
 Merge a block like this into your `opencode.json` (global for your default policy, project-level to override per repo):
 
@@ -95,7 +103,7 @@ Behavior notes:
 - **Where the agent list comes from:** live from the running server (`GET /agent`), which already merges OpenCode's built-ins, this repo's agents, and any agent you installed yourself. Nothing is snapshotted at install time and no opt-in metadata is needed, so `build`, `plan`, and third-party agents are configurable exactly like the repo's own. A server too old to answer, or one reporting no agents, stops the wizard with a toast instead of opening a dialog.
 - **How groups are derived:** from each primary's `task` permission rules, evaluated the way OpenCode evaluates them (last matching rule wins, `*` and `?` glob, `ask` counts as permitted). A subagent becomes a child only when a rule with a *specific* pattern permits it, so a primary that merely inherits the catch-all `allow` — every built-in — is shown as **Delegates to any subagent** rather than adopting every subagent on the server. A subagent claimed by several primaries appears under each (decisions still dedupe by name), an agent with `mode: "all"` is both a parent and a claimable child, and subagents nobody claims explicitly land in **Other subagents** so everything stays reachable. Custom parents sort before OpenCode's native ones. In Review, each row is filed under the first parent in hub order that claims it.
 - **Internal agents:** the ones OpenCode marks `hidden` (`title`, `summary`, `compaction`) are excluded by default; a **Show internal agents** row in the hub reveals them and toggles back.
-- **Standalone install:** installing only the meta domain is enough. Profiles are optional (no `profiles/` directory simply means no Profiles rows), a malformed profile is skipped with a warning instead of blocking the run, and a tier naming agents this server does not have keeps the agents it does have and warns about the rest.
+- **Standalone install:** installing only the meta domain is enough (to install the plugin by hand without the repo installer at all, see `docs/manual-plugin-install.md`). Profiles are optional (no `profiles/` directory simply means no Profiles rows), a malformed profile is skipped with a warning instead of blocking the run, and a tier naming agents this server does not have keeps the agents it does have and warns about the rest.
 - **Saved presets** capture the final concrete `agent → model/variant` result so you can re-apply a whole configuration in about two steps. They live user-side in `~/.config/opencode/model-configurator-presets.json` (always the global config root, independent of the chosen scope) and hold concrete model ids — the repo `profiles/*.json` stay abstract. The name prompt always opens empty; saving under an existing name asks Overwrite / Choose another name first. Inherited (model-less) agents are omitted from the preset.
 - Profiles (`profiles/<name>.json`) map agents to abstract tiers with an optional suggested variant; they never contain concrete model ids, so they work for any provider set. The installer snapshots `profiles/` beside the plugin, so re-run `installers/opencode.sh install` after changing profiles in the repo (the plugin, including `presets.ts`, is installed as copies, not symlinks — re-running install is also how you pick up plugin code changes).
 - The model/variant catalog comes live from the running OpenCode server (`connected` providers intersected with the full catalog) — no cache file and no external process.

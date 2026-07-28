@@ -13,7 +13,7 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 | [learning](domains/learning/README.md) | Interactive multi-session learning around the `mentor` primary agent, plus English coaching wired into it | `mentor` (primary), `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product docs, Jira ticketing, summaries, slide decks, and transcription | `/decide`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt and skill maintenance utilities | `/absorb`, `/prompt-checker`, `model-configurator` (TUI plugin) |
-| [common](domains/common/README.md) | Shared engineering, quality, question UX, and output-refinement skills | `/defend`, `/grill`, transversal skills |
+| [common](domains/common/README.md) | Shared engineering, quality, question UX, and output-refinement skills | `/defend`, `/graphify-index`, `/grill`, transversal skills |
 
 - `domains/`: source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/`: source of truth for reusable skill bodies.
@@ -22,8 +22,8 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 - `skills/<skill>/SKILL.md`: reusable skill contracts.
 - `domains/<domain>/skills/<skill>`: symlink declaring that a domain uses a central skill.
 - `domains/<domain>/tui-plugins/*.tsx`: OpenCode TUI plugins (entrypoint plus same-named companion directory), OpenCode-only.
-- `installers/opencode.sh`: symlink installer for OpenCode (`~/.config/opencode`).
-- `docs/`: workflow notes and migration records.
+- `installers/opencode.sh`: OpenCode component installer (`~/.config/opencode` by default). Most artifacts are symlinked; TUI plugins are generated copies with managed configuration.
+- `docs/`: operational and workflow guides.
 
 Install all components globally:
 
@@ -31,7 +31,7 @@ Install all components globally:
 installers/opencode.sh install
 ```
 
-The installer now defaults to all lifecycle states. Use filters when needed:
+The installer defaults to all lifecycle states. Use filters when needed:
 
 ```bash
 installers/opencode.sh install --domain refactor --status done,testing
@@ -39,9 +39,24 @@ installers/opencode.sh install --project
 installers/opencode.sh status --domain sdd
 ```
 
+`install` is a sync. A filtered install replaces the previous selection, so include every domain and status you want to keep.
+
+## Documentation
+
+| Guide | Use it for |
+|---|---|
+| [Agent models](docs/agent-models.md) | Assigning models and variants per agent |
+| [Graphify](docs/graphify.md) | Indexing, refreshing, querying, and recovering graphs |
+| [Graphify test plan](docs/graphify-testing.md) | Validating Graphify integration changes |
+| [Hot reload](docs/hot-reload.md) | Applying supported changes without restarting OpenCode |
+| [Learning domain](docs/learning-domain.md) | Running multi-session learning workflows |
+| [Manual plugin installation](docs/manual-plugin-install.md) | Installing plugins without the repository installer |
+| [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
+| [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
+
 ## Graphify (optional)
 
-Graphify gives agents a local structural graph for symbol, caller, and impact exploration, plus one machine-wide graph spanning every indexed repository. Install only the CLI:
+Graphify gives agents a local structural graph for symbol, caller, and impact exploration, plus one machine-wide graph spanning every indexed repository. Start with the core CLI:
 
 ```bash
 uv tool install graphifyy   # or: pipx install graphifyy

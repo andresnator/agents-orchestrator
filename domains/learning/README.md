@@ -1,4 +1,4 @@
-# learning
+# Learning Domain
 
 Interactive, multi-session learning built around one command: `/learn`. Inspired by Matt Pocock's `teach` skill, reworked for how Andres learns: Markdown artifacts only (no HTML), Mermaid mindmaps and flowcharts, question-driven retrieval, Cornell note-taking, Leitner spaced repetition, Feynman teach-backs, and the 70-20-10 model (70% doing real exercises in the learner's own repos, 20% Socratic debrief plus community resources, 10% formal micro-lessons with primary sources).
 
@@ -52,4 +52,4 @@ graph TD
     GI -. adopted at due-check .-> D
 ```
 
-Install with `installers/opencode.sh install --domain learning`. Known fallback: if native questions do not surface well from `/english`'s subtask session, drop `subtask: true` from that command or temporarily set `english-tutor` to `mode: primary`; `/learn` runs in the mentor's own primary session and is not affected.
+Install all domains with `installers/opencode.sh install`. Because installation is a sync, use `--domain learning` only when learning is the complete selection you want to keep. Known fallback: if native questions do not surface well from `/english`'s subtask session, drop `subtask: true` from that command or temporarily set `english-tutor` to `mode: primary`; `/learn` runs in the mentor's own primary session and is not affected.

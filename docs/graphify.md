@@ -6,13 +6,15 @@ Compatibility target: OpenCode `1.18.5` and Graphify (`graphifyy`) `0.9.28`.
 
 ## Quick setup
 
-1. Install the CLI (installs both `graphify` and `graphify-mcp`):
+1. Install the core CLI:
 
    ```bash
    uv tool install graphifyy
    # or, without uv:
    pipx install graphifyy
    ```
+
+   Agents need the optional MCP transport. Install `graphifyy[mcp]` and add the OpenCode entries in [MCP server](#mcp-server) when you want agent graph queries.
 
 2. Open a repository and run `/graphify-index` once. It asks whether to index code-only (recommended: seconds, local, free) or docs + code (minutes, spends LLM tokens), runs the first extract, and records the decision in `.ai/graphify-out/.opencode-index-mode`. From then on the plugin refreshes the graph automatically each session. A repository that never ran the command gets one informational toast per session and is never indexed behind your back. To silence the refresher for one session, opt out:
 
@@ -45,7 +47,7 @@ On an aggregator workspace (a plain folder holding cloned repos), the command di
 
 ## Background refresher
 
-Installing the `common` domain installs `domains/common/plugins/graphify-init.ts`. It runs by default (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`). On OpenCode startup the plugin returns immediately, then works in the background:
+Installing the `common` domain installs `domains/common/plugins/graphify-init.ts` (to install this plugin manually without the repo installer, see `docs/manual-plugin-install.md`). It runs by default (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`). On OpenCode startup the plugin returns immediately, then works in the background:
 
 1. Decide what each root needs using only local signals — no Graphify process is spawned to answer this.
 2. Stay silent when the graph is up to date. An already-indexed session never invokes Graphify at all.
@@ -191,14 +193,17 @@ Verified tools: `query_graph`, `get_node`, `get_neighbors`, `get_community`, `go
 
 ## Recovery
 
-The refresher never retries within a session. Two automatic paths cover the common cases: reopening the session retries a failed refresh, and deleting `.ai/graphify-out/graph.json` while `.opencode-index-mode` is present triggers a full automatic rebuild next session. When a toast reports a failure you want fixed now, recover manually:
+The refresher never retries within a session. Two automatic paths cover the common cases: reopening the session retries a failed refresh, and deleting `.ai/graphify-out/graph.json` while `.opencode-index-mode` is present triggers a full automatic rebuild next session. For immediate recovery, read `.ai/graphify-out/.opencode-index-mode` and run the matching command from the repository root:
 
 ```bash
-GRAPHIFY_OUT=.ai/graphify-out graphify extract /path/to/repo --code-only                   # full or incremental rebuild
-GRAPHIFY_OUT=.ai/graphify-out graphify extract /path/to/repo --code-only --allow-partial   # only if Graphify refuses an incomplete extraction
+# code-only mode
+GRAPHIFY_OUT=.ai/graphify-out graphify extract . --code-only --global --as <tag>
+
+# docs mode; use the backend recorded in the mode file
+GRAPHIFY_OUT=.ai/graphify-out graphify extract . --backend <backend> --global --as <tag>
 ```
 
-(`GRAPHIFY_FORCE=1` is not the remedy for a refusal: on `extract` it only disables the incremental gate and semantic-cache reads, producing an expensive full re-scan that gets refused again. `--allow-partial` is the flag that accepts an incomplete result.)
+Use the same repository tag shown by `graphify global list`. If global registration is intentionally disabled with `OPENCODE_GRAPHIFY_GLOBAL=0`, omit `--global --as <tag>`. Add `--allow-partial` only when Graphify refuses an incomplete extraction. `GRAPHIFY_FORCE=1` is not the remedy for that refusal: it disables the incremental gate and semantic-cache reads, producing an expensive full re-scan that gets refused again.
 
 Never reach for `graphify update` here: it ignores `.ai/` and recreates `graphify-out/` at the repository root (see the initializer section).
 
@@ -252,4 +257,4 @@ Notes:
 
 ## Agent behavior
 
-The installed global rules make repository exploration graph-first when a graph exists at `.ai/graphify-out/graph.json`. Agents query the current repository through the `graphify` MCP tools and other indexed repositories through the `graphify-global` MCP tools (tie-break via `~/.graphify/global-manifest.json`), falling back directly to normal LSP/filesystem tools when the tools are unavailable; the read-only CLI is hand-run only. The MCP paths depend entirely on the `opencode.jsonc` MCP entries, which the installer never writes: until you add them yourself, agents resolve `graphify: absent` even when a healthy graph sits on disk. The reusable contract lives in the `graphify-cli` skill; lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, any `install`) are off-limits to agents — first indexing belongs to the human-invoked `/graphify-index` command and refreshing to the `graphify-init` plugin. Domain-specific restrictions still win — SDD agents keep their stricter lifecycle and read-only rules. Cross-repo routing depends on the model's instruction-following: small-model agents may fall back to library-documentation tools despite the rules, so direct questions about other repositories to a frontier agent.
+The installed global rules make repository exploration graph-first when a graph exists at `.ai/graphify-out/graph.json`. Agents query the current repository through the `graphify` MCP tools and other indexed repositories through the `graphify-global` MCP tools (tie-break via `~/.graphify/global-manifest.json`), falling back directly to normal LSP/filesystem tools when the tools are unavailable; the read-only CLI is hand-run only. The MCP paths depend entirely on the `opencode.jsonc` MCP entries, which the installer never writes: without them, the graph may be present but MCP querying is unavailable, so agents fall back to filesystem tools. The reusable contract lives in the `graphify-cli` skill; lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, any `install`) are off-limits to agents — first indexing belongs to the human-invoked `/graphify-index` command and refreshing to the `graphify-init` plugin. Domain-specific restrictions still win — SDD agents keep their stricter lifecycle and read-only rules. Cross-repo routing depends on the model's instruction-following: small-model agents may fall back to library-documentation tools despite the rules, so direct questions about other repositories to a frontier agent.
