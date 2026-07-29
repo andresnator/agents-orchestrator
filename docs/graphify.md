@@ -2,19 +2,25 @@
 
 Graphify is optional. Install only its CLI; the repository installer never edits your OpenCode MCP configuration. Once the `common` domain is installed, the lifecycle splits in two: **first indexing is human-gated behind the `/graphify-index` command** (it asks whether to index and in which mode), and the `graphify-init` plugin keeps already-indexed repositories fresh in the background by default; opt the refresher out per session with `OPENCODE_GRAPHIFY_AUTOINIT=0`.
 
-Compatibility target: OpenCode `1.18.5` and Graphify (`graphifyy`) `0.9.28`.
+Compatibility target: OpenCode `1.18.5`, Graphify (`graphifyy`) `0.9.29`, and MCP Python SDK `1.28.1` for the optional transport. MCP SDK `2.x` is not compatible with Graphify `0.9.29`.
 
 ## Quick setup
 
-1. Install the core CLI:
+1. Install the CLI. Use the MCP variant when agents need graph queries:
 
    ```bash
-   uv tool install graphifyy
+   # CLI only
+   uv tool install "graphifyy==0.9.29"
+
+   # CLI + MCP transport
+   uv tool install --force --with "mcp==1.28.1" "graphifyy[mcp]==0.9.29"
+
    # or, without uv:
-   pipx install graphifyy
+   pipx install "graphifyy==0.9.29"
+   pipx inject graphifyy "mcp==1.28.1"
    ```
 
-   Agents need the optional MCP transport. Install `graphifyy[mcp]` and add the OpenCode entries in [MCP server](#mcp-server) when you want agent graph queries.
+   The MCP pin is deliberate: Graphify `0.9.29` imports the MCP SDK `1.x` API but does not declare an upper bound, so an unconstrained install can resolve incompatible MCP SDK `2.x` and make OpenCode report `MCP error -32000: Connection closed`. Add the OpenCode entries in [MCP server](#mcp-server) when you want agent graph queries.
 
 2. Open a repository and run `/graphify-index` once. It asks whether to index code-only (recommended: seconds, local, free) or docs + code (minutes, spends LLM tokens), runs the first extract, and records the decision in `.ai/graphify-out/.opencode-index-mode`. From then on the plugin refreshes the graph automatically each session. A repository that never ran the command gets one informational toast per session and is never indexed behind your back. To silence the refresher for one session, opt out:
 
@@ -155,15 +161,16 @@ graphify god-nodes --top 10 --graph .ai/graphify-out/graph.json
 
 ## MCP server
 
-The MCP tools are the agent path to both graphs — the repository's own and the global one. The MCP transport is an optional dependency of the CLI package, so install it explicitly:
+The MCP tools are the agent path to both graphs — the repository's own and the global one. The transport is optional and must currently stay on MCP SDK `1.28.1`:
 
 ```bash
-uv tool install "graphifyy[mcp]"
-# already installed via pipx:
-pipx inject graphifyy mcp
+uv tool install --force --with "mcp==1.28.1" "graphifyy[mcp]==0.9.29"
+
+# existing pipx installation:
+pipx inject graphifyy "mcp==1.28.1"
 ```
 
-The `pipx inject graphifyy mcp` line covers the default stdio transport only; running the server with `--transport http` additionally needs `starlette` (or reinstall with `pipx install --force "graphifyy[mcp]"`).
+Do not remove the MCP pin until Graphify supports SDK `2.x`. Graphify `0.9.29` imports `AnyUrl` from `mcp.types`; SDK `2.x` removed that export, so both local and global servers close during startup. The `pipx inject` line covers the default stdio transport only; HTTP transport additionally needs `pipx inject graphifyy starlette`.
 
 Then merge these entries into your user or project `opencode.jsonc` — the repository installer never does it for you:
 
@@ -186,6 +193,15 @@ Then merge these entries into your user or project `opencode.jsonc` — the repo
 ```
 
 OpenCode spawns local MCP servers with the project directory as working directory, so the relative `--graph` path of the `graphify` entry resolves to the current repository's graph; the `graphify-global` entry takes an absolute path (no `~` expansion in the command array) and works from anywhere.
+
+Verify the installed SDK before starting OpenCode:
+
+```bash
+~/.local/share/uv/tools/graphifyy/bin/python -c \
+  'from importlib.metadata import version; from mcp.types import AnyUrl; print(version("mcp"), "AnyUrl ok")'
+```
+
+The expected output is `1.28.1 AnyUrl ok`. After restarting OpenCode, `opencode mcp list` should show both Graphify servers as connected. Missing graph files do not prevent the servers from connecting; run `/graphify-index` once to create the local graph and register it in the global graph.
 
 **`project_path` bypasses `--graph`.** Every tool takes an optional `project_path`, and when it is present the server ignores its own `--graph` and resolves `<project_path>/<GRAPHIFY_OUT>/graph.json` from its *own* environment. Without `GRAPHIFY_OUT` exported where OpenCode launches, that lands on the non-existent `<project_path>/graphify-out/graph.json` and the tool answers that the repository has no graph — while `.ai/graphify-out/graph.json` sits right there. Export `GRAPHIFY_OUT=.ai/graphify-out` in your shell profile so the server inherits it; agents that omit `project_path` are unaffected.
 
@@ -211,7 +227,8 @@ Run these **from the repository root**: `built_at_commit` records the HEAD of th
 
 Other common checks:
 
-- Missing CLI: `uv tool install graphifyy` (or `pipx install graphifyy`).
+- Missing CLI: `uv tool install "graphifyy==0.9.29"` (or `pipx install "graphifyy==0.9.29"`).
+- `MCP error -32000: Connection closed` plus `cannot import name 'AnyUrl' from 'mcp.types'`: reinstall with `uv tool install --force --with "mcp==1.28.1" "graphifyy[mcp]==0.9.29"`, then restart OpenCode.
 - `--code-only` needs no API key and no network. Omitting it enables semantic LLM extraction, which does; the refresher passes it unless the repository's recorded mode is docs (see the next section).
 - Everything Graphify writes for a repo lives under `.ai/graphify-out/`, so the single `.ai/graphify-out` exclude entry covers the whole working tree.
 - A stray `graphify-out/` at the repository root means someone ran `graphify update`, `watch`, or an `extract` without `GRAPHIFY_OUT` by hand; delete it and rebuild with the command above.
