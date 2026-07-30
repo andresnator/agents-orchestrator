@@ -192,7 +192,22 @@ Then merge these entries into your user or project `opencode.jsonc` — the repo
 }
 ```
 
-OpenCode spawns local MCP servers with the project directory as working directory, so the relative `--graph` path of the `graphify` entry resolves to the current repository's graph; the `graphify-global` entry takes an absolute path (no `~` expansion in the command array) and works from anywhere.
+The relative `--graph` of the `graphify` entry only resolves when the server's working directory really is the repository root, and the `graphify-global` entry takes an absolute path (no `~` expansion in the command array) so it works from anywhere.
+
+**The relative form fails silently.** Asked for a graph it cannot find, `graphify-mcp` answers `graph.json not found` as plain text with `isError: false`. The model sees a normal, confident answer meaning "this repo has no graph", so it does not retry and does not report a problem — it just falls back to grep and file reading for the rest of the session. Nothing in the logs marks it, and the symptom is indistinguishable from a repository that genuinely has no graph. A misresolved relative path therefore costs you the whole graph-first strategy while looking like it is working.
+
+Belt and braces — do both, they cover different resolution paths:
+
+1. Export `GRAPHIFY_OUT=.ai/graphify-out` in the shell profile that launches OpenCode. This is what makes a `project_path` query resolve correctly (see below) and is the only form that survives an unexpected working directory.
+2. For a repository you use constantly, pin the absolute path in that project's `.opencode/opencode.json` instead of inheriting the relative global entry:
+
+   ```jsonc
+   { "mcp": { "graphify": { "type": "local", "command": ["graphify-mcp", "--graph", "/abs/path/to/repo/.ai/graphify-out/graph.json"], "enabled": true } } }
+   ```
+
+Verify rather than assume — ask an agent for `graph_stats` in a repository that has a graph. A node count means the path resolves; `graph.json not found` means it does not, whatever the config looks like.
+
+**Dropping `graphify-global`.** Every enabled server injects all of its tool schemas into every agent's context on every turn, so the two Graphify entries together cost roughly 3k tokens per turn per agent whether or not anything queries them. If cross-repository questions are rare for you, disable `graphify-global` in the global config and enable it per project (or turn it on when you need it): the local entry is what pays for itself.
 
 Verify the installed SDK before starting OpenCode:
 
