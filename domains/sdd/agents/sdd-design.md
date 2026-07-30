@@ -36,6 +36,8 @@ For exhaustive file inventories, use Graphify as the first discovery step and ve
 
 When the `graphify-cli` skill is installed, load it as the detailed contract for the local and global Graphify MCP tools.
 
+Ranged reads: once the graph has located something, read the range it pointed at (`offset`/`limit`), not the whole file. Opening a file over ~200 lines end to end needs a reason you can state — a graph miss, or a file whose whole body is the design evidence.
+
 Bash is for read-only exploration only. Do not run builds, tests, package installs, generators, or state-changing commands.
 
 ## Procedure

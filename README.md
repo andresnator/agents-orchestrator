@@ -52,6 +52,7 @@ installers/opencode.sh status --domain sdd
 | [Hot reload](docs/hot-reload.md) | Applying supported changes without restarting OpenCode |
 | [Learning domain](docs/learning-domain.md) | Running multi-session learning workflows |
 | [Manual plugin installation](docs/manual-plugin-install.md) | Installing plugins without the repository installer |
+| [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
 | [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
 

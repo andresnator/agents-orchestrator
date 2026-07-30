@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "1.9.2"
+  version: "1.9.3"
   status: in-progress
 ---
 
@@ -114,12 +114,12 @@ The cheap tier for bounded, medium-risk changes: ONE blind judge instead of two.
 
 ## Templates
 
-Read these files on demand — each one says when:
+Read these files on demand — each one says when. Never load them alongside this file: the orchestrator carries the whole change in its context, and these templates together are larger than this contract. Loading one before the step that needs it is a context leak, and most runs need none of them.
 
 - `assets/judge-prompt.md` — fallback judge prompt; only when `jd-judge-a`/`jd-judge-b` (or `jd-solo` for light mode) are not pre-registered, with an optional A/B emphasis differentiation mirroring those agents and a solo variant for light mode.
 - `assets/fix-prompt.md` — fallback fix agent prompt; only when `jd-fix` is not pre-registered.
-- `assets/output-formats.md` — verdict table plus APPROVED/VERDICT/FIXED/ESCALATED/STOPPED templates; read when synthesizing a verdict and when emitting the final judgment.
-- `references/decision-tree.md` — the full step-by-step flow diagram with every confirmation gate.
+- `assets/output-formats.md` — verdict table plus APPROVED/VERDICT/FIXED/ESCALATED/STOPPED templates; read at the synthesis step, not before launching the judges.
+- `references/decision-tree.md` — the full step-by-step flow diagram with every confirmation gate; read only when the flow above leaves a gate or transition ambiguous.
 
 ## Language
 

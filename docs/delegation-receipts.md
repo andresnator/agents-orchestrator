@@ -17,10 +17,10 @@ Every receipt in this repo follows the same conventions; the concrete schema liv
 ## Where it is used
 
 - `domains/sdd/agents/sdd-verify.md` — scenario receipt with `gaps` rows that seed fix briefs directly.
-- `domains/sdd/agents/sdd-implement.md` — wave receipt; a non-empty `out_of_scope` triggers re-planning.
+- `domains/sdd/agents/sdd-implement.md` — wave receipt with one `assertions` row per task (`task -> file:line`) so the orchestraitor integrates from fields instead of rereading the wave's files; a non-empty `out_of_scope` triggers re-planning. A `merge` brief returns a different receipt: `merged` rows (one per delta, RENAMED naming both sides), `specs_written`, and `stale` as the leftover channel.
 - `domains/sdd/agents/jd-judge-a.md`, `jd-judge-b.md`, `jd-solo.md` — findings receipt (plus `verdicts` in re-judge rounds); consumed by the `judgment-day` synthesis.
 - `domains/sdd/agents/jd-fix.md` — fixes receipt.
-- `domains/sdd/agents/sdd-proposal.md`, `sdd-spec.md`, `sdd-design.md`, `sdd-tasks.md` — drafting receipts with path + assertion fields; consumed by the sdd `orchestraitor` and the plan `deep-planner` (step 8 reconciles from receipts and re-reads only `tasks.md`).
+- `domains/sdd/agents/sdd-proposal.md`, `sdd-spec.md`, `sdd-design.md`, `sdd-tasks.md` — drafting receipts with path + assertion fields; consumed by the sdd `orchestraitor` and the plan `deep-planner` (step 8 reconciles from receipts and re-reads only `tasks.md`). In light mode `sdd-proposal` extends its receipt with `deltas` (one line per Spec Delta) and `groups` (task group count) so waves get scheduled without reading `change.md`.
 - `domains/refactor/agents/refactor-analyzer.md`, `domains/architecture/agents/arch-analyzer.md` — the pre-existing analyzer idiom (max 7 findings, `Output budget` brief field) this pattern generalizes.
 
 ## Writing a new one

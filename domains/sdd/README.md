@@ -13,8 +13,8 @@ Spec-driven development around one primary coordinator: `orchestraitor`. The SDD
 | Agent (subagent) | `jd-solo` | Runs balanced light-mode review |
 | Agent (subagent) | `sdd-design` | Drafts `design.md` from code evidence |
 | Agent (subagent) | `sdd-explore` | Discovers codebase structure read-only |
-| Agent (subagent) | `sdd-implement` | Implements one approved task wave |
-| Agent (subagent) | `sdd-proposal` | Drafts `proposal.md` from an approved brief |
+| Agent (subagent) | `sdd-implement` | Implements one approved task wave, or merges deltas at archive |
+| Agent (subagent) | `sdd-proposal` | Drafts `proposal.md`, or `change.md` at light depth, from an approved brief |
 | Agent (subagent) | `sdd-spec` | Drafts OpenSpec delta specifications |
 | Agent (subagent) | `sdd-tasks` | Drafts dependency-ordered `tasks.md` |
 | Agent (subagent) | `sdd-verify` | Cold-checks implementation against scenarios |
@@ -31,7 +31,9 @@ Assumes the `common` domain is installed: the transversal `grilling`, `judgment-
 
 The orchestraitor keeps the interview, confirmation gates, integration, checkbox updates, and archive in the main session. Phase work goes to dedicated subagents so each phase can receive its own model/provider via the user's `opencode.json` (see `docs/agent-models.md`) without changing the flow. The built-in `general` subagent remains allowlisted only for auxiliary self-contained chores such as lateral research, fixtures, or background test suites; it must not draft, implement, or verify SDD phases.
 
-Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonical `specs/` per capability, active `changes/<name>/` with proposal/design/spec deltas/tasks, and `changes/archive/` with deltas merged into canonical specs on completion. At kickoff the orchestraitor proposes a depth — `full` (four artifacts via phase subagents) or `light` (a single `change.md` with Why/What, Spec Deltas, and Tasks, drafted inline via the `sdd-draft-light` skill); implement and the archive spec-merge are identical in both, and verify runs the same cold-check with a depth-scaled fix budget (one fix round at `light`, two at `full`). In automatic mode the Review Workload Forecast decision and the first `commit-per-wave` commit are applied and reported instead of blocking. Implementation runs in waves: task groups declare `Files:` scopes plus a `Shared hotspots:` guard line, and only waves with disjoint scopes and no shared hotspot launch in parallel — each on scoped validation, with the full suite run once per round by the orchestraitor; anything else serializes. At resume/startup, legacy `.orchestraitor/` or `.orchestrator/` state is migrated into `.ai/orchestrator/` without overwriting existing files.
+The orchestraitor's own context is the flow's scarcest resource — it accumulates across every phase while a subagent's is discarded on return — so it runs under a read budget: kickoff and marker lines, `tasks.md` guard lines and checkbox state, an artifact it is about to edit, and the exact `file:line` an evidence row names. It never reads source files to understand code, never rereads the files a receipt already asserts on, and reads state with ranged reads rather than whole files. Subagents return the compact receipts in `docs/delegation-receipts.md` carrying assertion fields precisely so integration is a field check, not a re-read.
+
+Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonical `specs/` per capability, active `changes/<name>/` with proposal/design/spec deltas/tasks, and `changes/archive/` with deltas merged into canonical specs on completion. At kickoff the orchestraitor proposes a depth — `full` (four artifacts via phase subagents) or `light` (a single `change.md` with Why/What, Spec Deltas, and Tasks, drafted by `sdd-proposal` in light mode via the `sdd-draft-light` skill); implement and the archive spec-merge are identical in both, and verify runs the same cold-check with a depth-scaled fix budget (one fix round at `light`, two at `full`). In automatic mode the Review Workload Forecast decision and the first `commit-per-wave` commit are applied and reported instead of blocking. Implementation runs in waves: task groups declare `Files:` scopes plus a `Shared hotspots:` guard line, and only waves with disjoint scopes and no shared hotspot launch in parallel — each on scoped validation, with the full suite run once per round by the orchestraitor; anything else serializes. At resume/startup, legacy `.orchestraitor/` or `.orchestrator/` state is migrated into `.ai/orchestrator/` without overwriting existing files.
 
 The orchestraitor also adopts plans drafted elsewhere: external planners (e.g. `refactor-planner`) leave complete bundles under `.ai/<planner>/changes/<change>/` marked `Status: ready-for-sdd`, and "ejecuta el plan <change>" moves the bundle into `.ai/orchestrator/changes/` and runs it from implement onward. The contract is generic — see `docs/plan-handoff.md`. Bundles carrying a `Roadmap: <goal> | Slice: <n>/<total>` second line belong to a slice roadmap at `.ai/roadmaps/<goal>.md`: at archive the orchestraitor flips that slice to `done` and offers the next slice in one line — the user confirms each hop; it never auto-continues.
 
@@ -39,7 +41,7 @@ Kickoff runs only after explicit SDD activation and skips anything already state
 
 | Question | Options |
 |---|---|
-| Depth | `light` (single `change.md` drafted inline, no drafting subagents) / `full` (four artifacts via phase subagents); the orchestraitor assesses the scope and proposes one |
+| Depth | `light` (single `change.md` via one drafting subagent) / `full` (four artifacts via phase subagents); the orchestraitor assesses the scope and proposes one |
 | Mode | `interactive` (interview plus confirmation gates) / `automatic` (draft everything, implement, summarize at the end) |
 | TDD | test-first per task / tests alongside the implementation |
 | Judgment | `none` (no adversarial review) / `light` (one solo `jd-solo` judge, automatic fix of CRITICALs only, one round, no re-judge) / `verdict-only` (blind dual judges plus verdict, no fixes) / `full` (fixes plus the gated re-judge loop) |
@@ -50,8 +52,8 @@ graph TD
   user[User: vamos con sdd] --> orch[orchestraitor]
   intake[".ai/*/changes: ready-for-sdd bundles"] -->|ejecuta el plan| orch
   orch --> explore[sdd-explore]
-  orch -->|Depth light: explore + change.md inline| implement
   orch --> proposal[sdd-proposal]
+  proposal -->|Depth light: change.md| implement
   proposal --> spec[sdd-spec]
   proposal --> design[sdd-design]
   spec --> tasks[sdd-tasks]
@@ -100,7 +102,8 @@ sequenceDiagram
     O->>T: proposal + specs + design
     T-->>O: tasks.md written
   else depth light
-    O->>O: explore and draft change.md inline
+    O->>P: light brief with kickoff decisions + scope
+    P-->>O: change.md written (deltas + groups)
     O->>U: change.md gate
   end
   loop task waves
@@ -135,7 +138,11 @@ sequenceDiagram
       end
     end
   end
+  O->>I: merge brief (deltas -> canonical specs)
+  I-->>O: merged + stale receipt
   O->>O: archive
 ```
 
-Resume: artifacts are the state, the conversation is disposable — in a new session say "continúa <change>" and the orchestraitor rereads `.ai/orchestrator/changes/<change>/` and resumes from the first unchecked task without repeating kickoff.
+Resume: artifacts are the state, the conversation is disposable — in a new session say "continúa <change>" and the orchestraitor reads the kickoff and guard lines plus the checkbox state of `.ai/orchestrator/changes/<change>/` with ranged reads, and resumes from the first unchecked task without repeating kickoff.
+
+Flow effectiveness is exercised with the prioritized scenario catalog in `docs/sdd-test-plan.md` (fixtures, exact trigger phrases, pass criteria, and negative tests for known contract defects). Part of it runs unattended: `scripts/test-sdd-automode.sh` covers the auto-mode permission contracts for free, and `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh smoke` drives `orchestraitor` headlessly against the `java-orders` fixture. Interactive-gate scenarios stay manual — under `--auto` a question is rendered as text and ends the turn.

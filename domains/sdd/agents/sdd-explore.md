@@ -25,6 +25,8 @@ For exhaustive file inventories, use Graphify as the first discovery step and ve
 
 When the `graphify-cli` skill is installed, load it as the detailed contract for the local and global Graphify MCP tools.
 
+Ranged reads: once the graph has located something, read the range it pointed at (`offset`/`limit`), not the whole file. Reading a file over ~200 lines end to end needs a reason you can state — a graph miss, or a file whose whole body is the answer.
+
 4-file backstop: if you find yourself needing more than 3 files to understand something, your exploration approach is wrong. Re-query Graphify with a narrower question instead of reading more files.
 
 ## Result (final message)

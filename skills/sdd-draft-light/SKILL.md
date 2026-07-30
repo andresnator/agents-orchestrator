@@ -5,12 +5,12 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.0"
+  version: "2.0.0"
 ---
 
 ## Activation Contract
 
-Use when drafting the single `change.md` artifact for an SDD change whose kickoff recorded `Depth: light`. Loaded inline by the sdd `orchestraitor`; the interview and decisions already happened there. No drafting subagents are involved.
+Use when drafting the single `change.md` artifact for an SDD change whose kickoff recorded `Depth: light`. Loaded by the sdd `sdd-proposal` agent in light mode; the interview and decisions already happened in the `orchestraitor` and arrive in the brief as binding.
 
 ## Hard Rules
 
@@ -26,7 +26,7 @@ Use when drafting the single `change.md` artifact for an SDD change whose kickof
 
 | Situation | Action |
 | --- | --- |
-| Draft reveals >~400 estimated changed lines, a sprawling new capability, or cross-cutting risk | Stop and recommend upgrading to full depth; the draft becomes input to the `sdd-proposal` brief. |
+| Draft reveals >~400 estimated changed lines, a sprawling new capability, or cross-cutting risk | Write the draft anyway and report the oversized scope as an open question; upgrading to full depth is the orchestraitor's call, not the drafting agent's. |
 | Capability has no canonical spec | Put all its behavior under ADDED Requirements. |
 | Implementation detail appears in a delta | Move it to a task; keep deltas behavioral. |
 
@@ -36,11 +36,11 @@ Use when drafting the single `change.md` artifact for an SDD change whose kickof
 2. Draft `## Why / What` from the request and kickoff decisions: problem, gap, observable outcome, scope boundaries.
 3. Draft `## Spec Deltas` with one `### Delta for {capability}` block per touched capability, reading canonical specs first when they exist.
 4. Draft `## Tasks` as a dependency-ordered checklist consistent with the deltas.
-5. Check the upgrade gate and the word cap before presenting or writing.
+5. Check the upgrade gate and the word cap, then write the file.
 
 ## Output Contract
 
-The drafted `change.md` content plus open questions. When loaded by the orchestraitor, the orchestraitor owns the write and the confirmation gate.
+The `change.md` file written at its target path, plus open questions. The loading agent owns the write; the orchestraitor owns the confirmation gate and never receives the artifact body — only the drafting agent's receipt.
 
 ## References
 
