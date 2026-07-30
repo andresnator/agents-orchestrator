@@ -112,5 +112,7 @@ Adding a component must not require editing any installer.
 - For model-configurator changes, run `scripts/test-model-configurator.sh contracts` (shell + TypeScript suites; the TypeScript half needs `npm`) and, with a real binary, `OPENCODE_BIN=<path> scripts/test-model-configurator.sh smoke`.
 - For Graphify initializer changes, run `scripts/test-graphify-init.sh`; it uses isolated HOME/XDG state, a fake Graphify binary, and OpenCode's `/global/event` stream.
 - For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
+- For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
+- For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke` or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
 - For skill-registry plugin changes, run `scripts/test-skill-registry.sh`; it runs inside a throwaway HOME/worktree (project-over-user precedence, symlink-cycle dedupe, hash no-op, legacy `.atl` migration, retry after failure, `.git/info/exclude` ownership) and needs Node >= 22.18.
 - Do not commit unless explicitly asked.

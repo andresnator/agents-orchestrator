@@ -139,3 +139,5 @@ sequenceDiagram
 ```
 
 Resume: artifacts are the state, the conversation is disposable — in a new session say "continúa <change>" and the orchestraitor rereads `.ai/orchestrator/changes/<change>/` and resumes from the first unchecked task without repeating kickoff.
+
+Flow effectiveness is exercised with the prioritized scenario catalog in `docs/sdd-test-plan.md` (fixtures, exact trigger phrases, pass criteria, and negative tests for known contract defects). Part of it runs unattended: `scripts/test-sdd-automode.sh` covers the auto-mode permission contracts for free, and `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh smoke` drives `orchestraitor` headlessly against the `java-orders` fixture. Interactive-gate scenarios stay manual — under `--auto` a question is rendered as text and ends the turn.

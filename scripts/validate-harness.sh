@@ -219,6 +219,12 @@ if [ -x scripts/test-model-configurator.sh ] && command -v python3 >/dev/null 2>
     fail scripts/test-model-configurator.sh "shell contracts failed"
 fi
 
+# --- Deterministic sdd-automode contracts (jq-gated) ---
+if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
+  scripts/test-sdd-automode.sh >/dev/null ||
+    fail scripts/test-sdd-automode.sh "sdd-automode contracts failed"
+fi
+
 # --- Deterministic skill-registry plugin contracts (Node >= 22.18-gated) ---
 if [ -x scripts/test-skill-registry.sh ] && command -v node >/dev/null 2>&1 &&
   node -e 'process.exit(process.features && process.features.typescript ? 0 : 1)' >/dev/null 2>&1; then
