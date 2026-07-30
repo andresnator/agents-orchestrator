@@ -232,11 +232,14 @@ fi
 # editor is not exercised. Reaching it takes a cycle that drops the value and re-adds it — an
 # `uninstall`, or an `install` under a narrower `--domain` filter — which is why real drift
 # accumulated 22 blank entries in a live tui.json while double installs looked clean. The
-# check therefore compares two full uninstall/install cycles plus one plain repeat.
+# check therefore snapshots the fresh install as the baseline and compares two full
+# uninstall/install cycles plus one plain repeat against it, so drift introduced by the very
+# first cycle is caught too. `*.bak` files are excluded: they are point-in-time backups of the
+# pre-edit state, so they legitimately appear only once a cycle has run.
 target_snapshot() {
   (
     cd "$1" || exit 1
-    find . -mindepth 1 | LC_ALL=C sort | while IFS= read -r entry; do
+    find . -mindepth 1 ! -name '*.bak' | LC_ALL=C sort | while IFS= read -r entry; do
       if [ -L "$entry" ]; then
         printf 'link\t%s\t%s\n' "$entry" "$(readlink "$entry")"
       elif [ -d "$entry" ]; then
@@ -264,14 +267,15 @@ if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
   }
 
   if run_installer install fresh &&
+    { target_snapshot "$idem_target" >"$idem_dir/fresh.txt"; } &&
     run_installer uninstall "cycle 1" && run_installer install "cycle 1" &&
     { target_snapshot "$idem_target" >"$idem_dir/cycle1.txt"; } &&
     run_installer uninstall "cycle 2" && run_installer install "cycle 2" &&
     { target_snapshot "$idem_target" >"$idem_dir/cycle2.txt"; } &&
     run_installer install repeat &&
     { target_snapshot "$idem_target" >"$idem_dir/repeat.txt"; }; then
-    for idem_step in cycle2 repeat; do
-      diff -u "$idem_dir/cycle1.txt" "$idem_dir/$idem_step.txt" >"$idem_dir/$idem_step.diff" 2>&1 && continue
+    for idem_step in cycle1 cycle2 repeat; do
+      diff -u "$idem_dir/fresh.txt" "$idem_dir/$idem_step.txt" >"$idem_dir/$idem_step.diff" 2>&1 && continue
       sed -n '1,40p' "$idem_dir/$idem_step.diff" >&2
       fail installers/opencode.sh "install is not idempotent: $idem_step changed the target"
     done
