@@ -83,6 +83,21 @@ const ERROR_DURATION_MS = 8_000
 // solely so the test suite can shrink or stretch the delay; it never changes behavior shape.
 const TOAST_READY_FALLBACK_MS = 10_000
 const TOAST_DELAY_ENV = "OPENCODE_GRAPHIFY_TOAST_DELAY_MS"
+// No spawn may hang forever. The extract holds the per-repo lock for its whole run, and the
+// lock is only released when the call resolves — so a wedged child (a docs-mode backend call
+// that never answers, a git probe on an unreachable network mount) blocks every later session
+// in that repository until the server process itself dies. On expiry the child is killed and
+// the call resolves as a failure, taking the normal failure path that releases the lock.
+// Probes are sub-second in practice; extract is minutes in docs mode, so its budget is wide
+// enough that only a genuinely stuck run hits it. The env override exists solely so the test
+// suite can shrink the extract budget; it never changes behavior shape.
+const PROBE_TIMEOUT_MS = 15_000
+const EXTRACT_TIMEOUT_MS = 30 * 60 * 1_000
+const EXTRACT_TIMEOUT_ENV = "OPENCODE_GRAPHIFY_EXTRACT_TIMEOUT_MS"
+// SIGTERM first, so Graphify can unwind; SIGKILL is the backstop for a child that ignores it.
+const KILL_GRACE_MS = 2_000
+const timedOutMessage = (binary: string, timeoutMs: number) =>
+  `${binary} exceeded its ${Math.round(timeoutMs / 1_000)}s budget and was terminated`
 
 const TOAST_VARIANTS = {
   ERROR: "error",
@@ -254,26 +269,60 @@ function installShutdownHooks() {
   }
 }
 
+function extractTimeoutMs() {
+  const raw = process.env[EXTRACT_TIMEOUT_ENV]
+  if (raw !== undefined) {
+    const parsed = Number(raw)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+  return EXTRACT_TIMEOUT_MS
+}
+
+type RunOptions = {
+  env?: Record<string, string>
+  onSpawn?: (child: ChildProcess) => void
+  timeoutMs?: number
+}
+
 function runCommand(
   binary: string,
   args: readonly string[],
   root: string,
-  extraEnv?: Record<string, string>,
-  onSpawn?: (child: ChildProcess) => void,
+  options: RunOptions = {},
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
     installShutdownHooks()
     const child = spawn(binary, [...args], {
       cwd: root,
-      env: extraEnv ? { ...process.env, ...extraEnv } : process.env,
+      env: options.env ? { ...process.env, ...options.env } : process.env,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
     })
     liveChildren.add(child)
-    onSpawn?.(child)
+    options.onSpawn?.(child)
     let stdout = ""
     let stderr = ""
     let spawnError: Error | undefined
+
+    const timeoutMs = options.timeoutMs ?? PROBE_TIMEOUT_MS
+    let killTimer: ReturnType<typeof setTimeout> | undefined
+    const kill = (signal: NodeJS.Signals) => {
+      try {
+        child.kill(signal)
+      } catch (error) {
+        console.error(`${LOG_PREFIX} cannot terminate ${binary}: ${errorMessage(error)}`)
+      }
+    }
+    // Reported as a spawn error, not a non-zero exit: a terminated run has no output to
+    // classify, so it must never be mistaken for an empty corpus.
+    const budgetTimer = setTimeout(() => {
+      spawnError = new Error(timedOutMessage(binary, timeoutMs))
+      kill("SIGTERM")
+      killTimer = setTimeout(() => kill("SIGKILL"), KILL_GRACE_MS)
+      killTimer.unref?.()
+    }, timeoutMs)
+    // Timers must never keep the host process alive on their own.
+    budgetTimer.unref?.()
 
     child.stdout?.on("data", (chunk) => {
       stdout = appendBoundedOutput(stdout, chunk)
@@ -285,6 +334,8 @@ function runCommand(
       spawnError = error
     })
     child.once("close", (exitCode) => {
+      clearTimeout(budgetTimer)
+      if (killTimer) clearTimeout(killTimer)
       liveChildren.delete(child)
       resolve({ exitCode, stdout, stderr, error: spawnError })
     })
@@ -293,8 +344,8 @@ function runCommand(
 
 // Every Graphify call carries GRAPHIFY_OUT, including the --version probe: the value is what
 // makes the CLI and the MCP server agree on where this repository's graph lives.
-function runGraphify(args: readonly string[], root: string, onSpawn?: (child: ChildProcess) => void) {
-  return runCommand(GRAPHIFY_BINARY, args, root, { [GRAPHIFY_OUT_ENV]: OUT_RELATIVE }, onSpawn)
+function runGraphify(args: readonly string[], root: string, options: Omit<RunOptions, "env"> = {}) {
+  return runCommand(GRAPHIFY_BINARY, args, root, { ...options, env: { [GRAPHIFY_OUT_ENV]: OUT_RELATIVE } })
 }
 
 function isMissingBinary(result: CommandResult) {
@@ -726,8 +777,11 @@ async function buildRepoGraph(
       const headBefore = await gitValue(root, GIT_HEAD_ARGS)
       // Awaited after the run so releasing the lock can never race a still-pending write.
       let childPidRecorded: Promise<void> = Promise.resolve()
-      const run = await runGraphify(args, root, (child) => {
-        childPidRecorded = recordLockChildPid(root, child.pid)
+      const run = await runGraphify(args, root, {
+        onSpawn: (child) => {
+          childPidRecorded = recordLockChildPid(root, child.pid)
+        },
+        timeoutMs: extractTimeoutMs(),
       })
       await childPidRecorded
       if (run.error || run.exitCode !== 0) {

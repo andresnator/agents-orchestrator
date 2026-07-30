@@ -18,6 +18,9 @@ INSTALL_HINT="uv tool install graphifyy (or pipx install graphifyy)"
 # override this to pin each flush trigger separately.
 TOAST_FLUSH_DELAY_MS_DEFAULT=200
 TOAST_DELAY_MS=$TOAST_FLUSH_DELAY_MS_DEFAULT
+# The extract time budget (real default 30 minutes, far past any honest run). Only the timeout
+# test shrinks it; the sentinel launches with the variable truly absent everywhere else.
+EXTRACT_TIMEOUT_MS="unset"
 
 if [[ -z "$OPENCODE_BIN" ]]; then
   echo "FAIL: opencode is required (set OPENCODE_BIN to override)" >&2
@@ -303,6 +306,13 @@ start_server() {
   else
     backend_prefix=(env "OPENCODE_GRAPHIFY_BACKEND=$docs_backend")
   fi
+  # Same sentinel handling for the extract time budget: absent means the plugin's own default.
+  local -a extract_timeout_prefix
+  if [[ "$EXTRACT_TIMEOUT_MS" == unset ]]; then
+    extract_timeout_prefix=(env -u OPENCODE_GRAPHIFY_EXTRACT_TIMEOUT_MS)
+  else
+    extract_timeout_prefix=(env "OPENCODE_GRAPHIFY_EXTRACT_TIMEOUT_MS=$EXTRACT_TIMEOUT_MS")
+  fi
 
   HOME="$HOME_DIR" \
     XDG_CONFIG_HOME="$XDG_DIR" \
@@ -315,6 +325,7 @@ start_server() {
     "${global_prefix[@]}" \
     "${docs_prefix[@]}" \
     "${backend_prefix[@]}" \
+    "${extract_timeout_prefix[@]}" \
     "$OPENCODE_BIN" serve --hostname 127.0.0.1 --port "$PORT" --print-logs --log-level ERROR \
     >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
@@ -1629,6 +1640,32 @@ shouldKillRunningExtractWhenServerIsTerminated() {
   cleanup_processes
 }
 
+shouldKillExtractThatExceedsItsTimeBudget() {
+  # Given a build that never finishes on its own and a 1s extract budget: the wedged docs-mode
+  # run that used to hold the per-repo lock until the whole server process died.
+  local root
+  local builder_pid
+  root=$(make_committed_repo timeout-repo)
+  plant_mode "$root" code-only
+  hold_builds "$root"
+  EXTRACT_TIMEOUT_MS=1000
+  start_server extract-timeout 1 "$FAKE_BIN_DIR:/usr/bin:/bin"
+  EXTRACT_TIMEOUT_MS="unset"
+
+  # When
+  request_config "$root" "$SUITE_DIR/extract-timeout.config.json"
+  wait_for_file "$root/.fake-graphify/build.pid"
+  builder_pid=$(<"$root/.fake-graphify/build.pid")
+  kill -0 "$builder_pid" 2>/dev/null || fail "fake builder was not running before the budget expired"
+
+  # Then the budget kills the child, the failure is reported, and the lock is free for the
+  # next session instead of outliving it.
+  wait_for_pid_exit "$builder_pid"
+  wait_for_pattern "Graphify indexing failed for timeout-repo" "$EVENTS_FILE"
+  [[ ! -e "$root/.ai/graphify-out/.opencode-extract-lock" ]] || fail "timed-out extract did not release the lock"
+  cleanup_processes
+}
+
 shouldWarnWhenBinaryIsMissing() {
   # Given a consented repository with real work but no graphify on PATH.
   local root
@@ -1688,6 +1725,7 @@ shouldSkipExtractWhileAnotherLiveSessionHoldsTheLock
 shouldReplaceStaleLockLeftByDeadSession
 shouldKeepLockWhileOrphanedExtractChildIsAlive
 shouldKillRunningExtractWhenServerIsTerminated
+shouldKillExtractThatExceedsItsTimeBudget
 shouldWarnWhenBinaryIsMissing
 
 echo "PASS: graphify-init consent, refresh, and notification contracts"
