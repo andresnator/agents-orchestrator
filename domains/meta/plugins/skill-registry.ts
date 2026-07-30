@@ -76,9 +76,15 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
   }
 }
 
-async function listSkillFiles(dir: string) {
+// Directories that never hold skills but can hold thousands of files. Walking them is the
+// difference between a few hundred syscalls and tens of thousands.
+const SKIPPED_DIRS = new Set(["node_modules", ".git", ".venv", "dist", "build", "target"])
+
+// `seenDirs` is caller-suppliable so a multi-root scan can share it: the installer symlinks
+// ~/.config/opencode/skills at the worktree's own skills/ directory, so without a shared set
+// the same tree is walked once per root.
+async function listSkillFiles(dir: string, seenDirs = new Set<string>()) {
   const out: string[] = []
-  const seenDirs = new Set<string>()
 
   // Report paths as discovered under the scanned root (e.g. ~/.config/opencode/skills/...),
   // not their symlink targets; realpath is used only for cycle detection.
@@ -100,6 +106,7 @@ async function listSkillFiles(dir: string) {
     }
 
     for (const entry of entries) {
+      if (SKIPPED_DIRS.has(entry.name)) continue
       const full = path.join(current, entry.name)
       let entryStat
       try {
@@ -119,16 +126,21 @@ async function listSkillFiles(dir: string) {
 
 async function discoverSkills(worktree: string) {
   const home = os.homedir()
+  // Project roots first, then the user root. The order matters now that the roots share one
+  // `seenDirs`: when the user root is a symlink at a project root's tree, whichever root is
+  // walked first is the one that reports the path — and a project path is the correct answer,
+  // the same precedence the byName merge below enforces for genuinely separate trees.
   const roots = [
-    { dir: path.join(home, ".config/opencode/skills"), project: false },
     { dir: path.join(worktree, ".opencode/skills"), project: true },
     { dir: path.join(worktree, ".agents/skills"), project: true },
     { dir: path.join(worktree, "skills"), project: true },
+    { dir: path.join(home, ".config/opencode/skills"), project: false },
   ]
 
+  const seenDirs = new Set<string>()
   const byName = new Map<string, SkillEntry>()
   for (const root of roots) {
-    for (const file of await listSkillFiles(root.dir)) {
+    for (const file of await listSkillFiles(root.dir, seenDirs)) {
       const skill = await parseSkill(file, root.project)
       if (!skill) continue
       const existing = byName.get(skill.name)
@@ -312,20 +324,48 @@ export const skillRegistryContracts = {
   projectRoot,
 }
 
+// Retry budget for a failed generation. The bus fires events continuously — dozens per
+// second while a response streams — and each generation is a full recursive scan of every
+// skill root. Without a bound, one persistent failure (an unwritable `.ai/`, a permission
+// error) turns every event into that scan for the rest of the session. The first retry is
+// immediate so a transient failure recovers at once; the rest are rate-limited and capped.
+const MAX_RETRIES = 3
+const RETRY_COOLDOWN_MS = 1_000
+
 export const SkillRegistryPlugin: Plugin = async (input) => {
   const root = projectRoot(input)
   let failed = false
-  const run = () =>
-    generateRegistry(root).catch((error) => {
+  let running = false
+  let retries = 0
+  let nextRetryAt = 0
+
+  const run = async () => {
+    running = true
+    try {
+      await generateRegistry(root)
+      retries = 0
+    } catch (error) {
       failed = true
-      console.error(`[skill-registry] ${error instanceof Error ? error.message : String(error)}`)
-    })
+      nextRetryAt = Date.now() + RETRY_COOLDOWN_MS
+      const detail = error instanceof Error ? error.message : String(error)
+      if (retries >= MAX_RETRIES) {
+        console.error(`[skill-registry] ${detail} — retry budget spent, giving up until the next session`)
+      } else {
+        console.error(`[skill-registry] ${detail}`)
+      }
+    } finally {
+      running = false
+    }
+  }
 
   void run()
 
   return {
     "event": async () => {
-      if (!failed) return
+      if (!failed || running) return
+      if (retries >= MAX_RETRIES) return
+      if (retries > 0 && Date.now() < nextRetryAt) return
+      retries += 1
       failed = false
       void run()
     },

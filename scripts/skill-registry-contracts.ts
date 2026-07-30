@@ -144,6 +144,68 @@ async function shouldRetryGenerationAfterFailure(): Promise<void> {
   pass("shouldRetryGenerationAfterFailure")
 }
 
+async function shouldBoundRetriesOnPersistentFailure(): Promise<void> {
+  const worktree = path.join(testRoot, "wt-retry-cap")
+  await fs.mkdir(worktree, { recursive: true })
+  // The blocker stays in place, so every attempt fails: one error line per attempt.
+  await fs.writeFile(path.join(worktree, ".ai"), "blocker", "utf8")
+
+  const errors: string[] = []
+  const originalError = console.error
+  console.error = (message: unknown) => {
+    errors.push(String(message))
+  }
+  const fireEvents = async (count: number, hooks: { event: (payload: never) => Promise<void> }) => {
+    for (let index = 0; index < count; index++) await hooks.event({ event: { type: "test" } } as never)
+  }
+  try {
+    const hooks = await SkillRegistryPlugin({ worktree, directory: worktree } as never)
+    await waitFor(() => errors.length === 1, "initial generation failure")
+
+    // The first retry is immediate so a transient failure recovers at once.
+    await fireEvents(1, hooks)
+    await waitFor(() => errors.length === 2, "immediate first retry")
+
+    // A burst inside the cooldown must not re-scan: that burst is the stall being fixed.
+    await fireEvents(50, hooks)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(errors.length, 2, "events inside the cooldown must not trigger a generation")
+
+    for (const attempt of [3, 4]) {
+      await new Promise((resolve) => setTimeout(resolve, 1_050))
+      await fireEvents(1, hooks)
+      await waitFor(() => errors.length === attempt, `retry ${attempt - 1}`)
+    }
+
+    // Budget spent: further events are ignored for the rest of the session, and the last
+    // message says so instead of failing silently.
+    assert.match(errors[3], /retry budget spent/)
+    await new Promise((resolve) => setTimeout(resolve, 1_050))
+    await fireEvents(50, hooks)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(errors.length, 4, "retries must stop once the budget is spent")
+  } finally {
+    console.error = originalError
+  }
+  pass("shouldBoundRetriesOnPersistentFailure")
+}
+
+async function shouldDedupeASymlinkedRootAcrossRoots(): Promise<void> {
+  const worktree = path.join(testRoot, "wt-root-dedupe")
+  const projectSkill = path.join(worktree, "skills/dedupe-probe")
+  await writeSkill(projectSkill, "dedupe-probe", "Trigger: dedupe fixture.")
+  // How the installer wires a user root: one symlink per skill into the repo's own tree.
+  await fs.mkdir(userSkillsDir, { recursive: true })
+  await fs.symlink(projectSkill, path.join(userSkillsDir, "dedupe-probe"), "dir")
+
+  const skills = await discoverSkills(worktree)
+  const found = skills.filter((skill) => skill.name === "dedupe-probe")
+  assert.equal(found.length, 1)
+  assert.equal(found[0].path, path.join(projectSkill, "SKILL.md"))
+  assert.equal(found[0].project, true)
+  pass("shouldDedupeASymlinkedRootAcrossRoots")
+}
+
 async function shouldOwnExactGitInfoExcludeLine(): Promise<void> {
   const worktree = path.join(testRoot, "wt-exclude")
   await writeSkill(path.join(worktree, ".opencode/skills/exclude-probe"), "exclude-probe", "Trigger: exclude fixture.")
@@ -174,6 +236,8 @@ await shouldTerminateAndDedupeSymlinkCycles()
 await shouldSkipRewriteWhenHashUnchanged()
 await shouldMigrateLegacyAtlWithoutOverwrite()
 await shouldRetryGenerationAfterFailure()
+await shouldBoundRetriesOnPersistentFailure()
+await shouldDedupeASymlinkedRootAcrossRoots()
 await shouldOwnExactGitInfoExcludeLine()
 
 console.log(`PASS: ${passed} skill-registry plugin contract group(s)`)
