@@ -84,7 +84,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-FULL-02 — Full automatic mode** (P0)
 - Fixture: same as SDD-FULL-01.
 - Steps: same request, kickoff answers `Mode: automatic`, judgment `none`.
-- Expected: drafting runs in three blocking waves (`sdd-proposal`; then `sdd-spec` ∥ `sdd-design`; then `sdd-tasks`) with **no** proposal or specs+design gates; the orchestraitor rereads the artifacts and fixes minor inconsistencies itself; questions only if genuinely blocked, with decisions recorded in `design.md`.
+- Expected: drafting runs in three blocking waves (`sdd-proposal`; then `sdd-spec` ∥ `sdd-design`; then `sdd-tasks`) with **no** proposal or specs+design gates; the orchestraitor reconciles the four receipts against each other (`first_line`, `capabilities`, `paths`, `forecast_guards`, `open_questions`) and re-delegates to the owning phase agent on contradiction, rereading an artifact only to fix an inconsistency already located; questions only if genuinely blocked, with decisions recorded in `design.md`.
 - Pass: zero intermediate confirmation gates between kickoff and the final summary; all four artifacts written; implement/verify ran without pausing for approval.
 
 ### Light depth
@@ -164,7 +164,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-WAVE-02 — Parallel eligibility** (P0)
 - Fixture: `tasks.md` with three groups: two with disjoint `Files:` scopes and no hotspot overlap, one either missing `Files:` or touching a `Shared hotspots:` entry.
 - Steps: run implement.
-- Expected: only the two eligible waves launch in parallel (single message); the third runs alone; parallel briefs name **scoped** validation only, and the orchestraitor runs the full project test command once itself after the round; it rereads each receipt's `files_changed` before checking boxes.
+- Expected: only the two eligible waves launch in parallel (single message); the third runs alone; parallel briefs name **scoped** validation only, and the orchestraitor runs the full project test command once itself after the round; it reconciles each receipt from its fields before checking boxes — `tasks_done` covers the wave's tasks, one `assertions` row per task points inside the wave's `Files:` scope, `files_changed` stays in scope — spot-checking a `file:line` only when a row looks wrong, never rereading the wave's files wholesale.
 - Pass: the ineligible wave never joined a parallel round; exactly one orchestraitor-run full-suite pass per parallel round.
 
 **SDD-WAVE-03 — `out_of_scope` drops parallelism** (P0)
@@ -233,7 +233,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-RES-01 — Resume full and light** (P1)
 - Fixture: In-flight change (full) with `tasks.md` half-checked; separately a light change (`change.md` present, no `proposal.md`, `Depth: light` in line 1).
 - Steps: fresh session, `"continúa <change>"`.
-- Expected: rereads the artifacts (or just `change.md` for light — detected by the rule above), resumes from the first unchecked task, never repeats kickoff, honors the recorded kickoff line; a kickoff line without `Delivery:` means `Delivery: none`.
+- Expected: recovers state with ranged reads — the kickoff line (line 1 of `proposal.md`, or of `change.md` for light, detected by the rule above), the guard lines under it, and `tasks.md` far enough to find the first unchecked task — never reopening the artifact set; resumes from the first unchecked task, never repeats kickoff, honors the recorded kickoff line; a kickoff line without `Delivery:` means `Delivery: none`.
 - Pass: no kickoff question was re-asked; completed tasks were not redone.
 
 **SDD-RES-02 — Interruption after implement** (P1 — **negative, expected FAIL today**)
@@ -312,7 +312,9 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
   - `sdd-spec`: `paths[]`, `capabilities[]`, `first_line`, `summary`, `open_questions[]`.
   - `sdd-design`: `path`, `first_line`, `inspected[]` ≤5, `summary`, `open_questions[]`.
   - `sdd-tasks`: `path`, `first_line`, `groups`, `files_scopes`, `forecast_guards`, `summary`, `open_questions[]`.
-  - `sdd-implement`: `wave`, `tasks_done[]`, `files_changed[]`, `out_of_scope[]`, `validation`, `commit`, `blockers[]`.
+  - `sdd-implement` (wave): `wave`, `tasks_done[]`, `assertions[]` (one `task -> file:line` row per task in `tasks_done`), `files_changed[]`, `out_of_scope[]`, `validation`, `commit`, `blockers[]`.
+  - `sdd-implement` (merge brief): `merge`, `merged[]` (one row per briefed delta; RENAMED names both sides), `specs_written[]`, `stale[]`, `blockers[]`.
+  - `sdd-proposal` in light mode additionally returns `deltas[]` (`<capability> <KIND> '<requirement>'`) and `groups`.
   - `sdd-verify`: terminal line first, then `change`, `diff_range`, `scenarios[]`, `gaps[]`, `blockers[]`.
   - Judges: `findings[]` with id/severity/category/evidence/scenario ≤2 lines/fix 1 line, `notes[]` ≤3; `VERDICT: CLEAN — No issues found.` only when empty; re-judge → `verdicts[]` only.
   - `jd-fix`: `fixes[]`, `observed[]` ≤3, terminal `FIX: <n> fixed, <m> open.`.

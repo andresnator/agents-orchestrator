@@ -177,8 +177,7 @@ assert_grep() {
 }
 
 assert_not_grep() {
-  grep -Fq "$2" "$1" && verdict_fail "$(short "$1") still contains '$2'"
-  return 0
+  ! grep -Fq "$2" "$1" || verdict_fail "$(short "$1") still contains '$2'"
 }
 
 short() { printf '%s' "${1#"$SCRATCH"/}"; }
@@ -210,9 +209,8 @@ assert_launched() {
 }
 
 assert_not_launched() {
-  launched_subagents | grep -qx "$1" &&
+  ! launched_subagents | grep -qx "$1" ||
     verdict_fail "the run launched $1 and should not have"
-  return 0
 }
 
 word_count() { wc -w < "$1" | tr -d ' '; }
@@ -295,8 +293,11 @@ scenario_SDD_LIGHT_01() {
   words="$(word_count "$change_dir/change.md")"
   [ "$words" -lt 800 ] || { verdict_fail "change.md is $words words, the light budget is under 800"; return; }
 
+  # Light depth delegates the draft to sdd-proposal in light mode; the other
+  # drafting phases stay out of a light run.
+  assert_launched sdd-proposal || return
   local agent
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
+  for agent in sdd-spec sdd-design sdd-tasks; do
     assert_not_launched "$agent" || return
   done
   verdict_pass
@@ -371,21 +372,13 @@ scenario_SDD_ARCH_01() {
   assert_absent "$PROJECT/.ai/orchestrator/changes/adjust-order-pricing" || return
   verdict_pass
 
-  # SDD-ARCH-02 is the negative half of this same run: the archive procedure
-  # documents ADDED/MODIFIED/REMOVED only, so a RENAMED delta has no defined
-  # merge. Report what actually happened rather than asserting a contract that
-  # does not exist yet.
+  # SDD-ARCH-02 rides the same run: the merge moved to sdd-implement, whose
+  # `## Merge procedure` defines RENAMED (new name only, old name gone), so the
+  # rename is asserted like any other delta kind.
   CURRENT=SDD-ARCH-02
-  local old_present new_present
-  grep -Fq 'Requirement: Money scale' "$canonical" && old_present=yes || old_present=no
-  grep -Fq 'Monetary rounding' "$canonical" && new_present=yes || new_present=no
-  printf 'INFO %s — RENAMED delta outcome: old name present=%s, new name present=%s\n' \
-    "$CURRENT" "$old_present" "$new_present"
-  if [ "$old_present" = no ] && [ "$new_present" = yes ]; then
-    printf '     the rename was applied even though the archive procedure does not define it\n'
-  else
-    printf '     the rename was NOT applied — the known defect reproduces\n'
-  fi
+  assert_grep "$canonical" 'Monetary rounding' || return
+  assert_not_grep "$canonical" 'Requirement: Money scale' || return
+  verdict_pass
 }
 
 scenario_SDD_JDG_04() {
