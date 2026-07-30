@@ -189,39 +189,88 @@ def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, b
     raise JsoncError(f"unsupported action '{action}'")
 
 
+def trim_before(text: str, close: int, floor: int) -> int:
+    """Start of the whitespace run that ends at `close`, never crossing `floor`.
+
+    Insertions carry their own newline and indent, so whatever whitespace the previous
+    formatting left before the closing bracket has to go — otherwise the two stack and the
+    array gains a blank line on every edit.
+    """
+    while close > floor and text[close - 1] in " \t\r\n":
+        close -= 1
+    return close
+
+
 def add_value(text: str, root: Node, array: Node | None, property_name: str, value: str) -> str:
     encoded = json.dumps(value, ensure_ascii=False)
     if array is None:
         close = root.end - 1
-        has_properties = bool(root.properties)
-        prefix = "," if has_properties and not has_trailing_comma(text, root) else ""
-        insertion = f'{prefix}\n  {json.dumps(property_name)}: [{encoded}]\n'
-        return text[:close] + insertion + text[close:]
+        prefix = "," if root.properties and not has_trailing_comma(text, root) else ""
+        insertion = f'{prefix}\n  {json.dumps(property_name)}: [\n    {encoded}\n  ]\n'
+        return text[: trim_before(text, close, root.start + 1)] + insertion + text[close:]
 
     close = array.end - 1
-    if not array.items:
-        return text[:close] + f"\n    {encoded}\n  " + text[close:]
-    last = array.items[-1]
-    prefix = "" if has_comma_between(text, last.end, close) else ","
-    return text[:close] + f"{prefix}\n    {encoded}\n  " + text[close:]
+    if array.items:
+        # The separator belongs right after the last item; on the new entry's own line it would
+        # land on the blank line before ']'.
+        last = array.items[-1]
+        if not has_comma_between(text, last.end, close):
+            text = text[: last.end] + "," + text[last.end :]
+            close += 1
+    return text[: trim_before(text, close, array.start + 1)] + f"\n    {encoded}\n  " + text[close:]
+
+
+def separator_comma(text: str, array: Node, item: Node, close_bracket: int) -> int | None:
+    """Index of the comma that separates `item` from the rest of the array, if there is one."""
+    assert array.items is not None
+    items = array.items
+    index = items.index(item)
+    if index < len(items) - 1:
+        comma = text.find(",", item.end, items[index + 1].start)
+        return None if comma == -1 else comma
+
+    probe = item.end
+    while probe < close_bracket and text[probe] in " \t\r\n":
+        probe += 1
+    if probe < close_bracket and text[probe] == ",":
+        return probe
+    if index > 0:
+        comma = text.rfind(",", items[index - 1].end, item.start)
+        return None if comma == -1 else comma
+    return None
 
 
 def remove_value(text: str, array: Node, item: Node) -> str:
+    """Delete one item, its separator comma, and the whitespace it occupied.
+
+    Removal has to leave the array in the exact shape add_value would produce, because
+    `install` is a remove-then-add sync: whitespace left inside the brackets makes the next
+    add insert its own newline after it, and the array grows one blank line per install — the
+    drift that put 22 blank entries in a real tui.json. Any non-whitespace inside the brackets
+    (a comment) stops the collapse, so it survives with ']' still on its own line.
+    """
     assert array.items is not None
-    if len(array.items) == 1:
-        return text[: item.start] + text[item.end :]
-    index = array.items.index(item)
-    if index < len(array.items) - 1:
-        next_item = array.items[index + 1]
-        comma = text.find(",", item.end, next_item.start)
-        if comma == -1:
-            return text[: item.start] + text[item.end :]
-        return text[: item.start] + text[item.end : comma] + text[comma + 1 :]
-    previous = array.items[index - 1]
-    comma = text.rfind(",", previous.end, item.start)
-    if comma == -1:
-        return text[: item.start] + text[item.end :]
-    return text[:comma] + text[comma + 1 : item.start] + text[item.end :]
+    open_bracket, close_bracket = array.start + 1, array.end - 1
+    start, end = item.start, item.end
+
+    # Cut the separator on its own, never as part of the item's span: a comment can sit between
+    # the two ("./foreign.tsx", // keep me), and it has to survive.
+    comma = separator_comma(text, array, item, close_bracket)
+    if comma is not None:
+        text = text[:comma] + text[comma + 1 :]
+        close_bracket -= 1
+        if comma < start:
+            start -= 1
+            end -= 1
+
+    while start > open_bracket and text[start - 1] in " \t\r\n":
+        start -= 1
+    # Only a now-empty array collapses forward, to '[]'; with items left, the newline before
+    # ']' is exactly what add_value expects to find.
+    if len(array.items) == 1 and start == open_bracket:
+        while end < close_bracket and text[end] in " \t\r\n":
+            end += 1
+    return text[:start] + text[end:]
 
 
 def has_comma_between(text: str, start: int, end: int) -> bool:

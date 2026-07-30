@@ -4,7 +4,6 @@
   "theme": "system",
   "plugin": [
     "./foreign.tsx", // Keep this inline comment.
-  
     "./plugins/model-configurator.tsx"
   ],
   "label": "Configuración ágil",

@@ -225,6 +225,60 @@ if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
     fail scripts/test-sdd-automode.sh "sdd-automode contracts failed"
 fi
 
+# --- Installer idempotency (python3/jq/opencode-gated) ---
+# Managed config values (the tui.json plugin entry, the package.json dependency) are edited in
+# place, so every remove-then-add round trip must land on the exact same bytes. Repeating a
+# plain `install` is not enough to prove that: a still-selected value is never removed, so the
+# editor is not exercised. Reaching it takes a cycle that drops the value and re-adds it — an
+# `uninstall`, or an `install` under a narrower `--domain` filter — which is why real drift
+# accumulated 22 blank entries in a live tui.json while double installs looked clean. The
+# check therefore compares two full uninstall/install cycles plus one plain repeat.
+target_snapshot() {
+  (
+    cd "$1" || exit 1
+    find . -mindepth 1 | LC_ALL=C sort | while IFS= read -r entry; do
+      if [ -L "$entry" ]; then
+        printf 'link\t%s\t%s\n' "$entry" "$(readlink "$entry")"
+      elif [ -d "$entry" ]; then
+        printf 'dir\t%s\n' "$entry"
+      else
+        printf 'file\t%s\t%s\n' "$entry" "$(cksum <"$entry")"
+      fi
+    done
+  )
+}
+
+if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
+  { [ -n "${OPENCODE_BIN:-}" ] || command -v opencode >/dev/null 2>&1; }; then
+  idem_dir="$(mktemp -d "${TMPDIR:-/tmp}/harness-idempotency.XXXXXX")"
+  idem_target="$idem_dir/target"
+  idem_log="$idem_dir/install.log"
+  idem_step=""
+
+  run_installer() {
+    if ! installers/opencode.sh "$1" --target "$idem_target" >"$idem_log" 2>&1; then
+      sed -n '1,40p' "$idem_log" >&2
+      fail installers/opencode.sh "$1 into a scratch target failed ($2)"
+      return 1
+    fi
+  }
+
+  if run_installer install fresh &&
+    run_installer uninstall "cycle 1" && run_installer install "cycle 1" &&
+    { target_snapshot "$idem_target" >"$idem_dir/cycle1.txt"; } &&
+    run_installer uninstall "cycle 2" && run_installer install "cycle 2" &&
+    { target_snapshot "$idem_target" >"$idem_dir/cycle2.txt"; } &&
+    run_installer install repeat &&
+    { target_snapshot "$idem_target" >"$idem_dir/repeat.txt"; }; then
+    for idem_step in cycle2 repeat; do
+      diff -u "$idem_dir/cycle1.txt" "$idem_dir/$idem_step.txt" >"$idem_dir/$idem_step.diff" 2>&1 && continue
+      sed -n '1,40p' "$idem_dir/$idem_step.diff" >&2
+      fail installers/opencode.sh "install is not idempotent: $idem_step changed the target"
+    done
+  fi
+  rm -rf "$idem_dir"
+fi
+
 # --- Deterministic skill-registry plugin contracts (Node >= 22.18-gated) ---
 if [ -x scripts/test-skill-registry.sh ] && command -v node >/dev/null 2>&1 &&
   node -e 'process.exit(process.features && process.features.typescript ? 0 : 1)' >/dev/null 2>&1; then
