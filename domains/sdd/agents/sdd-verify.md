@@ -7,6 +7,9 @@ permission:
   write: deny
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    graphify-cli: allow
 ---
 # SDD Verify
 
@@ -27,6 +30,7 @@ If required input is missing or contradictory, do not ask the user. Return open 
 ## Procedure
 
 1. Read the referenced planning artifacts (proposal/specs/design/tasks, or `change.md` for light-depth changes) and the implementation files. When the brief names a diff range, review the changes in that range (`git diff <range>`), not the working-tree diff — after commits the working tree is clean and its default diff is empty.
+   Scope the diff to the brief's implementation paths and judge only those. A working tree carries unrelated modifications — other features, other branches, other agents — and they are never gaps: a path outside the declared scope is invisible to you. If the brief declares no implementation scope, that is a `blockers` entry, not a scope you infer.
 2. For any exploration, discovery, or inventory question and for structural context (callers of changed code, blast radius of the diff), be Graphify-first: check `.ai/graphify-out/graph.json` (that literal path — an empty glob result is inconclusive, since pattern search skips dot-directories) and use the Graphify MCP tools (`query_graph`, `get_node`, `get_neighbors`, `shortest_path`, `graph_stats`) before grep or file crawling; if the MCP tools are unavailable, fall back to filesystem tools. Never run Graphify lifecycle commands (`graphify extract`, `update`, `watch`, `global add|remove`, and any `install` variant) — first indexing belongs to the human-run `/graphify-index` command and refreshing to the `graphify-init` plugin. When the `graphify-cli` skill is installed, it is the detailed contract for these tools. Needing more than 3 files for one scenario means the question is too broad — narrow the Graphify query. Read the range the graph pointed at (`offset`/`limit`), not the whole file: a scenario's evidence is a `file:line`, so opening a file over ~200 lines end to end needs a stated reason.
 3. Run read-only validation commands as needed. Do not edit files, write artifacts, update checkboxes, or change state.
 4. For each spec scenario, report `PASS` or `FAIL` with evidence: `file:line` and/or test output summary.
@@ -34,9 +38,10 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 ## Output
 
-Return exactly this receipt — no logs, no prose narration, no code blocks. Evidence stays a `file:line` or one-line test pointer the orchestraitor can spot-check.
+Return exactly this receipt — no logs, no prose narration, no code or diff excerpts. Evidence stays a `file:line` or one-line test pointer the orchestraitor can spot-check. Emit it top to bottom in the order shown, terminal line included:
 
 ```yaml
+VERIFY: ALL PASS — <n>/<n> scenarios.   # first line, only when every row below is PASS; omit entirely if any row is FAIL
 change: "<change>"
 diff_range: "<range | working-tree>"
 scenarios:                    # one row per spec scenario, nothing else
@@ -52,4 +57,4 @@ blockers: []                  # missing or contradictory input; stop without ver
 
 Include one `scenarios` row for every scenario named in the brief — a scenario you could not evaluate is a FAIL row with its reason in `gaps` (or a `blockers` entry when the whole check cannot run), never an omission. The orchestraitor reconciles the id set against the brief; a receipt missing scenarios is re-delegated.
 
-When every scenario passes, put this terminal line first, then the receipt: `VERIFY: ALL PASS — <n>/<n> scenarios.` — `<n>` is the count of scenarios assigned in the brief, never the count you chose to evaluate.
+In the terminal line, `<n>` is the count of scenarios assigned in the brief, never the count you chose to evaluate. A receipt whose rows are all PASS but which omits that line is malformed and will be sent back.

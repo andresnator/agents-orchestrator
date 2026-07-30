@@ -61,6 +61,8 @@ Assertions read three observable sources — the `.ai/orchestrator/` tree on dis
 
 `SDD-LIGHT-01`, `SDD-FULL-02`, `SDD-ADOPT-01`, `SDD-ARCH-01` and `SDD-JDG-04` run via `scripts/test-sdd-flows.sh smoke`. `SDD-ARCH-02` is asserted as part of the `SDD-ARCH-01` run: the same fixture carries the RENAMED delta and the runner checks the canonical spec for the new name only.
 
+`LITE-01` and `LITE-02` (sdd-lite POC, below) run via `scripts/test-sdd-flows.sh lite`: the runner's `RUN_AGENT` hook drives `orchestralite` instead of the orchestraitor against the same fixture. Both agents must be installed in the caller's real OpenCode config.
+
 ### What stays manual
 
 - **Every interactive-mode scenario** (the proposal gate, the specs+design gate, the `commit-per-wave` first-commit confirmation, the `full`-judgment continue/escalate/stop gate). Headless runs end at the question.
@@ -326,6 +328,23 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Pass: exits 0 both times with the expected component counts.
 
 ---
+
+## SDD Lite POC (LITE-*)
+
+Scenarios for the `sdd-lite` domain (`domains/sdd-lite/README.md`): `orchestralite` runs interview, `change.md` drafting, and implementation in one context and delegates only the cold verify to `lite-verify`. The POC's hypothesis is a token claim, so these scenarios are also the measurement harness.
+
+**LITE-01 — Bounded lite happy path** (P0)
+- Fixture: clean `java-orders` scratch (same task as SDD-LIGHT-01: `Order.totalQuantity()` plus its test).
+- Steps: `scripts/test-sdd-flows.sh LITE-01`; the prompt pre-approves the draft — a headless question ends the turn (see the gate-behavior note above).
+- Expected: `change.md` under `.ai/sdd-lite/changes/<change>/` with `Lite:` as line 1, `## Spec Deltas` and `## Tasks` sections, under 800 words; the implementation and its test land under `src/`; exactly one delegation (`lite-verify`); no `sdd-*` subagent launches; `.ai/orchestrator/` never appears.
+- Pass: all of the above hold as script assertions.
+
+**LITE-02 — Entry scope gate redirects** (P0)
+- Fixture: clean scratch; a deliberately sprawling request (project-wide i18n) with pre-approval offered.
+- Expected: the gate fires before the flow starts — no `.ai/sdd-lite/` tree, no `lite-verify` launch, working tree untouched, and the reply recommends the `orchestraitor`.
+- Pass: script assertions; pre-approval must not defeat the gate.
+
+**Token comparison (light vs lite).** Run `SDD-LIGHT-01` and `LITE-01` back to back on the same day and model profile; each PASS line prints the run's output tokens. For the full picture query the OpenCode store (`docs/opencode-db-growth.md`) for the two sessions: total tokens (primary plus subagents), the primary's context peak, delegation count, and compaction events (must be 0 in both). The hypothesis holds if lite's total is lower with the same verify outcome; record the result either way in `domains/sdd-lite/README.md` under "Experiment status".
 
 ## Known-defect index
 

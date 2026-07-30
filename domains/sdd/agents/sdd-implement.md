@@ -7,6 +7,9 @@ permission:
   write: allow
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    code-conventions: allow
 ---
 # SDD Implement
 

@@ -7,6 +7,9 @@ permission:
   write: allow
   question: deny
   bash: deny
+  skill:
+    "*": deny
+    sdd-draft-spec: allow
 ---
 # SDD Spec
 

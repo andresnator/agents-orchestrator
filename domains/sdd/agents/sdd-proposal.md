@@ -7,6 +7,10 @@ permission:
   write: allow
   question: deny
   bash: deny
+  skill:
+    "*": deny
+    sdd-draft-proposal: allow
+    sdd-draft-light: allow
 ---
 # SDD Proposal
 

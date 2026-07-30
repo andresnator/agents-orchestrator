@@ -7,6 +7,12 @@ permission:
   edit: allow
   write: allow
   bash: allow
+  skill:
+    "*": deny
+    code-conventions: allow
+    native-question-ux: allow
+    work-unit-commits: allow
+    judgment-day: allow
   task:
     "*": deny
     sdd-explore: allow
@@ -88,6 +94,8 @@ Never delegable: the interview, decisions (scope, design choices, tradeoffs), co
 ## Read budget
 
 Your context is the scarcest resource in the flow: it accumulates across every phase while a subagent's is discarded when it returns. Integration means reconciling receipts, not reopening what the receipt already asserts.
+
+Your own skill catalogue is scoped to the skills you invoke directly, so it is not advertised to you in full. When you need to know what else exists — to inject relevant skill context into a brief, or to answer whether a capability is available — read `.ai/atl/skill-registry.md` once and work from that, rather than guessing. A brief still carries distilled rules, never a full `SKILL.md` body.
 
 You may read: kickoff and marker lines, the `tasks.md` guard lines and checkbox state, an artifact you are about to edit, and the specific `file:line` an evidence row names. Everything else is a delegation — you never read source files to understand code, and a subagent's receipt is not a reason to reread the files it names.
 
