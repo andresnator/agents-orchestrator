@@ -206,6 +206,27 @@ async function shouldDedupeASymlinkedRootAcrossRoots(): Promise<void> {
   pass("shouldDedupeASymlinkedRootAcrossRoots")
 }
 
+async function shouldSkipBuildOutputDirsButNotSkillsNamedLikeThem(): Promise<void> {
+  const worktree = path.join(testRoot, "wt-skip-dirs")
+  const skillsRoot = path.join(worktree, ".opencode/skills")
+  // A skill whose directory name collides with a build-output name is still a skill:
+  // the root's immediate children are skill directories by contract.
+  await writeSkill(path.join(skillsRoot, "dist"), "dist", "Trigger: dist-named skill.")
+  // Below that level the same names are outputs and must not be walked into.
+  await writeSkill(path.join(skillsRoot, "real-skill"), "real-skill", "Trigger: real skill.")
+  await writeSkill(
+    path.join(skillsRoot, "real-skill/node_modules/buried"),
+    "buried",
+    "Trigger: must never be indexed.",
+  )
+
+  const skills = await discoverSkills(worktree)
+  assert.ok(skills.some((skill) => skill.name === "dist"))
+  assert.ok(skills.some((skill) => skill.name === "real-skill"))
+  assert.ok(!skills.some((skill) => skill.name === "buried"))
+  pass("shouldSkipBuildOutputDirsButNotSkillsNamedLikeThem")
+}
+
 async function shouldOwnExactGitInfoExcludeLine(): Promise<void> {
   const worktree = path.join(testRoot, "wt-exclude")
   await writeSkill(path.join(worktree, ".opencode/skills/exclude-probe"), "exclude-probe", "Trigger: exclude fixture.")
@@ -238,6 +259,7 @@ await shouldMigrateLegacyAtlWithoutOverwrite()
 await shouldRetryGenerationAfterFailure()
 await shouldBoundRetriesOnPersistentFailure()
 await shouldDedupeASymlinkedRootAcrossRoots()
+await shouldSkipBuildOutputDirsButNotSkillsNamedLikeThem()
 await shouldOwnExactGitInfoExcludeLine()
 
 console.log(`PASS: ${passed} skill-registry plugin contract group(s)`)

@@ -77,7 +77,9 @@ async function parseSkill(file: string, project: boolean): Promise<SkillEntry | 
 }
 
 // Directories that never hold skills but can hold thousands of files. Walking them is the
-// difference between a few hundred syscalls and tens of thousands.
+// difference between a few hundred syscalls and tens of thousands. Skipped only below the
+// root's own children: a root's immediate entries ARE the skill directories, and a skill may
+// legitimately be named `dist` or `build`.
 const SKIPPED_DIRS = new Set(["node_modules", ".git", ".venv", "dist", "build", "target"])
 
 // `seenDirs` is caller-suppliable so a multi-root scan can share it: the installer symlinks
@@ -88,7 +90,7 @@ async function listSkillFiles(dir: string, seenDirs = new Set<string>()) {
 
   // Report paths as discovered under the scanned root (e.g. ~/.config/opencode/skills/...),
   // not their symlink targets; realpath is used only for cycle detection.
-  async function walk(current: string) {
+  async function walk(current: string, depth = 0) {
     let realCurrent: string
     try {
       realCurrent = await fs.realpath(current)
@@ -106,7 +108,7 @@ async function listSkillFiles(dir: string, seenDirs = new Set<string>()) {
     }
 
     for (const entry of entries) {
-      if (SKIPPED_DIRS.has(entry.name)) continue
+      if (depth > 0 && SKIPPED_DIRS.has(entry.name)) continue
       const full = path.join(current, entry.name)
       let entryStat
       try {
@@ -115,7 +117,7 @@ async function listSkillFiles(dir: string, seenDirs = new Set<string>()) {
         continue
       }
 
-      if (entryStat.isDirectory()) await walk(full)
+      if (entryStat.isDirectory()) await walk(full, depth + 1)
       else if (entryStat.isFile() && entry.name === "SKILL.md") out.push(full)
     }
   }
