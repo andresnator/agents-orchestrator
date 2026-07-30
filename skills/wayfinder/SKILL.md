@@ -1,18 +1,18 @@
 ---
 name: wayfinder
-description: "Plan an effort too big and foggy for one agent session as a shared map of investigation tickets, resolved one decision per session until the way to the destination is clear. Use only when invoked via the /wayfinder command, with a loose idea to chart or an existing map to advance."
+description: "Plan an effort too big and foggy for one agent session as a shared map of decision tickets, resolved one decision per session until the way to the destination is clear. Use only when invoked via the /wayfinder command, with a loose idea to chart or an existing map to advance."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills/tree/main/skills/engineering/wayfinder
   status: testing
-  version: "1.0.2"
+  version: "1.1.0"
 ---
 
 # Wayfinder
 
-A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** of investigation tickets, then works them one at a time until the route is clear.
+A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** of **decision tickets** — questions whose resolution is a decision, not slices of a build to execute — then works them one at a time until the route is clear.
 
 The destination varies per effort, and naming it is the first act of charting — it shapes every ticket. It might be a plan to hand to `/deep-plan`, a decision to lock before drafting starts, or a change made in place like a data-structure migration.
 
@@ -45,7 +45,7 @@ Each ticket is one question sized to a single agent session — template in `ass
 
 Every ticket is **HITL** (human in the loop) or **AFK** (agent alone). A HITL ticket only resolves through a live exchange — the agent never stands in for the human's side of it.
 
-- **Research** (AFK): reading documentation, third-party APIs, or local resources. Produces a markdown summary linked from the ticket. Use when knowledge outside the working directory is required.
+- **Research** (AFK): reading documentation, third-party APIs, or local resources to surface a fact a decision waits on. Resolved by a **delegated research subagent**: the subagent investigates against primary sources and returns its findings; the session writes them as a markdown file under the map directory, linked from the ticket. Use when knowledge outside the working directory is required.
 - **Prototype** (HITL): raise the fidelity of the discussion with a cheap, rough, concrete artifact to react to — an outline, a stub, a sketch of UI or logic. Link it as an asset. Use when "how should it look/behave" is the key question.
 - **Grilling** (HITL): conversation via the `grilling` and `domain-modeling` skills, one question at a time. The default case.
 - **Task** (HITL or AFK): manual work that must happen before a decision can be made — provisioning access, signing up for a service, moving data so its shape can be seen. The one type that *does* rather than decides; it earns its place by unblocking a decision. The resolution records what was done and any resulting facts later tickets depend on.
@@ -62,7 +62,7 @@ Fog only gathers *toward* the destination; work beyond it is **out of scope** an
 
 ## Invocation
 
-Two modes. Either way, **never resolve more than one ticket per session.**
+Two modes. Either way, **never resolve more than one decision per session** — research tickets are the exception: delegated subagents burn them down in parallel.
 
 ### Chart the map
 
@@ -72,7 +72,8 @@ Input: a loose idea.
 2. **Map the frontier.** Grill again, **breadth-first**: fan out across the whole space, surfacing the open decisions and the first steps takeable now. If this surfaces no fog, stop — no map needed (see Activation).
 3. **Create the map**: Destination and Notes filled in, Decisions-so-far empty, the fog sketched into Not yet specified.
 4. **Create the tickets you can specify now**, then wire `blocked-by` edges in a second pass. Everything you can't yet specify stays in the fog.
-5. Stop — charting is one session's work; do not also resolve tickets.
+5. **Fire the research subagents.** For each research ticket just created, delegate one research subagent, in parallel. As each returns, write its findings under the map directory, record the ticket's Resolution, close it, and add its line to Decisions so far.
+6. Stop — charting is one session's work; it hand-resolves nothing.
 
 ### Work through the map
 
@@ -83,6 +84,7 @@ Input: a map (path or URL), optionally a ticket — without one, you pick the ne
 3. Resolve it — zoom into related or closed tickets on demand; invoke the skills the map's Notes name. If in doubt, use `grilling` and `domain-modeling`.
 4. Record the resolution: write the answer in the ticket's Resolution section, set `status: closed`, and append a one-line pointer to the map's Decisions so far.
 5. Add newly-surfaced tickets (create, then wire blocking); graduate any fog the answer made specifiable, removing each graduated patch from Not yet specified. If the answer reveals a ticket sits beyond the destination, rule it out of scope rather than resolving it. If the decision invalidates other tickets, update or delete them.
+6. If steps 4–5 left open, unblocked research tickets, fire a research subagent for each, in parallel, resolving them exactly as in charting.
 
 The user may run unblocked tickets in parallel sessions, so expect concurrent edits to the map.
 
