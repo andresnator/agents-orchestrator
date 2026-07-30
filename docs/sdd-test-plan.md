@@ -59,7 +59,7 @@ Assertions read three observable sources — the `.ai/orchestrator/` tree on dis
 
 ### What is automated
 
-`SDD-LIGHT-01`, `SDD-FULL-02`, `SDD-ADOPT-01`, `SDD-ARCH-01` and `SDD-JDG-04` run via `scripts/test-sdd-flows.sh smoke`. `SDD-ARCH-02` is reported as part of the `SDD-ARCH-01` run — it is a negative test with no contract to assert against, so the runner prints the observed RENAMED outcome instead of passing or failing on it.
+`SDD-LIGHT-01`, `SDD-FULL-02`, `SDD-ADOPT-01`, `SDD-ARCH-01` and `SDD-JDG-04` run via `scripts/test-sdd-flows.sh smoke`. `SDD-ARCH-02` is asserted as part of the `SDD-ARCH-01` run: the same fixture carries the RENAMED delta and the runner checks the canonical spec for the new name only.
 
 ### What stays manual
 
@@ -92,13 +92,13 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-LIGHT-01 — Light happy path with bounded fast-path kickoff** (P0)
 - Fixture: clean scratch repo.
 - Steps: say `"usa SDD"` with a bounded request (2–3 files, no new capability). Accept the bundle.
-- Expected: the orchestraitor assesses `light` and asks ONE accept-or-adjust question proposing `Depth: light | Mode: automatic | TDD: alongside | Judgment: none | Delivery: none` (knobs already stated in the request are substituted, and judgment `light` is recommended instead of `none` if the change touches non-trivial logic); no drafting subagents launch — the orchestraitor drafts `change.md` inline via `sdd-draft-light`.
+- Expected: the orchestraitor assesses `light` and asks ONE accept-or-adjust question proposing `Depth: light | Mode: automatic | TDD: alongside | Judgment: none | Delivery: none` (knobs already stated in the request are substituted, and judgment `light` is recommended instead of `none` if the change touches non-trivial logic); exactly one drafting subagent launches — `sdd-proposal` in light mode, which explores read-only and writes `change.md` via `sdd-draft-light`, returning a receipt with `deltas` and `groups`. The orchestraitor never reads `change.md` to run the gate.
 - Pass: single artifact `change.md` (no `proposal.md`/`design.md`/`tasks.md`/delta files) with the kickoff line as line 1 including `Depth: light`, sections `## Why / What`, `## Spec Deltas` (ADDED/MODIFIED/REMOVED semantics), `## Tasks`, under ~800 words; implement/verify/archive then run identically to full depth; verify fix budget is ONE round.
 
 **SDD-LIGHT-02 — Upgrade gate light → full** (P0)
 - Fixture: clean scratch repo.
 - Steps: start light (as above) with a request deliberately worded to sound bounded but that drafting will reveal as large (>~400 estimated changed lines or a sprawling new capability).
-- Expected: during drafting the orchestraitor stops and recommends upgrading to full instead of silently continuing light; on acceptance, the light draft becomes input to the `sdd-proposal` brief.
+- Expected: `sdd-proposal` writes the light draft anyway and reports the oversized scope in `open_questions` — it never decides the upgrade itself; the orchestraitor reads that field and recommends upgrading to full instead of silently continuing light; on acceptance, the light draft becomes input to the full-depth `sdd-proposal` brief.
 - Pass: an explicit upgrade offer was made before implementation; after upgrade, the four full-depth artifacts exist and the flow continues as full.
 
 ### Bundle adoption (plan intake)
@@ -205,12 +205,12 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Expected: merge before moving anything — ADDED appended, MODIFIED's matching requirement fully replaced (no stale text), REMOVED deleted, new capability files created; the merge is verified delta-by-delta and reported in one line; then `mv` to `changes/archive/<YYYY-MM-DD>-<change>/`.
 - Pass: canonical spec content is exactly the expected post-merge text; the change folder no longer exists outside `archive/`; light depth merges from the `## Spec Deltas` blocks of `change.md` with identical results.
 
-**SDD-ARCH-02 — RENAMED delta at archive** (P0 — **negative, expected FAIL today**)
-- Known defect: `sdd-draft-spec`/`sdd-draft-light` templates allow RENAMED deltas, but the archive procedure (`orchestraitor.md` Archive step 1) only handles ADDED/MODIFIED/REMOVED.
+**SDD-ARCH-02 — RENAMED delta at archive** (P0)
+- Was a negative test: the drafting templates allow RENAMED deltas while the archive procedure only handled ADDED/MODIFIED/REMOVED. The merge moved to `sdd-implement`'s `## Merge procedure`, which defines RENAMED, so this is now a real pass criterion.
 - Fixture: Delta set including one RENAMED requirement (with Reason + Migration).
 - Steps: archive.
-- Expected (contract intent): the requirement appears under its new name only. Expected (today): the old name survives in the canonical spec or the delta is silently skipped.
-- Pass criterion for the *test*: document the observed behavior; the scenario flips to a real pass only once archive handles RENAMED.
+- Expected: the orchestraitor delegates the merge with a `merge` brief; the requirement ends up under its new name only, the old name is gone from the canonical spec, and the body carries the delta's Reason and Migration. The returned `merged` row names both sides (`<capability> RENAMED '<old>' -> '<new>'`).
+- Pass: canonical spec contains the new name exactly once and the old name zero times; `stale` is empty.
 
 ### Delivery
 
@@ -327,14 +327,14 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 
 ## Known-defect index
 
-| Scenario | Defect (absorb 2026-07-29) | Severity |
-|---|---|---|
-| SDD-ARCH-02 | RENAMED deltas producible but unhandled at archive merge | P0 |
-| SDD-DELIV-02 | Commit ownership shared between orchestraitor and `sdd-implement` → git index race in parallel waves | P0 |
-| SDD-RES-02 | No durable checkpoint for post-implementation phases | P1 |
-| (not scenario-ized) | `sdd-proposal` hardcodes `.ai/orchestrator/changes/` while deep-planner writes under `.ai/deep-planner/changes/` — covered indirectly by SDD-ADOPT-01 | P0 |
+| Scenario | Defect (absorb 2026-07-29) | Severity | State |
+|---|---|---|---|
+| SDD-ARCH-02 | RENAMED deltas producible but unhandled at archive merge | P0 | fixed — `sdd-implement` `## Merge procedure` defines RENAMED; the scenario is a real pass criterion now |
+| SDD-DELIV-02 | Commit ownership shared between orchestraitor and `sdd-implement` → git index race in parallel waves | P0 | open |
+| SDD-RES-02 | No durable checkpoint for post-implementation phases | P1 | open |
+| (not scenario-ized) | `sdd-proposal` hardcodes `.ai/orchestrator/changes/` while deep-planner writes under `.ai/deep-planner/changes/` — covered indirectly by SDD-ADOPT-01 | P0 | open |
 
-These are expected to FAIL (or behave undefined) until fixed; a run that "passes" one of them today should be treated as nondeterministic luck, not a green light.
+Rows still `open` are expected to FAIL (or behave undefined) until fixed; a run that "passes" one of them today should be treated as nondeterministic luck, not a green light.
 
 ## Execution record
 
