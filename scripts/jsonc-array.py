@@ -205,8 +205,14 @@ def add_value(text: str, root: Node, array: Node | None, property_name: str, val
     encoded = json.dumps(value, ensure_ascii=False)
     if array is None:
         close = root.end - 1
-        prefix = "," if root.properties and not has_trailing_comma(text, root) else ""
-        insertion = f'{prefix}\n  {json.dumps(property_name)}: [\n    {encoded}\n  ]\n'
+        if root.properties and not has_trailing_comma(text, root):
+            # Same rule as the array branch below: the separator goes right after the last
+            # value. Prefixing it to the insertion would land it after any trailing line
+            # comment ("system" // set by me,) where the comment swallows it.
+            last = max(root.properties.values(), key=lambda value: value.end)
+            text = text[: last.end] + "," + text[last.end :]
+            close += 1
+        insertion = f'\n  {json.dumps(property_name)}: [\n    {encoded}\n  ]\n'
         return text[: trim_before(text, close, root.start + 1)] + insertion + text[close:]
 
     close = array.end - 1

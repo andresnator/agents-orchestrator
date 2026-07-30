@@ -94,6 +94,22 @@ shouldAddPluginPropertyWhenMissing() {
   pass "shouldAddPluginPropertyWhenMissing"
 }
 
+shouldPlaceSeparatorBeforeTrailingLineComment() {
+  local scratch rendered
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-contract.XXXXXX")"
+  rendered="$scratch/rendered.jsonc"
+
+  # Given a JSONC object whose last property ends in a trailing line comment
+  # When the managed property is added
+  # Then the separator comma lands after the value, not inside the comment
+  python3 "$ROOT/scripts/jsonc-array.py" add "$FIXTURES/tui-trailing-comment-before.jsonc" plugin "$PLUGIN_SPEC" > "$rendered"
+  assert_file_equals "$rendered" "$FIXTURES/tui-trailing-comment-after-add.jsonc" "trailing-comment add rendered unexpectedly"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$rendered" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 ||
+    fail "trailing-comment add produced a document the editor itself cannot re-parse"
+  rm -rf "$scratch"
+  pass "shouldPlaceSeparatorBeforeTrailingLineComment"
+}
+
 shouldRejectInvalidOrWrongShapeJsonc() {
   local scratch invalid wrong status
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/model-configurator-contract.XXXXXX")"
@@ -529,6 +545,7 @@ run_contracts() {
 run_shell_contracts() {
   shouldPreserveJsoncWhenAddingAndRemovingManagedEntry
   shouldAddPluginPropertyWhenMissing
+  shouldPlaceSeparatorBeforeTrailingLineComment
   shouldRejectInvalidOrWrongShapeJsonc
   shouldAvoidAddingThirdEntryWhenJsoncAlreadyContainsDuplicates
   shouldExposePinnedPluginContracts
