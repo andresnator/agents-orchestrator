@@ -60,7 +60,7 @@ Recommended classification:
 - `sdd-implement`, `jd-fix` — write real code; medium-high quality
 - `sdd-design` — makes design decisions, not mechanical drafting; deliberately split from the other three drafters, which is the one place this classification diverges from `profiles/default.json`'s `drafting` tier
 
-Apply it with `/model-configurator` by browsing the agent groups (or a profile plus per-agent overrides), and use **Apply and save as preset** to re-apply the whole mapping in two steps later. Serving the minion tier from a local provider (e.g. Ollama) additionally gives the paper's privacy property: the heavy context is only ever read on your machine.
+Apply it with `/model-configurator` by browsing the agent groups (or a profile plus per-agent overrides), and use **Apply and save as preset** to re-apply the whole mapping in two steps later. Serving the minion tier from a local provider (e.g. Ollama or [LM Studio on another computer in the LAN](lm-studio.md)) additionally gives the paper's privacy property: the heavy context stays on machines you control.
 
 ## Variants
 
