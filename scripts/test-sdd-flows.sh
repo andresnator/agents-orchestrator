@@ -5,6 +5,12 @@
 #   OPENCODE_BIN=/opt/homebrew/bin/opencode scripts/test-sdd-flows.sh probe
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh smoke
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh SDD-LIGHT-01
+#   OPENCODE_BIN=... scripts/test-sdd-flows.sh lite      # sdd-lite POC scenarios
+#
+# The LITE-* scenarios drive `orchestralite` (sdd-lite domain) instead of the
+# orchestraitor; both agents must be installed in the caller's real OpenCode
+# config for their ids to resolve. PASS lines print output tokens, so running
+# SDD-LIGHT-01 and LITE-01 back to back is the light-vs-lite token comparison.
 #
 # This suite calls a real model and spends real credits, so it is opt-in and is
 # NOT wired into scripts/validate-harness.sh. Runs use the caller's real HOME and
@@ -85,6 +91,7 @@ trap cleanup EXIT INT TERM
 # seeded with pre-existing .ai state, and export SCRATCH / PROJECT / EVENTS.
 setup_scenario() {
   local seed="${1:-none}"
+  RUN_AGENT=orchestraitor
   SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/sdd-flow.XXXXXX")"
   SCRATCHES+=("$SCRATCH")
   KEEP_CURRENT=0
@@ -128,7 +135,7 @@ run_agent() {
   : > "$EVENTS"
   "$OPENCODE_BIN" run \
     --dir "$PROJECT" \
-    --agent orchestraitor \
+    --agent "$RUN_AGENT" \
     --format json \
     --auto \
     --title "$CURRENT" \
@@ -217,19 +224,20 @@ word_count() { wc -w < "$1" | tr -d ' '; }
 
 # A completed run archives the change, so a scenario's folder may be either
 # still active or already under changes/archive/<date>-<name>/. With a name,
-# look for that change; without one, take whichever single change exists.
+# look for that change; without one, take whichever single change exists. An
+# optional second argument points at another changes root (the sdd-lite POC
+# keeps its state under .ai/sdd-lite/changes).
 find_change_dir() {
-  local name="${1:-}" dir
+  local name="${1:-}" root="${2:-$PROJECT/.ai/orchestrator/changes}" dir
   if [ -n "$name" ]; then
-    for dir in "$PROJECT/.ai/orchestrator/changes/$name" \
-      "$PROJECT"/.ai/orchestrator/changes/archive/*-"$name"; do
+    for dir in "$root/$name" "$root"/archive/*-"$name"; do
       [ -d "$dir" ] && { printf '%s\n' "$dir"; return 0; }
     done
     return 1
   fi
-  dir="$(find "$PROJECT/.ai/orchestrator/changes" -mindepth 1 -maxdepth 1 \
+  dir="$(find "$root" -mindepth 1 -maxdepth 1 \
     -type d ! -name archive -print -quit 2>/dev/null)"
-  [ -n "$dir" ] || dir="$(find "$PROJECT/.ai/orchestrator/changes/archive" \
+  [ -n "$dir" ] || dir="$(find "$root/archive" \
     -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
   [ -n "$dir" ] && printf '%s\n' "$dir"
 }
@@ -407,9 +415,66 @@ scenario_SDD_JDG_04() {
   verdict_pass
 }
 
+# --- sdd-lite POC scenarios --------------------------------------------------
+
+# Same bounded task as SDD-LIGHT-01, run by orchestralite. The prompt
+# pre-approves the change.md draft because a headless question ends the turn.
+scenario_LITE_01() {
+  CURRENT="LITE-01"
+  setup_scenario none
+  RUN_AGENT=orchestralite
+  run_agent "Agrega a Order un método totalQuantity() que devuelva la suma de las cantidades de sus líneas, con su test. Es un cambio acotado, TDD alongside. Apruebo el borrador de change.md de antemano: muestralo y continúa sin esperar confirmación, y no me hagas más preguntas." ||
+    { verdict_fail "the run exited non-zero or timed out"; return; }
+
+  local change_dir
+  change_dir="$(find_change_dir "" "$PROJECT/.ai/sdd-lite/changes")"
+  [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/sdd-lite/changes/"; return; }
+
+  assert_file "$change_dir/change.md" || return
+  assert_first_line_matches "$change_dir/change.md" 'Lite: *' || return
+  assert_grep "$change_dir/change.md" '## Spec Deltas' || return
+  assert_grep "$change_dir/change.md" '## Tasks' || return
+
+  local words
+  words="$(word_count "$change_dir/change.md")"
+  [ "$words" -lt 800 ] || { verdict_fail "change.md is $words words, the lite budget is under 800"; return; }
+
+  # The lite flow never touches SDD state and delegates only to lite-verify
+  # (a re-delegated verify round is within contract, another agent is not).
+  assert_absent "$PROJECT/.ai/orchestrator" || return
+  assert_launched lite-verify || return
+  [ "$(launched_subagents)" = "lite-verify" ] ||
+    { verdict_fail "the run delegated beyond lite-verify (saw: $(launched_subagents | tr '\n' ' '))"; return; }
+
+  grep -Rq 'totalQuantity' "$PROJECT/src/main" ||
+    { verdict_fail "totalQuantity was not implemented under src/main"; return; }
+  grep -Rq 'totalQuantity' "$PROJECT/src/test" ||
+    { verdict_fail "no test references totalQuantity under src/test"; return; }
+  verdict_pass
+}
+
+# Oversized request: the entry scope gate must redirect to the orchestraitor
+# without starting the flow or touching the tree.
+scenario_LITE_02() {
+  CURRENT="LITE-02"
+  setup_scenario none
+  RUN_AGENT=orchestralite
+  run_agent "Quiero internacionalizar todo el proyecto: extraer cada texto a bundles de mensajes, soportar español e inglés, formatear moneda por locale y migrar todos los tests existentes. Apruebo cualquier borrador de antemano, no me hagas preguntas." ||
+    { verdict_fail "the run exited non-zero or timed out"; return; }
+
+  assert_absent "$PROJECT/.ai/sdd-lite" || return
+  assert_not_launched lite-verify || return
+  [ -z "$(cd "$PROJECT" && GIT_CONFIG_GLOBAL=/dev/null git status --porcelain)" ] ||
+    { verdict_fail "the working tree was modified despite the scope gate"; return; }
+  jq -r "$TEXT_JQ" "$EVENTS" 2>/dev/null | grep -qi 'orchestraitor' ||
+    { verdict_fail "the redirect to the orchestraitor was never mentioned"; return; }
+  verdict_pass
+}
+
 # --- Entry point -------------------------------------------------------------
 
 SMOKE=(SDD-LIGHT-01 SDD-FULL-02 SDD-ADOPT-01 SDD-ARCH-01 SDD-JDG-04)
+LITE=(LITE-01 LITE-02)
 
 run_scenario() {
   local id="$1"
@@ -421,7 +486,7 @@ run_scenario() {
 }
 
 main() {
-  [ "$#" -ge 1 ] || die "usage: $0 probe|smoke|<scenario-id>"
+  [ "$#" -ge 1 ] || die "usage: $0 probe|smoke|lite|<scenario-id>"
   [ -n "${OPENCODE_BIN:-}" ] || die "OPENCODE_BIN is required (this suite spends real credits)"
   [ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
   command -v jq >/dev/null 2>&1 || die "jq is required"
@@ -432,6 +497,10 @@ main() {
     smoke)
       local id
       for id in "${SMOKE[@]}"; do run_scenario "$id"; done
+      ;;
+    lite)
+      local id
+      for id in "${LITE[@]}"; do run_scenario "$id"; done
       ;;
     *) run_scenario "$1" ;;
   esac

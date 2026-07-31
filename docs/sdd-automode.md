@@ -20,6 +20,7 @@ A complete `agent.<name>.permission` block in the selected target config (prefer
 - `sdd-proposal`, `sdd-spec`, `sdd-tasks` keep `bash: deny`.
 - Every subagent keeps `question: deny`; the orchestraitor keeps `question: allow`.
 - The orchestraitor's `task` map (`"*": deny` plus the sdd subagent allowlist) is copied as-is.
+- Every agent's nested `skill` map (`"*": deny` plus its per-agent allowlist) is copied as-is, like the `task` map.
 
 Invariants:
 

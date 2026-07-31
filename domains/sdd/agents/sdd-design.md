@@ -7,6 +7,10 @@ permission:
   write: allow
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    sdd-draft-design: allow
+    graphify-cli: allow
 ---
 # SDD Design
 

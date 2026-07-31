@@ -7,6 +7,10 @@ permission:
   write: allow
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    graphify-cli: allow
+    code-conventions: allow
 ---
 # Judgment-Day Fix
 

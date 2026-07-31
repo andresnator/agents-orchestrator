@@ -7,6 +7,11 @@ permission:
   write: allow
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    code-conventions: allow
+    tcr: allow
+    work-unit-commits: allow
 ---
 # SDD Implement
 

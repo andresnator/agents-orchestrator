@@ -61,6 +61,8 @@ Assertions read three observable sources — the `.ai/orchestrator/` tree on dis
 
 `SDD-LIGHT-01`, `SDD-FULL-02`, `SDD-ADOPT-01`, `SDD-ARCH-01` and `SDD-JDG-04` run via `scripts/test-sdd-flows.sh smoke`. `SDD-ARCH-02` is asserted as part of the `SDD-ARCH-01` run: the same fixture carries the RENAMED delta and the runner checks the canonical spec for the new name only.
 
+`LITE-01` and `LITE-02` (sdd-lite POC, below) run via `scripts/test-sdd-flows.sh lite`: the runner's `RUN_AGENT` hook drives `orchestralite` instead of the orchestraitor against the same fixture. Both agents must be installed in the caller's real OpenCode config.
+
 ### What stays manual
 
 - **Every interactive-mode scenario** (the proposal gate, the specs+design gate, the `commit-per-wave` first-commit confirmation, the `full`-judgment continue/escalate/stop gate). Headless runs end at the question.
@@ -291,7 +293,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-AUTO-01 — sdd-automode.sh contract sweep** (P2)
 - Fixture: scratch OpenCode target with a valid `opencode.json`; run each sub-case with `--target <scratch>`.
 - Cases and expected results:
-  1. `on` writes a complete `agent.<name>.permission` block per `domains/sdd/agents/*.md` agent + `general`, preserving frontmatter denies verbatim: `edit`/`write: deny` for `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify`; `bash: deny` for `sdd-proposal`, `sdd-spec`, `sdd-tasks`; `question: deny` for every subagent; orchestraitor keeps `question: allow` and its nested `task` map.
+  1. `on` writes a complete `agent.<name>.permission` block per `domains/sdd/agents/*.md` agent + `general`, preserving frontmatter denies verbatim: `edit`/`write: deny` for `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify`; `bash: deny` for `sdd-proposal`, `sdd-spec`, `sdd-tasks`; `question: deny` for every subagent; orchestraitor keeps `question: allow` and its nested `task` map; every agent keeps its nested `skill` map.
   2. `on` twice → second run prints the already-on message and writes nothing; `off` when not on prints the not-on message.
   3. `--dry-run` prints the diff and leaves the config file byte-identical.
   4. Any mutation first writes a timestamped `opencode.json.bak.<ts>` backup.
@@ -307,7 +309,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Pass: artifacts written; observed resume behavior recorded (this scenario is primarily a compatibility probe).
 
 **SDD-RCPT-01 — Receipt conformance checklist** (P2)
-- Run opportunistically inside every scenario above; per `docs/delegation-receipts.md` check that each receipt is one compact YAML block, identity echo first, evidence as pointers (`file:line`, one-line test results — never logs/diffs/code), refusal via `blockers`/`open_questions`, and the artifact itself is never returned (path + assertion fields instead):
+- Run opportunistically inside every scenario above; per `docs/delegation-receipts.md` check that each receipt is one compact YAML block, identity echo first (after the receipt's clean-case terminal token where its template puts one), evidence as pointers (`file:line`, one-line test results — never logs/diffs/code), refusal via `blockers`/`open_questions`, and the artifact itself is never returned (path + assertion fields instead):
   - `sdd-proposal`: `path`, `first_line`, `capabilities[]`, `summary` ≤2 lines, `open_questions[]` (+ `second_line` in roadmap mode).
   - `sdd-spec`: `paths[]`, `capabilities[]`, `first_line`, `summary`, `open_questions[]`.
   - `sdd-design`: `path`, `first_line`, `inspected[]` ≤5, `summary`, `open_questions[]`.
@@ -326,6 +328,23 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Pass: exits 0 both times with the expected component counts.
 
 ---
+
+## SDD Lite POC (LITE-*)
+
+Scenarios for the `sdd-lite` domain (`domains/sdd-lite/README.md`): `orchestralite` runs interview, `change.md` drafting, and implementation in one context and delegates only the cold verify to `lite-verify`. The POC's hypothesis is a token claim, so these scenarios are also the measurement harness.
+
+**LITE-01 — Bounded lite happy path** (P0)
+- Fixture: clean `java-orders` scratch (same task as SDD-LIGHT-01: `Order.totalQuantity()` plus its test).
+- Steps: `scripts/test-sdd-flows.sh LITE-01`; the prompt pre-approves the draft — a headless question ends the turn (see the gate-behavior note above).
+- Expected: `change.md` under `.ai/sdd-lite/changes/<change>/` with `Lite:` as line 1, `## Spec Deltas` and `## Tasks` sections, under 800 words; the implementation and its test land under `src/`; every delegation targets `lite-verify` — no `sdd-*` or `general` launches (a re-delegated verify round stays within contract); `.ai/orchestrator/` never appears.
+- Pass: all of the above hold as script assertions.
+
+**LITE-02 — Entry scope gate redirects** (P0)
+- Fixture: clean scratch; a deliberately sprawling request (project-wide i18n) with pre-approval offered.
+- Expected: the gate fires before the flow starts — no `.ai/sdd-lite/` tree, no `lite-verify` launch, working tree untouched, and the reply recommends the `orchestraitor`.
+- Pass: script assertions; pre-approval must not defeat the gate.
+
+**Token comparison (light vs lite).** Run `SDD-LIGHT-01` and `LITE-01` back to back on the same day and model profile; each PASS line prints the run's output tokens. For the full picture query the OpenCode store (`docs/opencode-db-growth.md`) for the two sessions: total tokens (primary plus subagents), the primary's context peak, delegation count, and compaction events (must be 0 in both). The hypothesis holds if lite's total is lower with the same verify outcome; record the result either way in `domains/sdd-lite/README.md` under "Experiment status".
 
 ## Known-defect index
 

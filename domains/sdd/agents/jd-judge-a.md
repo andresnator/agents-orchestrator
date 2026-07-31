@@ -7,6 +7,9 @@ permission:
   write: deny
   question: deny
   bash: allow
+  skill:
+    "*": deny
+    graphify-cli: allow
 ---
 # Judgment-Day Judge A
 

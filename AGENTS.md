@@ -9,7 +9,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - All documentation and descriptive text in this repo — including READMEs, `docs/`, skill contracts, frontmatter descriptions, and comments — is written in English. Preserve literal runtime trigger phrases (for example, `"ejecuta el plan <change>"` and Spanish skill triggers) because they are activation contracts, not documentation; translating existing legacy Spanish prose is out of scope for this forward-looking rule.
 - `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
 - `skills/` is the source of truth for reusable skill bodies.
-- `domains/{sdd,refactor,architecture,plan,learning,docs,meta,common}/README.md` explains each domain.
+- `domains/{sdd,sdd-lite,refactor,architecture,plan,learning,docs,meta,common}/README.md` explains each domain.
 - `domains/<domain>/agents/<name>.md` stores one fused OpenCode agent file: frontmatter plus prompt body.
 - `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
@@ -33,6 +33,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 Each `domains/<domain>/README.md` is the authoritative description; one-liners:
 
 - `sdd`: spec-driven development around the `orchestraitor` primary agent; adopts ready-for-sdd planner bundles (see `docs/plan-handoff.md`).
+- `sdd-lite`: POC of a single-context flow for bounded changes around the `orchestralite` primary agent; only the cold verify is delegated.
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles, plus Java refactor skills.
 - `architecture`: architecture mapping, state reviews, reverse-engineered PRDs, audits, and ADR + ideation bundles.
 - `plan`: Fable-style planning front-door (`/deep-plan` → ready-for-sdd bundles for executable goals, plan docs for decisions) and `/wayfinder` multi-session discovery maps under `.ai/`.
@@ -92,7 +93,7 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 
 ## Adding A Component
 
-1. Pick the domain first: `sdd`, `refactor`, `architecture`, `plan`, `learning`, `docs`, `meta`, or `common`.
+1. Pick the domain first: `sdd`, `sdd-lite`, `refactor`, `architecture`, `plan`, `learning`, `docs`, `meta`, or `common`.
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
 3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
 4. For skills, bump `metadata.version` when changing an existing skill.
@@ -113,6 +114,6 @@ Adding a component must not require editing any installer.
 - For Graphify initializer changes, run `scripts/test-graphify-init.sh`; it uses isolated HOME/XDG state, a fake Graphify binary, and OpenCode's `/global/event` stream.
 - For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
 - For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
-- For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke` or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
+- For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke`, `lite` (the sdd-lite `LITE-*` scenarios, driving `orchestralite`), or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
 - For skill-registry plugin changes, run `scripts/test-skill-registry.sh`; it runs inside a throwaway HOME/worktree (project-over-user precedence, symlink-cycle dedupe, hash no-op, legacy `.atl` migration, retry after failure, `.git/info/exclude` ownership) and needs Node >= 22.18.
 - Do not commit unless explicitly asked.
