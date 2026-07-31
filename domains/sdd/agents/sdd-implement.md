@@ -10,6 +10,8 @@ permission:
   skill:
     "*": deny
     code-conventions: allow
+    tcr: allow
+    work-unit-commits: allow
 ---
 # SDD Implement
 

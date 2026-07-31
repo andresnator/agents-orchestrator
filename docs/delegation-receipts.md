@@ -7,9 +7,9 @@ A delegation receipt is the compact, machine-scannable return a subagent sends b
 Every receipt in this repo follows the same conventions; the concrete schema lives inline in each agent's Output section, not in a shared skill.
 
 - **Compact YAML.** One block, keys the caller branches on, no surrounding prose.
-- **Identity echo.** The receipt starts by echoing the identity keys from the brief (`change`, `wave`, `diff_range`, …) so the caller can match returns to briefs without inference.
+- **Identity echo.** The receipt echoes the identity keys from the brief (`change`, `wave`, `diff_range`, …) so the caller can match returns to briefs without inference; only the receipt's own clean-case terminal token may precede them.
 - **Evidence stays pointers.** `file:line` references and one-line test results only — never logs, code blocks, or diff excerpts. The parent verifies by following pointers, not by trusting pasted output.
-- **Terminal token for the clean case.** A fixed string the caller can match exactly: `VERDICT: CLEAN — No issues found.` (judges), `VERIFY: ALL PASS — <n>/<n> scenarios.` (verify), `FIX: <n> fixed, <m> open.` (fix rounds). Callers key control flow on these strings; change them only as a breaking contract change.
+- **Terminal token for the clean case.** A fixed string the caller can match exactly: `VERDICT: CLEAN — No issues found.` (judges), `VERIFY: ALL PASS — <n>/<n> scenarios.` (verify), `FIX: <n> fixed, <m> open.` (fix rounds). Each receipt's template fixes the token's position — the verify receipts emit it as the first line of the receipt, `jd-fix` as the last. Callers key control flow on these strings; change them only as a breaking contract change.
 - **`blockers: []` as the refusal channel.** A subagent that cannot proceed says why in `blockers` (or `open_questions` for drafting agents, `nf: <reason>` for read-only fan-outs) instead of guessing or returning partial prose.
 - **Per-item size caps, not count caps.** Findings are capped in size (scenario ≤ 2 lines, fix = 1 line of intent), and repeated instances of one defect collapse into one row with multiple `evidence` entries. Real defects are never dropped to fit a count.
 - **Never return the artifact.** An agent that writes a file returns its path plus assertion fields (`first_line`, `forecast_guards`, …) the caller checks instead of re-reading the file wholesale.
@@ -17,6 +17,7 @@ Every receipt in this repo follows the same conventions; the concrete schema liv
 ## Where it is used
 
 - `domains/sdd/agents/sdd-verify.md` — scenario receipt with `gaps` rows that seed fix briefs directly.
+- `domains/sdd-lite/agents/lite-verify.md` — the sdd-lite fork of the `sdd-verify` receipt (same shape and terminal token), consumed by `orchestralite`; duplicated deliberately so the POC domain installs standalone.
 - `domains/sdd/agents/sdd-implement.md` — wave receipt with one `assertions` row per task (`task -> file:line`) so the orchestraitor integrates from fields instead of rereading the wave's files; a non-empty `out_of_scope` triggers re-planning. A `merge` brief returns a different receipt: `merged` rows (one per delta, RENAMED naming both sides), `specs_written`, and `stale` as the leftover channel.
 - `domains/sdd/agents/jd-judge-a.md`, `jd-judge-b.md`, `jd-solo.md` — findings receipt (plus `verdicts` in re-judge rounds); consumed by the `judgment-day` synthesis.
 - `domains/sdd/agents/jd-fix.md` — fixes receipt.

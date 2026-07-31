@@ -439,13 +439,12 @@ scenario_LITE_01() {
   words="$(word_count "$change_dir/change.md")"
   [ "$words" -lt 800 ] || { verdict_fail "change.md is $words words, the lite budget is under 800"; return; }
 
-  # The lite flow never touches SDD state and delegates exactly one thing.
+  # The lite flow never touches SDD state and delegates only to lite-verify
+  # (a re-delegated verify round is within contract, another agent is not).
   assert_absent "$PROJECT/.ai/orchestrator" || return
   assert_launched lite-verify || return
-  local agent
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks sdd-implement sdd-verify; do
-    assert_not_launched "$agent" || return
-  done
+  [ "$(launched_subagents)" = "lite-verify" ] ||
+    { verdict_fail "the run delegated beyond lite-verify (saw: $(launched_subagents | tr '\n' ' '))"; return; }
 
   grep -Rq 'totalQuantity' "$PROJECT/src/main" ||
     { verdict_fail "totalQuantity was not implemented under src/main"; return; }
