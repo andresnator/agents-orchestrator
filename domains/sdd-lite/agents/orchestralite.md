@@ -42,7 +42,7 @@ interview -> change.md drafted in chat -> approval -> write file -> implement in
 4. **Implement inline**: work task by task in this same context. Read only files inside the declared `Files:` scope of the current task group; check the boxes in `change.md` as you go. Run the scoped validation once per task group, when the group closes — not after every checkbox; a suite you already saw green does not get re-run to confirm itself. Keep chat output short — what changed, one line per task; no code dumps unless the user asks.
 5. **Verify cold**: delegate to `lite-verify` with a complete brief: the `change.md` path, the scenario ids to check, the implementation scope, the validation command, and the diff range (`<baseline-sha>..HEAD` if the user had you commit; otherwise the working tree). Ask it to return its Output receipt. Reconcile the receipt against the brief: the scenario id set matches exactly, every row PASS, `gaps` and `blockers` empty, and the terminal `VERIFY: ALL PASS — <n>/<n>` count matches. A malformed or incomplete receipt is not a verdict: re-delegate once naming the discrepancy, then ask the user.
 6. **Fix**: on gaps, apply the fixes inline — maximum one round — then re-delegate `lite-verify` scoped to the failed scenarios only. Gaps still open after that round: stop and ask the user (continue with orchestraitor / stop).
-7. **Archive**: `mv .ai/sdd-lite/changes/<change>/ .ai/sdd-lite/changes/archive/<YYYY-MM-DD>-<change>/`. No spec merge — sdd-lite keeps no canonical specs.
+7. **Archive**: `mv .ai/sdd-lite/changes/<change>/ .ai/sdd-lite/changes/archive/<YYYY-MM-DD>-<change>/`. Confirm the folder exists first (literal path); if it is already gone or already under `archive/`, say so in one line instead of letting `mv` fail. No spec merge — sdd-lite keeps no canonical specs.
 
 Committing is the user's act: never commit or push unless explicitly asked, and never commit `.ai/` artifacts.
 
@@ -82,6 +82,8 @@ Rules: requirements use RFC 2119; scenarios use WHEN/THEN; deltas describe WHAT,
 
 Inline implementation is the experiment, not a license to read everything. Reads stay inside the current group's `Files:` scope plus the test files it names; state reads (the `Lite:` line, checkbox positions) are ranged reads, never whole files. If understanding the change requires reading beyond the declared scope, that is the mid-flight gate firing — redirect instead of widening.
 
+Graphify is out of scope for this domain: you carry `graphify*: deny`, so the global Graphify-first precedence rule does not apply to you. Never probe `.ai/graphify-out/` and never mention an absent graph — inside the scope gate exploration is plain reads within the declared `Files:` scope, and an absent graph is the expected state, not friction.
+
 ## Command output discipline
 
 Everything a command prints enters this context and is re-sent on every later turn, so command output is a budget you spend, not free information.
@@ -115,7 +117,7 @@ Follow these when writing code or tests. A convention the target repo already ap
   changes/archive/<YYYY-MM-DD>-<change>/
 ```
 
-`.ai/` is a hidden dot-directory that default glob tools skip: scan state with literal paths (`ls -la .ai/sdd-lite/changes/`). Resume: on "continúa <change>", read the `Lite:` line and the first unchecked task with ranged reads and continue from there.
+`.ai/` is a hidden dot-directory that default glob tools skip: scan state with literal paths (`ls -la .ai/sdd-lite/changes/`). Resume: on "continúa <change>", first confirm `.ai/sdd-lite/changes/<change>/change.md` exists with a literal-path check — never a glob, and never a blind read. If it is missing, check `changes/archive/*-<change>/`: found there means the change is already archived — say so; found nowhere, list the available changes in one line and ask which to resume. Only after the file is confirmed do the ranged reads (the `Lite:` line, the first unchecked task) and continue from there. A missing change is a question to the user, never a surfaced tool error.
 
 ## Questions and language
 

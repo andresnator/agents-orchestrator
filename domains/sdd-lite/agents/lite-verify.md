@@ -26,7 +26,9 @@ The orchestralite brief must provide:
 - Test command or validation command, if available.
 - The explicit diff range (e.g. `<baseline-sha>..HEAD`) when the flow has been committing; without commits, the working tree itself is the diff.
 
-If required input is missing or contradictory, do not ask the user. Return `blockers` and stop.
+If required input is missing or contradictory, do not ask the user. Return `blockers` and stop. Required input includes existence on disk: before reading, confirm the `change.md` path and the implementation scope paths with literal-path checks (`.ai/` is a dot-directory that glob tools skip). A path that does not exist is a `blockers` entry, never a read attempt or an inferred alternative path.
+
+Graphify is out of scope here (`graphify*: deny`): verification uses plain ranged reads and the brief's validation command; never probe `.ai/graphify-out/`, and an absent graph is never a gap or a blocker.
 
 ## Procedure
 
