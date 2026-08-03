@@ -52,6 +52,7 @@ installers/opencode.sh status --domain sdd
 | [Graphify test plan](docs/graphify-testing.md) | Validating Graphify integration changes |
 | [Hot reload](docs/hot-reload.md) | Applying supported changes without restarting OpenCode |
 | [Learning domain](docs/learning-domain.md) | Running multi-session learning workflows |
+| [LM Studio over LAN](docs/lm-studio.md) | Connecting OpenCode to one or more LM Studio models on another computer |
 | [Manual plugin installation](docs/manual-plugin-install.md) | Installing plugins without the repository installer |
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |

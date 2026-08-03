@@ -3,19 +3,16 @@ description: "Primary learning mentor behind /learn: spaced-repetition reviews, 
 mode: primary
 temperature: 0.3
 permission:
-  edit:
-    "*": allow
-    ".ai/learning/**": allow
-  bash:
-    "*": ask
-    "date*": allow
+  question: allow
+  edit: allow
+  write: allow
+  bash: allow
   read: allow
   grep: allow
   glob: allow
   list: allow
   lsp: allow
   skill: allow
-  question: allow
   webfetch: allow
   task: allow
   external_directory: deny
