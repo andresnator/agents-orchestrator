@@ -14,13 +14,13 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
 - `skills/<skill>/SKILL.md` stores self-contained skill contracts.
 - `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
-- `domains/<domain>/plugins/*.ts` stores OpenCode plugins installed with that domain.
-- `domains/common/plugins/graphify-init.ts` is the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph **refresher** (per-repo output under `.ai/graphify-out/`); first indexing is human-gated behind the `domains/common/commands/graphify-index.md` command, which records the per-repo mode in `.ai/graphify-out/.opencode-index-mode`. Setup, the cross-repository global graph, and recovery live in `docs/graphify.md`.
-- `domains/<domain>/tui-plugins/<name>.tsx` stores OpenCode TUI plugin entrypoints; each has a same-named companion directory with its sources. OpenCode-only; the installer generates copies (not symlinks) and registers the exact entry in the target's `tui.json`.
+- `domains/<domain>/plugins/*.ts` stores repository-owned OpenCode plugins installed with that domain.
+- `domains/<domain>/external-plugins/<name>.server.json` and `<name>.tui.json` lock reusable standalone plugins by version, GitHub repository, full commit, artifact path, and SHA-256. Their source, tests, and releases live in the named external repositories.
+- `domains/common/external-plugins/graphify-init.server.json` pins the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph **refresher**. First indexing remains human-gated behind `domains/common/commands/graphify-index.md`, which records the per-repo mode in `.ai/graphify-out/.opencode-index-mode`; setup and recovery live in `docs/graphify.md`.
 - `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
 - `docs/` stores reference docs for live mechanisms.
 - `profiles/<name>.json` stores abstract model-tier profiles (never concrete model ids) consumed by the meta `model-configurator` TUI plugin; see `docs/agent-models.md`.
-- The meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md` and `docs/hot-reload.md`).
+- The externally maintained meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md` and `docs/hot-reload.md`).
 - `scripts/sdd-automode.sh` toggles SDD auto-mode: per-agent `permission` blocks in user OpenCode config, never repo artifacts (see `docs/sdd-automode.md`).
 - `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
@@ -78,16 +78,16 @@ installers/opencode.sh uninstall [--project] [--target DIR] [--dry-run]
 installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
 ```
 
-- Default target `~/.config/opencode`, `--project` targets `./.opencode`; everything is symlinked except TUI plugins, which are generated copies plus a managed `tui.json` entry and pinned `package.json` dependency (requires OpenCode >= 1.17.15, `python3`, and `jq`; aborts before mutation otherwise); global rules link to `$TARGET/AGENTS.md`.
-- Both plugin types install into `$TARGET/plugins/`, OpenCode's plugin folder: runtime plugins as symlinks, TUI plugins as a generated `<name>.tsx` copy plus its companion directory. There is no separate `tui-plugins/` install directory. This is safe because OpenCode's runtime loader globs `{plugin,plugins}/*.{ts,js}` (top level, no `.tsx`), so a TUI entrypoint and its subdirectory are never loaded as runtime plugins; the TUI reaches them only through the exact `tui.json` path entry.
+- Default target `~/.config/opencode`, `--project` targets `./.opencode`; repository artifacts are symlinked. External plugins require OpenCode >= 1.17.15, `curl`, `jq`, and `shasum` or `sha256sum`; an external TUI plugin additionally requires `python3` so its exact entry can be added to `tui.json` without losing JSONC comments. Preflight and downloads finish before the transaction mutates the target. Global rules link to `$TARGET/AGENTS.md`.
+- All plugins install under `$TARGET/plugins/`. Repository-owned server plugins are symlinked at the top level. External server bundles are verified regular `<name>.js` files at the top level. External TUI bundles live at `<name>/tui.js` and load only through the exact managed `tui.json` entry, so OpenCode's top-level server-plugin glob does not load them twice.
 - Default filter is `--domain all --status all`.
-- Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, plugins, and TUI plugins are not status-filtered.
-- The installer discovers agent/command regular files and domain skill symlinks. Installed skill links point to the top-level `skills/` directory.
+- Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, plugins, and external plugins are not status-filtered.
+- The installer discovers agent/command regular files, domain skill symlinks, repository plugins, and external-plugin descriptors. Installed skill links point to the top-level `skills/` directory.
 - `install` always installs the global rules regardless of `--domain`/`--status` filters. A pre-existing foreign destination is skipped with a warning unless `--force`.
-- The installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated files), and `dir<TAB>path` lines, plus `managed-array`/`managed-object` rows (`kind<TAB>file<TAB>field<TAB>value`) that narrowly own one exact config value each (the `tui.json` plugin entry and the `jsonc-parser` dependency). Pre-existing identical values are never claimed.
+- The installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated or downloaded files), and `dir<TAB>path` lines, plus `managed-array` rows that narrowly own an exact `tui.json` plugin entry. Pre-existing identical entries are never claimed. Legacy `managed-object` rows are still understood so upgrading removes the retired `jsonc-parser` package dependency safely.
 - `install` is a sync: links, generated files, and managed values from the previous manifest that are no longer selected are removed (type-guarded and exact-value-guarded, so user-replaced content is never deleted), then directories the previous manifest created and the current one no longer claims are pruned deepest-first with `rmdir`, so one that still holds anything is kept. OpenCode installs are transactional: a failure mid-install rolls the target back to its prior state.
 - `uninstall` removes manifest-owned symlinks, generated files, and still-matching managed values plus empty created directories.
-- Generated files do not auto-update when the repo changes; re-run install. `status` reports them as `generated`, `stale`, `foreign`, or `not installed`.
+- Downloaded bundles and copied profiles do not auto-update when a descriptor or repo profile changes; re-run install. `status` reports external bundles with their pinned version and distinguishes installed, stale, foreign, and missing state.
 - `install --reload` additionally hot-reloads running OpenCode servers after the transaction commits (best-effort, never fails the install); plugin code still needs a restart. Mechanism in `docs/hot-reload.md`.
 - The `skill-registry` plugin generates the skill index consumed at runtime (`.ai/atl/skill-registry.md`).
 
@@ -97,10 +97,10 @@ installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--t
 2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
 3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
 4. For skills, bump `metadata.version` when changing an existing skill.
-5. Add a plugin under `domains/<domain>/plugins/` only for real OpenCode runtime behavior.
-6. Add a TUI plugin under `domains/<domain>/tui-plugins/` (entrypoint `<name>.tsx` plus same-named companion directory) only for interactive OpenCode UI; it is OpenCode-only by design.
+5. Add a plugin under `domains/<domain>/plugins/` only when it is repository-specific. A reusable server or TUI plugin belongs in a standalone repository; add a `.server.json` or `.tui.json` lock under `domains/<domain>/external-plugins/` instead of copying its implementation here.
+6. For an external plugin update, change `version`, `commit`, `artifact`, and `sha256` together, then run the remote artifact check below. A TUI descriptor may also name a repository-local `profileSource` copied beside its bundle.
 7. When adding, removing, or moving a component, update the domain README's `## Components` table; if its entry points changed, update that domain's row in the root README too.
-8. Run `installers/opencode.sh install --dry-run` to confirm discovery and link behavior.
+8. Run `installers/opencode.sh install --dry-run` to confirm discovery and target behavior.
 
 Adding a component must not require editing any installer.
 
@@ -109,11 +109,10 @@ Adding a component must not require editing any installer.
 - For doc-only changes, inspect the edited Markdown/frontmatter directly.
 - For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks `installers/opencode.sh` plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
 - For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files.
-- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command frontmatter contracts (forbidden keys, key order, mode values), skill frontmatter (name/description/license, strict SemVer `metadata.version`, valid `metadata.status`), domain skill symlink integrity, global agent/command/TUI-plugin name uniqueness, TUI companion-directory layout, profile JSON shape (valid JSON, no agent in two tiers, agents must exist; jq-gated), script syntax (plus `shellcheck -x` when available) for all installers and every `scripts/*.sh`, the deterministic model-configurator shell contracts (python3/jq-gated), and the deterministic skill-registry plugin contracts (Node >= 22.18-gated).
-- For model-configurator changes, run `scripts/test-model-configurator.sh contracts` (shell + TypeScript suites; the TypeScript half needs `npm`) and, with a real binary, `OPENCODE_BIN=<path> scripts/test-model-configurator.sh smoke`.
-- For Graphify initializer changes, run `scripts/test-graphify-init.sh`; it uses isolated HOME/XDG state, a fake Graphify binary, and OpenCode's `/global/event` stream.
+- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command and skill frontmatter contracts, domain skill symlink integrity, global component-name uniqueness, external descriptor shape, profile JSON shape, script syntax (plus `shellcheck -x` when available), deterministic external-plugin installer contracts, and the remaining component-specific checks.
+- For external-plugin installation changes, run `scripts/test-external-plugin-install.sh contracts`; it covers JSONC preservation, install/repair/status/uninstall, foreign-file protection, rollback, filtered sync, migration from the old internal plugins, and project-target containment without network access. Run `scripts/test-external-plugin-install.sh remote` to download every descriptor's real pinned artifact and verify its SHA-256.
+- Plugin implementation checks belong to their standalone repositories: `opencode-agent-model-configurator`, `opencode-skill-registry`, and `opencode-graphify-init` each expose `npm run check` and CI. Changes here validate the descriptor and integration, not copied source.
 - For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
 - For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
 - For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke`, `lite` (the sdd-lite `LITE-*` scenarios, driving `orchestralite`), or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
-- For skill-registry plugin changes, run `scripts/test-skill-registry.sh`; it runs inside a throwaway HOME/worktree (project-over-user precedence, symlink-cycle dedupe, hash no-op, legacy `.atl` migration, retry after failure, `.git/info/exclude` ownership) and needs Node >= 22.18.
 - Do not commit unless explicitly asked.

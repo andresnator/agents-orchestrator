@@ -15,7 +15,7 @@
 # This suite calls a real model and spends real credits, so it is opt-in and is
 # NOT wired into scripts/validate-harness.sh. Runs use the caller's real HOME and
 # XDG dirs — a hermetic HOME hangs session creation because provider credentials
-# never resolve (see scripts/test-graphify-init.sh) — but every artifact is
+# never resolve — but every artifact is
 # written inside a throwaway project directory, never in this repo.
 #
 # What the probe established about headless behavior: `--agent orchestraitor`

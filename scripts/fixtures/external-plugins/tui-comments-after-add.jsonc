@@ -4,7 +4,7 @@
   "theme": "system",
   "plugin": [
     "./foreign.tsx", // Keep this inline comment.
-    "./plugins/model-configurator.tsx"
+    "./plugins/model-configurator/tui.js"
   ],
   "label": "Configuración ágil",
 }

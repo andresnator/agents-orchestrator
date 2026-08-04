@@ -174,6 +174,26 @@ discover_components() {
       done
     fi
 
+    dir="$domain/external-plugins"
+    if [ -d "$dir" ]; then
+      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' \) | sort |
+        while IFS= read -r file; do
+          name="$(basename "$file")"
+          case "$name" in
+            *.server.json)
+              name="${name%.server.json}"
+              type="external-server-plugins"
+              ;;
+            *.tui.json)
+              name="${name%.tui.json}"
+              type="external-tui-plugins"
+              ;;
+          esac
+          src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
+          printf '%s\t%s\t%s\t%s\t%s\n' "$type" "$name" "$domain_name" "-" "$src" >> "$out"
+        done
+    fi
+
     dir="$domain/tui-plugins"
     if [ -d "$dir" ]; then
       find "$dir" -maxdepth 1 -type f -name '*.tsx' | sort | while IFS= read -r file; do
@@ -190,7 +210,16 @@ check_collisions() {
   selected="$1"
   dup="$(awk -F '\t' '
     {
-      key = $1 "\t" $2
+      type = $1
+      name = $2
+      if (type == "plugins" || type == "external-server-plugins") {
+        type = "server-plugins"
+        sub(/\.(ts|js)$/, "", name)
+      } else if (type == "tui-plugins" || type == "external-tui-plugins") {
+        type = "tui-plugins"
+        sub(/\.tsx$/, "", name)
+      }
+      key = type "\t" name
       src = $5
       if (seen[key] != "" && seen[key] != src) {
         print key

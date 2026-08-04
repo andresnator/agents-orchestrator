@@ -6,7 +6,7 @@ Status: adopted on OpenCode 1.17.15 (2026-07-14). The model-configurator wizard 
 
 - **Viable today** for agent model/variant and other `opencode.json[c]` config changes, with one asymmetry between scopes (see below): the OpenCode server can hot-apply config without a process restart, and the wizard now does.
 - **Viable today** for installed markdown artifacts (agents, commands, skills) and project config: disposing instances makes the server re-read them on the next request; `install --reload` does this for every discovered healthy server. A TUI session that already listed them may not refresh its client-side catalog until its next request.
-- **Not viable** for plugin code (including TUI plugins), `tui.json`, and `package.json`: modules and plugin registration load once at process startup. Re-running `installers/opencode.sh install` plus a restart remains the only path for those.
+- **Not viable** for plugin code (including TUI plugins) and `tui.json`: modules and plugin registration load once at process startup. Re-running `installers/opencode.sh install` plus a restart remains the only path for those.
 
 ## The Mechanism (validated empirically on 1.17.15)
 
@@ -26,7 +26,7 @@ The v1 loader has no file watcher: editing `opencode.json[c]` by hand changes no
 
 ## What Is Implemented
 
-1. **model-configurator** (`domains/meta/tui-plugins/model-configurator/hot-apply.ts`), after the existing transactional write semantics:
+1. **model-configurator** ([external `hot-apply.ts`](https://github.com/andresnator/opencode-agent-model-configurator/blob/v0.1.0/src/hot-apply.ts)), after the existing transactional write semantics:
    - **Client shape**: the TUI hands plugins the **v2 SDK** client (`createOpencodeClient` from `@opencode-ai/sdk/v2`, wired through `packages/tui/src/context/sdk.tsx` → `packages/tui/src/plugin/adapters.tsx`), whose generated groups take parameters directly. The bundled v1 SDK (`~/.config/opencode/node_modules/@opencode-ai/sdk`) neither generates the global group nor matches these signatures — it is not what TUI plugins receive. The v2 groups are **class instances whose methods read `this.client`**: invoke them on their receiver (`group.update(...)`); extracting a method into a variable and calling it detached throws `undefined is not an object (evaluating 'this.client')`.
    - **Project scope**: keep our comment-preserving JSONC write, then `client.instance.dispose({ directory })` for the project directory.
    - **Global scope**: removals (inherit, stale `variant` keys) are written locally first — the PATCH cannot express them — then the remaining `set` leaves go through `PATCH /global/config` via `client.global.config.update({ config })`. The byte change from those leaves triggers the cache invalidation and global disposal that also pick up the local removals. Removal-only change sets have no byte-changing leaf to ride on, so they fall back to the restart toast.

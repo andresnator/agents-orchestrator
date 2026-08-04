@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "name": "model-configurator",
+  "kind": "tui",
+  "version": "0.1.0",
+  "repository": "andresnator/opencode-agent-model-configurator",
+  "commit": "6dd359aa6eb32856d7fdff37e0d8a50088f900a6",
+  "artifact": "dist/tui.js",
+  "sha256": "3d4da4ed1dd8f3c79df72172c97f16e4277e2a10f80cabb0d0ce0bc7737538b3",
+  "profileSource": "profiles"
+}
