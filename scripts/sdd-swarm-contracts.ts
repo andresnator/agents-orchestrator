@@ -97,6 +97,17 @@ function shouldDenyNestedSwarmToolsInWorkerContract(): void {
   assert.match(worker, /^    "git push\*": deny$/m)
 }
 
+function shouldUseSddSwarmNamespaceWhenNamingRuntimeBranches(): void {
+  // Given
+  const runId = "20260804t120000-a1b2c3"
+
+  // When
+  const prefix = sddSwarmContracts.runBranchPrefix(runId)
+
+  // Then
+  assert.equal(prefix, "sdd-swarm/20260804t120000-a1b2c3")
+}
+
 function shouldParseReceiptWhenEvidenceMatchesContract(): void {
   // Given
   const receipt = `wave: "1"
@@ -181,6 +192,7 @@ shouldSerializeLegacyGroupsWhenDependenciesAreMissing()
 shouldSerializeOverlappingScopesWhenDependenciesAreExplicit()
 shouldSerializeIntrinsicHotspotsWithoutPromptInference()
 shouldDenyNestedSwarmToolsInWorkerContract()
+shouldUseSddSwarmNamespaceWhenNamingRuntimeBranches()
 shouldParseReceiptWhenEvidenceMatchesContract()
 shouldReturnZeroEfficiencyWhenMeasurementIsIncomplete()
 shouldMatchFilesInsideDirectoryAndGlobScopes()

@@ -105,7 +105,7 @@ State is atomically persisted under `.ai/sdd-swarm/<run-id>/run.json`; the appen
 ${XDG_DATA_HOME:-~/.local/share}/opencode/sdd-swarm/<repo-id>/<run-id>/
 ```
 
-`SDD_SWARM_WORKTREE_ROOT` overrides that root for tests. Branches use `codex/swarm/<run-id>/task-<group>` and `codex/swarm/<run-id>/integration`.
+`SDD_SWARM_WORKTREE_ROOT` overrides that root for tests. Branches use `sdd-swarm/<run-id>/task-<group>` and `sdd-swarm/<run-id>/integration`.
 The detached controller uses `node` from `PATH`; `SDD_SWARM_NODE_BIN` can select another Node >= 22.18 executable. This is intentionally separate from OpenCode's own executable.
 
 Terminal states are `completed`, `blocked`, `failed`, `aborted`, and `interrupted`. Completion means every receipt, diff, scoped check, cherry-pick, full gate, and optional final gate passed. A dead controller is reported as `interrupted`; the ledger and worktrees remain for diagnosis. `abort` terminates recorded process groups. `cleanup` is explicit, preserves branches and the ledger, unlocks worktrees, and refuses to remove any dirty worktree.

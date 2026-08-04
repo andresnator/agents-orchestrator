@@ -29,6 +29,7 @@ const WORKTREE_ROOT_ENV = "SDD_SWARM_WORKTREE_ROOT"
 const WORKER_MODEL_ENV = "SDD_SWARM_WORKER_MODEL"
 const OPENCODE_BIN_ENV = "OPENCODE_BIN"
 const NODE_BIN_ENV = "SDD_SWARM_NODE_BIN"
+const BRANCH_NAMESPACE = "sdd-swarm"
 const TERMINAL_STATUSES = new Set(["completed", "blocked", "failed", "aborted", "interrupted"])
 const INTRINSIC_HOTSPOT_FILES = new Set([
   "build.gradle",
@@ -922,6 +923,10 @@ function makeRunId(): string {
   return `${timestamp}-${randomBytes(3).toString("hex")}`
 }
 
+function runBranchPrefix(runId: string): string {
+  return `${BRANCH_NAMESPACE}/${runId}`
+}
+
 async function prepareRun(options: {
   root: string
   change: string
@@ -946,7 +951,7 @@ async function prepareRun(options: {
   const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share")
   const worktreeBase = process.env[WORKTREE_ROOT_ENV] || path.join(dataHome, "opencode", "sdd-swarm")
   const runWorktrees = path.join(worktreeBase, repoId, runId)
-  const branchPrefix = `codex/swarm/${runId}`
+  const branchPrefix = runBranchPrefix(runId)
   const workers: Record<string, WorkerState> = {}
   for (const group of parsed.groups.filter((candidate) => !candidate.completed)) {
     workers[group.id] = {
@@ -1101,6 +1106,7 @@ export const sddSwarmContracts = {
   parseReceipt,
   parseTasks,
   pathInScopes,
+  runBranchPrefix,
   scopesOverlap,
 }
 
