@@ -7,12 +7,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/lib/common.sh"
 
 TARGET=""
-MIN_TUI_OPENCODE_VERSION="1.17.15"
-MODEL_CONFIGURATOR_SPEC="./plugins/model-configurator.tsx"
-JSONC_PARSER_VERSION="3.3.1"
+MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 INSTALL_TX_DIR=""
 INSTALL_TX_RECORDS=""
+EXTERNAL_STAGE_DIR=""
 
 runtime_usage() {
   cat <<'EOF'
@@ -21,13 +20,15 @@ Usage:
               [--project] [--target DIR] [--dry-run] [--force] [--reload]
 
 Actions:
-  install     Sync selected domain components into an OpenCode target as symlinks.
-              TUI plugins are also registered by exact path in tui.json.
+  install     Sync selected domain components into an OpenCode target. Repository
+              components are symlinked; external plugin bundles are downloaded
+              from commit-pinned GitHub sources and SHA-256 verified. TUI plugins
+              are also registered by exact path in tui.json.
               Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
               regardless of --domain/--status filters. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
-  uninstall   Remove symlinks recorded in the target manifest, then remove the manifest.
-  status      List selected components and whether each target link is linked, not linked, or foreign.
+  uninstall   Remove manifest-owned links, files, config values, and empty directories.
+  status      List selected components and their target state.
 
 Targets:
   default      ~/.config/opencode
@@ -37,11 +38,13 @@ Targets:
 Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
-              (currently: architecture, common, docs, meta, plan, refactor, sdd).
+              (currently: architecture, common, docs, learning, meta, plan,
+              refactor, sdd, sdd-lite).
               Domain skills are symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
-               Agents, commands, plugins, and TUI plugins are not status-filtered because
+              Agents, commands, plugins, external plugins, and TUI plugins are not
+              status-filtered because
               OpenCode frontmatter for executable components cannot carry
               repository-only metadata.
 
@@ -50,7 +53,7 @@ Defaults:
   --status all
 
 Options:
-  --dry-run   Print planned mkdir/link/rm/manifest actions without changing files.
+  --dry-run   Print planned mkdir/link/download/rm/manifest actions without changing files.
   --force     Replace an existing non-matching destination symlink/file during install.
   --reload    After a committed install, POST /global/dispose to running OpenCode
               servers so re-installed agents, commands, and skills are re-read
@@ -81,8 +84,8 @@ Examples:
 
 Manifest:
   The installer writes .agents-orchestrator-manifest in the target. A later
-  install is a sync: links from the old manifest that are no longer selected
-  are removed if they are still symlinks.
+  install is a sync: previously owned links, files, config values, and empty
+  directories that are no longer selected are removed with type/value guards.
 EOF
 }
 
@@ -104,23 +107,196 @@ runtime_ensure_dirs() {
   ensure_dir "$TARGET/plugins" "$1"
 }
 
-# Both plugin types install into OpenCode's plugin folder. The runtime loader
-# globs {plugin,plugins}/*.{ts,js}, so a TUI plugin's .tsx entrypoint and its
-# companion subdirectory sitting there are never picked up as runtime plugins;
-# the TUI loads them only through the exact tui.json path entry.
+# All plugin types install into OpenCode's plugin folder. External server
+# bundles stay at the top level for the runtime loader. External TUI bundles
+# are nested so they load only through their exact tui.json path entry.
 runtime_dest() {
   case "$1" in
+    external-server-plugins) DEST_PATH="$TARGET/plugins/$2.js" ;;
+    external-tui-plugins) DEST_PATH="$TARGET/plugins/$2/tui.js" ;;
     tui-plugins) DEST_PATH="$TARGET/plugins/$2" ;;
     *) DEST_PATH="$TARGET/$1/$2" ;;
   esac
 }
 
-runtime_install_component() {
-  local type="$1" src="$3" dest="$4" manifest="$5" companion support profile profiles_dest
-  if [ "$type" != "tui-plugins" ]; then
-    link_component "$src" "$dest" "$manifest"
+external_descriptor_field() {
+  jq -er --arg field "$2" '.[$field] // empty' "$1"
+}
+
+external_descriptor_kind() {
+  case "$1" in
+    external-server-plugins) printf 'server' ;;
+    external-tui-plugins) printf 'tui' ;;
+    *) return 1 ;;
+  esac
+}
+
+validate_external_descriptor() {
+  local type="$1" name="$2" descriptor="$3" kind
+  kind="$(external_descriptor_kind "$type")"
+  jq -e --arg name "$name" --arg kind "$kind" '
+    .schemaVersion == 1 and
+    .name == $name and
+    .kind == $kind and
+    (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+    (.repository | type == "string" and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")) and
+    (.commit | type == "string" and test("^[0-9a-f]{40}$")) and
+    (.artifact | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != ".."))) and
+    (.sha256 | type == "string" and test("^[0-9a-f]{64}$")) and
+    ((.profileSource // null) as $profile |
+      $profile == null or
+      ($kind == "tui" and ($profile | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != "..")))))
+  ' "$descriptor" >/dev/null 2>&1 || die "$descriptor: invalid external plugin descriptor"
+}
+
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  else
+    sha256sum "$1" | awk '{ print $1 }'
+  fi
+}
+
+external_test_artifact() {
+  local name="$1" test_dir="${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}"
+  [ -n "$test_dir" ] || return 1
+  [ -f "$test_dir/$name.js" ] || return 1
+  printf '%s\n' "$test_dir/$name.js"
+}
+
+external_expected_sha() {
+  local name="$1" descriptor="$2" test_artifact
+  if test_artifact="$(external_test_artifact "$name" 2>/dev/null)"; then
+    sha256_file "$test_artifact"
+  else
+    external_descriptor_field "$descriptor" sha256
+  fi
+}
+
+external_artifact_url() {
+  local descriptor="$1" repository commit artifact
+  repository="$(external_descriptor_field "$descriptor" repository)"
+  commit="$(external_descriptor_field "$descriptor" commit)"
+  artifact="$(external_descriptor_field "$descriptor" artifact)"
+  printf 'https://raw.githubusercontent.com/%s/%s/%s\n' "$repository" "$commit" "$artifact"
+}
+
+external_tui_spec() {
+  printf './plugins/%s/tui.js' "$1"
+}
+
+external_file_state() {
+  local descriptor="$1" name="$2" dest="$3" expected actual
+  if [ -L "$dest" ] || { [ -e "$dest" ] && [ ! -f "$dest" ]; }; then
+    printf 'foreign'
     return 0
   fi
+  if [ ! -f "$dest" ]; then
+    printf 'not installed'
+    return 0
+  fi
+  expected="$(external_expected_sha "$name" "$descriptor")"
+  actual="$(sha256_file "$dest")"
+  if [ "$actual" = "$expected" ]; then printf 'installed'; else printf 'stale'; fi
+}
+
+cleanup_external_stage() {
+  if [ -n "$EXTERNAL_STAGE_DIR" ] && [ -d "$EXTERNAL_STAGE_DIR" ]; then
+    rm -rf "$EXTERNAL_STAGE_DIR"
+  fi
+  EXTERNAL_STAGE_DIR=""
+}
+
+stage_external_artifacts() {
+  local selected="$1" type name domain status descriptor dest stage expected actual source url
+  [ "$DRY_RUN" -eq 0 ] || return 0
+  EXTERNAL_STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agents-orchestrator-external.XXXXXX")"
+  trap cleanup_external_stage EXIT
+
+  while IFS=$'\t' read -r type name domain status descriptor; do
+    case "$type" in external-server-plugins|external-tui-plugins) ;; *) continue ;; esac
+    stage="$EXTERNAL_STAGE_DIR/$name.js"
+    expected="$(external_expected_sha "$name" "$descriptor")"
+    DEST_PATH=""
+    runtime_dest "$type" "$name"
+    dest="$DEST_PATH"
+
+    if [ -f "$dest" ] && [ ! -L "$dest" ] && [ "$(sha256_file "$dest")" = "$expected" ]; then
+      cp "$dest" "$stage"
+    elif source="$(external_test_artifact "$name" 2>/dev/null)"; then
+      cp "$source" "$stage"
+    else
+      url="$(external_artifact_url "$descriptor")"
+      curl -fsSL --retry 2 --connect-timeout 10 --max-time 90 "$url" -o "$stage" || {
+        cleanup_external_stage
+        die "failed to download external plugin $name from $url"
+      }
+    fi
+
+    actual="$(sha256_file "$stage")"
+    if [ "$actual" != "$expected" ]; then
+      cleanup_external_stage
+      die "$name: external artifact checksum mismatch (expected $expected, found $actual)"
+    fi
+  done < "$selected"
+}
+
+install_external_artifact() {
+  local name="$1" descriptor="$2" dest="$3" manifest="$4" stage url
+  if [ "$DRY_RUN" -eq 1 ]; then
+    url="$(external_artifact_url "$descriptor")"
+    printf 'download %s -> %s\n' "$url" "$dest"
+    printf 'file\t%s\n' "$dest" >> "$manifest"
+    return 0
+  fi
+  stage="$EXTERNAL_STAGE_DIR/$name.js"
+  [ -f "$stage" ] || die "staged external plugin missing: $stage"
+  generate_file "$stage" "$dest" "$manifest" copy_source
+}
+
+install_external_tui_profiles() {
+  local descriptor="$1" dest="$2" manifest="$3" profile_source profiles_dest profile
+  profile_source="$(external_descriptor_field "$descriptor" profileSource 2>/dev/null || true)"
+  [ -n "$profile_source" ] || return 0
+  profiles_dest="$(dirname "$dest")/profiles"
+  prepare_tui_directory "$profiles_dest" "$manifest"
+  for profile in "$REPO_ROOT/$profile_source"/*.json; do
+    [ -f "$profile" ] || continue
+    install_tui_source "$profile" "$profiles_dest/$(basename "$profile")" "$manifest"
+  done
+}
+
+tui_spec_for_dest() {
+  local dest="$1"
+  case "$dest" in
+    "$TARGET"/*) printf './%s' "${dest#"$TARGET"/}" ;;
+    *) die "TUI entry is outside the OpenCode target: $dest" ;;
+  esac
+}
+
+runtime_install_component() {
+  local type="$1" name="$2" src="$3" dest="$4" manifest="$5" companion support spec
+  case "$type" in
+    external-server-plugins)
+      install_external_artifact "$name" "$src" "$dest" "$manifest"
+      return 0
+      ;;
+    external-tui-plugins)
+      prepare_tui_directory "$(dirname "$dest")" "$manifest"
+      install_external_artifact "$name" "$src" "$dest" "$manifest"
+      install_external_tui_profiles "$src" "$dest" "$manifest"
+      maybe_fail_install "after-links"
+      spec="$(external_tui_spec "$name")"
+      ensure_managed_array_entry "$TARGET/tui.json" plugin "$spec" "$manifest"
+      maybe_fail_install "after-managed-array"
+      return 0
+      ;;
+    tui-plugins) ;;
+    *)
+      link_component "$src" "$dest" "$manifest"
+      return 0
+      ;;
+  esac
 
   install_tui_source "$src" "$dest" "$manifest"
   companion="${src%.tsx}"
@@ -130,22 +306,75 @@ runtime_install_component() {
       [ -f "$support" ] || continue
       install_tui_source "$support" "${dest%.tsx}/$(basename "$support")" "$manifest"
     done
-    profiles_dest="${dest%.tsx}/profiles"
-    prepare_tui_directory "$profiles_dest" "$manifest"
-    for profile in "$REPO_ROOT"/profiles/*.json; do
-      [ -f "$profile" ] || continue
-      install_tui_source "$profile" "$profiles_dest/$(basename "$profile")" "$manifest"
-    done
   fi
   maybe_fail_install "after-links"
-  ensure_managed_array_entry "$TARGET/tui.json" plugin "$MODEL_CONFIGURATOR_SPEC" "$manifest"
+  spec="$(tui_spec_for_dest "$dest")"
+  ensure_managed_array_entry "$TARGET/tui.json" plugin "$spec" "$manifest"
   maybe_fail_install "after-managed-array"
-  ensure_managed_object_entry "$TARGET/package.json" dependencies.jsonc-parser "$JSONC_PARSER_VERSION" "$manifest"
-  maybe_fail_install "after-managed-object"
 }
 
 runtime_component_state() {
-  local type="$1" src="$3" dest="$4" state companion companion_state compatibility support support_state profile
+  local type="$1" name="$2" src="$3" dest="$4" state companion companion_state compatibility support support_state
+  local profile profile_source profiles_dest spec version
+
+  case "$type" in
+    external-server-plugins|external-tui-plugins)
+      if ! command -v jq >/dev/null 2>&1; then
+        printf 'unavailable (jq required)'
+        return 0
+      fi
+      if ! command -v shasum >/dev/null 2>&1 && ! command -v sha256sum >/dev/null 2>&1; then
+        printf 'unavailable (shasum or sha256sum required)'
+        return 0
+      fi
+      if [ "$type" = "external-tui-plugins" ] && ! command -v python3 >/dev/null 2>&1; then
+        printf 'unavailable (python3 required)'
+        return 0
+      fi
+      state="$(external_file_state "$src" "$name" "$dest")"
+      version="$(external_descriptor_field "$src" version)"
+      [ "$type" = "external-tui-plugins" ] || {
+        if [ "$state" = "installed" ]; then
+          compatibility="$(opencode_compatibility)"
+          if [ "$compatibility" = "compatible" ]; then
+            printf 'installed@%s' "$version"
+          else
+            printf 'installed@%s; %s' "$version" "$compatibility"
+          fi
+        else
+          printf '%s' "$state"
+        fi
+        return 0
+      }
+
+      companion_state="installed"
+      profile_source="$(external_descriptor_field "$src" profileSource 2>/dev/null || true)"
+      if [ -n "$profile_source" ]; then
+        profiles_dest="$(dirname "$dest")/profiles"
+        for profile in "$REPO_ROOT/$profile_source"/*.json; do
+          [ -f "$profile" ] || continue
+          support_state="$(file_state "$profile" "$profiles_dest/$(basename "$profile")" copy_source)"
+          [ "$support_state" = "generated" ] || companion_state="$support_state"
+        done
+      fi
+      spec="$(external_tui_spec "$name")"
+      if [ "$state" = "installed" ] && [ "$companion_state" = "installed" ] &&
+        managed_array_has "$TARGET/tui.json" plugin "$spec"; then
+        compatibility="$(opencode_compatibility)"
+        if [ "$compatibility" = "compatible" ]; then
+          printf 'installed+registered@%s' "$version"
+        else
+          printf 'installed+registered@%s; %s' "$version" "$compatibility"
+        fi
+      elif [ "$state" = "foreign" ] || [ "$companion_state" = "foreign" ]; then
+        printf 'foreign'
+      else
+        printf 'not installed'
+      fi
+      return 0
+      ;;
+  esac
+
   state="$(link_state "$src" "$dest")"
   [ "$type" = "tui-plugins" ] || { printf '%s' "$state"; return 0; }
   state="$(file_state "$src" "$dest" copy_source)"
@@ -157,15 +386,10 @@ runtime_component_state() {
       support_state="$(file_state "$support" "${dest%.tsx}/$(basename "$support")" copy_source)"
       [ "$support_state" = "generated" ] || companion_state="$support_state"
     done
-    for profile in "$REPO_ROOT"/profiles/*.json; do
-      [ -f "$profile" ] || continue
-      support_state="$(file_state "$profile" "${dest%.tsx}/profiles/$(basename "$profile")" copy_source)"
-      [ "$support_state" = "generated" ] || companion_state="$support_state"
-    done
   fi
+  spec="$(tui_spec_for_dest "$dest")"
   if [ "$state" = "generated" ] && [ "$companion_state" = "generated" ] &&
-    managed_array_has "$TARGET/tui.json" plugin "$MODEL_CONFIGURATOR_SPEC" &&
-    managed_object_has "$TARGET/package.json" dependencies.jsonc-parser "$JSONC_PARSER_VERSION"; then
+    managed_array_has "$TARGET/tui.json" plugin "$spec"; then
     compatibility="$(opencode_compatibility)"
     if [ "$compatibility" = "compatible" ]; then
       printf 'generated+registered'
@@ -179,35 +403,88 @@ runtime_component_state() {
   fi
 }
 
+preflight_external_source() {
+  local descriptor="$1" name="$2" dest="$3" expected actual
+  expected="$(external_expected_sha "$name" "$descriptor")"
+  if [ -L "$dest" ] || [ -d "$dest" ]; then
+    manifest_owns_file "$OLD_MANIFEST" "$dest" && return 0
+    [ "$FORCE" -eq 1 ] || die "$dest exists and is not an installer-owned external plugin file"
+    return 0
+  fi
+  [ -f "$dest" ] || return 0
+  actual="$(sha256_file "$dest")"
+  [ "$actual" != "$expected" ] || return 0
+  manifest_owns_file "$OLD_MANIFEST" "$dest" && return 0
+  [ "$FORCE" -eq 1 ] || die "$dest exists and does not match the pinned external plugin artifact"
+}
+
 runtime_pre_install() {
-  local selected="$1" type name domain status src dest companion
-  awk -F '\t' '$1 == "tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" || return 0
-  command -v python3 >/dev/null 2>&1 || die "python3 is required to preserve tui.json comments"
-  command -v jq >/dev/null 2>&1 || die "jq is required to manage the OpenCode plugin dependency"
-  [ -f "$JSONC_EDITOR" ] || die "JSONC editor not found: $JSONC_EDITOR"
-  check_opencode_version
-  validate_managed_files
+  local selected="$1" type name domain status src dest companion support profile profile_source profiles_dest
+  local has_external=0 has_tui=0
+  awk -F '\t' '$1 == "external-server-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_external=1
+  awk -F '\t' '$1 == "tui-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_tui=1
+
+  if [ "$has_external" -eq 1 ]; then
+    command -v jq >/dev/null 2>&1 || die "jq is required to validate external plugin descriptors"
+    if ! command -v shasum >/dev/null 2>&1 && ! command -v sha256sum >/dev/null 2>&1; then
+      die "shasum or sha256sum is required to verify external plugin artifacts"
+    fi
+    if [ -z "${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}" ]; then
+      command -v curl >/dev/null 2>&1 || die "curl is required to download external plugin artifacts"
+    else
+      [ -d "$AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR" ] ||
+        die "test external artifact directory not found: $AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR"
+    fi
+    check_opencode_version
+  fi
+  if [ "$has_tui" -eq 1 ]; then
+    command -v python3 >/dev/null 2>&1 || die "python3 is required to preserve tui.json comments"
+    [ -f "$JSONC_EDITOR" ] || die "JSONC editor not found: $JSONC_EDITOR"
+    [ "$has_external" -eq 1 ] || check_opencode_version
+    validate_managed_files
+  fi
 
   while IFS=$'\t' read -r type name domain status src; do
-    [ "$type" = "tui-plugins" ] || continue
     DEST_PATH=""
     runtime_dest "$type" "$name"
     dest="$DEST_PATH"
-    preflight_tui_source "$src" "$dest"
-    companion="${src%.tsx}"
-    if [ -d "$companion" ]; then
-      preflight_tui_directory "${dest%.tsx}"
-      for support in "$companion"/*.ts "$companion"/*.tsx; do
-        [ -f "$support" ] || continue
-        preflight_tui_source "$support" "${dest%.tsx}/$(basename "$support")"
-      done
-      preflight_tui_directory "${dest%.tsx}/profiles"
-      for profile in "$REPO_ROOT"/profiles/*.json; do
-        [ -f "$profile" ] || continue
-        preflight_tui_source "$profile" "${dest%.tsx}/profiles/$(basename "$profile")"
-      done
-    fi
+    case "$type" in
+      external-server-plugins|external-tui-plugins)
+        if [ -n "${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}" ]; then
+          [ -f "$AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR/$name.js" ] ||
+            die "test external artifact not found: $AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR/$name.js"
+        fi
+        validate_external_descriptor "$type" "$name" "$src"
+        preflight_external_source "$src" "$name" "$dest"
+        if [ "$type" = "external-tui-plugins" ]; then
+          preflight_tui_directory "$(dirname "$dest")"
+          profile_source="$(external_descriptor_field "$src" profileSource 2>/dev/null || true)"
+          if [ -n "$profile_source" ]; then
+            [ -d "$REPO_ROOT/$profile_source" ] || die "$src: profileSource does not exist: $profile_source"
+            profiles_dest="$(dirname "$dest")/profiles"
+            preflight_tui_directory "$profiles_dest"
+            for profile in "$REPO_ROOT/$profile_source"/*.json; do
+              [ -f "$profile" ] || continue
+              preflight_tui_source "$profile" "$profiles_dest/$(basename "$profile")"
+            done
+          fi
+        fi
+        ;;
+      tui-plugins)
+        preflight_tui_source "$src" "$dest"
+        companion="${src%.tsx}"
+        if [ -d "$companion" ]; then
+          preflight_tui_directory "${dest%.tsx}"
+          for support in "$companion"/*.ts "$companion"/*.tsx; do
+            [ -f "$support" ] || continue
+            preflight_tui_source "$support" "${dest%.tsx}/$(basename "$support")"
+          done
+        fi
+        ;;
+    esac
   done < "$selected"
+
+  [ "$has_external" -eq 0 ] || stage_external_artifacts "$selected"
 }
 
 runtime_remove_managed_entry() {
@@ -219,7 +496,7 @@ runtime_remove_managed_entry() {
 }
 
 runtime_begin_install() {
-  local selected="$1" manifest="$2" type name domain status src companion kind owned_path field value
+  local selected="$1" manifest="$2" type name domain status src companion kind owned_path field value profile_source
   [ "$DRY_RUN" -eq 0 ] || return 0
   INSTALL_TX_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agents-orchestrator-install.XXXXXX")"
   INSTALL_TX_RECORDS="$INSTALL_TX_DIR/records.tsv"
@@ -241,10 +518,17 @@ runtime_begin_install() {
     runtime_dest "$type" "$name"
     [ -n "$DEST_PATH" ] || continue
     snapshot_install_path "$DEST_PATH"
-    if [ "$type" = "tui-plugins" ]; then
-      companion="${src%.tsx}"
-      [ ! -d "$companion" ] || snapshot_install_path "${DEST_PATH%.tsx}"
-    fi
+    case "$type" in
+      tui-plugins)
+        companion="${src%.tsx}"
+        [ ! -d "$companion" ] || snapshot_install_path "${DEST_PATH%.tsx}"
+        ;;
+      external-tui-plugins)
+        snapshot_install_path "$(dirname "$DEST_PATH")"
+        profile_source="$(external_descriptor_field "$src" profileSource 2>/dev/null || true)"
+        [ -z "$profile_source" ] || snapshot_install_path "$(dirname "$DEST_PATH")/profiles"
+        ;;
+    esac
   done < "$selected"
   snapshot_install_path "$TARGET/AGENTS.md"
   if [ -f "$manifest" ]; then
@@ -260,6 +544,7 @@ runtime_commit_install() {
   [ -z "$INSTALL_TX_DIR" ] || rm -rf "$INSTALL_TX_DIR"
   INSTALL_TX_DIR=""
   INSTALL_TX_RECORDS=""
+  cleanup_external_stage
 }
 
 runtime_abort_install() {
@@ -346,14 +631,14 @@ opencode_compatibility() {
   local binary version
   binary="${OPENCODE_BIN:-$(command -v opencode || true)}"
   if [ -z "$binary" ]; then
-    printf 'opencode >= %s is required for TUI plugins' "$MIN_TUI_OPENCODE_VERSION"
+    printf 'opencode >= %s is required for external and TUI plugins' "$MIN_EXTERNAL_OPENCODE_VERSION"
     return 0
   fi
   version="$($binary --version 2>/dev/null | tr -d '[:space:]')"
-  if version_at_least "$version" "$MIN_TUI_OPENCODE_VERSION"; then
+  if version_at_least "$version" "$MIN_EXTERNAL_OPENCODE_VERSION"; then
     printf 'compatible'
   else
-    printf 'opencode >= %s is required for TUI plugins (found %s)' "$MIN_TUI_OPENCODE_VERSION" "${version:-unknown}"
+    printf 'opencode >= %s is required for external and TUI plugins (found %s)' "$MIN_EXTERNAL_OPENCODE_VERSION" "${version:-unknown}"
   fi
 }
 
@@ -370,17 +655,11 @@ version_at_least() {
 }
 
 validate_managed_files() {
-  local status existing
+  local status
   if [ -e "$TARGET/tui.json" ]; then
     status=0
-    python3 "$JSONC_EDITOR" has "$TARGET/tui.json" plugin "$MODEL_CONFIGURATOR_SPEC" >/dev/null || status=$?
+    python3 "$JSONC_EDITOR" has "$TARGET/tui.json" plugin "__agents_orchestrator_validation_probe__" >/dev/null || status=$?
     [ "$status" -ne 2 ] || die "$TARGET/tui.json is not valid supported JSONC"
-  fi
-  if [ -e "$TARGET/package.json" ]; then
-    jq empty "$TARGET/package.json" 2>/dev/null || die "$TARGET/package.json is not valid JSON"
-    existing="$(jq -r '.dependencies["jsonc-parser"] // empty' "$TARGET/package.json")"
-    [ -z "$existing" ] || [ "$existing" = "$JSONC_PARSER_VERSION" ] ||
-      die "$TARGET/package.json has foreign jsonc-parser dependency '$existing' (expected $JSONC_PARSER_VERSION)"
   fi
 }
 
@@ -572,7 +851,8 @@ runtime_post_install() {
 # Validated on OpenCode 1.17.15 (docs/hot-reload.md): POST /global/dispose makes
 # every instance re-read markdown artifacts and project config on its next
 # request. It does NOT re-read the global opencode.json[c] (infinite-TTL cache)
-# and cannot reload plugin code, but the installer changes neither.
+# and cannot reload plugin code; any installed plugin-bundle change still needs
+# a restart even when --reload is requested.
 reload_running_servers() {
   local urls url health reachable=0
   command -v curl >/dev/null 2>&1 || { warn "reload: curl not found; restart OpenCode sessions to apply"; return 0; }

@@ -37,7 +37,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `systematic-debugging` | Root-cause debugging: reproduce, evidence, one hypothesis, minimal fix |
 | Skill | `tcr` | Apply test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
-| Plugin | `graphify-init` | Refreshes Graphify code graphs under `.ai/graphify-out/` in the background, honoring the per-repo mode recorded by `/graphify-index` (default-on; never first-indexes; concurrency lock; kills its extracts on shutdown; aggregates non-git workspace roots; merges into the global graph) |
+| External server plugin | [`graphify-init`](https://github.com/andresnator/opencode-graphify-init) | Refreshes Graphify graphs under `.ai/graphify-out/` in the background, honoring the mode recorded by `/graphify-index`; it never performs first indexing |
 
 Use common skills by reference from domain-specific agents instead of duplicating them into each domain. Common is the single home for transversal skills used by 3+ domains (`grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, `risk-assessment`); consuming domains declare the dependency in their README instead of duplicating symlinks.
 

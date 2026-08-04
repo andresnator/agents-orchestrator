@@ -16,6 +16,7 @@ SKILLS=0
 LINKS=0
 PROFILES=0
 TUI_PLUGINS=0
+EXTERNAL_PLUGINS=0
 
 fail() {
   printf 'FAIL %s: %s\n' "$1" "$2"
@@ -102,6 +103,46 @@ for f in domains/*/tui-plugins/*.tsx; do
   [ -d "$companion" ] || fail "$f" "missing same-named companion directory"
 done
 check_unique tui-plugins domains/*/tui-plugins/*.tsx
+
+# --- Commit-pinned external OpenCode plugins ---
+if command -v jq >/dev/null 2>&1; then
+  for f in domains/*/external-plugins/*.json; do
+    [ -e "$f" ] || continue
+    EXTERNAL_PLUGINS=$((EXTERNAL_PLUGINS + 1))
+    base="$(basename "$f")"
+    case "$base" in
+      *.server.json)
+        expected_name="${base%.server.json}"
+        expected_kind="server"
+        ;;
+      *.tui.json)
+        expected_name="${base%.tui.json}"
+        expected_kind="tui"
+        TUI_PLUGINS=$((TUI_PLUGINS + 1))
+        ;;
+      *)
+        fail "$f" "external plugin filename must end in .server.json or .tui.json"
+        continue
+        ;;
+    esac
+    jq -e --arg name "$expected_name" --arg kind "$expected_kind" '
+      .schemaVersion == 1 and
+      .name == $name and
+      .kind == $kind and
+      (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+      (.repository | type == "string" and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")) and
+      (.commit | type == "string" and test("^[0-9a-f]{40}$")) and
+      (.artifact | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != ".."))) and
+      (.sha256 | type == "string" and test("^[0-9a-f]{64}$")) and
+      ((.profileSource // null) as $profile |
+        $profile == null or
+        ($kind == "tui" and ($profile | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != "..")))))
+    ' "$f" >/dev/null 2>&1 || fail "$f" "invalid external plugin descriptor"
+    profile_source="$(jq -r '.profileSource // empty' "$f" 2>/dev/null)"
+    [ -z "$profile_source" ] || [ -d "$ROOT/$profile_source" ] ||
+      fail "$f" "profileSource '$profile_source' does not exist"
+  done
+fi
 
 # --- Skills ---
 for d in skills/*/; do
@@ -213,10 +254,10 @@ if command -v shellcheck >/dev/null 2>&1; then
     fail scripts "shellcheck reported issues"
 fi
 
-# --- Deterministic model-configurator contracts ---
-if [ -x scripts/test-model-configurator.sh ] && command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  scripts/test-model-configurator.sh shell-contracts >/dev/null ||
-    fail scripts/test-model-configurator.sh "shell contracts failed"
+# --- Deterministic external plugin installer contracts ---
+if [ -x scripts/test-external-plugin-install.sh ] && command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  scripts/test-external-plugin-install.sh contracts >/dev/null ||
+    fail scripts/test-external-plugin-install.sh "external plugin installer contracts failed"
 fi
 
 # --- Deterministic sdd-automode contracts (jq-gated) ---
@@ -226,8 +267,8 @@ if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Installer idempotency (python3/jq/opencode-gated) ---
-# Managed config values (the tui.json plugin entry, the package.json dependency) are edited in
-# place, so every remove-then-add round trip must land on the exact same bytes. Repeating a
+# Managed config values (currently the tui.json plugin entry) are edited in place,
+# so every remove-then-add round trip must land on the exact same bytes. Repeating a
 # plain `install` is not enough to prove that: a still-selected value is never removed, so the
 # editor is not exercised. Reaching it takes a cycle that drops the value and re-adds it — an
 # `uninstall`, or an `install` under a narrower `--domain` filter — which is why real drift
@@ -256,10 +297,16 @@ if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
   idem_dir="$(mktemp -d "${TMPDIR:-/tmp}/harness-idempotency.XXXXXX")"
   idem_target="$idem_dir/target"
   idem_log="$idem_dir/install.log"
+  idem_artifacts="$idem_dir/external-artifacts"
   idem_step=""
+  mkdir -p "$idem_artifacts"
+  printf '%s\n' 'export default { id: "fixture.model", tui: async () => {} }' > "$idem_artifacts/model-configurator.js"
+  printf '%s\n' 'export default { id: "fixture.registry", server: async () => ({}) }' > "$idem_artifacts/skill-registry.js"
+  printf '%s\n' 'export default { id: "fixture.graphify", server: async () => ({}) }' > "$idem_artifacts/graphify-init.js"
 
   run_installer() {
-    if ! installers/opencode.sh "$1" --target "$idem_target" >"$idem_log" 2>&1; then
+    if ! AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$idem_artifacts" \
+      installers/opencode.sh "$1" --target "$idem_target" >"$idem_log" 2>&1; then
       sed -n '1,40p' "$idem_log" >&2
       fail installers/opencode.sh "$1 into a scratch target failed ($2)"
       return 1
@@ -283,17 +330,10 @@ if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
   rm -rf "$idem_dir"
 fi
 
-# --- Deterministic skill-registry plugin contracts (Node >= 22.18-gated) ---
-if [ -x scripts/test-skill-registry.sh ] && command -v node >/dev/null 2>&1 &&
-  node -e 'process.exit(process.features && process.features.typescript ? 0 : 1)' >/dev/null 2>&1; then
-  scripts/test-skill-registry.sh >/dev/null ||
-    fail scripts/test-skill-registry.sh "skill-registry plugin contracts failed"
-fi
-
 if [ "$FAILS" -gt 0 ]; then
-  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d TUI plugins, %d skills, %d domain skill links, %d profiles.\n' \
-    "$FAILS" "$AGENTS" "$COMMANDS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
+  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill links, %d profiles.\n' \
+    "$FAILS" "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
   exit 1
 fi
-printf 'PASS: %d agents, %d commands, %d TUI plugins, %d skills, %d domain skill links, %d profiles, script syntax and deterministic contracts OK.\n' \
-  "$AGENTS" "$COMMANDS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
+printf 'PASS: %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill links, %d profiles, script syntax and deterministic contracts OK.\n' \
+  "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"

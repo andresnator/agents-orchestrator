@@ -2,6 +2,6 @@
   // Keep comments around a missing managed property.
   "theme": "system",
   "plugin": [
-    "./plugins/model-configurator.tsx"
+    "./plugins/model-configurator/tui.js"
   ]
 }

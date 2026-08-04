@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "name": "graphify-init",
+  "kind": "server",
+  "version": "0.1.0",
+  "repository": "andresnator/opencode-graphify-init",
+  "commit": "e0319a20f48f038826b1d07d518e73fe726f900f",
+  "artifact": "dist/server.js",
+  "sha256": "67e2dcc6c17ed89a0f0a475c71f0bc1aa2a74ca3e631cb1faa94fba054794f62"
+}
