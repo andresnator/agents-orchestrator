@@ -16,14 +16,14 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 | [meta](domains/meta/README.md) | Prompt and skill maintenance utilities | `/absorb`, `/prompt-checker`, `model-configurator` (TUI plugin) |
 | [common](domains/common/README.md) | Shared engineering, quality, question UX, and output-refinement skills | `/defend`, `/graphify-index`, `/grill`, transversal skills |
 
-- `domains/`: source of truth for agents, commands, plugins, and domain skill usage.
+- `domains/`: source of truth for agents, commands, local plugins, external-plugin locks, and domain skill usage.
 - `skills/`: source of truth for reusable skill bodies.
 - `domains/<domain>/agents/*.md`: fused OpenCode agent files with frontmatter and prompt body.
 - `domains/<domain>/commands/*.md`: fused OpenCode command files with frontmatter and prompt body.
 - `skills/<skill>/SKILL.md`: reusable skill contracts.
 - `domains/<domain>/skills/<skill>`: symlink declaring that a domain uses a central skill.
-- `domains/<domain>/tui-plugins/*.tsx`: OpenCode TUI plugins (entrypoint plus same-named companion directory), OpenCode-only.
-- `installers/opencode.sh`: OpenCode component installer (`~/.config/opencode` by default). Most artifacts are symlinked; TUI plugins are generated copies with managed configuration.
+- `domains/<domain>/external-plugins/*.server.json|*.tui.json`: version, commit, artifact, and SHA-256 locks for reusable plugins maintained in standalone repositories.
+- `installers/opencode.sh`: OpenCode component installer (`~/.config/opencode` by default). Repository artifacts are symlinked; external plugin bundles are downloaded from pinned commits, checksum-verified, and manifest-owned.
 - `docs/`: operational and workflow guides.
 
 Install all components globally:
@@ -49,11 +49,9 @@ installers/opencode.sh status --domain sdd
 | [Agent models](docs/agent-models.md) | Assigning models and variants per agent |
 | [Delegation receipts](docs/delegation-receipts.md) | Writing compact machine-scannable subagent returns |
 | [Graphify](docs/graphify.md) | Indexing, refreshing, querying, and recovering graphs |
-| [Graphify test plan](docs/graphify-testing.md) | Validating Graphify integration changes |
 | [Hot reload](docs/hot-reload.md) | Applying supported changes without restarting OpenCode |
 | [Learning domain](docs/learning-domain.md) | Running multi-session learning workflows |
 | [LM Studio over LAN](docs/lm-studio.md) | Connecting OpenCode to one or more LM Studio models on another computer |
-| [Manual plugin installation](docs/manual-plugin-install.md) | Installing plugins without the repository installer |
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
 | [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
@@ -64,7 +62,7 @@ installers/opencode.sh status --domain sdd
 Graphify gives agents a local structural graph for symbol, caller, and impact exploration, plus one machine-wide graph spanning every indexed repository. Start with the core CLI:
 
 ```bash
-uv tool install graphifyy   # or: pipx install graphifyy
+uv tool install "graphifyy[mcp]==0.9.32"   # or use pipx
 ```
 
 Do not run `graphify opencode install` (or `graphify claude install`): it writes its own agent instructions and plugin, and can replace the installer-managed `~/.config/opencode/AGENTS.md` symlink. First indexing is human-gated: run `/graphify-index` once per repository (it asks docs vs code-only and records the mode); the `graphify-init` plugin then refreshes automatically. See [docs/graphify.md](docs/graphify.md) for the lifecycle, the cross-repository global graph, query usage, the optional MCP entry, and recovery.

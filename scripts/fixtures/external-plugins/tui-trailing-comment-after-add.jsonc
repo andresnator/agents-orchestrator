@@ -1,6 +1,6 @@
 {
   "theme": "system", // set by me
   "plugin": [
-    "./plugins/model-configurator.tsx"
+    "./plugins/model-configurator/tui.js"
   ]
 }

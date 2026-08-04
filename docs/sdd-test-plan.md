@@ -51,7 +51,7 @@ Part of this catalog now runs unattended. Two scripts split along the line that 
 | `scripts/test-sdd-automode.sh` | free, no LLM, no network | yes (jq-gated) | SDD-AUTO-01, expanded into 14 cases |
 | `scripts/test-sdd-flows.sh` | real model calls | no, opt-in via `OPENCODE_BIN` | the smoke set below, driving `orchestraitor` headlessly |
 
-The flow runner uses `opencode run --dir <scratch> --agent orchestraitor --format json --auto`. Every scenario gets a fresh `mktemp -d` copy of the `java-orders` fixture in its own git repo; nothing is written inside this repo or the user's projects, and the user's `~/.config/opencode` is read but never modified. Runs deliberately use the caller's real `HOME`/`XDG` dirs: under a hermetic HOME, session creation hangs because provider credentials never resolve (the same blocker documented in `scripts/test-graphify-init.sh`).
+The flow runner uses `opencode run --dir <scratch> --agent orchestraitor --format json --auto`. Every scenario gets a fresh `mktemp -d` copy of the `java-orders` fixture in its own git repo; nothing is written inside this repo or the user's projects, and the user's `~/.config/opencode` is read but never modified. Runs deliberately use the caller's real `HOME`/`XDG` dirs because provider credentials do not resolve under a hermetic home.
 
 Assertions read three observable sources — the `.ai/orchestrator/` tree on disk, `git log` in the scratch project, and the JSON event stream, where a delegation is a `tool` part named `task` whose `.state.input.subagent_type` names the subagent that ran. That last one is what makes "which subagents were *not* launched" testable.
 
