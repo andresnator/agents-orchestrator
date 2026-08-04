@@ -65,6 +65,29 @@ EOF
   printf '%s\n' "$binary"
 }
 
+make_fake_curl() {
+  local binary="$1"
+  cat > "$binary" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+output=""
+url=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o) shift; output="$1" ;;
+    https://*) url="$1" ;;
+  esac
+  shift
+done
+case "$url" in
+  */server.js) cp "$FAKE_SERVER_ARTIFACT" "$output" ;;
+  */tui.js) cp "$FAKE_TUI_ARTIFACT" "$output" ;;
+  *) exit 1 ;;
+esac
+EOF
+  chmod +x "$binary"
+}
+
 make_external_artifacts() {
   local root="$1"
   mkdir -p "$root"
@@ -170,6 +193,18 @@ shouldInstallRepairStatusAndUninstallExternalPlugins() {
   assert_contains "$status_output" $'meta\texternal-server-plugins\tskill-registry\t-\tinstalled@0.1.0' "status missed skill registry"
   assert_contains "$status_output" $'common\texternal-server-plugins\tgraphify-init\t-\tinstalled@0.1.0' "status missed Graphify"
 
+  printf 'corrupt\n' > "$target/plugins/model-configurator/tui.js"
+  AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
+    "$INSTALLER" status --domain meta --target "$target" > "$status_output"
+  assert_contains "$status_output" $'meta\texternal-tui-plugins\tmodel-configurator\t-\tstale' "status hid a stale TUI bundle"
+
+  AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain meta,common --target "$target" >/dev/null
+  printf 'corrupt\n' > "$target/plugins/model-configurator/profiles/default.json"
+  AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
+    "$INSTALLER" status --domain meta --target "$target" > "$status_output"
+  assert_contains "$status_output" $'meta\texternal-tui-plugins\tmodel-configurator\t-\tstale' "status hid a stale TUI profile"
+
   "$INSTALLER" uninstall --target "$target" >/dev/null
   [ ! -e "$target/plugins/model-configurator" ] || fail "uninstall retained model configurator"
   [ ! -e "$target/plugins/skill-registry.js" ] || fail "uninstall retained skill registry"
@@ -180,6 +215,44 @@ shouldInstallRepairStatusAndUninstallExternalPlugins() {
   assert_file_equals "$target/package.json" "$before_package" "uninstall changed foreign package.json"
   rm -rf "$scratch"
   pass "shouldInstallRepairStatusAndUninstallExternalPlugins"
+}
+
+shouldStageSameNamedArtifactsByKind() {
+  local scratch repo target binary server_artifact tui_artifact server_sha tui_sha
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-kind-stage.XXXXXX")"
+  repo="$scratch/repo"
+  target="$scratch/target"
+  server_artifact="$scratch/server.js"
+  tui_artifact="$scratch/tui.js"
+  mkdir -p "$repo/installers/lib" "$repo/scripts" "$repo/global"
+  mkdir -p "$repo/domains/server/external-plugins" "$repo/domains/tui/external-plugins"
+  cp "$ROOT/installers/opencode.sh" "$repo/installers/opencode.sh"
+  cp "$ROOT/installers/lib/common.sh" "$repo/installers/lib/common.sh"
+  cp "$ROOT/scripts/jsonc-array.py" "$repo/scripts/jsonc-array.py"
+  cp "$ROOT/global/AGENTS.md" "$repo/global/AGENTS.md"
+  printf 'server bundle\n' > "$server_artifact"
+  printf 'tui bundle\n' > "$tui_artifact"
+  server_sha="$(sha256_file "$server_artifact")"
+  tui_sha="$(sha256_file "$tui_artifact")"
+  cat > "$repo/domains/server/external-plugins/shared.server.json" <<EOF
+{"schemaVersion":1,"name":"shared","kind":"server","version":"1.0.0","repository":"fixture/shared","commit":"0000000000000000000000000000000000000000","artifact":"dist/server.js","sha256":"$server_sha"}
+EOF
+  cat > "$repo/domains/tui/external-plugins/shared.tui.json" <<EOF
+{"schemaVersion":1,"name":"shared","kind":"tui","version":"1.0.0","repository":"fixture/shared","commit":"0000000000000000000000000000000000000000","artifact":"dist/tui.js","sha256":"$tui_sha"}
+EOF
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  make_fake_curl "$scratch/bin/curl"
+
+  # Given server and TUI descriptors with the same type-local name
+  # When both artifacts are staged before the transaction
+  # Then each destination receives the bundle for its own plugin kind
+  FAKE_SERVER_ARTIFACT="$server_artifact" FAKE_TUI_ARTIFACT="$tui_artifact" \
+    PATH="$scratch/bin:$PATH" OPENCODE_BIN="$binary" \
+    "$repo/installers/opencode.sh" install --target "$target" >/dev/null
+  assert_file_equals "$target/plugins/shared.js" "$server_artifact" "same-named TUI bundle replaced the staged server bundle"
+  assert_file_equals "$target/plugins/shared/tui.js" "$tui_artifact" "same-named server bundle replaced the staged TUI bundle"
+  rm -rf "$scratch"
+  pass "shouldStageSameNamedArtifactsByKind"
 }
 
 shouldPreservePreexistingTuiRegistration() {
@@ -412,6 +485,7 @@ run_contracts() {
   shouldPreserveJsoncManagedEntry
   shouldHandleMissingPropertyAndTrailingComment
   shouldInstallRepairStatusAndUninstallExternalPlugins
+  shouldStageSameNamedArtifactsByKind
   shouldPreservePreexistingTuiRegistration
   shouldAbortBeforeMutationOnInvalidPreconditions
   shouldRollbackExternalPluginTransaction

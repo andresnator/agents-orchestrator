@@ -131,6 +131,12 @@ external_descriptor_kind() {
   esac
 }
 
+external_stage_path() {
+  local type="$1" name="$2" kind
+  kind="$(external_descriptor_kind "$type")"
+  printf '%s/%s-%s.js\n' "$EXTERNAL_STAGE_DIR" "$kind" "$name"
+}
+
 validate_external_descriptor() {
   local type="$1" name="$2" descriptor="$3" kind
   kind="$(external_descriptor_kind "$type")"
@@ -215,7 +221,7 @@ stage_external_artifacts() {
 
   while IFS=$'\t' read -r type name domain status descriptor; do
     case "$type" in external-server-plugins|external-tui-plugins) ;; *) continue ;; esac
-    stage="$EXTERNAL_STAGE_DIR/$name.js"
+    stage="$(external_stage_path "$type" "$name")"
     expected="$(external_expected_sha "$name" "$descriptor")"
     DEST_PATH=""
     runtime_dest "$type" "$name"
@@ -242,14 +248,14 @@ stage_external_artifacts() {
 }
 
 install_external_artifact() {
-  local name="$1" descriptor="$2" dest="$3" manifest="$4" stage url
+  local type="$1" name="$2" descriptor="$3" dest="$4" manifest="$5" stage url
   if [ "$DRY_RUN" -eq 1 ]; then
     url="$(external_artifact_url "$descriptor")"
     printf 'download %s -> %s\n' "$url" "$dest"
     printf 'file\t%s\n' "$dest" >> "$manifest"
     return 0
   fi
-  stage="$EXTERNAL_STAGE_DIR/$name.js"
+  stage="$(external_stage_path "$type" "$name")"
   [ -f "$stage" ] || die "staged external plugin missing: $stage"
   generate_file "$stage" "$dest" "$manifest" copy_source
 }
@@ -278,12 +284,12 @@ runtime_install_component() {
   local type="$1" name="$2" src="$3" dest="$4" manifest="$5" companion support spec
   case "$type" in
     external-server-plugins)
-      install_external_artifact "$name" "$src" "$dest" "$manifest"
+      install_external_artifact "$type" "$name" "$src" "$dest" "$manifest"
       return 0
       ;;
     external-tui-plugins)
       prepare_tui_directory "$(dirname "$dest")" "$manifest"
-      install_external_artifact "$name" "$src" "$dest" "$manifest"
+      install_external_artifact "$type" "$name" "$src" "$dest" "$manifest"
       install_external_tui_profiles "$src" "$dest" "$manifest"
       maybe_fail_install "after-links"
       spec="$(external_tui_spec "$name")"
@@ -368,6 +374,8 @@ runtime_component_state() {
         fi
       elif [ "$state" = "foreign" ] || [ "$companion_state" = "foreign" ]; then
         printf 'foreign'
+      elif [ "$state" = "stale" ] || [ "$companion_state" = "stale" ]; then
+        printf 'stale'
       else
         printf 'not installed'
       fi
