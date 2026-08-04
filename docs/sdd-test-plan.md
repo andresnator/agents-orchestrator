@@ -27,7 +27,7 @@ LLM behavior is nondeterministic: run each P0 scenario at least twice before rec
 
 | Fixture | Path | Content |
 |---|---|---|
-| Ready bundle | `.ai/deep-planner/changes/add-rate-limit/` | `proposal.md` first line exactly `Status: ready-for-sdd \| Source: deep-planner`, plus `design.md`, `specs/<capability>/spec.md`, `tasks.md` with `Files:` per group and the five forecast guard lines |
+| Ready bundle | `.ai/deep-planner/changes/add-rate-limit/` | `proposal.md` first line exactly `Status: ready-for-sdd \| Source: deep-planner`, plus `design.md`, `specs/<capability>/spec.md`, `tasks.md` with `Files:` and `Depends on:` per group and the five forecast guard lines |
 | Roadmap bundle | same, plus `proposal.md` second line `Roadmap: <goal> \| Slice: <n>/<total>` | paired with the roadmap fixture |
 | Malformed bundle | `.ai/refactor-planner/changes/legacy-split/` | valid marker line, but `tasks.md` groups missing `Files:` and no `Shared hotspots:` guard |
 | Markerless folder | `.ai/deep-planner/changes/no-marker/` | complete bundle whose `proposal.md` first line is ordinary prose |
@@ -81,7 +81,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Fixture: clean scratch repo, no `.ai/orchestrator/`.
 - Steps: say `"vamos con sdd"` plus a request that spans a new capability across several files. Answer the kickoff: `Depth: full`, `Mode: interactive`, judgment `none`, delivery `none`. Approve each gate.
 - Expected: ONE kickoff round (all five questions — Depth, Mode, TDD, Judgment, Delivery — minus anything already stated); phases run explore → proposal → **gate** → specs ∥ design → **gate** → tasks → implement → verify → archive; drafting goes to `sdd-proposal`/`sdd-spec`/`sdd-design`/`sdd-tasks` subagents (the orchestraitor never dumps a draft in chat, only briefs, 1–3 line summaries, and file paths); artifacts land under `.ai/orchestrator/changes/<change>/`.
-- Pass: `proposal.md` line 1 is the kickoff line in the recorded shape (`Mode: … | TDD: … | Judgment: … | Depth: full | Delivery: …`); both confirmation gates were asked against the *written* artifact (summary + path); `tasks.md` has the five forecast guard lines and `Files:` per group; after archive the folder sits in `changes/archive/<YYYY-MM-DD>-<change>/` and canonical specs contain the merged deltas.
+- Pass: `proposal.md` line 1 is the kickoff line in the recorded shape (`Mode: … | TDD: … | Judgment: … | Depth: full | Delivery: …`); both confirmation gates were asked against the *written* artifact (summary + path); `tasks.md` has the five forecast guard lines plus `Files:` and `Depends on:` per group; after archive the folder sits in `changes/archive/<YYYY-MM-DD>-<change>/` and canonical specs contain the merged deltas.
 
 **SDD-FULL-02 — Full automatic mode** (P0)
 - Fixture: same as SDD-FULL-01.
@@ -124,7 +124,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Pass: no folder moved before the user confirmed; after confirmation the roadmap row flips to `adopted` with `Bundle` repointed.
 
 **SDD-ADOPT-04 — Malformed bundle degrades to serial waves** (P0)
-- Fixture: Malformed bundle (`tasks.md` without `Files:` scopes / `Shared hotspots:`).
+- Fixture: Malformed bundle (`tasks.md` without `Files:` / `Depends on:` scopes or `Shared hotspots:`).
 - Steps: adopt and run through implement.
 - Expected: adoption succeeds (legacy bundles are accepted), but no implement waves launch in parallel — everything serializes.
 - Pass: implement rounds were sequential; no parallel multi-wave message was issued.
@@ -164,7 +164,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 - Pass: interactive asked before wave 1; automatic modified only the `Chain strategy:` line and continued.
 
 **SDD-WAVE-02 — Parallel eligibility** (P0)
-- Fixture: `tasks.md` with three groups: two with disjoint `Files:` scopes and no hotspot overlap, one either missing `Files:` or touching a `Shared hotspots:` entry.
+- Fixture: `tasks.md` with three groups: two with explicit `Depends on: none`, disjoint `Files:` scopes, and no hotspot overlap; one either missing a scheduling line or touching a `Shared hotspots:` entry.
 - Steps: run implement.
 - Expected: only the two eligible waves launch in parallel (single message); the third runs alone; parallel briefs name **scoped** validation only, and the orchestraitor runs the full project test command once itself after the round; it reconciles each receipt from its fields before checking boxes — `tasks_done` covers the wave's tasks, one `assertions` row per task points inside the wave's `Files:` scope, `files_changed` stays in scope — spot-checking a `file:line` only when a row looks wrong, never rereading the wave's files wholesale.
 - Pass: the ineligible wave never joined a parallel round; exactly one orchestraitor-run full-suite pass per parallel round.

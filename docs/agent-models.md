@@ -60,6 +60,8 @@ Recommended classification:
 - `sdd-implement`, `jd-fix` — write real code; medium-high quality
 - `sdd-design` — makes design decisions, not mechanical drafting; deliberately split from the other three drafters, which is the one place this classification diverges from `profiles/default.json`'s `drafting` tier
 
+The experimental worktree swarm makes the same policy measurable rather than assumed: keep `sdd-swarm` on the frontier tier, map `sdd-swarm-worker` to the candidate worker tier, and use `sdd-swarm-baseline` only for the single-agent control arm. `scripts/benchmark-sdd-swarm.sh` compares that mapping against a same-model swarm before it is promoted beyond the POC.
+
 Apply it with `/model-configurator` by browsing the agent groups (or a profile plus per-agent overrides), and use **Apply and save as preset** to re-apply the whole mapping in two steps later. Serving the minion tier from a local provider (e.g. Ollama or [LM Studio on another computer in the LAN](lm-studio.md)) additionally gives the paper's privacy property: the heavy context stays on machines you control.
 
 ## Variants

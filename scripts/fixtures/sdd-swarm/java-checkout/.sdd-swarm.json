@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "mock_worker": ["node", ".sdd-swarm/mock-worker.mjs", "{group}", "{attempt}"],
+  "scoped_validation": {
+    "1": ["mvn", "-B", "-o", "-Dtest=TaxCalculatorTest", "test"],
+    "2": ["mvn", "-B", "-o", "-Dtest=ShippingCalculatorTest", "test"],
+    "3": ["mvn", "-B", "-o", "-Dtest=DiscountPolicyTest", "test"],
+    "4": ["mvn", "-B", "-o", "-Dtest=OrderValidatorTest", "test"],
+    "5": ["mvn", "-B", "-o", "-Dtest=CheckoutSummaryTest", "test"],
+    "6": ["mvn", "-B", "-o", "-Dtest=CheckoutRegistryTest", "test"]
+  },
+  "full_validation": ["mvn", "-B", "-o", "test"],
+  "final_validation": ["bash", ".sdd-swarm/golden-verify.sh"]
+}

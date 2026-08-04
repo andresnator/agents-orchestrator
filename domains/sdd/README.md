@@ -1,12 +1,13 @@
 # SDD Domain
 
-Spec-driven development around one primary coordinator: `orchestraitor`. The SDD cycle is explicit opt-in: start it conversationally ("vamos con sdd", "usa SDD") or with equivalent clear intent. Without an SDD mention, `orchestraitor` executes directly and keeps `general` only for auxiliary chores. Use `/judgment` for a standalone adversarial review, and `/grill` (installed with the `common` domain) to run the grill interview router explicitly (`/grill [me|docs|sdd] <topic>`) instead of relying on trigger phrases. Judgment-day is a high-signal gate for high-risk, high-size, or SDD verification moments — not a default pre-commit/pre-push action; routine work gets the cheap single-reviewer check formalized as the skill's Light Mode (`/judgment light <target>`, one `jd-solo` judge, automatic fix of CRITICALs only, no re-judge).
+Spec-driven development around one primary coordinator: `orchestraitor`. The SDD cycle is explicit opt-in: start it conversationally ("vamos con sdd", "usa SDD") or with equivalent clear intent. Without an SDD mention, `orchestraitor` executes directly and keeps `general` only for auxiliary chores. `/sdd-swarm <change>` is a separate experimental entry point for implementing an already-approved full-depth change in up to four isolated Git worktrees; it never activates automatically. Use `/judgment` for a standalone adversarial review, and `/grill` (installed with the `common` domain) to run the grill interview router explicitly (`/grill [me|docs|sdd] <topic>`) instead of relying on trigger phrases. Judgment-day is a high-signal gate for high-risk, high-size, or SDD verification moments — not a default pre-commit/pre-push action; routine work gets the cheap single-reviewer check formalized as the skill's Light Mode (`/judgment light <target>`, one `jd-solo` judge, automatic fix of CRITICALs only, no re-judge).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
 | Agent (primary) | `orchestraitor` | Executes tasks and coordinates opt-in SDD |
+| Agent (primary) | `sdd-swarm` | Supervises the opt-in worktree swarm POC |
 | Agent (subagent) | `jd-fix` | Applies confirmed adversarial findings |
 | Agent (subagent) | `jd-judge-a` | Reviews correctness adversarially |
 | Agent (subagent) | `jd-judge-b` | Reviews security adversarially |
@@ -14,11 +15,15 @@ Spec-driven development around one primary coordinator: `orchestraitor`. The SDD
 | Agent (subagent) | `sdd-design` | Drafts `design.md` from code evidence |
 | Agent (subagent) | `sdd-explore` | Discovers codebase structure read-only |
 | Agent (subagent) | `sdd-implement` | Implements one approved task wave, or merges deltas at archive |
+| Agent (subagent) | `sdd-swarm-baseline` | Provides the sequential single-agent benchmark arm |
+| Agent (subagent) | `sdd-swarm-worker` | Implements one bounded group in an isolated worktree |
 | Agent (subagent) | `sdd-proposal` | Drafts `proposal.md`, or `change.md` at light depth, from an approved brief |
 | Agent (subagent) | `sdd-spec` | Drafts OpenSpec delta specifications |
 | Agent (subagent) | `sdd-tasks` | Drafts dependency-ordered `tasks.md` |
 | Agent (subagent) | `sdd-verify` | Cold-checks implementation against scenarios |
 | Command | `/judgment` | Runs the adversarial review protocol |
+| Command | `/sdd-swarm` | Plans and launches isolated implementation workers for an approved change |
+| Plugin | `sdd-swarm` | Schedules worktrees, verifies receipts, integrates commits, and exposes durable run control |
 | Skill | `sdd-draft-design` | Explore then draft an approved design |
 | Skill | `sdd-draft-light` | Draft bounded light-depth `change.md` |
 | Skill | `sdd-draft-proposal` | Draft an approved OpenSpec proposal |
@@ -35,7 +40,7 @@ Every agent in the domain declares a `permission.skill` allowlist naming only th
 
 The orchestraitor's own context is the flow's scarcest resource — it accumulates across every phase while a subagent's is discarded on return — so it runs under a read budget: kickoff and marker lines, `tasks.md` guard lines and checkbox state, an artifact it is about to edit, and the exact `file:line` an evidence row names. It never reads source files to understand code, never rereads the files a receipt already asserts on, and reads state with ranged reads rather than whole files. Subagents return the compact receipts in `docs/delegation-receipts.md` carrying assertion fields precisely so integration is a field check, not a re-read.
 
-Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonical `specs/` per capability, active `changes/<name>/` with proposal/design/spec deltas/tasks, and `changes/archive/` with deltas merged into canonical specs on completion. At kickoff the orchestraitor proposes a depth — `full` (four artifacts via phase subagents) or `light` (a single `change.md` with Why/What, Spec Deltas, and Tasks, drafted by `sdd-proposal` in light mode via the `sdd-draft-light` skill); implement and the archive spec-merge are identical in both, and verify runs the same cold-check with a depth-scaled fix budget (one fix round at `light`, two at `full`). In automatic mode the Review Workload Forecast decision and the first `commit-per-wave` commit are applied and reported instead of blocking. Implementation runs in waves: task groups declare `Files:` scopes plus a `Shared hotspots:` guard line, and only waves with disjoint scopes and no shared hotspot launch in parallel — each on scoped validation, with the full suite run once per round by the orchestraitor; anything else serializes. At resume/startup, legacy `.orchestraitor/` or `.orchestrator/` state is migrated into `.ai/orchestrator/` without overwriting existing files.
+Artifacts live OpenSpec-style under `.ai/orchestrator/` in each project: canonical `specs/` per capability, active `changes/<name>/` with proposal/design/spec deltas/tasks, and `changes/archive/` with deltas merged into canonical specs on completion. At kickoff the orchestraitor proposes a depth — `full` (four artifacts via phase subagents) or `light` (a single `change.md` with Why/What, Spec Deltas, and Tasks, drafted by `sdd-proposal` in light mode via the `sdd-draft-light` skill); implement and the archive spec-merge are identical in both, and verify runs the same cold-check with a depth-scaled fix budget (one fix round at `light`, two at `full`). In automatic mode the Review Workload Forecast decision and the first `commit-per-wave` commit are applied and reported instead of blocking. Full-depth groups declare `Files:` and `Depends on:` plus the `Shared hotspots:` guard line. Only dependency-ready groups with explicit dependencies, disjoint scopes, and no shared hotspot launch in parallel — each on scoped validation, with the full suite run once per round by the orchestraitor; a legacy group without either line serializes in document order. At resume/startup, legacy `.orchestraitor/` or `.orchestrator/` state is migrated into `.ai/orchestrator/` without overwriting existing files.
 
 The orchestraitor also adopts plans drafted elsewhere: external planners (e.g. `refactor-planner`) leave complete bundles under `.ai/<planner>/changes/<change>/` marked `Status: ready-for-sdd`, and "ejecuta el plan <change>" moves the bundle into `.ai/orchestrator/changes/` and runs it from implement onward. The contract is generic — see `docs/plan-handoff.md`. Bundles carrying a `Roadmap: <goal> | Slice: <n>/<total>` second line belong to a slice roadmap at `.ai/roadmaps/<goal>.md`: at archive the orchestraitor flips that slice to `done` and offers the next slice in one line — the user confirms each hop; it never auto-continues.
 

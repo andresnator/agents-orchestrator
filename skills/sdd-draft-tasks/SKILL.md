@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.1.1"
+  version: "2.2.0"
 ---
 
 ## Activation Contract
@@ -21,8 +21,9 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
 - Every task line MUST be `- [ ] X.Y {concrete action naming real files}`: Specific, Actionable, Verifiable, Small enough for one session. Never vague ("implement feature"). Testing tasks reference specific spec scenarios.
-- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the implementer; the `Files:` scopes exist so it can schedule safely.
+- Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Every group carries `Depends on: none` or a comma-separated list of earlier group numbers. Execution scheduling (batching, parallelism, worktrees) is left to the implementer; `Depends on:` plus `Files:` lets it schedule safely without inferring semantic independence.
 - Every group carries a `Files:` line right under its heading: the directories or globs its tasks will touch. Scopes are scheduling predictions, not enforcement — only groups with disjoint scopes and no shared hotspot may run as parallel waves downstream; a missing `Files:` line means that group serializes.
+- Every group carries a `Depends on:` line directly after `Files:`. A missing or malformed dependency line is accepted for legacy bundles but forces that group to serialize in document order.
 - Fill the `Shared hotspots:` guard line with repo-wide collision points any group might touch (lockfiles/manifests, barrel or index files, DI/route registries, generated code, shared fixtures), or `none`.
 - Preserve the five forecast guard lines VERBATIM (the orchestraitor gates and schedules on them): `Decision needed before apply:`, `Chained PRs recommended:`, `Chain strategy:`, `400-line budget risk:`, `Shared hotspots:`.
 - Keep the artifact under 650 words. When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
@@ -33,14 +34,14 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 | --- | --- |
 | Standalone and spec/design exist on disk | Read them; the design File Changes table seeds concrete task targets. |
 | Missing spec or design | Offer to run `sdd-draft-spec` or `sdd-draft-design` first. |
-| A task depends on another | Order it after its dependency; never forward-reference a later group. |
+| A task depends on another | Order it after its dependency and name the earlier group in `Depends on:`; never forward-reference a later group. |
 | Estimated changed lines exceed 400 | Recommend a chained-PR split in the forecast and ask. |
 
 ## Execution Steps
 
 1. Read `assets/tasks-template.md` and `references/question-bank.md`; read the approved spec and design.
 2. Interview for slicing, dependency order, and per-task verification.
-3. Draft `tasks.md` inline from the template with the forecast and dependency-ordered grouped checkboxes.
+3. Draft `tasks.md` inline from the template with the forecast and dependency-ordered grouped checkboxes, including `Files:` and `Depends on:` for every group.
 4. Present for approval; revise until approved.
 5. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/tasks.md`.
 

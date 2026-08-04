@@ -6,7 +6,7 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 
 | Domain | Purpose | Entry points |
 |---|---|---|
-| [sdd](domains/sdd/README.md) | Spec-driven development around the `orchestraitor` primary agent | `orchestraitor` (primary), `/judgment` |
+| [sdd](domains/sdd/README.md) | Spec-driven development around the `orchestraitor` primary agent, plus an opt-in worktree swarm POC | `orchestraitor`, `sdd-swarm` (primary), `/judgment`, `/sdd-swarm` |
 | [sdd-lite](domains/sdd-lite/README.md) | POC: single-context flow for bounded changes — `change.md` in chat, inline implementation, delegated cold verify only | `orchestralite` (primary) |
 | [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening planning producing ready-for-sdd bundles, plus Java refactor skills | `refactor-planner` (primary), `/harden-plan`, `/refactor-plan` |
 | [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (primary), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
@@ -57,6 +57,7 @@ installers/opencode.sh status --domain sdd
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
 | [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
+| [SDD worktree swarm POC](docs/sdd-swarm.md) | Running and benchmarking isolated parallel OpenCode workers |
 
 ## Graphify (optional)
 
