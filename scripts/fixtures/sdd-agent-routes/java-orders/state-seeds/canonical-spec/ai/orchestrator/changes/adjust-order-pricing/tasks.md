@@ -16,6 +16,7 @@ Shared hotspots: none
 ## 1. Reconciliation
 
 Files: .ai/orchestrator/changes/adjust-order-pricing/specs/
+Depends on: none
 
 - [x] 1.1 Confirm against `src/main/java/com/example/orders/OrderPricing.java` that the bulk discount, the per-line share, and the two-decimal money scale are implemented as described.
 - [x] 1.2 Confirm no production or test source references leaflet rounding.
@@ -23,5 +24,6 @@ Files: .ai/orchestrator/changes/adjust-order-pricing/specs/
 ## 2. Tests
 
 Files: src/test/java/com/example/orders/
+Depends on: 1
 
 - [x] 2.1 Run the existing suite unchanged to prove this change is specification-only.

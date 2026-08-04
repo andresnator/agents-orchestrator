@@ -30,8 +30,8 @@ If required input is missing or contradictory, do not ask the user. Return open 
 1. Load the `sdd-draft-tasks` skill for checklist and forecast rules.
 2. Read proposal, specs, and design from disk.
 3. Write only `.ai/orchestrator/changes/<change>/tasks.md`.
-4. Use dependency-ordered checklist groups. Make dependencies explicit so the orchestraitor can batch implementation waves safely.
-5. Give every group a `Files:` scope line (directories/globs it will touch) and fill the `Shared hotspots:` guard line per the skill — the orchestraitor only parallelizes groups with disjoint scopes and no shared hotspot.
+4. Use dependency-ordered checklist groups. Give every group `Depends on: none` or a comma-separated list of earlier group numbers so downstream schedulers never infer semantic independence.
+5. Give every group a `Files:` scope line (directories/globs it will touch) and fill the `Shared hotspots:` guard line per the skill — the orchestraitor only parallelizes dependency-ready groups with explicit dependencies, disjoint scopes, and no shared hotspot.
 6. Preserve the Review Workload Forecast guard lines required by the skill.
 
 ## Output
@@ -43,6 +43,7 @@ path: "<tasks.md path written>"
 first_line: "<verbatim first line of the file>"
 groups: <n>
 files_scopes: all | missing:["<group>", ...]
+dependencies: all | legacy:["<group>", ...]
 forecast_guards: present | missing:["<guard line>", ...]
 summary: "<=2 lines: wave/dependency notes>"
 open_questions: []
