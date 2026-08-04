@@ -44,6 +44,41 @@ Files: src/second/
   assert.match(plan.warnings.join("\n"), /serialized in document order/)
 }
 
+function shouldSerializeEveryGroupWhenSharedHotspotsDeclarationIsMissing(): void {
+  // Given
+  const markdown = `# Tasks: Missing hotspot guard
+## 1. First
+Files: src/first/
+Depends on: none
+- [ ] 1.1 First task
+## 2. Second
+Files: src/second/
+Depends on: none
+- [ ] 2.1 Second task
+`
+
+  // When
+  const plan = sddSwarmContracts.parseTasks(markdown)
+
+  // Then
+  assert.equal(plan.shared_hotspots_declared, false)
+  assert.deepEqual(plan.waves, [["1"], ["2"]])
+  assert.match(plan.warnings.join("\n"), /no Shared hotspots declaration; all groups serialized/)
+}
+
+function shouldRejectTaskGroupWhenFilesScopeIsMissing(): void {
+  // Given
+  const markdown = `# Tasks: Missing scope
+Shared hotspots: none
+## 1. Unscoped
+Depends on: none
+- [ ] 1.1 Unscoped task
+`
+
+  // When / Then
+  assert.throws(() => sddSwarmContracts.parseTasks(markdown), /task group 1 has no Files scope/)
+}
+
 function shouldSerializeOverlappingScopesWhenDependenciesAreExplicit(): void {
   // Given
   const markdown = `# Tasks: Overlap
@@ -87,7 +122,7 @@ Depends on: none
   assert.match(plan.warnings.join("\n"), /manifest, registry, fixture, or generated-code hotspot/)
 }
 
-function shouldDenyNestedSwarmToolsInWorkerContract(): void {
+function shouldDocumentBestEffortWorkerGuardsWhenShellAccessIsBroad(): void {
   // Given
   const worker = fs.readFileSync(path.join(ROOT, "domains/sdd/agents/sdd-swarm-worker.md"), "utf8")
 
@@ -95,6 +130,7 @@ function shouldDenyNestedSwarmToolsInWorkerContract(): void {
   assert.match(worker, /^  task: deny$/m)
   assert.match(worker, /^  sdd_swarm: deny$/m)
   assert.match(worker, /^    "git push\*": deny$/m)
+  assert.match(worker, /these rules are not a security sandbox/)
 }
 
 function shouldUseSddSwarmNamespaceWhenNamingRuntimeBranches(): void {
@@ -154,7 +190,33 @@ function shouldMatchFilesInsideDirectoryAndGlobScopes(): void {
 
   // When / Then
   assert.equal(sddSwarmContracts.pathInScopes("src/main/java/com/example/App.java", directoryScopes), true)
+  assert.equal(sddSwarmContracts.pathInScopes("src/test/Foo.java", directoryScopes), true)
+  assert.equal(sddSwarmContracts.pathInScopes("src/test/com/example/Foo.java", directoryScopes), true)
   assert.equal(sddSwarmContracts.pathInScopes("README.md", directoryScopes), false)
+}
+
+function shouldRestrictSwarmToolWhenInvokerIsNotSupervisor(): void {
+  // Given / When / Then
+  assert.doesNotThrow(() => sddSwarmContracts.assertSupervisorAgent("sdd-swarm"))
+  assert.throws(
+    () => sddSwarmContracts.assertSupervisorAgent("orchestraitor"),
+    /restricted to the sdd-swarm supervisor; invoked by orchestraitor/,
+  )
+}
+
+function shouldMarkCostUnmeasurableWhenProviderOmitsCost(): void {
+  // Given
+  const unmetered = JSON.stringify({ part: { tokens: { input: 10, output: 5 } } })
+  const meteredZero = JSON.stringify({ part: { tokens: { input: 10, output: 5 }, cost: 0 } })
+
+  // When
+  const unmeteredUsage = sddSwarmContracts.extractOpenCodeTextAndUsage(unmetered).usage
+  const meteredUsage = sddSwarmContracts.extractOpenCodeTextAndUsage(meteredZero).usage
+
+  // Then
+  assert.equal(unmeteredUsage.cost_measurable, false)
+  assert.equal(meteredUsage.cost_measurable, true)
+  assert.equal(meteredUsage.cost, 0)
 }
 
 async function shouldAbortCherryPickWhenIntegrationConflicts(): Promise<void> {
@@ -189,13 +251,17 @@ async function shouldAbortCherryPickWhenIntegrationConflicts(): Promise<void> {
 
 shouldBuildFourWorkerWaveWhenGroupsAreIndependent()
 shouldSerializeLegacyGroupsWhenDependenciesAreMissing()
+shouldSerializeEveryGroupWhenSharedHotspotsDeclarationIsMissing()
+shouldRejectTaskGroupWhenFilesScopeIsMissing()
 shouldSerializeOverlappingScopesWhenDependenciesAreExplicit()
 shouldSerializeIntrinsicHotspotsWithoutPromptInference()
-shouldDenyNestedSwarmToolsInWorkerContract()
+shouldDocumentBestEffortWorkerGuardsWhenShellAccessIsBroad()
 shouldUseSddSwarmNamespaceWhenNamingRuntimeBranches()
 shouldParseReceiptWhenEvidenceMatchesContract()
 shouldReturnZeroEfficiencyWhenMeasurementIsIncomplete()
 shouldMatchFilesInsideDirectoryAndGlobScopes()
+shouldRestrictSwarmToolWhenInvokerIsNotSupervisor()
+shouldMarkCostUnmeasurableWhenProviderOmitsCost()
 await shouldAbortCherryPickWhenIntegrationConflicts()
 
 console.log("PASS: sdd-swarm TypeScript contracts")

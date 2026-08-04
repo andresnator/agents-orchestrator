@@ -33,7 +33,7 @@ Related evidence and precedents:
 
 - `/sdd-swarm <change>` — explicit command for an approved full-depth change.
 - `sdd-swarm` — primary supervisor; it plans, starts, and reports durable runs.
-- `sdd-swarm-worker` — one task group, one worktree, one commit, no nested tools.
+- `sdd-swarm-worker` — one task group, one worktree, and one commit, with best-effort nested-tool and Git command guards.
 - `sdd-swarm-baseline` — sequential control arm used only by the benchmark.
 - `sdd-swarm.ts` — custom tool, parser, scheduler, process controller, verifier, integrator, and ledger.
 
@@ -47,6 +47,7 @@ The POC was built against:
 - Node >= 22.18 with native TypeScript type stripping (verified locally with 26.5.1).
 - Git 2.50.1 on a POSIX host.
 - Java 17 and Maven 3.9.16 for the benchmark fixture.
+- A repository-local or `.git/info/exclude` rule that ignores `.ai/`; preflight checks this before planning or running and reports the exact remediation when it is absent.
 
 Install the SDD domain from this worktree and reload OpenCode before a real-model run:
 
@@ -56,7 +57,9 @@ installers/opencode.sh install --domain sdd --reload
 
 ## Input Contracts
 
-The change must exist at `.ai/orchestrator/changes/<change>/` and the repository working tree must be clean. Each new `tasks.md` group declares both scheduling dimensions:
+The repository working tree must be clean for `run`. The change may already exist at `.ai/orchestrator/changes/<change>/`. Otherwise, `plan` and `run` accept exactly one external `.ai/<planner>/changes/<change>/` candidate whose `proposal.md` first line is exactly `Status: ready-for-sdd | Source: <planner>`. They validate `proposal.md`, `design.md`, at least one `specs/<capability>/spec.md`, and `tasks.md`, then atomically move the bundle into the orchestrator location. Multiple candidates, a marker mismatch, or an incomplete bundle fail before any worker starts. A valid roadmap marker also moves the matching slice to `adopted` and repoints its bundle.
+
+Every `tasks.md` group must declare a non-empty `Files:` scope. Each new group also declares its scheduling dependency:
 
 ```markdown
 ## 2. Shipping policy
@@ -65,7 +68,7 @@ Files: src/main/java/com/example/shipping/, src/test/java/com/example/shipping/
 Depends on: none
 ```
 
-`Depends on:` is `none` or earlier group numbers separated by commas. A legacy group without a valid dependency line remains accepted but runs alone in document order. Parallel groups also need disjoint `Files:` scopes and must not touch `Shared hotspots:`.
+`Depends on:` is `none` or earlier group numbers separated by commas. A legacy group without a valid dependency line remains accepted but runs alone in document order. `Shared hotspots: none` explicitly declares that no shared hotspot exists; if the header is absent, the entire plan is serialized. Parallel groups also need disjoint `Files:` scopes and must not touch declared or intrinsic hotspots.
 
 The project optionally defines deterministic commands in `.sdd-swarm.json`:
 
@@ -125,7 +128,7 @@ The Task background probe spends model tokens and is separate:
 SDD_SWARM_REAL_BENCHMARK_APPROVED=1 scripts/probe-sdd-swarm-task.sh
 ```
 
-It enables `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` internally, asserts that four background `Task` calls are launched before the first automatic notification, records wall time, and interrupts a separate parent session after its background task starts to exercise cancellation propagation. Set `SDD_SWARM_TASK_PROBE_MODEL=provider/model` for a reproducible model selection. It never edits files; cancellation is exercised through parent-session interruption because `Task` has no public cancel action.
+It enables `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` internally, asserts that four background `Task` calls are launched before the first automatic notification, records wall time, and interrupts a separate parent session after capturing its child session id. The probe passes cancellation only after the child persists `MessageAbortedError`; a non-zero parent exit alone is insufficient. Set `SDD_SWARM_TASK_PROBE_MODEL=provider/model` for a reproducible model selection. It never edits files; cancellation is exercised through parent-session interruption because `Task` has no public cancel action.
 
 ## Real-Model Benchmark
 
@@ -144,7 +147,7 @@ SDD_SWARM_TIERED_WORKER_MODEL=provider/worker-model \
 scripts/benchmark-sdd-swarm.sh
 ```
 
-The limit is checked after each completed model run, so one in-flight run can cross it. Raw JSONL, OpenCode events, stderr, state, and an English Markdown report are written under `.ai/sdd-swarm-benchmark/<timestamp>/` by default. The report includes worker versus serial integration time, retries, timeouts, conflicts, scope failures, verified groups per minute/unit, configuration, limitations, and the promotion decision.
+The limit is checked after each completed model run, so one in-flight run can cross it. Every supervisor and worker invocation must expose provider cost, including an explicit numeric zero; otherwise the benchmark stops after that invocation instead of treating missing cost as zero. Raw JSONL, OpenCode events, stderr, state, and an English Markdown report are written under `.ai/sdd-swarm-benchmark/<timestamp>/` by default. The report includes worker versus serial integration time, retries, timeouts, conflicts, scope failures, verified groups per minute/unit, configuration, limitations, and the promotion decision.
 
 For each correct repetition the report computes:
 
@@ -152,12 +155,13 @@ For each correct repetition the report computes:
 efficiency = sqrt((single_time / arm_time) * (single_cost / arm_cost))
 ```
 
-Provider cost is used when reported, otherwise total tokens. A failed correctness gate scores zero. Promote only when one swarm arm passes 3/3 and reaches median efficiency >= 1.25x. A score from 1.00x through 1.24x is inconclusive; below 1.00x or any correctness regression is not promoted.
+Reported provider cost is the budget authority. The efficiency comparison falls back to tokens only when a provider explicitly reports zero cost for either paired run. A failed correctness gate scores zero. Promote only when one swarm arm passes 3/3 and reaches median efficiency >= 1.25x. A score from 1.00x through 1.24x is inconclusive; below 1.00x or any correctness regression is not promoted.
 
 ## Safety And Limitations
 
 - Worktrees isolate files and indexes, not Git refs, Maven caches, ports, services, databases, or rate limits. The fixture prewarms dependencies and gives every checkout its own `target/` and Java temp directory.
-- The controller owns all worktree/branch creation and integration. Workers cannot use `Task`, `sdd_swarm`, external directories, push, merge, or rebase.
+- The tool fails closed unless OpenCode reports `context.agent: sdd-swarm`; registering the plugin does not make the controller callable from the standard orchestraitor path.
+- The controller owns all worktree/branch creation and integration. Direct `Task`, `sdd_swarm`, external-directory, push, merge, and rebase operations are denied or prohibited for workers, but broad shell access makes those controls best-effort rather than a security boundary. Use disposable, credential-limited execution for untrusted workers; controller verification determines what can be integrated.
 - Every worker must produce exactly one commit. The controller compares the real diff with `Files:` and the receipt; model self-report is never sufficient.
 - A conflict, dirty tree, out-of-scope path, bad receipt, timeout, or red gate blocks the run and preserves evidence. There is no autonomous conflict repair.
 - Integration remains serial. Tasks with strong dependencies or hotspots should be expected to show little or no speedup.

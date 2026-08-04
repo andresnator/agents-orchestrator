@@ -30,6 +30,9 @@ const WORKER_MODEL_ENV = "SDD_SWARM_WORKER_MODEL"
 const OPENCODE_BIN_ENV = "OPENCODE_BIN"
 const NODE_BIN_ENV = "SDD_SWARM_NODE_BIN"
 const BRANCH_NAMESPACE = "sdd-swarm"
+const SUPERVISOR_AGENT = "sdd-swarm"
+const READY_MARKER = /^Status: ready-for-sdd \| Source: ([a-z0-9][a-z0-9-]{0,63})$/
+const ROADMAP_MARKER = /^Roadmap: ([a-z0-9][a-z0-9-]{0,63}) \| Slice: \d+\/\d+$/
 const TERMINAL_STATUSES = new Set(["completed", "blocked", "failed", "aborted", "interrupted"])
 const INTRINSIC_HOTSPOT_FILES = new Set([
   "build.gradle",
@@ -81,6 +84,7 @@ type TaskGroup = {
 type SwarmPlan = {
   tasks_path: string
   shared_hotspots: string[]
+  shared_hotspots_declared: boolean
   groups: TaskGroup[]
   waves: string[][]
   warnings: string[]
@@ -96,6 +100,7 @@ type SwarmConfig = {
 
 type Usage = {
   cost: number
+  cost_measurable: boolean
   input_tokens: number
   output_tokens: number
   cache_tokens: number
@@ -163,6 +168,16 @@ type Receipt = {
   blockers: string[]
 }
 
+type BundleResolution = {
+  directory: string
+  warnings: string[]
+}
+
+type RoadmapUpdate = {
+  file: string
+  content: string
+}
+
 function nowIso(): string {
   return new Date().toISOString()
 }
@@ -196,8 +211,13 @@ function globToRegExp(glob: string): RegExp {
   for (let index = 0; index < normalized.length; index += 1) {
     const character = normalized[index]
     if (character === "*" && normalized[index + 1] === "*") {
-      result += ".*"
-      index += 1
+      if (normalized[index + 2] === "/") {
+        result += "(?:.*/)?"
+        index += 2
+      } else {
+        result += ".*"
+        index += 1
+      }
     } else if (character === "*") {
       result += "[^/]*"
     } else if (character === "?") {
@@ -236,12 +256,15 @@ function parseTasks(markdown: string, tasksPath = "tasks.md"): SwarmPlan {
   const groups: TaskGroup[] = []
   const warnings: string[] = []
   let sharedHotspots: string[] = []
+  let sharedHotspotsDeclared = false
   let current: TaskGroup | undefined
 
   for (const rawLine of markdown.split("\n")) {
     const line = rawLine.trim()
     const hotspots = line.match(HOTSPOTS_LINE)
     if (hotspots) {
+      if (sharedHotspotsDeclared) throw new Error(`${tasksPath} has duplicate Shared hotspots declarations`)
+      sharedHotspotsDeclared = true
       sharedHotspots = splitList(hotspots[1]).map(normalizeRepoPath)
       continue
     }
@@ -281,7 +304,7 @@ function parseTasks(markdown: string, tasksPath = "tasks.md"): SwarmPlan {
   const known = new Set(groups.map((group) => group.id))
   for (const [index, group] of groups.entries()) {
     if (group.tasks.length === 0) throw new Error(`task group ${group.id} has no checklist tasks`)
-    if (group.files.length === 0) warnings.push(`group ${group.id} has no Files scope; serialized`)
+    if (group.files.length === 0) throw new Error(`task group ${group.id} has no Files scope`)
     if (group.depends_on === null) {
       warnings.push(`group ${group.id} has no valid Depends on; serialized in document order`)
     } else {
@@ -299,7 +322,17 @@ function parseTasks(markdown: string, tasksPath = "tasks.md"): SwarmPlan {
     }
   }
 
-  const plan = { tasks_path: tasksPath, shared_hotspots: sharedHotspots, groups, waves: [], warnings }
+  if (!sharedHotspotsDeclared) {
+    warnings.push(`${tasksPath} has no Shared hotspots declaration; all groups serialized`)
+  }
+  const plan = {
+    tasks_path: tasksPath,
+    shared_hotspots: sharedHotspots,
+    shared_hotspots_declared: sharedHotspotsDeclared,
+    groups,
+    waves: [],
+    warnings,
+  }
   plan.waves = buildWaves(plan, DEFAULT_MAX_WORKERS)
   return plan
 }
@@ -320,7 +353,7 @@ function buildWaves(plan: Omit<SwarmPlan, "waves"> | SwarmPlan, maxWorkers: numb
 
     const first = ready[0]
     const parallelEligible = (group: TaskGroup) =>
-      group.depends_on !== null && group.files.length > 0 && !group.touches_hotspot
+      plan.shared_hotspots_declared && group.depends_on !== null && !group.touches_hotspot
     const wave: TaskGroup[] = [first]
     if (parallelEligible(first)) {
       for (const candidate of ready.slice(1)) {
@@ -379,11 +412,12 @@ function efficiencyScore(baselineTime: number, armTime: number, baselineCost: nu
 }
 
 function emptyUsage(): Usage {
-  return { cost: 0, input_tokens: 0, output_tokens: 0, cache_tokens: 0 }
+  return { cost: 0, cost_measurable: false, input_tokens: 0, output_tokens: 0, cache_tokens: 0 }
 }
 
 function addUsage(target: Usage, incoming: Usage): void {
   target.cost += incoming.cost
+  target.cost_measurable = target.cost_measurable && incoming.cost_measurable
   target.input_tokens += incoming.input_tokens
   target.output_tokens += incoming.output_tokens
   target.cache_tokens += incoming.cache_tokens
@@ -403,7 +437,10 @@ function extractOpenCodeTextAndUsage(jsonl: string): { text: string; usage: Usag
         usage.output_tokens += Number(tokens.output ?? 0)
         usage.cache_tokens += Number(tokens.cache?.read ?? 0) + Number(tokens.cache?.write ?? 0)
       }
-      if (typeof event.part?.cost === "number") usage.cost += event.part.cost
+      if (typeof event.part?.cost === "number") {
+        usage.cost += event.part.cost
+        usage.cost_measurable = true
+      }
     } catch {
       // A malformed diagnostic line is ignored; receipt validation still fails closed.
     }
@@ -439,11 +476,203 @@ async function gitBestEffort(root: string, args: string[], cwd = root): Promise<
   }
 }
 
-async function atomicWriteJson(file: string, value: unknown): Promise<void> {
+async function atomicWriteText(file: string, content: string): Promise<void> {
   await fs.mkdir(path.dirname(file), { recursive: true })
   const temporary = `${file}.${process.pid}.${randomBytes(3).toString("hex")}.tmp`
-  await fs.writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8")
+  await fs.writeFile(temporary, content, "utf8")
   await fs.rename(temporary, file)
+}
+
+async function atomicWriteJson(file: string, value: unknown): Promise<void> {
+  await atomicWriteText(file, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+async function isDirectory(directory: string): Promise<boolean> {
+  try {
+    return (await fs.stat(directory)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+async function requireRegularFile(file: string, label: string): Promise<void> {
+  try {
+    if ((await fs.stat(file)).isFile()) return
+  } catch {
+    // Report one stable bundle-shape error below.
+  }
+  throw new Error(`full-depth bundle is missing ${label}: ${file}`)
+}
+
+async function validateFullDepthBundle(directory: string, expectedSource?: string): Promise<string> {
+  const proposal = path.join(directory, "proposal.md")
+  await requireRegularFile(proposal, "proposal.md")
+  await requireRegularFile(path.join(directory, "design.md"), "design.md")
+  await requireRegularFile(path.join(directory, "tasks.md"), "tasks.md")
+
+  const specsDirectory = path.join(directory, "specs")
+  let capabilities: import("node:fs").Dirent[]
+  try {
+    capabilities = await fs.readdir(specsDirectory, { withFileTypes: true })
+  } catch {
+    throw new Error(`full-depth bundle is missing specs/<capability>/spec.md: ${specsDirectory}`)
+  }
+  const specFiles = await Promise.all(
+    capabilities
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(specsDirectory, entry.name, "spec.md"))
+      .map(async (file) => ((await fs.stat(file).catch(() => undefined))?.isFile() ? file : undefined)),
+  )
+  if (!specFiles.some(Boolean)) {
+    throw new Error(`full-depth bundle is missing specs/<capability>/spec.md: ${specsDirectory}`)
+  }
+
+  const proposalText = await fs.readFile(proposal, "utf8")
+  if (expectedSource !== undefined) {
+    const firstLine = proposalText.split(/\r?\n/, 1)[0]
+    const markerSource = firstLine.match(READY_MARKER)?.[1]
+    if (markerSource !== expectedSource) {
+      throw new Error(`external bundle must start with: Status: ready-for-sdd | Source: ${expectedSource}`)
+    }
+  }
+  return proposalText
+}
+
+function parseMarkdownTableRow(line: string): string[] | undefined {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return undefined
+  return trimmed.slice(1, -1).split("|").map((cell) => cell.trim())
+}
+
+async function prepareRoadmapUpdate(
+  root: string,
+  proposalText: string,
+  change: string,
+): Promise<{ update?: RoadmapUpdate; warnings: string[] }> {
+  const warnings: string[] = []
+  const proposalLines = proposalText.split(/\r?\n/)
+  const roadmapMatch = proposalLines[1]?.match(ROADMAP_MARKER)
+  if (!roadmapMatch) {
+    if (proposalLines[1]?.startsWith("Roadmap:")) warnings.push("bundle has a malformed Roadmap marker; adopted as a plain bundle")
+    return { warnings }
+  }
+
+  const goal = roadmapMatch[1]
+  const roadmapFile = path.join(root, ".ai", "roadmaps", `${goal}.md`)
+  let roadmapText: string
+  try {
+    roadmapText = await fs.readFile(roadmapFile, "utf8")
+  } catch {
+    warnings.push(`roadmap ${goal} is missing; adopted as a plain bundle`)
+    return { warnings }
+  }
+  if (/^Status:\s*abandoned\b/m.test(roadmapText)) {
+    warnings.push(`roadmap ${goal} is abandoned; adopted as a plain bundle`)
+    return { warnings }
+  }
+  if (!/^Status:\s*active\s*\|\s*Source:\s*[a-z0-9][a-z0-9-]{0,63}\s*$/m.test(roadmapText)) {
+    warnings.push(`roadmap ${goal} is malformed; adopted as a plain bundle`)
+    return { warnings }
+  }
+
+  const lines = roadmapText.split("\n")
+  const headerIndex = lines.findIndex((line) => {
+    const cells = parseMarkdownTableRow(line)
+    return cells?.includes("#") && cells.includes("Slice") && cells.includes("Depends on") && cells.includes("Status") && cells.includes("Bundle")
+  })
+  if (headerIndex === -1) {
+    warnings.push(`roadmap ${goal} has no valid slice table; adopted as a plain bundle`)
+    return { warnings }
+  }
+  const header = parseMarkdownTableRow(lines[headerIndex]) ?? []
+  const numberColumn = header.indexOf("#")
+  const sliceColumn = header.indexOf("Slice")
+  const dependencyColumn = header.indexOf("Depends on")
+  const statusColumn = header.indexOf("Status")
+  const bundleColumn = header.indexOf("Bundle")
+  const rows = lines
+    .map((line, index) => ({ cells: parseMarkdownTableRow(line), index }))
+    .filter((row) => row.index > headerIndex + 1 && row.cells?.length === header.length)
+  const matches = rows.filter((row) => row.cells?.[sliceColumn] === change)
+  if (matches.length !== 1) {
+    warnings.push(`roadmap ${goal} does not contain exactly one slice named ${change}; adopted as a plain bundle`)
+    return { warnings }
+  }
+
+  const target = matches[0]
+  const targetCells = target.cells ?? []
+  const statusByNumber = new Map(rows.map((row) => [row.cells?.[numberColumn], row.cells?.[statusColumn]]))
+  const dependencies = splitList(targetCells[dependencyColumn] ?? "").filter((dependency) => dependency !== "—" && dependency !== "-")
+  const incomplete = dependencies.filter((dependency) => statusByNumber.get(dependency) !== "done")
+  if (incomplete.length > 0) {
+    throw new Error(`roadmap slice ${change} depends on incomplete slices: ${incomplete.join(", ")}`)
+  }
+
+  targetCells[statusColumn] = "adopted"
+  targetCells[bundleColumn] = `.ai/orchestrator/changes/${change}/`
+  lines[target.index] = `| ${targetCells.join(" | ")} |`
+  return { update: { file: roadmapFile, content: lines.join("\n") }, warnings }
+}
+
+async function ensureAiIgnored(root: string): Promise<void> {
+  const ignored = await gitBestEffort(root, ["check-ignore", "--quiet", ".ai/"])
+  if (!ignored) {
+    throw new Error("sdd_swarm requires .ai/ to be ignored; add '.ai/' to .gitignore or .git/info/exclude")
+  }
+}
+
+async function externalBundleCandidates(root: string, change: string): Promise<Array<{ directory: string; source: string }>> {
+  const aiDirectory = path.join(root, ".ai")
+  const entries = await fs.readdir(aiDirectory, { withFileTypes: true }).catch(() => [])
+  const candidates: Array<{ directory: string; source: string }> = []
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === "orchestrator") continue
+    const directory = path.join(aiDirectory, entry.name, "changes", change)
+    if (await isDirectory(directory)) candidates.push({ directory, source: entry.name })
+  }
+  return candidates
+}
+
+async function resolveOrAdoptBundle(root: string, change: string): Promise<BundleResolution> {
+  await ensureAiIgnored(root)
+  const destination = path.join(root, ".ai", "orchestrator", "changes", change)
+  if (existsSync(destination)) {
+    if (!(await isDirectory(destination))) throw new Error(`change bundle destination is not a directory: ${destination}`)
+    await validateFullDepthBundle(destination)
+    return { directory: destination, warnings: [] }
+  }
+
+  const candidates = await externalBundleCandidates(root, change)
+  if (candidates.length === 0) {
+    throw new Error(`no orchestrator or ready-for-sdd bundle found for change ${change}`)
+  }
+  if (candidates.length > 1) {
+    const relative = candidates.map((candidate) => path.relative(root, candidate.directory)).join(", ")
+    throw new Error(`ambiguous ready-for-sdd bundles for change ${change}: ${relative}`)
+  }
+
+  const candidate = candidates[0]
+  const proposalText = await validateFullDepthBundle(candidate.directory, candidate.source)
+  const roadmap = await prepareRoadmapUpdate(root, proposalText, change)
+  await fs.mkdir(path.dirname(destination), { recursive: true })
+  if (existsSync(destination)) throw new Error(`change bundle destination appeared during adoption: ${destination}`)
+  await fs.rename(candidate.directory, destination)
+  try {
+    if (roadmap.update) await atomicWriteText(roadmap.update.file, roadmap.update.content)
+  } catch (error) {
+    const rolledBack = await fs.rename(destination, candidate.directory).then(() => true).catch(() => false)
+    throw new Error(
+      `could not update roadmap after adopting ${change}${rolledBack ? "; adoption rolled back" : "; manual recovery required"}: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  return {
+    directory: destination,
+    warnings: [
+      `adopted ready-for-sdd bundle from ${path.relative(root, candidate.directory)}`,
+      ...roadmap.warnings,
+    ],
+  }
 }
 
 async function readState(file: string): Promise<RunState> {
@@ -714,14 +943,11 @@ async function validateWorkerResult(options: {
   group: TaskGroup
   worker: WorkerState
   baseSha: string
-  stdoutFile: string
+  outputText: string
   logDir: string
 }): Promise<void> {
-  const { state, group, worker, baseSha, stdoutFile, logDir } = options
-  const raw = await fs.readFile(stdoutFile, "utf8")
-  const extracted = state.execution === "opencode" ? extractOpenCodeTextAndUsage(raw) : { text: raw, usage: emptyUsage() }
-  worker.usage = extracted.usage
-  const receipt = parseReceipt(extracted.text)
+  const { state, group, worker, baseSha, outputText, logDir } = options
+  const receipt = parseReceipt(outputText)
   const expectedTasks = group.tasks.filter((task) => !task.done).map((task) => task.id).sort()
   if (receipt.wave !== group.id) throw new Error(`receipt wave ${receipt.wave} does not match group ${group.id}`)
   if (JSON.stringify([...receipt.tasksDone].sort()) !== JSON.stringify(expectedTasks)) {
@@ -776,6 +1002,8 @@ async function executeWorker(stateFilePath: string, state: RunState, group: Task
   const worker = state.workers[group.id]
   worker.base_sha = baseSha
   const groupDir = path.join(path.dirname(stateFilePath), "workers", group.id)
+  const javaTemp = path.join(groupDir, "java-tmp")
+  await fs.mkdir(javaTemp, { recursive: true })
   await ensureWorktree(state.root, worker.worktree, worker.branch, baseSha, `${state.run_id} group ${group.id}`)
   await copyChangeBundle(state.root, worker.worktree, state.change)
 
@@ -806,7 +1034,7 @@ async function executeWorker(stateFilePath: string, state: RunState, group: Task
         GIT_AUTHOR_EMAIL: "sdd-swarm-worker@example.invalid",
         GIT_COMMITTER_NAME: "sdd-swarm-worker",
         GIT_COMMITTER_EMAIL: "sdd-swarm-worker@example.invalid",
-        MAVEN_OPTS: `${process.env.MAVEN_OPTS ? `${process.env.MAVEN_OPTS} ` : ""}-Djansi.tmpdir=${path.join(groupDir, "java-tmp")} -Djava.io.tmpdir=${path.join(groupDir, "java-tmp")}`,
+        MAVEN_OPTS: `${process.env.MAVEN_OPTS ? `${process.env.MAVEN_OPTS} ` : ""}-Djansi.tmpdir=${javaTemp} -Djava.io.tmpdir=${javaTemp}`,
       },
       onSpawn: async (pid) => {
         worker.pid = pid
@@ -815,6 +1043,9 @@ async function executeWorker(stateFilePath: string, state: RunState, group: Task
     })
     worker.duration_ms = (worker.duration_ms ?? 0) + result.durationMs
     delete worker.pid
+    const raw = await fs.readFile(stdout, "utf8")
+    const extracted = state.execution === "opencode" ? extractOpenCodeTextAndUsage(raw) : { text: raw, usage: emptyUsage() }
+    addUsage(worker.usage, extracted.usage)
     if (result.timedOut) worker.status = "timed_out"
     if (result.exitCode !== 0 || result.timedOut) {
       if (attempt <= TECHNICAL_RETRY_LIMIT && isTechnicalExit(result.exitCode, result.timedOut)) continue
@@ -824,7 +1055,7 @@ async function executeWorker(stateFilePath: string, state: RunState, group: Task
       return worker
     }
     try {
-      await validateWorkerResult({ state, group, worker, baseSha, stdoutFile: stdout, logDir: groupDir })
+      await validateWorkerResult({ state, group, worker, baseSha, outputText: extracted.text, logDir: groupDir })
       worker.status = "passed"
       await persistState(stateFilePath, state)
       return worker
@@ -938,11 +1169,14 @@ async function prepareRun(options: {
   validateMaxWorkers(options.maxWorkers)
   validateWorkerTimeout(options.workerTimeoutSeconds)
   const root = await git(options.root, ["rev-parse", "--show-toplevel"], options.root)
+  await ensureAiIgnored(root)
   const dirty = await git(root, ["status", "--porcelain"])
   if (dirty) throw new Error("sdd_swarm requires a clean Git working tree")
-  const tasksPath = path.join(root, ".ai", "orchestrator", "changes", options.change, "tasks.md")
+  const bundle = await resolveOrAdoptBundle(root, options.change)
+  const tasksPath = path.join(bundle.directory, "tasks.md")
   const markdown = await fs.readFile(tasksPath, "utf8")
   const parsed = parseTasks(markdown, path.relative(root, tasksPath))
+  parsed.warnings.unshift(...bundle.warnings)
   parsed.waves = buildWaves(parsed, options.maxWorkers)
   const config = await loadConfig(root)
   const baseline = await git(root, ["rev-parse", "HEAD"])
@@ -960,7 +1194,7 @@ async function prepareRun(options: {
       worktree: path.join(runWorktrees, `task-${group.id}`),
       status: "pending",
       attempts: 0,
-      usage: emptyUsage(),
+      usage: { ...emptyUsage(), cost_measurable: true },
     }
   }
   const state: RunState = {
@@ -984,6 +1218,7 @@ async function prepareRun(options: {
     max_parallel: 0,
     metrics: {
       ...emptyUsage(),
+      cost_measurable: true,
       wall_time_ms: 0,
       worker_wall_time_ms: 0,
       integration_wall_time_ms: 0,
@@ -1091,10 +1326,19 @@ async function cleanupRun(root: string, runId: string): Promise<RunState> {
 async function planChange(root: string, change: string, maxWorkers = DEFAULT_MAX_WORKERS): Promise<SwarmPlan> {
   if (!CHANGE_NAME.test(change)) throw new Error("change must be a lowercase kebab-case name")
   validateMaxWorkers(maxWorkers)
-  const tasksPath = path.join(root, ".ai", "orchestrator", "changes", change, "tasks.md")
-  const plan = parseTasks(await fs.readFile(tasksPath, "utf8"), path.relative(root, tasksPath))
+  const repositoryRoot = await git(root, ["rev-parse", "--show-toplevel"], root)
+  const bundle = await resolveOrAdoptBundle(repositoryRoot, change)
+  const tasksPath = path.join(bundle.directory, "tasks.md")
+  const plan = parseTasks(await fs.readFile(tasksPath, "utf8"), path.relative(repositoryRoot, tasksPath))
+  plan.warnings.unshift(...bundle.warnings)
   plan.waves = buildWaves(plan, maxWorkers)
   return plan
+}
+
+function assertSupervisorAgent(agent: string): void {
+  if (agent !== SUPERVISOR_AGENT) {
+    throw new Error(`sdd_swarm is restricted to the ${SUPERVISOR_AGENT} supervisor; invoked by ${agent || "unknown"}`)
+  }
 }
 
 export const sddSwarmContracts = {
@@ -1103,6 +1347,8 @@ export const sddSwarmContracts = {
   buildWaves,
   cherryPickCommit,
   efficiencyScore,
+  extractOpenCodeTextAndUsage,
+  assertSupervisorAgent,
   parseReceipt,
   parseTasks,
   pathInScopes,
@@ -1128,7 +1374,8 @@ export const SddSwarmPlugin: Plugin = async (input) => {
           max_workers: schema.number().int().min(1).max(MAX_WORKERS).optional().describe("Concurrency cap; defaults to 4"),
           worker_timeout_seconds: schema.number().int().min(1).optional().describe("Per-worker timeout; defaults to 1200"),
         },
-        async execute(args) {
+        async execute(args, context) {
+          assertSupervisorAgent(context.agent)
           const maxWorkers = args.max_workers ?? DEFAULT_MAX_WORKERS
           if (args.action === "plan") {
             if (!args.change) throw new Error("change is required for plan")

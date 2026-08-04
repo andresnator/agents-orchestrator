@@ -24,6 +24,8 @@ permission:
 
 You implement exactly one task group in the Git worktree selected by the controller. The prompt is a closed brief: change path, baseline SHA, task IDs, allowed `Files:` scopes, validation argv, and commit requirement.
 
+The frontmatter denies direct nested tools and common dangerous Git command prefixes, and the procedure below is a behavioral guard. Because the worker still has broad shell access, these rules are not a security sandbox: shell wrappers, alternate Git syntax, subprocesses, credentials, and absolute paths remain host capabilities. Run the POC only in a disposable, credential-limited environment when the worker model is not trusted. The controller's diff, receipt, commit, and validation checks remain the enforcement boundary for what gets integrated.
+
 ## Procedure
 
 1. Read the named change bundle and only source/test files required by the assigned tasks and allowed scopes.

@@ -5,6 +5,11 @@ import path from "node:path"
 const group = process.argv[2]
 const attempt = process.argv[3]
 const scenario = process.env.SDD_SWARM_MOCK_SCENARIO ?? "success"
+const javaTemp = process.env.MAVEN_OPTS?.match(/(?:^|\s)-Djava\.io\.tmpdir=([^\s]+)/)?.[1]
+
+if (!javaTemp || !fs.existsSync(javaTemp) || !fs.statSync(javaTemp).isDirectory()) {
+  throw new Error("controller must create java.io.tmpdir before launching a worker")
+}
 
 if (scenario === "timeout" && group === "1") await new Promise((resolve) => setTimeout(resolve, 10_000))
 if (scenario === "retry-once" && group === "1" && attempt === "1") {

@@ -65,7 +65,7 @@ const lines = [
   "",
   `Generated: ${new Date().toISOString()}`,
   "",
-  "Efficiency uses provider-reported USD only when both paired runs report cost; otherwise it uses tokens for both runs. A failed correctness gate scores zero.",
+  "Efficiency uses positive provider-reported USD for both paired runs; an explicitly reported zero switches the pair to tokens. The benchmark refuses missing cost. A failed correctness gate scores zero.",
   "",
   "## Configuration",
   "",

@@ -55,11 +55,34 @@ milliseconds() {
 }
 
 event_cost() {
-  jq -s '[.[].part.cost // 0] | add // 0' "$1"
+  local cost
+  if ! cost=$(jq -ers '
+    [.[].part.cost? | select(type == "number")] as $costs |
+    if ($costs | length) == 0 then error("provider cost unavailable") else ($costs | add) end
+  ' "$1"); then
+    echo "FAIL: provider cost is unavailable in $1; refusing to continue an unmetered benchmark" >&2
+    return 1
+  fi
+  printf '%s\n' "$cost"
 }
 
 event_tokens() {
   jq -s '[.[] | ((.part.tokens.input // 0) + (.part.tokens.output // 0) + (.part.tokens.cache.read // 0) + (.part.tokens.cache.write // 0))] | add // 0' "$1"
+}
+
+state_cost() {
+  local cost
+  if ! cost=$(jq -er '
+    [.workers[] | select(.attempts > 0) | .usage.cost_measurable] as $measurements |
+    if (($measurements | length) > 0 and ($measurements | all(. == true)))
+    then .metrics.cost
+    else error("worker provider cost unavailable")
+    end
+  ' "$1"); then
+    echo "FAIL: one or more worker costs are unavailable in $1; refusing to continue an unmetered benchmark" >&2
+    return 1
+  fi
+  printf '%s\n' "$cost"
 }
 
 check_budget() {
@@ -114,7 +137,7 @@ append_result() {
 }
 
 run_single() {
-  local repetition=$1 project events started ended status=0 correct=false baseline commits verified=0
+  local repetition=$1 project events started ended status=0 correct=false baseline commits verified=0 cost
   project=$(setup_repo "single-$repetition")
   events="$OUTPUT_DIR/single-$repetition.events.jsonl"
   baseline=$(git -C "$project" rev-parse HEAD)
@@ -127,12 +150,13 @@ run_single() {
   if [[ "$status" -eq 0 && "$commits" -eq 1 && -z "$(git -C "$project" status --porcelain)" ]] &&
     (cd "$project" && bash .sdd-swarm/golden-verify.sh); then correct=true; fi
   [[ "$correct" == true ]] && verified=$VERIFIED_GROUPS
-  append_result single "$repetition" "$correct" "$((ended - started))" "$(event_cost "$events")" "$(event_tokens "$events")" "$SINGLE_MODEL" "" 0 0 "$verified"
+  cost=$(event_cost "$events")
+  append_result single "$repetition" "$correct" "$((ended - started))" "$cost" "$(event_tokens "$events")" "$SINGLE_MODEL" "" 0 0 "$verified"
 }
 
 run_swarm() {
   local arm=$1 repetition=$2 supervisor_model=$3 worker_model=$4 project supervisor_events state started ended status=0 correct=false
-  local cost tokens worker_ms integration_ms verified=0 retries timeouts conflicts out_of_scope
+  local cost supervisor_cost workers_cost tokens worker_ms integration_ms verified=0 retries timeouts conflicts out_of_scope
   project=$(setup_repo "$arm-$repetition")
   supervisor_events="$OUTPUT_DIR/$arm-$repetition-supervisor.events.jsonl"
   state="$OUTPUT_DIR/$arm-$repetition-state.json"
@@ -147,7 +171,9 @@ run_swarm() {
   ended=$(milliseconds)
   if [[ "$status" -eq 0 ]] && jq -e '.status == "completed"' "$state" >/dev/null &&
     (cd "$(jq -r .integration_worktree "$state")" && bash .sdd-swarm/golden-verify.sh); then correct=true; fi
-  cost=$(awk -v supervisor="$(event_cost "$supervisor_events")" -v workers="$(jq -r '.metrics.cost // 0' "$state" 2>/dev/null || echo 0)" 'BEGIN { print supervisor + workers }')
+  supervisor_cost=$(event_cost "$supervisor_events")
+  workers_cost=$(state_cost "$state")
+  cost=$(awk -v supervisor="$supervisor_cost" -v workers="$workers_cost" 'BEGIN { print supervisor + workers }')
   tokens=$(awk -v supervisor="$(event_tokens "$supervisor_events")" -v workers="$(jq -r '(.metrics.input_tokens // 0) + (.metrics.output_tokens // 0) + (.metrics.cache_tokens // 0)' "$state" 2>/dev/null || echo 0)" 'BEGIN { print int(supervisor + workers) }')
   worker_ms=$(jq -r '.metrics.worker_wall_time_ms // 0' "$state" 2>/dev/null || echo 0)
   integration_ms=$(jq -r '.metrics.integration_wall_time_ms // 0' "$state" 2>/dev/null || echo 0)

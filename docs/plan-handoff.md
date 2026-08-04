@@ -63,7 +63,7 @@ Consumer semantics (orchestraitor):
 
 - All four artifacts conform to the `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, and `sdd-draft-tasks` templates, including the Review Workload Forecast guard lines in `tasks.md`.
 - Tasks are small, ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves.
-- Every task group MUST carry `Files:` and `Depends on:` lines, and the forecast MUST include the `Shared hotspots:` guard line (see `sdd-draft-tasks` >= 2.2.0). Intake still accepts legacy or malformed bundles without them, but the orchestraitor serializes those groups in document order instead of parallelizing.
+- Every task group MUST carry `Files:` and `Depends on:` lines, and the forecast MUST include the `Shared hotspots:` guard line (see `sdd-draft-tasks` >= 2.2.0). Standard orchestraitor intake still accepts legacy or malformed bundles without them and serializes those groups; the worktree-swarm path rejects a missing `Files:` scope and serializes the entire plan when `Shared hotspots:` is absent.
 - Every claim is evidence-backed or marked hypothesis; hypotheses and behavior changes stay out of `tasks.md`.
 - Do not write the `Mode: … | TDD: … | Judgment: … | Depth: … | Delivery: …` kickoff line; those choices belong to the user at adoption.
 - Bundles are always full depth — the four-artifact shape is the contract; the light-mode `change.md` is not a valid bundle format, and adoption never asks Depth.

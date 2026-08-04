@@ -59,6 +59,40 @@ setup_repo() {
   printf '%s\n' "$project"
 }
 
+setup_deep_plan_repo() {
+  local name=$1 with_roadmap=${2:-0}
+  local project proposal roadmap
+  project=$(setup_repo "$name")
+  mkdir -p "$project/.ai/deep-planner/changes"
+  mv "$project/.ai/orchestrator/changes/$CHANGE" "$project/.ai/deep-planner/changes/$CHANGE"
+  proposal="$project/.ai/deep-planner/changes/$CHANGE/proposal.md"
+  node - "$proposal" "$with_roadmap" <<'NODE'
+const fs = require("node:fs")
+const [file, withRoadmap] = process.argv.slice(2)
+const lines = fs.readFileSync(file, "utf8").split("\n")
+lines[0] = "Status: ready-for-sdd | Source: deep-planner"
+if (withRoadmap === "1") lines.splice(1, 0, "Roadmap: parallel-delivery | Slice: 1/2")
+fs.writeFileSync(file, lines.join("\n"))
+NODE
+  if [[ "$with_roadmap" == 1 ]]; then
+    roadmap="$project/.ai/roadmaps/parallel-delivery.md"
+    mkdir -p "$(dirname "$roadmap")"
+    node - "$roadmap" <<'NODE'
+const fs = require("node:fs")
+fs.writeFileSync(process.argv[2], `# Roadmap: parallel-delivery
+Status: active | Source: deep-planner
+Outcome: Deliver the fixture in controlled slices.
+
+| # | Slice | Scope | Depends on | Status | Bundle |
+|---|---|---|---|---|---|
+| 1 | parallel-checkout | Implement checkout policies | — | planned | .ai/deep-planner/changes/parallel-checkout/ |
+| 2 | verify-checkout | Verify the integrated result | 1 | pending | — |
+`)
+NODE
+  fi
+  printf '%s\n' "$project"
+}
+
 run_sync() {
   local project=$1
   local output=$2
@@ -132,6 +166,55 @@ SUCCESS_PROJECT=$(setup_repo success)
 PLAN_JSON="$SUITE_DIR/plan.json"
 node "$PLUGIN" plan --root "$SUCCESS_PROJECT" --change "$CHANGE" --max-workers 4 >"$PLAN_JSON"
 jq -e '.waves == [["1","2","3","4"],["5"],["6"]]' "$PLAN_JSON" >/dev/null || fail "unexpected fixture waves"
+
+DEEP_PLAN_PROJECT=$(setup_deep_plan_repo deep-plan-plan 1)
+DEEP_PLAN_JSON="$SUITE_DIR/deep-plan.json"
+node "$PLUGIN" plan --root "$DEEP_PLAN_PROJECT" --change "$CHANGE" --max-workers 4 >"$DEEP_PLAN_JSON"
+jq -e '.waves == [["1","2","3","4"],["5"],["6"]]' "$DEEP_PLAN_JSON" >/dev/null ||
+  fail "deep-plan bundle did not produce the expected waves"
+[[ ! -e "$DEEP_PLAN_PROJECT/.ai/deep-planner/changes/$CHANGE" ]] || fail "deep-plan source bundle was not adopted"
+[[ -f "$DEEP_PLAN_PROJECT/.ai/orchestrator/changes/$CHANGE/design.md" ]] || fail "adopted deep-plan bundle is incomplete"
+grep -Fq "| 1 | parallel-checkout | Implement checkout policies | — | adopted | .ai/orchestrator/changes/parallel-checkout/ |" \
+  "$DEEP_PLAN_PROJECT/.ai/roadmaps/parallel-delivery.md" || fail "roadmap slice was not updated during adoption"
+
+AMBIGUOUS_PROJECT=$(setup_deep_plan_repo ambiguous-bundles)
+mkdir -p "$AMBIGUOUS_PROJECT/.ai/refactor-planner/changes"
+cp -R "$AMBIGUOUS_PROJECT/.ai/deep-planner/changes/$CHANGE" "$AMBIGUOUS_PROJECT/.ai/refactor-planner/changes/$CHANGE"
+node - "$AMBIGUOUS_PROJECT/.ai/refactor-planner/changes/$CHANGE/proposal.md" <<'NODE'
+const fs = require("node:fs")
+const file = process.argv[2]
+const lines = fs.readFileSync(file, "utf8").split("\n")
+lines[0] = "Status: ready-for-sdd | Source: refactor-planner"
+fs.writeFileSync(file, lines.join("\n"))
+NODE
+if node "$PLUGIN" plan --root "$AMBIGUOUS_PROJECT" --change "$CHANGE" >"$SUITE_DIR/ambiguous.log" 2>&1; then
+  fail "planning adopted one of multiple ready-for-sdd bundles"
+fi
+grep -Fq "ambiguous ready-for-sdd bundles" "$SUITE_DIR/ambiguous.log" || fail "ambiguous bundle error was not specific"
+
+DEEP_RUN_PROJECT=$(setup_deep_plan_repo deep-plan-run)
+DEEP_RUN_RESULT="$SUITE_DIR/deep-plan-run.json"
+run_sync "$DEEP_RUN_PROJECT" "$DEEP_RUN_RESULT"
+assert_completed_run "$DEEP_RUN_RESULT"
+[[ ! -e "$DEEP_RUN_PROJECT/.ai/deep-planner/changes/$CHANGE" ]] || fail "run did not adopt the deep-plan source bundle"
+cleanup_run "$DEEP_RUN_PROJECT" "$DEEP_RUN_RESULT"
+
+INCOMPLETE_PROJECT=$(setup_repo incomplete-bundle)
+rm "$INCOMPLETE_PROJECT/.ai/orchestrator/changes/$CHANGE/design.md"
+if node "$PLUGIN" plan --root "$INCOMPLETE_PROJECT" --change "$CHANGE" >"$SUITE_DIR/incomplete.log" 2>&1; then
+  fail "planning accepted an incomplete full-depth bundle"
+fi
+grep -Fq "full-depth bundle is missing design.md" "$SUITE_DIR/incomplete.log" || fail "incomplete bundle error was not specific"
+
+NO_IGNORE_PROJECT=$(setup_repo no-ai-ignore)
+awk '$0 != ".ai/"' "$NO_IGNORE_PROJECT/.gitignore" >"$NO_IGNORE_PROJECT/.gitignore.next"
+mv "$NO_IGNORE_PROJECT/.gitignore.next" "$NO_IGNORE_PROJECT/.gitignore"
+git -C "$NO_IGNORE_PROJECT" add .gitignore
+git -C "$NO_IGNORE_PROJECT" commit -qm "test: remove ai ignore prerequisite"
+if node "$PLUGIN" plan --root "$NO_IGNORE_PROJECT" --change "$CHANGE" >"$SUITE_DIR/no-ignore.log" 2>&1; then
+  fail "planning accepted a repository that does not ignore .ai/"
+fi
+grep -Fq "add '.ai/' to .gitignore or .git/info/exclude" "$SUITE_DIR/no-ignore.log" || fail ".ai ignore remediation was not specific"
 
 SUCCESS_RESULT="$SUITE_DIR/success.json"
 run_background "$SUCCESS_PROJECT" "$SUCCESS_RESULT"

@@ -16,6 +16,8 @@ CANCEL_OUTPUT=${SDD_SWARM_TASK_CANCEL_OUTPUT:-${OUTPUT%.jsonl}.cancel.jsonl}
 MODEL_ARGS=()
 [[ -z "${SDD_SWARM_TASK_PROBE_MODEL:-}" ]] || MODEL_ARGS=(--model "$SDD_SWARM_TASK_PROBE_MODEL")
 CANCEL_PID=""
+CANCEL_CHILD_SESSION=""
+CANCEL_CHILD_ERROR=""
 
 cleanup() {
   if [[ -n "$CANCEL_PID" ]] && kill -0 "$CANCEL_PID" >/dev/null 2>&1; then
@@ -58,12 +60,15 @@ OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true "$OPENCODE_BIN" run \
   >"$CANCEL_OUTPUT" 2>"${CANCEL_OUTPUT%.jsonl}.stderr.log" &
 CANCEL_PID=$!
 for ((attempt = 0; attempt < 600; attempt++)); do
-  CANCEL_STARTED=$(jq -s '[.[] | select(.part?.tool == "task" and .part.state.input?.background == true)] | length' "$CANCEL_OUTPUT" 2>/dev/null || echo 0)
-  [[ "$CANCEL_STARTED" -ge 1 ]] && break
+  CANCEL_CHILD_SESSION=$(jq -r '
+    select(.part?.tool == "task" and .part.state.input?.background == true) |
+    .part.state.metadata.sessionId // empty
+  ' "$CANCEL_OUTPUT" 2>/dev/null | tail -1 || true)
+  [[ -n "$CANCEL_CHILD_SESSION" ]] && break
   kill -0 "$CANCEL_PID" >/dev/null 2>&1 || { echo "FAIL: cancellation parent exited before launching Task" >&2; exit 1; }
   sleep 0.1
 done
-[[ "${CANCEL_STARTED:-0}" -ge 1 ]] || { echo "FAIL: cancellation Task did not start" >&2; exit 1; }
+[[ "$CANCEL_CHILD_SESSION" =~ ^ses_[[:alnum:]]+$ ]] || { echo "FAIL: cancellation Task did not expose a valid child session id" >&2; exit 1; }
 kill -TERM "$CANCEL_PID"
 set +e
 wait "$CANCEL_PID"
@@ -72,16 +77,32 @@ set -e
 CANCEL_PID=""
 [[ "$CANCEL_EXIT" -ne 0 ]] || { echo "FAIL: interrupted Task parent returned success" >&2; exit 1; }
 
+for ((attempt = 0; attempt < 100; attempt++)); do
+  CANCEL_CHILD_ERROR=$(
+    "$OPENCODE_BIN" db --format json \
+      "SELECT json_extract(data, '$.error.name') AS error_name FROM message WHERE session_id = '$CANCEL_CHILD_SESSION' AND json_extract(data, '$.role') = 'assistant' ORDER BY time_updated DESC LIMIT 1" \
+      2>/dev/null | jq -r '.[0].error_name // empty' 2>/dev/null || true
+  )
+  [[ "$CANCEL_CHILD_ERROR" == MessageAbortedError ]] && break
+  sleep 0.1
+done
+[[ "$CANCEL_CHILD_ERROR" == MessageAbortedError ]] || {
+  echo "FAIL: child Task $CANCEL_CHILD_SESSION did not reach MessageAbortedError after parent cancellation" >&2
+  exit 1
+}
+
 jq -nc \
   --argjson background_calls "$START_COUNT" \
   --argjson notifications "$NOTIFICATION_COUNT" \
   --argjson fanout_before_notification true \
   --argjson wall_ms "$((ENDED_MS - STARTED_MS))" \
   --argjson cancellation_parent_exit "$CANCEL_EXIT" \
-  '{background_calls:$background_calls,notifications:$notifications,fanout_before_notification:$fanout_before_notification,wall_ms:$wall_ms,cancellation:{signal:"SIGTERM",parent_exit:$cancellation_parent_exit,background_started:true}}' \
+  --arg cancellation_child_session "$CANCEL_CHILD_SESSION" \
+  --arg cancellation_child_error "$CANCEL_CHILD_ERROR" \
+  '{background_calls:$background_calls,notifications:$notifications,fanout_before_notification:$fanout_before_notification,wall_ms:$wall_ms,cancellation:{signal:"SIGTERM",parent_exit:$cancellation_parent_exit,child_session:$cancellation_child_session,child_terminal:true,child_error:$cancellation_child_error}}' \
   >"$REPORT"
 
-echo "PASS: OpenCode launched four background Tasks before notification and propagated parent cancellation"
+echo "PASS: OpenCode launched four background Tasks before notification and terminated the cancellation child session"
 echo "Events: $OUTPUT"
 echo "Cancellation events: $CANCEL_OUTPUT"
 echo "Report: $REPORT"
