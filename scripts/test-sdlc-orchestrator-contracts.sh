@@ -101,12 +101,34 @@ assert_contains "$review" 'same child through Task'
 assert_contains "$review" 'task_id'
 assert_receipt_schema "$review"
 
+architect="domains/architecture/agents/architect.md"
+assert_frontmatter_contains "$architect" 'mode: subagent'
+assert_frontmatter_contains "$architect" 'question: deny'
+assert_frontmatter_contains "$architect" 'arch-analyzer: allow'
+assert_frontmatter_contains "$architect" 'boundary-inspector: allow'
+assert_frontmatter_contains "$architect" '"npm audit*": allow'
+assert_contains "$architect" 'raw user request in the coordinator brief'
+assert_not_contains "$architect" "$RUNTIME_ARGUMENTS"
+for operation in map review prd ideate audit boundary; do
+  assert_contains "$architect" "$operation"
+done
+assert_contains "$architect" 'producer: architect'
+assert_receipt_schema "$architect"
+
 for command in deep-plan wayfinder judgment defend; do
   case "$command" in
     deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
     judgment) file="domains/sdd/commands/$command.md" ;;
     defend) file="domains/common/commands/$command.md" ;;
   esac
+  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
+  assert_frontmatter_contains "$file" 'subtask: false'
+  assert_contains "$file" "$RUNTIME_ARGUMENTS"
+  assert_contains "$file" 'Explicit SDLC route:'
+done
+
+for command in arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector; do
+  file="domains/architecture/commands/$command.md"
   assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
   assert_frontmatter_contains "$file" 'subtask: false'
   assert_contains "$file" "$RUNTIME_ARGUMENTS"

@@ -1,13 +1,12 @@
 ---
 description: "Generate or refresh compact C4-lite Mermaid architecture docs (context, containers, key flows) in the project's doc folder."
-agent: architect
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[optional subpath or focus]"
 ---
-You are running `/arch-map` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `architect` in `map` mode using the exact raw arguments above.
+Explicit SDLC route: `architecture / map`. Route directly through `sdlc-orchestrator` to `architect` with `operation: map`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Hard constraints:
 

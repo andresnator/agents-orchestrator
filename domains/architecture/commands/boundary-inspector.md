@@ -1,8 +1,14 @@
 ---
 description: Inspect backend service inputs and outputs with evidence
+agent: sdlc-orchestrator
+subtask: false
 argument-hint: "[target path, service, module, or scope]"
 ---
 # /boundary-inspector
+
+Raw arguments: `$ARGUMENTS`
+
+Explicit SDLC route: `architecture / boundary`. Route directly through `sdlc-orchestrator` to `architect` with `operation: boundary`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 ## Purpose
 

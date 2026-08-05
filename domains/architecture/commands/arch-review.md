@@ -1,13 +1,12 @@
 ---
 description: "Validate project state (toolchain, architecture style, gaps) and produce an evidence-backed ranked issue shortlist."
-agent: architect
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[optional subpath or focus]"
 ---
-You are running `/arch-review` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `architect` in `review` mode using the exact raw arguments above.
+Explicit SDLC route: `architecture / review`. Route directly through `sdlc-orchestrator` to `architect` with `operation: review`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Hard constraints:
 

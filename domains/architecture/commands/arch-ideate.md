@@ -1,13 +1,12 @@
 ---
 description: "Question-driven architecture refactor ideation producing an ADR plus a ready-for-sdd OpenSpec bundle."
-agent: architect
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[architecture concern or target]"
 ---
-You are running `/arch-ideate` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `architect` in `ideate` mode using the exact raw arguments above.
+Explicit SDLC route: `architecture / ideate`. Route directly through `sdlc-orchestrator` to `architect` with `operation: ideate`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Hard constraints:
 
