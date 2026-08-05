@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.2"
+  version: "2.0.3"
 ---
 
 ## Activation Contract
@@ -20,6 +20,7 @@ Use when drafting an OpenSpec `proposal.md` through interview-first SDD planning
 - Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state-changing commands. Only write planning `.md` files after explicit approval.
+- Standalone writes default to `.ai/orchestrator/changes/{change}/proposal.md`. A phase agent may instead receive a validated `.ai/{producer}/changes/{change}/proposal.md` target for a ready-for-sdd handoff; in that context the producer marker replaces the kickoff line.
 - When delegated by grill, return the approved draft and do not write files; the orchestrator owns the single write step.
 
 ## Decision Gates
@@ -37,7 +38,7 @@ Use when drafting an OpenSpec `proposal.md` through interview-first SDD planning
 2. Interview for problem, users, business rules, scope, risks, success, and capability binding.
 3. Draft `proposal.md` with New/Modified Capabilities as the spec contract.
 4. Present the draft for approval; revise until approved.
-5. If standalone and approved, ask before writing under `.ai/orchestrator/changes/{change-name}/proposal.md`.
+5. If standalone and approved, ask before writing under `.ai/orchestrator/changes/{change-name}/proposal.md`. When loaded by a phase agent, write only its validated target path and follow its active-versus-handoff header contract.
 
 ## Output Contract
 

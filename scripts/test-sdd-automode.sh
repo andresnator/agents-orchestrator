@@ -113,6 +113,17 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     assert_json_value "$config" ".agent[\"$name\"].permission.bash" deny \
       "on: $name lost its bash deny"
   done
+  # Drafting agents keep their nested planning-artifact write boundary.
+  for name in sdd-proposal sdd-spec sdd-design sdd-tasks; do
+    assert_json_value "$config" ".agent[\"$name\"].permission.edit[\"*\"]" deny \
+      "on: $name lost its edit wildcard deny"
+    assert_json_value "$config" ".agent[\"$name\"].permission.edit[\".ai/*/changes/**\"]" allow \
+      "on: $name lost its planning edit allow"
+    assert_json_value "$config" ".agent[\"$name\"].permission.write[\"*\"]" deny \
+      "on: $name lost its write wildcard deny"
+    assert_json_value "$config" ".agent[\"$name\"].permission.write[\".ai/*/changes/**\"]" allow \
+      "on: $name lost its planning write allow"
+  done
   # Subagents never ask; the orchestraitor always may.
   for name in sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
     assert_json_value "$config" ".agent[\"$name\"].permission.question" deny \

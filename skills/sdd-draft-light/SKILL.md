@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 ## Activation Contract
@@ -19,7 +19,7 @@ Use when drafting the single `change.md` artifact for an SDD change whose kickof
 - Keep under 800 words total: roughly 150 for Why / What, 450 for Spec Deltas, 200 for Tasks.
 - Spec Deltas use the same semantics as `sdd-draft-spec` delta files: requirements use RFC 2119, scenarios use WHEN/THEN, MODIFIED restates the full replacement requirement, REMOVED and RENAMED carry Reason and Migration. Describe WHAT, not HOW. New capability behavior goes under ADDED. Omit empty ADDED/MODIFIED/REMOVED/RENAMED subsections.
 - At archive, each capability block under `## Spec Deltas` merges into canonical `specs/{capability}/spec.md` exactly like a delta file; never edit canonical specs while drafting.
-- Tasks are small, dependency-ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves; testing tasks reference a Spec Deltas scenario. A light change is normally one sequential group; only when tasks split into independent groups, give each a `### N. {group}` heading with a `Files:` scope line (directories/globs) so the orchestraitor can schedule parallel waves — groups without disjoint scopes serialize.
+- Tasks are small, dependency-ordered `- [ ] X.Y` checkboxes naming real files; testing tasks reference a Spec Deltas scenario. Light depth always executes as one sequential implementation wave. Put one aggregate `Files:` scope line immediately under `## Tasks`; do not create task-group headings or parallel scheduling metadata.
 - Artifacts default to English; summaries and gates use the user's language.
 
 ## Decision Gates
@@ -35,7 +35,7 @@ Use when drafting the single `change.md` artifact for an SDD change whose kickof
 1. Read `assets/change-template.md`.
 2. Draft `## Why / What` from the request and kickoff decisions: problem, gap, observable outcome, scope boundaries.
 3. Draft `## Spec Deltas` with one `### Delta for {capability}` block per touched capability, reading canonical specs first when they exist.
-4. Draft `## Tasks` as a dependency-ordered checklist consistent with the deltas.
+4. Draft `## Tasks` as one dependency-ordered checklist consistent with the deltas, preceded by its aggregate `Files:` scope.
 5. Check the upgrade gate and the word cap, then write the file.
 
 ## Output Contract

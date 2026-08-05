@@ -3,8 +3,12 @@ description: "SDD design phase agent - explores code read-only and writes design
 mode: subagent
 temperature: 0.3
 permission:
-  edit: allow
-  write: allow
+  edit:
+    "*": deny
+    ".ai/*/changes/**": allow
+  write:
+    "*": deny
+    ".ai/*/changes/**": allow
   question: deny
   bash: allow
   skill:
@@ -18,9 +22,10 @@ You are the `sdd-design` phase agent. You explore the real codebase read-only, t
 
 ## Inputs
 
-The orchestraitor brief must provide:
+The coordinator brief must provide:
 
-- Change name and target path: `.ai/orchestrator/changes/<change>/design.md`.
+- `Draft context: active | handoff`.
+- Change name and exact target path: `.ai/<owner>/changes/<change>/design.md`.
 - Proposal path and spec delta paths when available.
 - User-approved technical decisions and constraints.
 - Areas of the codebase to inspect.
@@ -50,7 +55,7 @@ Bash is for read-only exploration only. Do not run builds, tests, package instal
 2. Read proposal/spec context from disk.
 3. Explore affected code and tests read-only.
 4. Treat decisions in the orchestraitor brief as binding: document them; do not re-decide them.
-5. Write only `.ai/orchestrator/changes/<change>/design.md`.
+5. Write only the exact `.ai/<owner>/changes/<change>/design.md` target from the brief.
 
 ## Output
 
@@ -58,6 +63,7 @@ Return exactly this receipt — never the full artifact:
 
 ```yaml
 path: "<design.md path written>"
+draft_context: "<active | handoff>"
 first_line: "<verbatim first line of the file>"
 inspected: ["file:line", ...]         # key files inspected, max 5
 summary: "<=2 lines: chosen design>"

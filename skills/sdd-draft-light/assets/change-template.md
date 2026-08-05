@@ -53,11 +53,13 @@ The system MUST {observable behavior}.
 
 ## Tasks
 
+Files: {repo-relative files or globs touched by this change}
+
 - [ ] 1.1 {Concrete action naming real files}
 - [ ] 1.2 {Concrete action depending on 1.1}
 
 <!-- Keep under 800 words total. Delta semantics are identical to full-depth
 delta files; at archive each capability block merges into
 specs/{capability}/spec.md. Omit empty ADDED/MODIFIED/REMOVED/RENAMED
-subsections. Tasks: dependency-ordered `- [ ] X.Y` naming real files; only
-multi-group changes add `### N. {group}` headings with a `Files:` scope line. -->
+subsections. Tasks: one sequential dependency-ordered wave of `- [ ] X.Y`
+items naming real files, preceded by one aggregate `Files:` scope line. -->

@@ -8,7 +8,15 @@ permission:
   glob: allow
   list: allow
   lsp: allow
-  skill: allow
+  skill:
+    "*": deny
+    code-conventions: allow
+    domain-modeling: allow
+    fable-planning: allow
+    graphify-cli: allow
+    grilling: allow
+    native-question-ux: allow
+    wayfinder: allow
   question: allow
   task:
     "*": deny
@@ -49,7 +57,7 @@ Assess which shape the goal wants — including whether an executable goal is ov
 - Plan-document mode: `.ai/deep-planner/plans/<plan-slug>.md`, one file per plan, kebab-case and verb-led (e.g. `choose-cache-strategy.md`). On collision ask for a new name; never overwrite.
 - Roadmap mode: `.ai/roadmaps/<goal>.md`, `<goal>` kebab-case and verb-led. On collision ask for a new name; never overwrite. Slice rows use bundle-style `<change>` names.
 - `/wayfinder` mode: `.ai/wayfinder/<map-slug>/` — `map.md` plus ticket files, which you do update in place as the map advances. `/wayfinder` never produces bundles.
-- All of this state lives under the hidden `.ai/` dot-directory, which default glob/file-search skips: when checking for existing plans, roadmaps, maps, or collisions, list the literal path (`ls -la .ai/roadmaps/`, `ls -la .ai/wayfinder/`) or search with hidden files enabled — an empty pattern result is inconclusive, never proof the state is absent.
+- All of this state lives under the hidden `.ai/` dot-directory, which default glob/file-search skips: when checking for existing plans, roadmaps, maps, or collisions, use the `list` tool on the literal path or search with hidden files enabled — an empty pattern result is inconclusive, never proof the state is absent.
 
 ## /wayfinder mode
 
@@ -69,16 +77,16 @@ Then continue with the Bundle workflow (executable goals), the Roadmap workflow 
 
 ## Bundle workflow (executable goals — default)
 
-Instead of writing a plan document, hand the completed plan to the sdd phase subagents, who draft the four ready-for-sdd artifacts. You own the decisions and the evidence; they own the writes. Follow `docs/plan-handoff.md` — it is the contract the `orchestraitor` consumes.
+Instead of writing a plan document, hand the completed plan to the sdd phase subagents in `Draft context: handoff`; they draft the four ready-for-sdd artifacts under the producer root, not the active SDD root. You own the decisions and the evidence; they own the writes. Follow `docs/plan-handoff.md` — it is the contract the `orchestraitor` consumes.
 
 **Precondition.** Before delegating: every edge whose destination is `open question` and every load-bearing `hypothesis` is resolved (one grouped clarification round) or moved to Scope Out. Hypotheses and behavior changes never enter `tasks.md`.
 
 6. **Choose `<change>`**: kebab-case, verb-led (e.g. `add-invoice-export`). On collision under `.ai/deep-planner/changes/`, ask for a new name — never overwrite.
-7. **Delegate drafting in waves.** Each brief carries everything the phase needs, because it drafts outside your context: the binding decisions from the interview, exploration evidence as `path:line`, the relevant edge matrix rows (handled → spec scenarios; out-of-scope → proposal Scope Out), the target paths under `.ai/deep-planner/changes/<change>/`, and the instruction to return the phase agent's Output receipt — never the full artifact. When a brief injects skill or registry context, cap it to the 3-5 most relevant skills as distilled rules, never full SKILL.md or template bodies — the same budget the sdd orchestraitor uses.
-   - **Wave 1 — `sdd-proposal`.** Brief includes: `proposal.md` first line must be exactly `Status: ready-for-sdd | Source: deep-planner`; do NOT write the `Mode: … | TDD: … | Judgment: … | Depth: … | Delivery: …` kickoff line (those choices belong to the user at adoption); the source goal for the Why; in roadmap mode, the instruction to also echo `second_line` in the receipt.
-   - **Wave 2 — `sdd-spec` ∥ `sdd-design`** in parallel, in one message: delta specs per capability (`ADDED`/`MODIFIED`/`REMOVED`/`RENAMED`) from the handled edges, and the design from the chosen approach + rejected alternatives.
-   - **Wave 3 — `sdd-tasks`.** Brief includes: the requirement that the Review Workload Forecast guard lines and per-group `Files:` scopes be present per the `sdd-draft-tasks` skill — the agent loads the template itself, never paste it; small ordered `- [ ] X.Y` tasks naming real files, sized for `sdd-implement` waves; the plan's end-to-end verification becomes the final task group; test format per the `code-conventions` skill.
-8. **Reconcile receipts against disk, then verify targeted.** Receipt fields tell you where to look; disk is the proof — a `path` in a receipt does not prove the write happened, and `first_line` cannot prove a kickoff line is absent further down. Run cheap targeted checks instead of re-reading the bundle: list `.ai/deep-planner/changes/<change>/` and confirm all four artifacts exist at the receipt `path`/`paths`, including one spec file per capability; read only the head of `proposal.md` (first ~5 lines) and confirm the marker first line is exact, no `Mode: … | Delivery: …` kickoff line appears, and in roadmap mode the `Roadmap: <goal> | Slice: <n>/<total>` second line is correct in the bundle drafted this sitting (already-written slice bundles are exempt — never edit their lines); and read `tasks.md` in full — the artifact the orchestraitor machine-consumes — confirming the Review Workload Forecast guard lines and per-group `Files:` scopes are actually present and tasks name real files. Any mismatch between a receipt and disk (missing file, wrong or extra marker line, absent guard lines or scopes) goes back to that phase agent as a correction brief; minor inconsistencies in `tasks.md` you fix yourself.
+7. **Delegate drafting in waves.** Every brief starts with `Draft context: handoff`, `Producer: deep-planner`, `Depth: full`, and the exact target path under `.ai/deep-planner/changes/<change>/`. It also carries everything the phase needs because it drafts outside your context: the binding decisions from the interview, exploration evidence as `path:line`, the relevant edge matrix rows (handled → spec scenarios; out-of-scope → proposal Scope Out), and the instruction to return the phase agent's Output receipt — never the full artifact. When a brief injects skill or registry context, cap it to the 3-5 most relevant skills as distilled rules, never full SKILL.md or template bodies — the same budget the sdd orchestraitor uses.
+   - **Wave 1 — `sdd-proposal`.** Brief includes: `proposal.md` first line must be exactly `Status: ready-for-sdd | Source: deep-planner`; do NOT write the `Mode: … | TDD: … | Judgment: … | Depth: … | Delivery: …` kickoff line (those choices belong to the user at adoption); the source goal for the Why; in roadmap mode, the exact Roadmap marker and the instruction to echo `second_line` in the receipt.
+   - **Wave 2 — `sdd-spec` ∥ `sdd-design`** in parallel, in one message: their briefs repeat the handoff identity and exact producer-owned target; delta specs per capability (`ADDED`/`MODIFIED`/`REMOVED`/`RENAMED`) come from the handled edges, and the design comes from the chosen approach + rejected alternatives.
+   - **Wave 3 — `sdd-tasks`.** Its brief repeats the handoff identity and exact producer-owned target, plus the requirement that the Review Workload Forecast guard lines and per-group `Files:` scopes be present per the `sdd-draft-tasks` skill — the agent loads the template itself, never paste it; small ordered `- [ ] X.Y` tasks naming real files, sized for `sdd-implement` waves; the plan's end-to-end verification becomes the final task group; test format per the `code-conventions` skill.
+8. **Reconcile receipts against disk, then verify targeted.** First require every receipt to echo `draft_context: handoff`; a different or missing context is a failed delegation. Receipt fields then tell you where to look, but disk is the proof — a `path` in a receipt does not prove the write happened, and `first_line` cannot prove a kickoff line is absent further down. Run cheap targeted checks instead of re-reading the bundle: list `.ai/deep-planner/changes/<change>/` and confirm all four artifacts exist at the receipt `path`/`paths`, including one spec file per capability; read only the head of `proposal.md` (first ~5 lines) and confirm the marker first line is exact, no `Mode: … | Delivery: …` kickoff line appears, and in roadmap mode the `Roadmap: <goal> | Slice: <n>/<total>` second line is correct in the bundle drafted this sitting (already-written slice bundles are exempt — never edit their lines); and read `tasks.md` in full — the artifact the orchestraitor machine-consumes — confirming the Review Workload Forecast guard lines and per-group `Files:` scopes are actually present and tasks name real files. Any mismatch between a receipt and disk (wrong context, missing file, wrong or extra marker line, absent guard lines or scopes) goes back to that phase agent as a correction brief; minor inconsistencies in `tasks.md` you fix yourself.
 9. **Report** 1–3 lines: the bundle path and the adoption hint — run the sdd orchestraitor with `ejecuta el plan <change>`. `/judgment` on the bundle remains the opt-in adversarial review.
 
 ## Roadmap workflow (oversized executable goals)
