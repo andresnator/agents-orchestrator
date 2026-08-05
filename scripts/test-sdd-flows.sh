@@ -4,7 +4,7 @@
 #
 #   OPENCODE_BIN=/opt/homebrew/bin/opencode scripts/test-sdd-flows.sh probe
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh smoke
-#   OPENCODE_BIN=... scripts/test-sdd-flows.sh plan       # /deep-plan -> adoption
+#   OPENCODE_BIN=... scripts/test-sdd-flows.sh plan       # /deep-plan -> in-place SDD
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh SDD-LIGHT-01
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh lite      # sdd-lite POC scenarios
 #
@@ -347,11 +347,11 @@ scenario_SDD_ADOPT_01() {
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   local adopted
-  adopted="$(find_change_dir enforce-order-limit)"
-  [ -n "$adopted" ] || { verdict_fail "enforce-order-limit was not adopted into .ai/orchestrator/changes/"; return; }
+  adopted="$(find_change_dir enforce-order-limit "$PROJECT/.ai/refactor-planner/changes")"
+  [ -n "$adopted" ] || { verdict_fail "enforce-order-limit was not executed under its producer root"; return; }
   assert_file "$adopted/proposal.md" || return
   assert_file "$adopted/state.md" || return
-  assert_absent "$PROJECT/.ai/refactor-planner/changes/enforce-order-limit" || return
+  assert_absent "$PROJECT/.ai/orchestrator/changes/enforce-order-limit" || return
   assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: refactor-planner' || return
   # The kickoff line goes on the first line after the marker block.
   sed -n '2,4p' "$adopted/proposal.md" | grep -q 'Mode:.*Depth: full' ||
@@ -403,9 +403,9 @@ scenario_PLAN_HANDOFF_01() {
     { verdict_fail "the orchestraitor adoption run exited non-zero or timed out"; return; }
 
   local adopted
-  adopted="$(find_change_dir "$change")"
-  [ -n "$adopted" ] || { verdict_fail "$change was not adopted into .ai/orchestrator/changes/"; return; }
-  assert_absent "$PROJECT/.ai/deep-planner/changes/$change" || return
+  adopted="$(find_change_dir "$change" "$PROJECT/.ai/deep-planner/changes")"
+  [ -n "$adopted" ] || { verdict_fail "$change was not executed under its producer root"; return; }
+  assert_absent "$PROJECT/.ai/orchestrator/changes/$change" || return
   assert_file "$adopted/state.md" || return
   assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: deep-planner' || return
   sed -n '2,4p' "$adopted/proposal.md" | grep -q 'Mode:.*Depth: full' ||
