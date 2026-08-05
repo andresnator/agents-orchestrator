@@ -4,6 +4,7 @@
 #
 #   OPENCODE_BIN=/opt/homebrew/bin/opencode scripts/test-sdd-flows.sh probe
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh smoke
+#   OPENCODE_BIN=... scripts/test-sdd-flows.sh plan       # /deep-plan -> adoption
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh SDD-LIGHT-01
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh lite      # sdd-lite POC scenarios
 #
@@ -291,11 +292,13 @@ scenario_SDD_LIGHT_01() {
   [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/orchestrator/changes/"; return; }
 
   assert_file "$change_dir/change.md" || return
+  assert_file "$change_dir/state.md" || return
   assert_absent "$change_dir/proposal.md" || return
   assert_absent "$change_dir/tasks.md" || return
   assert_first_line_matches "$change_dir/change.md" '*Depth: light*' || return
   assert_grep "$change_dir/change.md" '## Spec Deltas' || return
   assert_grep "$change_dir/change.md" '## Tasks' || return
+  assert_grep "$change_dir/change.md" 'Files:' || return
 
   local words
   words="$(word_count "$change_dir/change.md")"
@@ -322,6 +325,7 @@ scenario_SDD_FULL_02() {
   [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/orchestrator/changes/"; return; }
 
   assert_file "$change_dir/proposal.md" || return
+  assert_file "$change_dir/state.md" || return
   assert_file "$change_dir/tasks.md" || return
   [ -n "$(find "$change_dir/specs" -name spec.md -print -quit 2>/dev/null)" ] ||
     { verdict_fail "no specs/<capability>/spec.md delta was written"; return; }
@@ -331,6 +335,7 @@ scenario_SDD_FULL_02() {
 
   assert_launched sdd-proposal || return
   assert_launched sdd-spec || return
+  assert_launched sdd-design || return
   assert_launched sdd-tasks || return
   verdict_pass
 }
@@ -345,6 +350,7 @@ scenario_SDD_ADOPT_01() {
   adopted="$(find_change_dir enforce-order-limit)"
   [ -n "$adopted" ] || { verdict_fail "enforce-order-limit was not adopted into .ai/orchestrator/changes/"; return; }
   assert_file "$adopted/proposal.md" || return
+  assert_file "$adopted/state.md" || return
   assert_absent "$PROJECT/.ai/refactor-planner/changes/enforce-order-limit" || return
   assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: refactor-planner' || return
   # The kickoff line goes on the first line after the marker block.
@@ -356,6 +362,54 @@ scenario_SDD_ADOPT_01() {
     assert_not_launched "$agent" || return
   done
   assert_launched sdd-implement || return
+  verdict_pass
+}
+
+scenario_PLAN_HANDOFF_01() {
+  CURRENT="PLAN-HANDOFF-01"
+  setup_scenario none
+  RUN_AGENT=deep-planner
+  run_agent "Planifica, sin implementar, agregar a Order un método lineCount() que devuelva la cantidad de líneas y su test. Es un objetivo ejecutable acotado para un único bundle, no un roadmap ni una investigación. No hay decisiones de producto abiertas: usa las convenciones existentes y produce el bundle ready-for-sdd." ||
+    { verdict_fail "the deep-planner run exited non-zero or timed out"; return; }
+
+  local bundle_dir change agent
+  bundle_dir="$(find "$PROJECT/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
+  [ -n "$bundle_dir" ] || { verdict_fail "deep-planner produced no bundle under .ai/deep-planner/changes/"; return; }
+  change="$(basename "$bundle_dir")"
+
+  assert_file "$bundle_dir/proposal.md" || return
+  assert_file "$bundle_dir/design.md" || return
+  assert_file "$bundle_dir/tasks.md" || return
+  [ -n "$(find "$bundle_dir/specs" -name spec.md -print -quit 2>/dev/null)" ] ||
+    { verdict_fail "deep-planner bundle has no specs/<capability>/spec.md"; return; }
+  assert_first_line_matches "$bundle_dir/proposal.md" 'Status: ready-for-sdd | Source: deep-planner' || return
+  ! sed -n '1,5p' "$bundle_dir/proposal.md" | grep -q '^Mode:' ||
+    { verdict_fail "handoff proposal contains a kickoff line"; return; }
+
+  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
+    assert_launched "$agent" || return
+  done
+
+  local non_planning_changes
+  non_planning_changes="$(
+    cd "$PROJECT" || exit 1
+    git status --porcelain --untracked-files=all | grep -v '^?? \.ai/' || true
+  )"
+  [ -z "$non_planning_changes" ] ||
+    { verdict_fail "deep-planner modified non-planning files: $non_planning_changes"; return; }
+
+  RUN_AGENT=orchestraitor
+  run_agent "ejecuta el plan $change en modo automático, TDD tests alongside, judgment none, delivery none." ||
+    { verdict_fail "the orchestraitor adoption run exited non-zero or timed out"; return; }
+
+  local adopted
+  adopted="$(find_change_dir "$change")"
+  [ -n "$adopted" ] || { verdict_fail "$change was not adopted into .ai/orchestrator/changes/"; return; }
+  assert_absent "$PROJECT/.ai/deep-planner/changes/$change" || return
+  assert_file "$adopted/state.md" || return
+  assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: deep-planner' || return
+  sed -n '2,4p' "$adopted/proposal.md" | grep -q 'Mode:.*Depth: full' ||
+    { verdict_fail "adopted producer bundle has no kickoff line after its marker block"; return; }
   verdict_pass
 }
 
@@ -474,6 +528,7 @@ scenario_LITE_02() {
 # --- Entry point -------------------------------------------------------------
 
 SMOKE=(SDD-LIGHT-01 SDD-FULL-02 SDD-ADOPT-01 SDD-ARCH-01 SDD-JDG-04)
+PLAN=(PLAN-HANDOFF-01)
 LITE=(LITE-01 LITE-02)
 
 run_scenario() {
@@ -486,7 +541,7 @@ run_scenario() {
 }
 
 main() {
-  [ "$#" -ge 1 ] || die "usage: $0 probe|smoke|lite|<scenario-id>"
+  [ "$#" -ge 1 ] || die "usage: $0 probe|smoke|plan|lite|<scenario-id>"
   [ -n "${OPENCODE_BIN:-}" ] || die "OPENCODE_BIN is required (this suite spends real credits)"
   [ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
   command -v jq >/dev/null 2>&1 || die "jq is required"
@@ -497,6 +552,10 @@ main() {
     smoke)
       local id
       for id in "${SMOKE[@]}"; do run_scenario "$id"; done
+      ;;
+    plan)
+      local id
+      for id in "${PLAN[@]}"; do run_scenario "$id"; done
       ;;
     lite)
       local id

@@ -266,6 +266,12 @@ if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
     fail scripts/test-sdd-automode.sh "sdd-automode contracts failed"
 fi
 
+# --- Plan -> SDD handoff and state-machine contracts ---
+if [ -f scripts/test-plan-sdd-contracts.sh ]; then
+  bash scripts/test-plan-sdd-contracts.sh >/dev/null ||
+    fail scripts/test-plan-sdd-contracts.sh "plan/SDD contracts failed"
+fi
+
 # --- Installer idempotency (python3/jq/opencode-gated) ---
 # Managed config values (currently the tui.json plugin entry) are edited in place,
 # so every remove-then-add round trip must land on the exact same bytes. Repeating a

@@ -61,6 +61,7 @@ Consumer semantics (orchestraitor):
 
 ## Producer obligations
 
+- A producer delegating to the shared sdd drafting agents sends `Draft context: handoff`, `Producer: <planner>`, `Depth: full`, and an exact target under `.ai/<planner>/changes/<change>/` in every brief. Each receipt must echo `draft_context: handoff`. `Draft context: active` is reserved for orchestraitor-owned artifacts and is not a handoff bundle.
 - All four artifacts conform to the `sdd-draft-proposal`, `sdd-draft-spec`, `sdd-draft-design`, and `sdd-draft-tasks` templates, including the Review Workload Forecast guard lines in `tasks.md`.
 - Tasks are small, ordered `- [ ] X.Y` checkboxes naming real files, sized for `sdd-implement` waves.
 - Every task group MUST carry a `Files:` scope line, and the forecast MUST include the `Shared hotspots:` guard line (see `sdd-draft-tasks` >= 2.1.0). Intake still accepts legacy or malformed bundles without them, but the orchestraitor serializes those waves instead of parallelizing.
@@ -70,7 +71,7 @@ Consumer semantics (orchestraitor):
 
 ## Adoption semantics (consumer: orchestraitor)
 
-1. Discover on "ejecuta el plan <change>" or during the session-start scan: `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) with the marker first line.
+1. Discover on "ejecuta el plan <change>" or during the session-start scan: `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) with the complete marker grammar on the first line. Prefix-only or empty-Source markers are malformed and invisible.
 2. Adopt by moving the whole folder to `.ai/orchestrator/changes/<change>/`; never overwrite, ask for a new name on collision. The `Source:` marker stays.
-3. Kickoff-lite: ask the Mode/TDD/Judgment/Delivery round once, record the kickoff line (with `Depth: full`) in `proposal.md` on the first line after the marker block (the `Status: ready-for-sdd | Source: …` line plus the optional `Roadmap:` line) — the marker stays the first line.
+3. Kickoff-lite: ask the Mode/TDD/Judgment/Delivery round once, record the kickoff line (with `Depth: full`) in `proposal.md` on the first line after the marker block (the `Status: ready-for-sdd | Source: …` line plus the optional `Roadmap:` line) — the marker stays the first line. Create `.ai/orchestrator/changes/<change>/state.md` at `Phase: implement`, with zero verify/judgment rounds and `Last verified: none`.
 4. Normal sdd flow from there: implement from the first unchecked task, verify, optional judgment, archive. On archive, spec deltas merge into canonical specs — behavior-preservation deltas progressively document the system.

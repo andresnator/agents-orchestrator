@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.1.1"
+  version: "2.1.2"
 ---
 
 ## Activation Contract
@@ -20,6 +20,7 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 - Follow the `native-question-ux` skill for question presentation; ask one question at a time and stop after each answer.
 - Interview/summaries/gates use the user's language; artifacts default to English unless Spanish artifacts are explicitly requested.
 - Plan-only: read-only codebase access; no code edits, builds, installs, tests, or state changes. Only write planning `.md` files after explicit approval.
+- Standalone writes default to `.ai/orchestrator/changes/{change}/tasks.md`. A phase agent may receive a validated `.ai/{owner}/changes/{change}/tasks.md` target and writes only there.
 - Every task line MUST be `- [ ] X.Y {concrete action naming real files}`: Specific, Actionable, Verifiable, Small enough for one session. Never vague ("implement feature"). Testing tasks reference specific spec scenarios.
 - Order groups by dependency: a task may only depend on earlier tasks; never forward-reference a later group. Execution scheduling (batching, parallelism, worktrees) is left to the implementer; the `Files:` scopes exist so it can schedule safely.
 - Every group carries a `Files:` line right under its heading: the directories or globs its tasks will touch. Scopes are scheduling predictions, not enforcement — only groups with disjoint scopes and no shared hotspot may run as parallel waves downstream; a missing `Files:` line means that group serializes.
@@ -42,7 +43,7 @@ Use when drafting an OpenSpec `tasks.md` from an approved spec and design: an or
 2. Interview for slicing, dependency order, and per-task verification.
 3. Draft `tasks.md` inline from the template with the forecast and dependency-ordered grouped checkboxes.
 4. Present for approval; revise until approved.
-5. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/tasks.md`.
+5. If standalone and approved, ask before writing `.ai/orchestrator/changes/{change-name}/tasks.md`. When loaded by a phase agent, use its validated owner-specific target.
 
 ## Output Contract
 

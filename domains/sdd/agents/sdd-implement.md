@@ -10,8 +10,6 @@ permission:
   skill:
     "*": deny
     code-conventions: allow
-    tcr: allow
-    work-unit-commits: allow
 ---
 # SDD Implement
 
@@ -29,7 +27,6 @@ The orchestraitor brief must provide:
 - The wave's declared `Files:` scope, when `tasks.md` carries one.
 - TDD instruction, if selected.
 - Test command or validation command — in a parallel round, a scoped validation command (the wave's own tests and targeted checks) instead of the full suite.
-- Commit instruction, only when the change runs `Delivery: commit-per-wave`.
 
 For a `merge` brief instead: the delta source (each `specs/<capability>/spec.md` delta file, or the `## Spec Deltas` capability blocks of `change.md` at light depth) and the canonical root `.ai/orchestrator/specs/`.
 
@@ -39,10 +36,10 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 1. Read the referenced planning artifacts (proposal/specs/design/tasks, or `change.md` for light-depth changes) before editing.
 2. Implement only the assigned wave. Load the `code-conventions` skill and honor it; an established consistent repo convention wins on conflict. Respect dependencies.
-3. If TDD is selected, write the failing test from the relevant spec scenario first, then make it pass; tests follow the `code-conventions` format. Offer `tcr` only if the orchestraitor explicitly asked for that cadence.
+3. If TDD is selected, write the failing test from the relevant spec scenario first, then make it pass; tests follow the `code-conventions` format.
 4. Run the requested validation — exactly what the brief names, nothing broader. In a parallel round the brief names scoped validation on purpose: sibling waves may hold half-finished edits in the same tree, so a full-suite failure outside your scope is not yours to fix; the orchestraitor runs the full suite after the round.
 5. If validation of your own changes fails, repair your own changes before returning. Never "fix" code outside your wave's scope.
-6. When the brief includes a commit instruction, commit only your wave's work as one work-unit commit after validation passes (`work-unit-commits` style message); never push, never commit files under `.ai/`.
+6. Never stage, commit, or push. Git index ownership belongs exclusively to the orchestraitor after it reconciles the receipt and runs the round validation.
 7. Never edit artifacts under `.ai/orchestrator/`; the orchestraitor marks checkboxes and updates state. A `merge` brief is the one exception, and only for `.ai/orchestrator/specs/`.
 
 ## Merge procedure
@@ -66,7 +63,6 @@ assertions:                   # one row per task in tasks_done, each pointing in
 files_changed: ["path", ...]
 out_of_scope: []              # files touched outside the wave's declared Files: scope
 validation: "pass | fail:<one line>"
-commit: "<sha> | none"
 blockers: []                  # blockers or open questions, only when they prevent completion
 ```
 

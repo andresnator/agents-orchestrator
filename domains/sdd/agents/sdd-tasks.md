@@ -3,8 +3,12 @@ description: "SDD tasks phase agent - writes dependency-ordered tasks.md from ap
 mode: subagent
 temperature: 0.3
 permission:
-  edit: allow
-  write: allow
+  edit:
+    "*": deny
+    ".ai/*/changes/**": allow
+  write:
+    "*": deny
+    ".ai/*/changes/**": allow
   question: deny
   bash: deny
   skill:
@@ -17,9 +21,10 @@ You are the `sdd-tasks` phase agent. You write one dependency-ordered `tasks.md`
 
 ## Inputs
 
-The orchestraitor brief must provide:
+The coordinator brief must provide:
 
-- Change name and target path: `.ai/orchestrator/changes/<change>/tasks.md`.
+- `Draft context: active | handoff`.
+- Change name and exact target path: `.ai/<owner>/changes/<change>/tasks.md`.
 - Proposal, spec delta, and design paths.
 - Known dependencies, implementation constraints, and requested TDD mode.
 
@@ -29,7 +34,7 @@ If required input is missing or contradictory, do not ask the user. Return open 
 
 1. Load the `sdd-draft-tasks` skill for checklist and forecast rules.
 2. Read proposal, specs, and design from disk.
-3. Write only `.ai/orchestrator/changes/<change>/tasks.md`.
+3. Write only the exact `.ai/<owner>/changes/<change>/tasks.md` target from the brief.
 4. Use dependency-ordered checklist groups. Make dependencies explicit so the orchestraitor can batch implementation waves safely.
 5. Give every group a `Files:` scope line (directories/globs it will touch) and fill the `Shared hotspots:` guard line per the skill — the orchestraitor only parallelizes groups with disjoint scopes and no shared hotspot.
 6. Preserve the Review Workload Forecast guard lines required by the skill.
@@ -40,6 +45,7 @@ Return exactly this receipt — never the full artifact:
 
 ```yaml
 path: "<tasks.md path written>"
+draft_context: "<active | handoff>"
 first_line: "<verbatim first line of the file>"
 groups: <n>
 files_scopes: all | missing:["<group>", ...]
