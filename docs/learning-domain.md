@@ -1,6 +1,6 @@
 # Using the learning domain
 
-Two commands, a primary mentor plus a hidden tutor, eight methods. `/learn` drives multi-session learning paths whose state lives in the project you run it from, under `.ai/learning/`; `/english` is the on-demand English coaching surface that feeds recurring gaps into those paths. The `mentor` is `mode: primary`, sdd-style: it shows up in OpenCode's agent switcher and you can talk to it directly (a direct message is routed like `/learn` input), with `/learn` as the front door. `english-tutor` stays `mode: subagent` and is only reachable through `/english`.
+Two commands, a primary mentor plus a hidden tutor, eight methods. `/learn` drives multi-session learning paths whose state lives in the project you run it from, under `.ai/learning/`; `/english` is the on-demand English coaching surface that feeds recurring gaps into those paths. The `mentor` is `mode: primary`: it shows up in OpenCode's agent switcher and you can talk to it directly (a direct message is routed like `/learn` input), with `/learn` as the front door. `english-tutor` stays `mode: subagent` and is only reachable through `/english`. This standalone primary is deliberately excluded from the project-local SDLC orchestrator POC profile.
 
 ## Install
 

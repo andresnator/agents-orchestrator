@@ -8,9 +8,9 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 |---|---|---|
 | [sdlc](domains/sdlc/README.md) | Single natural-language SDLC primary routing to domain coordinators and owning every user question | `sdlc-orchestrator` (primary) |
 | [sdd](domains/sdd/README.md) | Spec-driven development through the `orchestraitor` coordinator, including ready-bundle execution without redrafting | `orchestraitor` (subagent), `/judgment` alias |
-| [sdd-lite](domains/sdd-lite/README.md) | POC: single-context flow for bounded changes — `change.md` in chat, inline implementation, delegated cold verify only | `orchestralite` (primary) |
-| [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening planning producing ready-for-sdd bundles, plus Java refactor skills | `refactor-planner` (primary), `/harden-plan`, `/refactor-plan` |
-| [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (primary), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
+| [sdd-lite](domains/sdd-lite/README.md) | POC: single-child flow for bounded changes — retained `change.md`, inline implementation, delegated cold verify only | `orchestralite` (subagent coordinator) |
+| [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening planning producing ready-for-sdd bundles, plus Java refactor skills | `refactor-planner` (subagent coordinator), `/harden-plan`, `/refactor-plan` |
+| [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (subagent coordinator), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
 | [plan](domains/plan/README.md) | Fable-style planning: Deep Plan produces ready-for-sdd bundles for executable goals or plan documents for decisions, plus Wayfinder maps under `.ai/` | `deep-planner` (subagent), `/deep-plan` and `/wayfinder` aliases |
 | [learning](domains/learning/README.md) | Interactive multi-session learning around the `mentor` primary agent, plus English coaching wired into it | `mentor` (primary), `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product docs, Jira ticketing, summaries, slide decks, and transcription | `/decide`, `/doc`, `/prd` |
@@ -43,6 +43,18 @@ installers/opencode.sh status --domain sdd
 
 `install` is a sync. A filtered install replaces the previous selection, so include every domain and status you want to keep.
 
+### Opt-in SDLC orchestrator POC
+
+Install the isolated profile into one project's `.opencode/` only:
+
+```bash
+scripts/sdlc-orchestrator-poc.sh install --project-root /absolute/path/to/project
+scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
+scripts/sdlc-orchestrator-poc.sh uninstall --project-root /absolute/path/to/project
+```
+
+The profile selects `sdlc,plan,sdd,architecture,refactor,sdd-lite,common`, makes `sdlc-orchestrator` the project default, sets nested subagent depth to 2, and leaves learning and its `mentor` primary outside the profile. It refuses global, source-repository, broad-manifest, foreign-destination, and tampered-config targets. See [the POC runbook and validation report](docs/sdlc-orchestrator-poc.md).
+
 ## Documentation
 
 | Guide | Use it for |
@@ -56,6 +68,7 @@ installers/opencode.sh status --domain sdd
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
 | [SDLC orchestrator ADR](docs/architecture/adr/0001-adopt-sdlc-orchestrator.md) | Understanding the primary-to-coordinator topology and trade-offs |
+| [SDLC orchestrator POC](docs/sdlc-orchestrator-poc.md) | Installing, operating, validating, and rolling back the project-local profile |
 | [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
 
 ## Graphify (optional)

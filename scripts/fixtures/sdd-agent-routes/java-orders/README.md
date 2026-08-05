@@ -1,8 +1,10 @@
 # java-orders fixture
 
-The throwaway project the SDD flow runner (`scripts/test-sdd-flows.sh`) copies into
-a scratch directory before driving `orchestraitor` headlessly. Scenario ids refer to
-`docs/sdd-test-plan.md`.
+The throwaway project copied by both real-model runners: the component-level
+`scripts/test-sdd-flows.sh` and the profile-level
+`scripts/test-sdlc-orchestrator-e2e.sh`. The latter enters through the project-default
+`sdlc-orchestrator`, while the former can drive a coordinator directly for focused
+scenarios. Scenario ids refer to `docs/sdd-test-plan.md`.
 
 It is a real Maven project on purpose: `sdd-implement` and `sdd-verify` run a build,
 so the fixture has to compile and have a suite that passes before any change lands.
@@ -31,7 +33,7 @@ restores the dot.
 
 | Seed | Feeds | Content |
 | --- | --- | --- |
-| `ready-plan` | SDD-ADOPT-01…05 | A complete ready-for-sdd bundle at `ai/refactor-planner/changes/enforce-order-limit/`. `proposal.md` line 1 is exactly `Status: ready-for-sdd | Source: refactor-planner`, with no kickoff line — adoption has to write it. `tasks.md` carries the five forecast guard lines and a `Files:` scope per group. All three task groups are unchecked, so adoption runs from implement onward. |
+| `ready-plan` | SDD-ADOPT-01…05 | A complete ready-for-sdd bundle at `ai/refactor-planner/changes/enforce-order-limit/`. `proposal.md` line 1 is exactly `Status: ready-for-sdd | Source: refactor-planner`, with no kickoff line — SDD intake adds it in place. `tasks.md` carries the five forecast guard lines and a `Files:` scope per group. All three task groups are unchecked, so execution runs from implement onward. |
 | `canonical-spec` | SDD-ARCH-01, SDD-ARCH-02 | A canonical `ai/orchestrator/specs/order-pricing/spec.md` plus a finished change at `ai/orchestrator/changes/adjust-order-pricing/` whose every task is `[x]`, so the session goes straight to archive. Its delta covers all four operations — ADDED (`Discount share per line`), MODIFIED (`Bulk discount`), REMOVED (`Legacy leaflet rounding`) and RENAMED (`Money scale → Monetary rounding`) — which is what lets one archive run feed both the positive merge test and the RENAMED negative. The change is specification-only: the code already implements everything the delta describes, so nothing needs implementing before the merge. |
 | `legacy` | SDD-MIG-01 | A pre-`.ai/` `orchestraitor/` tree — the runner drops it at the project root as `.orchestraitor/` rather than under `.ai/`. Holds a canonical spec and one light-depth change so the migration has both file kinds to move. |
 

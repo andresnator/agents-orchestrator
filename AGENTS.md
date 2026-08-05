@@ -35,7 +35,7 @@ Each `domains/<domain>/README.md` is the authoritative description; one-liners:
 
 - `sdlc`: the POC's single natural-language primary; delegates to domain coordinators and owns every user-facing question.
 - `sdd`: spec-driven development through the `orchestraitor` subagent coordinator; executes ready-for-sdd planner bundles in place (see `docs/plan-handoff.md`).
-- `sdd-lite`: POC of a single-context flow for bounded changes around the `orchestralite` primary agent; only the cold verify is delegated.
+- `sdd-lite`: POC of a single-child flow for bounded changes around the `orchestralite` coordinator; only the cold verify is delegated.
 - `refactor`: risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles, plus Java refactor skills.
 - `architecture`: architecture mapping, state reviews, reverse-engineered PRDs, audits, and ADR + ideation bundles.
 - `plan`: Fable-style planning coordinator (ready-for-sdd bundles for executable goals, plan docs for decisions) and Wayfinder multi-session discovery maps under `.ai/`.
@@ -118,5 +118,6 @@ Adding a component must not require editing any installer.
 - For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
 - For SDLC orchestrator contract changes, run `scripts/test-sdlc-orchestrator-contracts.sh`; it is deterministic and is also invoked by `scripts/validate-harness.sh`.
 - For SDLC POC profile changes, run `scripts/test-sdlc-orchestrator-poc.sh`; it uses scratch projects and deterministic external-plugin fixtures, never a real project or global config.
+- For the opt-in paid POC proof, run `SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows OPENCODE_BIN=<path> scripts/test-sdlc-orchestrator-e2e.sh`; it runs exactly the Plan-to-SDD and bounded-SDD-Lite workflows once each, without retries, and preserves ignored evidence under `.ai/evidence/`.
 - For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke`, `lite` (the sdd-lite `LITE-*` scenarios, driving `orchestralite`), or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
 - Do not commit unless explicitly asked.

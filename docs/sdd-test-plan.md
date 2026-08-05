@@ -2,7 +2,7 @@
 
 Manual scenario catalog to test the effectiveness of every flow in the `sdd` domain. "Effectiveness" here means: the `orchestraitor` and its subagents honor the contracts written in `domains/sdd/agents/*.md`, the `sdd-draft-*` and `judgment-day` skills, and `docs/plan-handoff.md` — observable artifacts, gates, receipts, and exact strings — when run in a real OpenCode session.
 
-Companion mechanisms split static contracts from opt-in model behavior: `scripts/validate-harness.sh` runs the free contract checks, while `scripts/test-sdd-flows.sh` exercises selected flows with a real model. Contradictions found by the 2026-07-29 flow review (`.ai/absorb/2026-07-29-sdd-flow-review.md`) remain in the catalog as regression scenarios after they are fixed.
+Companion mechanisms split static contracts from opt-in model behavior: `scripts/validate-harness.sh` runs the free contract checks, `scripts/test-sdd-flows.sh` exercises selected coordinators directly, and `scripts/test-sdlc-orchestrator-e2e.sh` proves the project-local primary topology with exactly two paid workflows and no retries. Contradictions found by the 2026-07-29 flow review (`.ai/absorb/2026-07-29-sdd-flow-review.md`) remain in the catalog as regression scenarios after they are fixed.
 
 ## How to judge results
 
@@ -14,13 +14,13 @@ Judge every scenario by **observable evidence only**, never by what the agent cl
 - `git log` / `git status` for delivery scenarios.
 - Which subagents were (not) launched, visible in the session's task activity.
 
-LLM behavior is nondeterministic: run each P0 scenario at least twice before recording a FAIL, and note the model profile used (see `docs/agent-models.md`). A scenario passes only when every listed pass criterion holds.
+LLM behavior is nondeterministic: for exploratory component scenarios, repeat before treating one behavioral miss as a product conclusion and note the model profile used (see `docs/agent-models.md`). The release-evidence POC runner is the exception: its contract is exactly one attempt per workflow, no retries, with the observed result retained whether it passes or fails. A scenario passes only when every listed pass criterion holds.
 
 ## Test environment
 
 1. Create a scratch project: `git init` a throwaway repo with a small real codebase (a few source files plus a runnable test command) — flows like implement/verify need something to build against.
-2. Install the harness into a scratch OpenCode target: `installers/opencode.sh install --target <scratch-config>` (sdd requires the `common` domain for `judgment-day`, `native-question-ux`, `code-conventions`, and `work-unit-commits`).
-3. Open an OpenCode session in the scratch project with `orchestraitor` as the primary agent.
+2. For end-to-end profile testing, install with `scripts/sdlc-orchestrator-poc.sh install --project-root <scratch-project>`; focused coordinator scenarios may instead use a dedicated scratch OpenCode target.
+3. Enter profile tests through the project-default `sdlc-orchestrator`. Direct coordinator selection is only a focused component-test technique.
 4. Build the fixture kit below per scenario — this repo ships no `.ai/orchestrator/` state; every scenario creates its own.
 
 ### Fixture kit
@@ -44,17 +44,18 @@ Scenario IDs are `SDD-<AREA>-<nn>`, plus `PLAN-HANDOFF-01` for the cross-domain 
 
 ## Automation
 
-Part of this catalog now runs unattended. Three scripts split along the line that matters — whether a scenario costs money.
+Part of this catalog now runs unattended. The scripts split deterministic contracts, focused coordinator behavior, and the public POC route.
 
 | Script | Cost | Wired into `validate-harness.sh` | Covers |
 |---|---|---|---|
 | `scripts/test-plan-sdd-contracts.sh` | free, no LLM, no network | yes | drafting contexts, write boundaries, commit ownership, durable state, light-wave contract |
 | `scripts/test-sdd-automode.sh` | free, no LLM, no network | yes (jq-gated) | SDD-AUTO-01, expanded into 14 cases |
 | `scripts/test-sdd-flows.sh` | real model calls | no, opt-in via `OPENCODE_BIN` | smoke plus `plan`, driving `orchestraitor`, `deep-planner`, or `orchestralite` headlessly |
+| `scripts/test-sdlc-orchestrator-e2e.sh` | real model calls | no, explicit confirmation required | one natural Plan→same-session SDD workflow and one natural bounded SDD Lite workflow through `sdlc-orchestrator` |
 
-The flow runner uses `opencode run --dir <scratch> --agent <scenario-agent> --format json --auto`; the default is `orchestraitor`, while the plan handoff scenario starts with `deep-planner` and the lite scenarios use `orchestralite`. Every scenario gets a fresh `mktemp -d` copy of the `java-orders` fixture in its own git repo; nothing is written inside this repo or the user's projects, and the user's `~/.config/opencode` is read but never modified. Runs deliberately use the caller's real `HOME`/`XDG` dirs because provider credentials do not resolve under a hermetic home.
+The focused flow runner uses `opencode run --dir <scratch> --agent <scenario-agent> --format json --auto`. The POC runner omits `--agent`: the installed project config resolves `default_agent: sdlc-orchestrator`, then the second Plan→SDD turn continues the exact parent session with `--session`. Every scenario gets a fresh `mktemp -d` copy of the `java-orders` fixture in its own git repo; nothing is written inside this repo or the user's projects, and global OpenCode config is read but never modified. Runs deliberately use the caller's real `HOME`/`XDG` dirs because provider credentials do not resolve under a hermetic home.
 
-Assertions read three observable sources — the `.ai/orchestrator/` tree on disk, `git log` in the scratch project, and the JSON event stream, where a delegation is a `tool` part named `task` whose `.state.input.subagent_type` names the subagent that ran. That last one is what makes "which subagents were *not* launched" testable.
+Assertions read disk artifacts, Git state, raw parent JSON events, and the recursive session tree in OpenCode's local database. The POC runner preserves sanitized exports for the parent and every child session, routes, token usage, resolved config, profile status, Maven output, diffs, and `.ai/` state under the repository's ignored `.ai/evidence/sdlc-orchestrator-poc/<timestamp>/` directory.
 
 **Headless gate behavior**, established by `scripts/test-sdd-flows.sh probe`: under `--auto`, a question is neither auto-answered nor hung on. The agent loads `native-question-ux`, renders the question as plain assistant text, and the turn ends. So an automated scenario's prompt must pre-answer the whole kickoff round, or the run stops at the gate leaving partial state on disk. This is why the automated set is entirely `Mode: automatic`, and why every interactive-gate scenario stays manual — the gate is exactly what cannot be observed headlessly.
 
@@ -62,7 +63,7 @@ Assertions read three observable sources — the `.ai/orchestrator/` tree on dis
 
 `SDD-LIGHT-01`, `SDD-FULL-02`, `SDD-ADOPT-01`, `SDD-ARCH-01` and `SDD-JDG-04` run via `scripts/test-sdd-flows.sh smoke`. `SDD-ARCH-02` is asserted as part of the `SDD-ARCH-01` run: the same fixture carries the RENAMED delta and the runner checks the canonical spec for the new name only.
 
-`PLAN-HANDOFF-01` runs via `scripts/test-sdd-flows.sh plan`: it executes the real `deep-planner`, verifies the four-artifact producer bundle and marker, then starts `orchestraitor` against that generated bundle and checks adoption plus durable state.
+`PLAN-HANDOFF-01` has a focused direct-coordinator form in `scripts/test-sdd-flows.sh plan`. The canonical POC proof is `scripts/test-sdlc-orchestrator-e2e.sh`: one natural request reaches `deep-planner` through the primary, then a second turn in that exact primary session reaches `orchestraitor`, executes the producer bundle in place, and verifies that no drafting agent was relaunched.
 
 `LITE-01` and `LITE-02` (sdd-lite POC, below) run via `scripts/test-sdd-flows.sh lite`: the runner's `RUN_AGENT` hook drives `orchestralite` instead of the orchestraitor against the same fixture. Both agents must be installed in the caller's real OpenCode config.
 
@@ -108,29 +109,29 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 
 ### Bundle adoption (plan intake)
 
-**PLAN-HANDOFF-01 — Real producer bundle → adoption** (P0)
+**PLAN-HANDOFF-01 — Real producer bundle → in-place execution** (P0)
 - Fixture: clean Java orders project; no prebuilt plan bundle.
-- Steps: run `deep-planner` on one bounded executable goal, then run `orchestraitor` with `"ejecuta el plan <generated-change>"` and all kickoff-lite answers pre-supplied.
-- Expected: `deep-planner` delegates with `Draft context: handoff`; all four sdd drafting agents write under `.ai/deep-planner/changes/<change>/`; `proposal.md` starts exactly with `Status: ready-for-sdd | Source: deep-planner` and carries no kickoff line; no production file changes during planning. The second session adopts that generated folder, inserts the kickoff after the marker block, creates `state.md` at `Phase: implement`, and continues without re-drafting.
-- Pass: producer and consumer are both exercised from real prompts; every drafting receipt echoes `draft_context: handoff`; the original producer folder is gone after adoption; the adopted or archived folder retains the marker, kickoff, and `state.md`.
+- Steps: send one bounded planning request to `sdlc-orchestrator`, then continue that exact primary session with an implementation request and all kickoff-lite answers pre-supplied.
+- Expected: the primary delegates Plan to `deep-planner`; all four SDD drafting agents write under `.ai/deep-planner/changes/<change>/`; `proposal.md` starts exactly with `Status: ready-for-sdd | Source: deep-planner` and carries no kickoff line; no production file changes during planning. The continued primary session delegates the exact receipt and path to `orchestraitor`, which adds kickoff and state in place and continues from implementation without re-drafting.
+- Pass: the same parent session contains the `deep-planner` then `orchestraitor` routes; no new `sdd-proposal`/`sdd-spec`/`sdd-design`/`sdd-tasks` child appears during execution; the active then archived bundle stays under `.ai/deep-planner/changes/`, retains its marker, kickoff, and state, and never appears under `.ai/orchestrator/changes/<change>/`.
 
 **SDD-ADOPT-01 — Adoption happy path** (P0)
 - Fixture: Ready bundle at `.ai/deep-planner/changes/add-rate-limit/`.
 - Steps: say `"ejecuta el plan add-rate-limit"`. Answer kickoff-lite (Mode/TDD/Judgment/Delivery — no Depth question).
-- Expected: discovery scans `.ai/*/changes/*/proposal.md` excluding `.ai/orchestrator/` with hidden-aware tooling and requires the complete marker grammar; the whole folder moves to `.ai/orchestrator/changes/add-rate-limit/`; the marker stays line 1, the kickoff line (with `Depth: full`) is recorded on the first line after the marker block, and `state.md` starts at `Phase: implement`; no re-drafting — the flow resumes at implement from the first unchecked task.
+- Expected: discovery scans `.ai/*/changes/*/proposal.md` excluding `.ai/orchestrator/` with hidden-aware tooling and requires the complete marker grammar; the producer folder becomes the active root in place; the marker stays line 1, the kickoff line (with `Depth: full`) is recorded on the first line after the marker block, and `state.md` starts at `Phase: implement`; no re-drafting — the flow resumes at implement from the first unchecked task.
 - Pass: `proposal.md` line 1 still `Status: ready-for-sdd | Source: deep-planner`; kickoff line and `state.md` present; Depth was never asked and light never offered; `sdd-proposal`/`sdd-spec`/`sdd-design`/`sdd-tasks` were NOT launched.
 
-**SDD-ADOPT-02 — Adoption name collision** (P0)
-- Fixture: Ready bundle plus a pre-existing `.ai/orchestrator/changes/add-rate-limit/`.
-- Steps: `"ejecuta el plan add-rate-limit"`.
-- Expected: never overwrite — the orchestraitor asks for a new name before moving anything.
-- Pass: the pre-existing folder is byte-identical after the run; the bundle lands under the new name; if the bundle carried a `Roadmap:` line, the roadmap row is matched by the OLD folder name and its `Slice` cell rewritten to the new name.
+**SDD-ADOPT-02 — Ambiguous producer path** (P0)
+- Fixture: two ready bundles with the same change name under different producer roots.
+- Steps: start a new parent session with `"ejecuta el plan add-rate-limit"` and no exact path.
+- Expected: never guess or move either folder — `orchestraitor` returns `needs_input` with both repository-relative paths.
+- Pass: both producer folders are byte-identical before and after; execution starts only after the primary supplies the selected exact path.
 
 **SDD-ADOPT-03 — Unmet roadmap dependency** (P0)
 - Fixture: Roadmap bundle for slice 2 whose `Depends on` slice 1 is not `done` in the roadmap.
 - Steps: `"ejecuta el plan <slice-2-change>"`.
 - Expected: one-line warning about the unmet dependency; adoption proceeds only after explicit confirmation.
-- Pass: no folder moved before the user confirmed; after confirmation the roadmap row flips to `adopted` with `Bundle` repointed.
+- Pass: the producer folder is unchanged before confirmation; after confirmation the roadmap row flips to `adopted` while its `Bundle` path stays under the producer root.
 
 **SDD-ADOPT-04 — Malformed bundle degrades to serial waves** (P0)
 - Fixture: Malformed bundle (`tasks.md` without `Files:` scopes / `Shared hotspots:`).
@@ -307,7 +308,7 @@ Judgment scenarios carry residual nondeterminism even when automated: `SDD-JDG-0
 **SDD-AUTO-01 — sdd-automode.sh contract sweep** (P2)
 - Fixture: scratch OpenCode target with a valid `opencode.json`; run each sub-case with `--target <scratch>`.
 - Cases and expected results:
-  1. `on` writes a complete `agent.<name>.permission` block per `domains/sdd/agents/*.md` agent + `general`, preserving frontmatter denies verbatim: `edit`/`write: deny` for `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify`; the drafting agents retain their nested write boundary (`"*": deny`, `".ai/*/changes/**": allow`); `bash: deny` for `sdd-proposal`, `sdd-spec`, `sdd-tasks`; `question: deny` for every subagent; orchestraitor keeps `question: allow` and its nested `task` map; every agent keeps its nested `skill` map.
+  1. `on` writes a complete `agent.<name>.permission` block per `domains/sdd/agents/*.md` agent + `general`, preserving frontmatter denies verbatim: `edit`/`write: deny` for `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify`; the drafting agents retain their nested write boundary (`"*": deny`, `".ai/*/changes/**": allow`); `bash: deny` for `sdd-proposal`, `sdd-spec`, `sdd-tasks`; `question: deny` for every SDD agent in the POC, including the `orchestraitor`, while its nested `task` map remains intact; every agent keeps its nested `skill` map. The POC's question owner is `sdlc-orchestrator`, outside this SDD-only toggle.
   2. `on` twice → second run prints the already-on message and writes nothing; `off` when not on prints the not-on message.
   3. `--dry-run` prints the diff and leaves the config file byte-identical.
   4. Any mutation first writes a timestamped `opencode.json.bak.<ts>` backup.
