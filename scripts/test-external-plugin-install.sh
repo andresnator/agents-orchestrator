@@ -154,6 +154,45 @@ shouldHandleMissingPropertyAndTrailingComment() {
   pass "shouldHandleMissingPropertyAndTrailingComment"
 }
 
+shouldPreserveJsoncScalarProperties() {
+  local scratch original managed depth restored removed status
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-jsonc-scalar.XXXXXX")"
+  original="$scratch/original.jsonc"
+  managed="$scratch/managed.jsonc"
+  depth="$scratch/depth.jsonc"
+  restored="$scratch/restored.jsonc"
+  removed="$scratch/removed.jsonc"
+  cat > "$original" <<'EOF'
+{
+  // Keep this profile comment.
+  "default_agent": "mentor", // Keep this inline comment.
+  "subagent_depth": 4,
+  "foreign": {"keep": true},
+}
+EOF
+
+  python3 "$ROOT/scripts/jsonc-array.py" set "$original" default_agent '"sdlc-orchestrator"' > "$managed"
+  python3 "$ROOT/scripts/jsonc-array.py" set "$managed" subagent_depth 2 > "$depth"
+  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" default_agent)" = '"sdlc-orchestrator"' ] ||
+    fail "JSONC scalar set/get lost default_agent"
+  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" subagent_depth)" = 2 ] ||
+    fail "JSONC scalar set/get lost subagent_depth"
+  assert_contains "$depth" "// Keep this profile comment." "JSONC scalar set dropped a comment"
+  assert_contains "$depth" '"foreign": {"keep": true}' "JSONC scalar set dropped a foreign key"
+
+  python3 "$ROOT/scripts/jsonc-array.py" set "$depth" default_agent '"mentor"' > "$restored"
+  python3 "$ROOT/scripts/jsonc-array.py" remove-property "$restored" subagent_depth > "$removed"
+  set +e
+  python3 "$ROOT/scripts/jsonc-array.py" get "$removed" subagent_depth >/dev/null
+  status=$?
+  set -e
+  [ "$status" -eq 1 ] || fail "JSONC scalar remove retained subagent_depth"
+  assert_contains "$removed" "// Keep this inline comment." "JSONC scalar restore dropped inline comment"
+  assert_contains "$removed" '"foreign": {"keep": true}' "JSONC scalar remove dropped a foreign key"
+  rm -rf "$scratch"
+  pass "shouldPreserveJsoncScalarProperties"
+}
+
 shouldInstallRepairStatusAndUninstallExternalPlugins() {
   local scratch target artifacts binary status_output before_package
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-install.XXXXXX")"
@@ -484,6 +523,7 @@ shouldMatchPinnedRemoteArtifacts() {
 run_contracts() {
   shouldPreserveJsoncManagedEntry
   shouldHandleMissingPropertyAndTrailingComment
+  shouldPreserveJsoncScalarProperties
   shouldInstallRepairStatusAndUninstallExternalPlugins
   shouldStageSameNamedArtifactsByKind
   shouldPreservePreexistingTuiRegistration
