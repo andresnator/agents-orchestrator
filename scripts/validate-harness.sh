@@ -272,6 +272,12 @@ if [ -f scripts/test-plan-sdd-contracts.sh ]; then
     fail scripts/test-plan-sdd-contracts.sh "plan/SDD contracts failed"
 fi
 
+# --- SDLC primary/coordinator contracts ---
+if [ -f scripts/test-sdlc-orchestrator-contracts.sh ]; then
+  bash scripts/test-sdlc-orchestrator-contracts.sh >/dev/null ||
+    fail scripts/test-sdlc-orchestrator-contracts.sh "SDLC orchestrator contracts failed"
+fi
+
 # --- Installer idempotency (python3/jq/opencode-gated) ---
 # Managed config values (currently the tui.json plugin entry) are edited in place,
 # so every remove-then-add round trip must land on the exact same bytes. Repeating a

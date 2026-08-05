@@ -2,6 +2,8 @@
 
 A delegation receipt is the compact, machine-scannable return a subagent sends back to its caller instead of prose or a full artifact. Subagent returns are injected verbatim into the parent's context, so their size is a direct token cost multiplied by every delegation; receipts keep that cost flat and let the parent branch on fields instead of re-reading files. The pattern was adapted from the Caveman project's cavecrew agents onto the receipt idiom this repo already used in `refactor-analyzer` and `arch-analyzer`.
 
+The SDLC profile adds one public receipt at the coordinator boundary. All domain coordinators use `sdlc-coordinator-receipt/v1`; their internal phase receipts remain specialized and unchanged.
+
 ## Conventions
 
 Every receipt in this repo follows the same conventions; the concrete schema lives inline in each agent's Output section, not in a shared skill.
@@ -14,6 +16,38 @@ Every receipt in this repo follows the same conventions; the concrete schema liv
 - **Per-item size caps, not count caps.** Findings are capped in size (scenario ≤ 2 lines, fix = 1 line of intent), and repeated instances of one defect collapse into one row with multiple `evidence` entries. Real defects are never dropped to fit a count.
 - **Never return the artifact.** An agent that writes a file returns its path plus assertion fields (`first_line`, `forecast_guards`, …) the caller checks instead of re-reading the file wholesale.
 
+## Public coordinator receipt
+
+`sdlc-orchestrator` accepts exactly this complete schema from `deep-planner`, `refactor-planner`, `architect`, `orchestraitor`, `orchestralite`, and `review-coordinator`:
+
+```yaml
+contract: sdlc-coordinator-receipt/v1
+status: complete | needs_input | blocked | failed
+domain: plan | sdd | architecture | refactor | review
+operation: string
+summary: string
+artifacts:
+  - {kind: string, path: string, status: created | updated | reused}
+decisions:
+  - {id: string, choice: string, rationale: string}
+scope:
+  in: []
+  out: []
+acceptance_criteria: []
+risks: []
+open_questions: []
+next:
+  route: string | none
+  reason: string
+handoff:
+  kind: ready-for-sdd | none
+  producer: string
+  change: string
+  bundle: string
+```
+
+Every field is mandatory; use empty lists, `none`, or an empty string instead of omission. `needs_input` is the only user-question channel: the coordinator puts exactly the next question in `open_questions`, the primary asks it, and the primary resumes the same child using the Task result's `task_id`. A ready-for-sdd producer fills every `handoff` value; all other returns use `kind: none`.
+
 ## Where it is used
 
 - `domains/sdd/agents/sdd-verify.md` — scenario receipt with `gaps` rows that seed fix briefs directly.
@@ -23,6 +57,9 @@ Every receipt in this repo follows the same conventions; the concrete schema liv
 - `domains/sdd/agents/jd-fix.md` — fixes receipt.
 - `domains/sdd/agents/sdd-proposal.md`, `sdd-spec.md`, `sdd-design.md`, `sdd-tasks.md` — drafting receipts echo `draft_context: active | handoff` plus path and assertion fields; consumed by the sdd `orchestraitor` and the plan `deep-planner` (step 8 reconciles from receipts and re-reads only `tasks.md`). In light mode `sdd-proposal` extends its receipt with `deltas`, `task_ids`, and one aggregate `files` scope; the orchestraitor runs that bounded change as one sequential wave without reading `change.md`.
 - `domains/refactor/agents/refactor-analyzer.md`, `domains/architecture/agents/arch-analyzer.md` — the pre-existing analyzer idiom (max 7 findings, `Output budget` brief field) this pattern generalizes.
+- `domains/sdlc/agents/sdlc-orchestrator.md` — validates the public receipt, owns every question, and keeps one Task ID per coordinator.
+- `domains/sdlc/agents/review-coordinator.md` — returns Judgment and Defend results or one primary-mediated Socratic question.
+- `domains/plan/agents/deep-planner.md`, `domains/sdd/agents/orchestraitor.md` — return Plan and SDD coordinator receipts while continuing to consume their phase-specific receipts internally.
 
 ## Writing a new one
 
