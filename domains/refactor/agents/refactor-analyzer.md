@@ -9,6 +9,7 @@ permission:
   list: allow
   lsp: allow
   skill: allow
+  question: deny
   edit: deny
   bash: deny
   webfetch: deny

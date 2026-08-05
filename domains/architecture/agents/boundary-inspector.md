@@ -2,6 +2,7 @@
 description: Inspects backend service inputs and outputs with evidence and confidence. Read-only static analysis; no edits, runtime execution, shell, or web access.
 mode: subagent
 permission:
+  question: deny
   edit: deny
   bash: deny
   webfetch: deny

@@ -169,6 +169,51 @@ for command in harden-plan refactor-plan; do
   assert_contains "$file" 'Explicit SDLC route:'
 done
 
+profile_primary_count=0
+profile_question_owner_count=0
+for domain in sdlc plan sdd architecture refactor sdd-lite common; do
+  for file in "domains/$domain/agents/"*.md; do
+    [ -f "$file" ] || continue
+    CHECKS=$((CHECKS + 1))
+    frontmatter "$file" | grep -Eq '^  question: (allow|deny)$' ||
+      fail "$file" 'profile agent must declare question: allow or deny explicitly'
+    if frontmatter "$file" | grep -Eq '^mode: primary$'; then
+      profile_primary_count=$((profile_primary_count + 1))
+      [ "$file" = "$primary" ] || fail "$file" 'unexpected repository-owned primary in the SDLC profile'
+    fi
+    if frontmatter "$file" | grep -Eq '^  question: allow$'; then
+      profile_question_owner_count=$((profile_question_owner_count + 1))
+      [ "$file" = "$primary" ] || fail "$file" 'unexpected question owner in the SDLC profile'
+    fi
+  done
+done
+
+CHECKS=$((CHECKS + 1))
+[ "$profile_primary_count" -eq 1 ] ||
+  fail domains "expected exactly one profile primary, found $profile_primary_count"
+CHECKS=$((CHECKS + 1))
+[ "$profile_question_owner_count" -eq 1 ] ||
+  fail domains "expected exactly one profile question owner, found $profile_question_owner_count"
+
+expected_aliases="$(printf '%s\n' \
+  arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector \
+  deep-plan defend harden-plan judgment refactor-plan wayfinder | sort)"
+actual_aliases="$(find domains -path '*/commands/*.md' -type f -print | while IFS= read -r file; do
+  if frontmatter "$file" | grep -Eq '^agent: sdlc-orchestrator$'; then
+    basename "$file" .md
+  fi
+done | sort)"
+CHECKS=$((CHECKS + 1))
+[ "$actual_aliases" = "$expected_aliases" ] ||
+  fail domains "SDLC alias set differs from the required 12 commands"
+
+for command in graphify-index grill; do
+  file="domains/common/commands/$command.md"
+  CHECKS=$((CHECKS + 1))
+  ! frontmatter "$file" | grep -Eq '^agent: sdlc-orchestrator$' ||
+    fail "$file" 'must remain outside SDLC alias routing'
+done
+
 CHECKS=$((CHECKS + 1))
 command_count="$(find domains -path '*/commands/*.md' -type f | wc -l | tr -d ' ')"
 [ "$command_count" = "21" ] || fail domains "expected 21 commands, found $command_count"
