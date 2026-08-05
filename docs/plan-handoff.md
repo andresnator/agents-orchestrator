@@ -1,6 +1,6 @@
 # Plan Handoff Contract
 
-How external planners hand complete OpenSpec change bundles to the sdd `orchestraitor` for execution. `refactor-planner`, `architect` (via `/arch-ideate`), and `deep-planner` (via `/deep-plan`) are the current producers; any future planner (performance, migration, security) reuses the same shape.
+External planners hand SDD one compact coordinator receipt plus the exact path to a complete OpenSpec bundle. The bundle remains the durable source under its producer root; SDD executes it in place without redrafting. `refactor-planner`, `architect`, and `deep-planner` are the current producers.
 
 ## Bundle location
 
@@ -22,7 +22,21 @@ The first line of `proposal.md` must be exactly:
 Status: ready-for-sdd | Source: <planner>
 ```
 
-The orchestraitor's discovery scan keys on this line; without it a folder is invisible to intake.
+The orchestraitor's discovery scan keys on this line; without it a folder is invisible to intake. A same-session handoff additionally validates this marker against `handoff.producer` and `handoff.bundle` from the coordinator receipt.
+
+## Coordinator handoff
+
+A producer returns the complete public schema from `docs/delegation-receipts.md`. A ready bundle fills this block:
+
+```yaml
+handoff:
+  kind: ready-for-sdd
+  producer: <planner>
+  change: <change>
+  bundle: .ai/<planner>/changes/<change>/
+```
+
+The parent sends the entire compact receipt and exact bundle path to `orchestraitor` with `operation: execute-handoff`. The receipt carries routing context, not proposal or design bodies. In a new session, the same context can be reconstructed from the durable bundle and its exact marker.
 
 ## Roadmaps (oversized goals)
 
@@ -56,7 +70,7 @@ Without this line nothing changes — the single-bundle flow is untouched. The s
 
 Consumer semantics (orchestraitor):
 
-- At adoption, match the row by `<goal>` + the moved folder's original name in the `Slice` column, flip it to `adopted`, and repoint its `Bundle`; if the folder was renamed on collision, rewrite the row's `Slice` to the new name. If the adopted slice has `Depends on` entries not `done`, warn in one line and adopt only on user confirmation. A missing, malformed, or `abandoned` roadmap never blocks adoption: report one line and adopt as a plain bundle (no row flips, no offers).
+- At in-place adoption, match the row by `<goal>` + `<change>` in the `Slice` column, flip it to `adopted`, and keep its existing `Bundle` path. If the slice has `Depends on` entries not `done`, return `needs_input` and proceed only after primary-mediated confirmation. A missing, malformed, or `abandoned` roadmap never blocks plain bundle execution.
 - At archive, flip the slice row to `done` (`Bundle` → archive path), then offer the next unblocked slice in ONE line and wait for the user — never auto-continue: `planned` → offer "ejecuta el plan <next-change>"; `pending` → offer running `/deep-plan` with "continúa el roadmap <goal>"; `adopted` (out-of-order execution in flight) → offer "continúa <change>". Every slice `done` or `dropped` → flip the roadmap `Status` to `done` and report it. A missing, malformed, or `abandoned` roadmap never blocks archive: report one line and finish normally (no row flips, no offers).
 
 ## Producer obligations
@@ -69,9 +83,11 @@ Consumer semantics (orchestraitor):
 - Do not write the `Mode: … | TDD: … | Judgment: … | Depth: … | Delivery: …` kickoff line; those choices belong to the user at adoption.
 - Bundles are always full depth — the four-artifact shape is the contract; the light-mode `change.md` is not a valid bundle format, and adoption never asks Depth.
 
-## Adoption semantics (consumer: orchestraitor)
+## Execution semantics (consumer: orchestraitor)
 
-1. Discover on "ejecuta el plan <change>" or during the session-start scan: `.ai/*/changes/*/proposal.md` (excluding `.ai/orchestrator/`) with the complete marker grammar on the first line. Prefix-only or empty-Source markers are malformed and invisible.
-2. Adopt by moving the whole folder to `.ai/orchestrator/changes/<change>/`; never overwrite, ask for a new name on collision. The `Source:` marker stays.
-3. Kickoff-lite: ask the Mode/TDD/Judgment/Delivery round once, record the kickoff line (with `Depth: full`) in `proposal.md` on the first line after the marker block (the `Status: ready-for-sdd | Source: …` line plus the optional `Roadmap:` line) — the marker stays the first line. Create `.ai/orchestrator/changes/<change>/state.md` at `Phase: implement`, with zero verify/judgment rounds and `Last verified: none`.
-4. Normal sdd flow from there: implement from the first unchecked task, verify, optional judgment, archive. On archive, spec deltas merge into canonical specs — behavior-preservation deltas progressively document the system.
+1. Same-session intake validates the full coordinator receipt, exact bundle path, complete marker, and four-artifact shape. New-session intake discovers one unique `.ai/*/changes/*/proposal.md` outside `.ai/orchestrator/` with the same exact marker grammar.
+2. Adopt in place. The bundle path becomes the active change root; do not copy or move it into `.ai/orchestrator/changes/` and do not draft replacement artifacts.
+3. Kickoff-lite: return `needs_input` for missing Mode/TDD/Judgment/Delivery values, then record the kickoff line (with `Depth: full`) immediately after the marker block. Create `<bundle>/state.md` at `Phase: implement`, with zero verify/judgment rounds and `Last verified: none`.
+4. Implement from the first unchecked task, verify, optionally route Judgment through `review-coordinator`, and merge deltas into `.ai/orchestrator/specs/`. Archive the completed bundle under `.ai/<planner>/changes/archive/<date>-<change>/`.
+
+A direct `operation: direct-sdd` is different: `orchestraitor` drafts its local proposal/specs/design/tasks under `.ai/orchestrator/changes/` before implementation. The handoff fast path never removes that direct-entry behavior.

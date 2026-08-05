@@ -18,13 +18,13 @@ A complete `agent.<name>.permission` block in the selected target config (prefer
 
 - `jd-judge-a`, `jd-judge-b`, `jd-solo`, `sdd-explore`, `sdd-verify` keep `edit`/`write: deny`.
 - `sdd-proposal`, `sdd-spec`, `sdd-tasks` keep `bash: deny`.
-- Every subagent keeps `question: deny`; the orchestraitor keeps `question: allow`.
+- Every SDD agent, including the `orchestraitor` coordinator, keeps `question: deny`.
 - The orchestraitor's `task` map (`"*": deny` plus the sdd subagent allowlist) is copied as-is.
 - Every agent's nested `skill` map (`"*": deny` plus its per-agent allowlist) is copied as-is, like the `task` map.
 
 Invariants:
 
-- Workflow gates still ask. Kickoff (`Depth`, `Mode`, `TDD`, `Judgment`, and `Delivery`), proposal/design confirmations, and judgment re-judge gates run through the orchestraitor's `question: allow` — only tool-permission prompts disappear.
+- Workflow gates still ask when SDD runs through the SDLC POC. The `sdlc-orchestrator` primary owns kickoff, proposal/design confirmation, and judgment re-judge questions, while the `orchestraitor` returns `needs_input` receipts. This SDD-only toggle does not modify the primary's frontmatter `question: allow`; only tool-permission prompts disappear.
 - `agent.<name>.model`/`variant` assignments (however they were written — the model configurator TUI or by hand), non-sdd agents, and top-level config keys are never touched (see [agent-models.md](agent-models.md)).
 - Repo agent frontmatter is never modified; the toggle is user-side config only.
 

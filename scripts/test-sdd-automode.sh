@@ -124,13 +124,12 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     assert_json_value "$config" ".agent[\"$name\"].permission.write[\".ai/*/changes/**\"]" allow \
       "on: $name lost its planning write allow"
   done
-  # Subagents never ask; the orchestraitor always may.
-  for name in sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
+  # SDD agents never ask; the sdlc-orchestrator owns user questions outside
+  # this domain-specific toggle.
+  for name in orchestraitor sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
     assert_json_value "$config" ".agent[\"$name\"].permission.question" deny \
       "on: $name lost its question deny"
   done
-  assert_json_value "$config" '.agent.orchestraitor.permission.question' allow \
-    "on: orchestraitor lost question allow"
   # The nested task allowlist is copied verbatim over the flat allow.
   assert_json_value "$config" '.agent.orchestraitor.permission.task | type' object \
     "on: orchestraitor task map collapsed to a scalar"

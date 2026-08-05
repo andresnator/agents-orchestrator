@@ -1,13 +1,13 @@
 ---
 description: "Plan a feature, change, or decision the Fable way — producing a ready-for-sdd bundle for executable goals, a slice roadmap for oversized goals, or a plan document for decisions."
-agent: deep-planner
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[goal to plan, or: continúa el roadmap <goal>]"
 ---
 You are running `/deep-plan` with raw arguments:
 `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `deep-planner` using the exact raw arguments above.
+Explicit SDLC route: `plan / deep-plan`. Route directly through `sdlc-orchestrator` to the `deep-planner` coordinator using the exact raw arguments above; do not show the optional route menu.
 
 Hard constraints:
 

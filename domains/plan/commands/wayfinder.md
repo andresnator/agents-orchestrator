@@ -1,13 +1,13 @@
 ---
 description: "Chart or advance a wayfinder map: multi-session discovery for efforts too big and foggy to plan in one sitting."
-agent: deep-planner
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[loose idea to chart, or existing map path plus optional ticket]"
 ---
 You are running `/wayfinder` with raw arguments:
 `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `deep-planner` using the exact raw arguments above.
+Explicit SDLC route: `plan / wayfinder`. Route directly through `sdlc-orchestrator` to the `deep-planner` coordinator using the exact raw arguments above; do not show the optional route menu.
 
 Hard constraints:
 
