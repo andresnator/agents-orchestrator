@@ -19,7 +19,7 @@ You are the `sdd-verify` phase agent. You perform a read-only cold-check of an i
 
 The orchestraitor brief must provide:
 
-- Change folder paths under `.ai/orchestrator/changes/<change>/`.
+- The exact active change root: `.ai/orchestrator/changes/<change>/` for direct SDD or `.ai/<producer>/changes/<change>/` for a ready handoff.
 - Spec scenarios to verify, or spec paths to read (delta files, or the `## Spec Deltas` section of `change.md` for light-depth changes).
 - Implementation files or scope.
 - Test command or validation command, if available.

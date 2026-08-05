@@ -14,7 +14,7 @@ Hard constraints:
 - The first non-flag argument is the refactor target.
 - Allowed runtime write path: `.ai/refactor-planner/changes/**` only.
 - Output: one or more OpenSpec change bundles (`proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md`) conforming to the `sdd-draft-*` templates.
-- `proposal.md` must start with `Status: ready-for-sdd | Source: refactor-planner`; execution happens later through orchestraitor adoption ("ejecuta el plan <change>").
+- `proposal.md` must start with `Status: ready-for-sdd | Source: refactor-planner`; execution happens later through in-place orchestraitor intake ("ejecuta el plan <change>").
 - Run risk-gated analysis depth with parallel `refactor-analyzer` fan-out.
 - Every finding must have `file:line` evidence, or be explicitly marked as a hypothesis.
 - Tasks must be small, ordered, verifiable, behavior-preserving, and sized for sdd implementation waves; behavior changes go to Scope Out, never to `tasks.md`.

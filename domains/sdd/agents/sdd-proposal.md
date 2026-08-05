@@ -53,7 +53,7 @@ If required input is missing or contradictory, do not ask the user. Return open 
    `Status: ready-for-sdd | Source: <producer>`
 
 3. When the brief carries a Roadmap marker, write it exactly as line 2. Otherwise continue with the proposal body on the next line.
-4. Do not write a `Mode: ... | TDD: ... | Judgment: ... | Depth: ... | Delivery: ...` kickoff line anywhere. Those choices belong to the user when the bundle is adopted.
+4. Do not write a `Mode: ... | TDD: ... | Judgment: ... | Depth: ... | Delivery: ...` kickoff line anywhere. Those choices belong to SDD intake.
 5. Write only the exact `.ai/<producer>/changes/<change>/proposal.md` target from the brief. Do not edit any sibling artifact, source code, tests, or docs.
 
 ## Procedure (active, light depth)

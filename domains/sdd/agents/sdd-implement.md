@@ -21,7 +21,7 @@ The brief names which. Without an explicit `merge` kind, it is a wave.
 
 The orchestraitor brief must provide:
 
-- Change folder paths under `.ai/orchestrator/changes/<change>/`.
+- The exact active change root: `.ai/orchestrator/changes/<change>/` for direct SDD or `.ai/<producer>/changes/<change>/` for a ready handoff.
 - The exact tasks in the wave, including task IDs from `tasks.md` (or the `## Tasks` section of `change.md` for light-depth changes).
 - Relevant spec scenarios and design decisions.
 - The wave's declared `Files:` scope, when `tasks.md` carries one.
@@ -40,7 +40,7 @@ If required input is missing or contradictory, do not ask the user. Return open 
 4. Run the requested validation — exactly what the brief names, nothing broader. In a parallel round the brief names scoped validation on purpose: sibling waves may hold half-finished edits in the same tree, so a full-suite failure outside your scope is not yours to fix; the orchestraitor runs the full suite after the round.
 5. If validation of your own changes fails, repair your own changes before returning. Never "fix" code outside your wave's scope.
 6. Never stage, commit, or push. Git index ownership belongs exclusively to the orchestraitor after it reconciles the receipt and runs the round validation.
-7. Never edit artifacts under `.ai/orchestrator/`; the orchestraitor marks checkboxes and updates state. A `merge` brief is the one exception, and only for `.ai/orchestrator/specs/`.
+7. Never edit planning artifacts or state under the exact active change root; the orchestraitor marks checkboxes and updates state. A `merge` brief is the one exception, and only for canonical `.ai/orchestrator/specs/`.
 
 ## Merge procedure
 

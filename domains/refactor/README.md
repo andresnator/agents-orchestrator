@@ -12,7 +12,7 @@ Bundles carry Andres's style contract: the `code-conventions` skill rides the te
 
 The coordinator profile assumes the `sdlc`, `common`, and `sdd` domains are installed. Full lens coverage uses common skills such as `cohesion-coupling` and `kiss-yagni`; missing lens skills are reported as skipped, never as failures, and a missing `risk-assessment` degrades to a documented inline risk heuristic. Bundle composition uses the `sdd-draft-*` templates from the `sdd` domain.
 
-Legacy note: pre-2026-07 `.ia-refactor/plan/**` artifacts are frozen history. The planner ignores them and `/refactor-execute` no longer exists — execution now happens through sdd adoption.
+Legacy note: pre-2026-07 `.ia-refactor/plan/**` artifacts are frozen history. The planner ignores them and `/refactor-execute` no longer exists — execution now happens through the in-place SDD handoff.
 
 ## Components
 

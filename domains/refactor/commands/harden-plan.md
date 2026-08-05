@@ -14,7 +14,7 @@ Hard constraints:
 - The first non-flag argument is the hardening target.
 - Allowed runtime write path: `.ai/refactor-planner/changes/**` only.
 - Output: one or more OpenSpec change bundles (`proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md`) conforming to the `sdd-draft-*` templates, with a `harden-` prefixed change name.
-- `proposal.md` must start with `Status: ready-for-sdd | Source: refactor-planner`; execution happens later through orchestraitor adoption ("ejecuta el plan <change>").
+- `proposal.md` must start with `Status: ready-for-sdd | Source: refactor-planner`; execution happens later through in-place orchestraitor intake ("ejecuta el plan <change>").
 - Always run the `behavior-safety`, `test-safety-net`, and `tooling` lenses; never run the other lenses.
 - Inspect test readiness: verify in the build files that a test framework, coverage reporter (e.g. JaCoCo), and mutation tool (e.g. PIT) are configured; each missing piece becomes an explicit group-1 enablement task with its verify command.
 - Coverage and mutation thresholds come from the kickoff round and are recorded in `design.md` and on the group-4 baseline tasks.
