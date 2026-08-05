@@ -22,6 +22,7 @@ This repo stores reusable agent artifacts, not application code. Keep additions 
 - `profiles/<name>.json` stores abstract model-tier profiles (never concrete model ids) consumed by the meta `model-configurator` TUI plugin; see `docs/agent-models.md`.
 - The externally maintained meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md` and `docs/hot-reload.md`).
 - `scripts/sdd-automode.sh` toggles SDD auto-mode: per-agent `permission` blocks in user OpenCode config, never repo artifacts (see `docs/sdd-automode.md`).
+- `scripts/sdlc-orchestrator-poc.sh` installs or removes the opt-in SDLC profile only under a supplied project's `.opencode/`; it never targets global OpenCode config.
 - `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
 - `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
 - There is no root package manifest, lockfile, CI workflow, or single root test command. Component-specific validation commands are documented below.
@@ -116,5 +117,6 @@ Adding a component must not require editing any installer.
 - For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
 - For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
 - For SDLC orchestrator contract changes, run `scripts/test-sdlc-orchestrator-contracts.sh`; it is deterministic and is also invoked by `scripts/validate-harness.sh`.
+- For SDLC POC profile changes, run `scripts/test-sdlc-orchestrator-poc.sh`; it uses scratch projects and deterministic external-plugin fixtures, never a real project or global config.
 - For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke`, `lite` (the sdd-lite `LITE-*` scenarios, driving `orchestralite`), or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
 - Do not commit unless explicitly asked.
