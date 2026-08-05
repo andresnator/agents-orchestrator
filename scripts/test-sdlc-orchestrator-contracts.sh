@@ -126,6 +126,21 @@ assert_contains "$refactor" 'operation: refactor | hardening'
 assert_contains "$refactor" 'producer: refactor-planner'
 assert_receipt_schema "$refactor"
 
+lite="domains/sdd-lite/agents/orchestralite.md"
+assert_frontmatter_contains "$lite" 'mode: subagent'
+assert_frontmatter_contains "$lite" 'question: deny'
+assert_frontmatter_contains "$lite" 'lite-verify: allow'
+assert_contains "$lite" 'operation: sdd-lite'
+assert_contains "$lite" 'raw user request'
+assert_contains "$lite" 'same Task child'
+assert_contains "$lite" 'lite-verify'
+assert_contains "$lite" 'VERIFY: ALL PASS'
+assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
+assert_receipt_schema "$lite"
+
+assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'mode: subagent'
+assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'question: deny'
+
 for command in deep-plan wayfinder judgment defend; do
   case "$command" in
     deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;

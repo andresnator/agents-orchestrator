@@ -1,12 +1,14 @@
 # SDD Lite Domain (POC)
 
-A deliberate proof of concept, not a replacement for the `sdd` domain. One primary agent, `orchestralite`, runs the whole flow for a bounded change in a single context — interview, `change.md` drafted and corrected in chat, inline implementation — and delegates exactly one step: the cold verification, to `lite-verify`.
+A deliberate proof of concept, not a replacement for the `sdd` domain. The `orchestralite` subagent coordinator runs a bounded change in one persistent child context and delegates exactly one nested step: cold verification to `lite-verify`. `sdlc-orchestrator` owns routing and questions; it never performs the implementation.
 
 ## Hypothesis under test
 
-The PR #30 context-diet measurements (96:1 read-to-delegate ratio, 25 silent compaction passes) covered the full orchestraitor under mixed use, and moved light-depth drafting *into* a subagent. This POC probes the case that measurement did not cover: a dedicated agent, a genuinely bounded change, a single session. The claim: total inline cost < total delegated depth-light cost, with zero compaction passes and the same verify outcome. Secondary claim: a distilled contract embedded in the agent prompt replaces the drafting skill for a frontier model — `orchestralite` loads no skills and carries its `change.md` template inline.
+The PR #30 context-diet measurements (96:1 read-to-delegate ratio, 25 silent compaction passes) covered the full orchestraitor under mixed use, and moved light-depth drafting *into* a subagent. This POC probes the case that measurement did not cover: a dedicated coordinator context, a genuinely bounded change, a single session. The claim: total inline cost < total delegated depth-light cost, with zero compaction passes and the same verify outcome. Secondary claim: a distilled contract embedded in the agent prompt replaces the drafting skill for a frontier model — `orchestralite` loads no skills and carries its `change.md` template inline.
 
 ## Experiment status: hypothesis supported at equal coverage (2026-07-30)
+
+These measurements predate the SDLC-primary integration and describe `orchestralite` running as a primary. The POC keeps the measured implementation and verify topology inside one resumed coordinator child; the extra parent routing/receipt overhead is evaluated by the new E2E evidence, not inferred from these historical numbers.
 
 Two paired runs on the `java-orders` fixture. Each pair uses a byte-identical prompt for both agents, the same working tree, and the fixture reset to baseline between runs; both agents run the same model per role (`gpt-5.6-sol` for the primary and for drafting, `gpt-5.6-luna` for implement/verify).
 
@@ -92,17 +94,17 @@ One correctness fix came out of the same profiling, and it applies to both domai
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `orchestralite` | Runs the bounded single-context lite flow end to end |
+| Agent (subagent coordinator) | `orchestralite` | Runs the bounded single-child lite flow and returns public receipts |
 | Agent (subagent) | `lite-verify` | Cold-checks the implementation against `change.md` scenarios |
 
 `lite-verify` is a trimmed fork of the sdd domain's `sdd-verify` agent (author: andresnator, this repository); it is duplicated rather than shared so the domain installs standalone and the experiment stays decoupled from `sdd`.
 
-The domain is self-contained: no skills, no commands, no dependency on the `sdd` domain being installed. `orchestralite` loads no skills at all — the `skill` tool is fully denied — and instead carries two contracts embedded in its prompt: the `change.md` template (a distilled mirror of `skills/sdd-draft-light/SKILL.md`) and the code conventions (a distilled mirror of `skills/code-conventions/SKILL.md`). That duplication is deliberate and has a maintenance cost: editing either skill does **not** propagate here, and `scripts/validate-harness.sh` does not detect the drift — whoever edits those skills must review the embedded copies. If the agent ever needs non-embedded skill content, it can still read `skills/<name>/SKILL.md` as a plain file.
+The domain remains internally self-contained: no skills, no commands, and no dependency on the full `sdd` domain. Normal POC entry does require the `sdlc` domain so the primary can route and resume the coordinator. `orchestralite` loads no skills — the `skill` tool is denied — and carries the `change.md` template plus code conventions inline. That duplication is deliberate: edits to the source skills do not propagate automatically and must be reviewed against the embedded copies.
 
 ## Flow
 
 ```
-interview -> change.md in chat -> approval -> write file -> implement inline -> lite-verify (cold) -> fix (max 1 round) -> archive
+sdlc-orchestrator question -> resumed orchestralite child -> retained draft -> approval -> write -> implement inline -> lite-verify (cold) -> fix (max 1 round) -> archive receipt
 ```
 
 Hard boundaries, enforced by a scope gate at entry and mid-flight:
