@@ -8,6 +8,8 @@ cd "$ROOT" || exit 1
 
 FAILS=0
 CHECKS=0
+# shellcheck disable=SC2016
+RUNTIME_ARGUMENTS='$ARGUMENTS'
 
 fail() {
   printf 'FAIL %s: %s\n' "$1" "$2" >&2
@@ -85,6 +87,31 @@ assert_contains "$primary" 'operation: execute-handoff'
 assert_contains "$primary" 'must not redraft proposal, design, specifications, or tasks'
 assert_contains "$primary" 'operation: direct-sdd'
 assert_receipt_schema "$primary"
+
+review="domains/sdlc/agents/review-coordinator.md"
+assert_frontmatter_contains "$review" 'mode: subagent'
+assert_frontmatter_contains "$review" 'question: deny'
+for phase_agent in jd-judge-a jd-judge-b jd-solo jd-fix; do
+  assert_frontmatter_contains "$review" "$phase_agent: allow"
+done
+assert_contains "$review" 'Supported operations are'
+assert_contains "$review" 'judgment'
+assert_contains "$review" 'defend'
+assert_contains "$review" 'same child through Task'
+assert_contains "$review" 'task_id'
+assert_receipt_schema "$review"
+
+for command in deep-plan wayfinder judgment defend; do
+  case "$command" in
+    deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
+    judgment) file="domains/sdd/commands/$command.md" ;;
+    defend) file="domains/common/commands/$command.md" ;;
+  esac
+  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
+  assert_frontmatter_contains "$file" 'subtask: false'
+  assert_contains "$file" "$RUNTIME_ARGUMENTS"
+  assert_contains "$file" 'Explicit SDLC route:'
+done
 
 CHECKS=$((CHECKS + 1))
 command_count="$(find domains -path '*/commands/*.md' -type f | wc -l | tr -d ' ')"

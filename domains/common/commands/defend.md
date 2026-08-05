@@ -1,8 +1,14 @@
 ---
 description: Socratic review where the user defends the design decisions in their code
+agent: sdlc-orchestrator
+subtask: false
 argument-hint: "[diff, branch, files, or scope to defend]"
 ---
 # /defend
+
+Raw arguments: `$ARGUMENTS`
+
+Explicit SDLC route: `review / defend`. Route directly through `sdlc-orchestrator` to `review-coordinator`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Run an inverted code review: instead of listing findings, make the USER defend the design decisions in the given scope. If no scope is provided, default to the current working-tree diff against the base branch; if there is no diff, ask for files or a scope.
 

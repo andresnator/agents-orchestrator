@@ -6,11 +6,12 @@ Reusable agent artifacts organized by domain. Authored in OpenCode format for Op
 
 | Domain | Purpose | Entry points |
 |---|---|---|
-| [sdd](domains/sdd/README.md) | Spec-driven development around the `orchestraitor` primary agent | `orchestraitor` (primary), `/judgment` |
+| [sdlc](domains/sdlc/README.md) | Single natural-language SDLC primary routing to domain coordinators and owning every user question | `sdlc-orchestrator` (primary) |
+| [sdd](domains/sdd/README.md) | Spec-driven development through the `orchestraitor` coordinator, including ready-bundle execution without redrafting | `orchestraitor` (subagent), `/judgment` alias |
 | [sdd-lite](domains/sdd-lite/README.md) | POC: single-context flow for bounded changes — `change.md` in chat, inline implementation, delegated cold verify only | `orchestralite` (primary) |
 | [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening planning producing ready-for-sdd bundles, plus Java refactor skills | `refactor-planner` (primary), `/harden-plan`, `/refactor-plan` |
 | [architecture](domains/architecture/README.md) | Architecture mapping, state reviews, PRDs, audits, ADRs, and ideation | `architect` (primary), `/arch-audit`, `/arch-ideate`, `/arch-map`, `/arch-prd`, `/arch-review`, `/boundary-inspector` |
-| [plan](domains/plan/README.md) | Fable-style planning front-door: `/deep-plan` produces ready-for-sdd bundles for executable goals or plan documents for decisions, plus `/wayfinder` multi-session discovery maps under `.ai/` | `deep-planner` (primary), `/deep-plan`, `/wayfinder` |
+| [plan](domains/plan/README.md) | Fable-style planning: Deep Plan produces ready-for-sdd bundles for executable goals or plan documents for decisions, plus Wayfinder maps under `.ai/` | `deep-planner` (subagent), `/deep-plan` and `/wayfinder` aliases |
 | [learning](domains/learning/README.md) | Interactive multi-session learning around the `mentor` primary agent, plus English coaching wired into it | `mentor` (primary), `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product docs, Jira ticketing, summaries, slide decks, and transcription | `/decide`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt and skill maintenance utilities | `/absorb`, `/prompt-checker`, `model-configurator` (TUI plugin) |
@@ -54,6 +55,7 @@ installers/opencode.sh status --domain sdd
 | [LM Studio over LAN](docs/lm-studio.md) | Connecting OpenCode to one or more LM Studio models on another computer |
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspecting and pruning the local session store |
 | [Plan handoff](docs/plan-handoff.md) | Passing planner bundles into SDD execution |
+| [SDLC orchestrator ADR](docs/architecture/adr/0001-adopt-sdlc-orchestrator.md) | Understanding the primary-to-coordinator topology and trade-offs |
 | [SDD auto mode](docs/sdd-automode.md) | Toggling SDD tool-permission prompts |
 
 ## Graphify (optional)
