@@ -137,6 +137,8 @@ scripts/validate-harness.sh
 
 The structure contract checks the single primary, single question owner, six coordinator allowlist, coordinator receipts, nested question denies, exact 12 aliases, and unchanged excluded commands. The profile suite uses scratch projects and deterministic external-plugin fixtures to cover install/status/idempotence/uninstall, absent and existing JSONC values, comments and foreign keys, tampering, broad and foreign manifests, foreign destinations, invalid JSONC, exact domain selection, and source-worktree refusal.
 
+Post-run deterministic result: 225 SDLC topology checks, 89 Plan/SDD handoff checks, all 6 profile cases, and the full `validate-harness.sh` inventory passed (24 agents, 21 commands, 3 external plugins, 1 TUI plugin, 83 skills, 91 domain skill links, and 1 model profile).
+
 The paid proof is explicit and is never part of the deterministic harness:
 
 ```bash
@@ -149,7 +151,16 @@ It performs exactly two workflows once each with no retry loop: Deep Plan follow
 
 ### Recorded real-model run
 
-The one authorized run is recorded after execution in this section. A failure remains evidence and is not retried.
+The one authorized run executed at repository head `c13486963cacd84291526227465ee5710a231e23` with OpenCode 1.18.10. Evidence is retained outside Git at `.ai/evidence/sdlc-orchestrator-poc/20260805T230631Z/`.
+
+| Workflow | Result | Observed route and durable outcome |
+|---|---|---|
+| Natural Deep Plan → same-session SDD | PASS | Parent `ses_02bd0d5d5ffetdU7ivK9THqEQd`; `sdlc-orchestrator → deep-planner → sdd-proposal/spec/design/tasks`, then the same parent → `orchestraitor → sdd-implement → sdd-verify → sdd-implement` for canonical merge. No drafting-session ID was added during execution. Maven passed, and the exact bundle archived at `.ai/deep-planner/changes/archive/2026-08-06-add-order-line-count/`; no copy appeared under `.ai/orchestrator/changes/`. |
+| Natural bounded request → SDD Lite | FAIL at protocol close | Parent `ses_02bc0666effe4uVhJLImunf1N4`; exactly `sdlc-orchestrator → orchestralite → lite-verify`. Implementation changed only the two declared files, scoped verification reported `VERIFY: ALL PASS — 1/1 scenarios.`, and an independent post-failure `mvn -q test` passed. `orchestralite` nevertheless misclassified the valid receipt twice and did not archive `.ai/sdd-lite/changes/add-order-total-quantity/`. |
+
+The runner made three OpenCode calls across two workflow attempts, with zero runner retries. The Plan→SDD tree used 10 sessions, 271,529 input tokens, 22,146 output tokens, 24,223 reasoning tokens, and 1,194,496 cache-read tokens. The SDD Lite tree used 3 sessions, 53,382 input tokens, 4,253 output tokens, 8,423 reasoning tokens, and 243,200 cache-read tokens. OpenCode reported zero metered cost for both trees in this environment.
+
+The failed transcript exposed one exact contract ambiguity: `lite-verify` correctly defines its clean token as the first line, including the word `scenarios.`; `orchestralite` invented a conflicting final-line token without that word. The coordinator contract now repeats the verifier's exact spelling and first-line position and forbids that transformation, with deterministic assertions. Per the evidence policy, the paid workflow was not retried after this fix. The report therefore records one full pass and one verified implementation with a failed archive gate, not two passing E2Es.
 
 ## Limitations
 

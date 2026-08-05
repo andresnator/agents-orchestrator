@@ -63,6 +63,9 @@ snapshot_project() {
   )
   [ -d "$project/.ai" ] && cp -R "$project/.ai" "$target/ai-state"
   [ -d "$project/src" ] && cp -R "$project/src" "$target/src"
+  [ -f "$project/pom.xml" ] && cp "$project/pom.xml" "$target/pom.xml"
+  [ -d "$project/target/surefire-reports" ] &&
+    cp -R "$project/target/surefire-reports" "$target/surefire-reports"
   [ -f "$project/.opencode/opencode.jsonc" ] &&
     cp "$project/.opencode/opencode.jsonc" "$target/opencode.jsonc"
   [ -f "$project/.opencode/.agents-orchestrator-manifest" ] &&
@@ -273,6 +276,8 @@ run_plan_sdd_workflow() {
   [ "$(session_id_from_events "$execute_events")" = "$root_id" ] ||
     { fail "the SDD turn did not continue the same primary session"; return 1; }
   write_session_tree "$root_id" "$tree_after"
+  export_tree "$tree_after" "$evidence/sessions"
+  write_usage "$tree_after" "$evidence/usage.tsv"
   for agent in sdlc-orchestrator deep-planner orchestraitor sdd-implement sdd-verify; do
     assert_tree_has "$tree_after" "$agent" || return 1
   done
@@ -293,8 +298,6 @@ run_plan_sdd_workflow() {
   grep -Rq 'lineCount' "$project/src/test" || { fail "lineCount has no test"; return 1; }
   assert_maven_green "$project" "$evidence/maven-test.log" || return 1
 
-  export_tree "$tree_after" "$evidence/sessions"
-  write_usage "$tree_after" "$evidence/usage.tsv"
   printf '%s\n' "${archived#"$project/"}" > "$evidence/bundle-after-path.txt"
   log "PASS E2E 1/2: session $root_id, bundle ${archived#"$project/"}"
 }
@@ -317,6 +320,8 @@ run_lite_workflow() {
   assert_session_id "$root_id"
   printf '%s\n' "$root_id" > "$evidence/root-session-id.txt"
   write_session_tree "$root_id" "$tree"
+  export_tree "$tree" "$evidence/sessions"
+  write_usage "$tree" "$evidence/usage.tsv"
   for agent in sdlc-orchestrator orchestralite lite-verify; do
     assert_tree_has "$tree" "$agent" || return 1
   done
@@ -324,15 +329,12 @@ run_lite_workflow() {
     sdd-proposal sdd-spec sdd-design sdd-tasks sdd-implement sdd-verify; do
     assert_tree_lacks "$tree" "$agent" || return 1
   done
-  archived="$(find "$project/.ai/sdd-lite/changes/archive" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
-  [ -n "$archived" ] || { fail "SDD Lite change was not archived"; return 1; }
-  [ ! -e "$project/.ai/orchestrator" ] || { fail "SDD Lite touched full-SDD state"; return 1; }
   grep -Rq 'totalQuantity' "$project/src/main" || { fail "totalQuantity was not implemented"; return 1; }
   grep -Rq 'totalQuantity' "$project/src/test" || { fail "totalQuantity has no test"; return 1; }
   assert_maven_green "$project" "$evidence/maven-test.log" || return 1
-
-  export_tree "$tree" "$evidence/sessions"
-  write_usage "$tree" "$evidence/usage.tsv"
+  archived="$(find "$project/.ai/sdd-lite/changes/archive" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
+  [ -n "$archived" ] || { fail "SDD Lite change was not archived"; return 1; }
+  [ ! -e "$project/.ai/orchestrator" ] || { fail "SDD Lite touched full-SDD state"; return 1; }
   printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
   log "PASS E2E 2/2: session $root_id, change ${archived#"$project/"}"
 }

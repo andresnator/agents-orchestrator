@@ -134,7 +134,9 @@ assert_contains "$lite" 'operation: sdd-lite'
 assert_contains "$lite" 'raw user request'
 assert_contains "$lite" 'same Task child'
 assert_contains "$lite" 'lite-verify'
-assert_contains "$lite" 'VERIFY: ALL PASS'
+assert_contains "$lite" 'VERIFY: ALL PASS — <n>/<n> scenarios.'
+assert_contains "$lite" "receipt's first line"
+assert_contains "$lite" "never ask the verifier to move the token to the final line or remove \`scenarios.\`"
 assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
 assert_receipt_schema "$lite"
 
