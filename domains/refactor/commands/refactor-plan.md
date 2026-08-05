@@ -1,13 +1,12 @@
 ---
 description: "Generate ready-for-sdd OpenSpec refactor change bundle(s) for a class, package, or module."
-agent: refactor-planner
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[target class, package, or module path]"
 ---
-You are running `/refactor-plan` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `refactor-planner` using the exact raw arguments above.
+Explicit SDLC route: `refactor / refactor`. Route directly through `sdlc-orchestrator` to `refactor-planner` with `operation: refactor`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Hard constraints:
 

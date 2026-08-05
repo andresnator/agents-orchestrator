@@ -115,6 +115,17 @@ done
 assert_contains "$architect" 'producer: architect'
 assert_receipt_schema "$architect"
 
+refactor="domains/refactor/agents/refactor-planner.md"
+assert_frontmatter_contains "$refactor" 'mode: subagent'
+assert_frontmatter_contains "$refactor" 'question: deny'
+assert_frontmatter_contains "$refactor" 'refactor-analyzer: allow'
+assert_frontmatter_contains "$refactor" '"git log*": allow'
+assert_contains "$refactor" 'raw user request in the coordinator brief'
+assert_not_contains "$refactor" "$RUNTIME_ARGUMENTS"
+assert_contains "$refactor" 'operation: refactor | hardening'
+assert_contains "$refactor" 'producer: refactor-planner'
+assert_receipt_schema "$refactor"
+
 for command in deep-plan wayfinder judgment defend; do
   case "$command" in
     deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
@@ -129,6 +140,14 @@ done
 
 for command in arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector; do
   file="domains/architecture/commands/$command.md"
+  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
+  assert_frontmatter_contains "$file" 'subtask: false'
+  assert_contains "$file" "$RUNTIME_ARGUMENTS"
+  assert_contains "$file" 'Explicit SDLC route:'
+done
+
+for command in harden-plan refactor-plan; do
+  file="domains/refactor/commands/$command.md"
   assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
   assert_frontmatter_contains "$file" 'subtask: false'
   assert_contains "$file" "$RUNTIME_ARGUMENTS"

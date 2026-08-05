@@ -1,13 +1,12 @@
 ---
 description: "Generate ready-for-sdd OpenSpec hardening bundle(s) — characterization, coverage, and mutation safety net — for a class, package, or module."
-agent: refactor-planner
+agent: sdlc-orchestrator
 subtask: false
 argument-hint: "[target class, package, or module path]"
 ---
-You are running `/harden-plan` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `refactor-planner` using the exact raw arguments above, with plan kind `hardening`.
+Explicit SDLC route: `plan / hardening`. Route directly through `sdlc-orchestrator` to `refactor-planner` with `operation: hardening`, preserving the raw arguments and constraints below; do not show the optional route menu.
 
 Hard constraints:
 
