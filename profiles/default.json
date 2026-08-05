@@ -3,9 +3,9 @@
   "description": "Balanced tiering for all harness agents",
   "tiers": {
     "orchestration": {
-      "description": "Primary planners and orchestrators; strongest model",
+      "description": "Primary and domain coordinators; strongest model",
       "variant": "high",
-      "agents": ["orchestraitor", "deep-planner", "refactor-planner", "architect"]
+      "agents": ["sdlc-orchestrator", "deep-planner", "refactor-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
     },
     "implementation": {
       "description": "Code-writing agents",
@@ -25,7 +25,7 @@
     "verification": {
       "description": "Independent verification",
       "variant": "high",
-      "agents": ["sdd-verify"]
+      "agents": ["sdd-verify", "lite-verify"]
     },
     "judge-a": {
       "description": "Blind judge A; keep provider distinct from judge-b",

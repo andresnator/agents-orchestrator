@@ -23,6 +23,7 @@ Merge a block like this into your `opencode.json` (global for your default polic
 ```json
 {
   "agent": {
+    "sdlc-orchestrator": { "model": "anthropic/claude-opus-4-8", "variant": "high" },
     "orchestraitor": { "model": "anthropic/claude-opus-4-8", "variant": "high" },
     "sdd-explore":   { "model": "anthropic/claude-haiku-4-5" },
     "sdd-implement": { "model": "anthropic/claude-sonnet-4-5", "variant": "high" },
@@ -51,8 +52,8 @@ Recommended classification:
 
 **Frontier tier.** Decisions, judgment, and the verification that backstops the minions:
 
-- `orchestraitor`, `deep-planner`, `refactor-planner`, `architect` — supervisors (variant `high`)
-- `sdd-verify` — aggregation/verification is the "cloud side" of the pattern; a cheap verifier invalidates the safety net that makes cheap workers acceptable (variant `high`)
+- `sdlc-orchestrator`, `orchestraitor`, `deep-planner`, `refactor-planner`, `architect`, `orchestralite`, `review-coordinator` — primary or domain coordinators (variant `high`)
+- `sdd-verify`, `lite-verify` — aggregation/verification is the "cloud side" of the pattern; a cheap verifier invalidates the safety net that makes cheap workers acceptable (variant `high`)
 - `jd-judge-a` / `jd-judge-b` — variant `high`, distinct providers (rule above)
 
 **Middle tier — do not degrade to minion:**
