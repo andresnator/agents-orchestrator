@@ -278,6 +278,24 @@ shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall() {
   pass shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
 }
 
+shouldRejectSymlinkedProjectTargetBeforeMutation() {
+  local project external action
+  project="$(make_project symlinked-target)"
+  external="$SCRATCH/external-opencode"
+  mkdir -p "$external"
+  printf 'keep me\n' > "$external/foreign.txt"
+  ln -s "$external" "$project/.opencode"
+
+  for action in install status uninstall; do
+    expect_failure 'refusing symlinked project target' run_profile "$action" --project-root "$project"
+  done
+  grep -Fq 'keep me' "$external/foreign.txt" || fail "symlinked target: foreign content changed"
+  [ ! -e "$external/.agents-orchestrator-manifest" ] || fail "symlinked target: installer manifest escaped project"
+  [ ! -e "$external/.sdlc-orchestrator-poc-manifest" ] || fail "symlinked target: profile manifest escaped project"
+  [ ! -e "$external/opencode.jsonc" ] || fail "symlinked target: config escaped project"
+  pass shouldRejectSymlinkedProjectTargetBeforeMutation
+}
+
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   local project aliases
   project="$(make_project selected-domains)"
@@ -313,6 +331,7 @@ shouldAcceptLegacyManifestWithoutTargetOwnership
 shouldAbortUninstallWhenManagedConfigChanges
 shouldRejectForeignAndBroadManifests
 shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
+shouldRejectSymlinkedProjectTargetBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 
 printf 'PASS: %d SDLC orchestrator profile contracts OK.\n' "$PASSES"

@@ -21,6 +21,13 @@ assert_exists() {
   [ -e "$1" ] || [ -L "$1" ] || fail "$1" 'expected path is absent'
 }
 
+assert_relative_symlink() {
+  local path="$1" expected="$2"
+  CHECKS=$((CHECKS + 1))
+  [ -L "$path" ] || { fail "$path" 'expected a shared-skill symlink'; return; }
+  [ "$(readlink "$path")" = "$expected" ] || fail "$path" "expected relative target $expected"
+}
+
 assert_absent() {
   CHECKS=$((CHECKS + 1))
   [ ! -e "$1" ] && [ ! -L "$1" ] || fail "$1" 'retired path still exists'
@@ -60,8 +67,11 @@ assert_frontmatter_contains() {
 }
 
 # One drafting contract replaces the retired phase fan-out.
-assert_exists domains/sdd/skills/sdd-draft-change/SKILL.md
-assert_exists domains/sdd/skills/sdd-draft-change/assets/change-template.md
+assert_exists skills/sdd-draft-change/SKILL.md
+assert_exists skills/sdd-draft-change/assets/change-template.md
+for owner in plan architecture common sdd; do
+  assert_relative_symlink "domains/$owner/skills/sdd-draft-change" '../../../skills/sdd-draft-change'
+done
 for retired in \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
   assert_absent "skills/$retired"
@@ -71,7 +81,7 @@ for retired in sdd-proposal sdd-spec sdd-design sdd-tasks; do
   assert_absent "domains/sdd/agents/$retired.md"
 done
 
-template=domains/sdd/skills/sdd-draft-change/assets/change-template.md
+template=skills/sdd-draft-change/assets/change-template.md
 for heading in '# Change:' '## Outcome' '## Scope' '## Behavior' '## Approach' '## Work' '## Verify'; do
   assert_contains "$template" "$heading"
 done
@@ -80,10 +90,10 @@ assert_contains "$template" 'ADD|MODIFY|REMOVE|RENAME'
 assert_contains "$template" 'WHEN <condition>'
 assert_contains "$template" 'THEN <observable result>'
 assert_contains "$template" 'Files: <paths>'
-assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'at most 900 words'
-assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
-assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'omits the execution-choice line'
-assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'preserves the producer marker'
+assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
+assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
+assert_contains skills/sdd-draft-change/SKILL.md 'omits the execution-choice line'
+assert_contains skills/sdd-draft-change/SKILL.md 'preserves the producer marker'
 assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
 
 # Every current producer/consumer uses change.md and compact returns.

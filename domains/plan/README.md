@@ -31,7 +31,7 @@ Normal delivery planning resolves intended behavior, implementation approach, wo
 
 The modes share one coordinator because they have the same ownership and handoff contract. `refactor-analyzer` remains a specialized read-only worker for medium-or-higher protected plans. Hardening and restructuring are deliberately separate handoffs: characterization establishes the baseline before a later refactor plan relies on it.
 
-The domain assumes `common` for planning methods and `sdd` for the shared `sdd-draft-change` contract.
+The domain declares the shared `sdd-draft-change` contract directly. It assumes `common` for planning methods; SDD owns later execution.
 
 ## Components
 
@@ -58,6 +58,7 @@ The domain assumes `common` for planning methods and `sdd` for the shared `sdd-d
 | Skill | `null-safety` | Detects null hazards |
 | Skill | `refactor` | Supplies cross-language refactoring techniques |
 | Skill | `scope-analysis` | Delimits the target boundary |
+| Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
 | Skill | `tooling-audit` | Detects test-tooling gaps |
 | Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |
 | Skill | `type-contracts` | Detects weak type contracts |

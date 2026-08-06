@@ -23,7 +23,7 @@ Architecture-level mapping, review, PRD recovery, audit, boundary analysis, and 
 
 Ideation keeps its ADR because it records an architecture decision. Its executable SDD handoff is only `change.md`, marked `Status: ready-for-sdd | Source: architect`; SDD executes it in place without redrafting.
 
-The domain assumes `sdlc`, `common`, and `sdd` are installed. Graph exploration follows the independent [Graphify guide](../../docs/graphify.md).
+The domain declares the shared `sdd-draft-change` contract directly. It assumes `sdlc` and `common` for routing and analysis; SDD owns later execution. Graph exploration follows the independent [Graphify guide](../../docs/graphify.md).
 
 ## Components
 
@@ -49,6 +49,7 @@ The domain assumes `sdlc`, `common`, and `sdd` are installed. Graph exploration 
 | Skill | `prd` | Creates rigorous PRDs |
 | Skill | `prd-light` | Creates lightweight PRDs |
 | Skill | `repo-issues` | Ranks repository issues |
+| Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
 | Skill | `service-boundary-analysis` | Maps service contracts |
 | Skill | `tooling-audit` | Detects test-tooling gaps |
 | Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |

@@ -4,7 +4,7 @@ description: "Trigger: draft change, ready-for-sdd change, SDD planning. Draft o
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.1.0"
   status: testing
 ---
 

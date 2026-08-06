@@ -75,6 +75,7 @@ resolve_project_root() {
   fi
 
   TARGET="$PROJECT_ROOT/.opencode"
+  [ ! -L "$TARGET" ] || die "refusing symlinked project target: $TARGET"
   CONFIG_FILE="$TARGET/opencode.jsonc"
   INSTALLER_MANIFEST="$TARGET/.agents-orchestrator-manifest"
   PROFILE_MANIFEST="$TARGET/.sdlc-orchestrator-poc-manifest"
