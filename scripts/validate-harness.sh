@@ -58,6 +58,19 @@ check_component() {
   fi
 }
 
+allowed_agent_skills() {
+  frontmatter "$1" | awk '
+    /^  skill:/ { skills = 1; next }
+    skills && /^  [^ ]/ { skills = 0 }
+    skills && /^    [A-Za-z0-9_-]+: allow$/ {
+      skill = $0
+      sub(/^    /, "", skill)
+      sub(/: allow$/, "", skill)
+      print skill
+    }
+  '
+}
+
 # --- Agents ---
 for f in domains/*/agents/*.md; do
   [ -e "$f" ] || continue
@@ -69,6 +82,13 @@ for f in domains/*/agents/*.md; do
     ! frontmatter "$f" | grep -Eq '^mode: (primary|subagent)$'; then
     fail "$f" "mode must be 'primary' or 'subagent'"
   fi
+  domain="$(basename "$(dirname "$(dirname "$f")")")"
+  while IFS= read -r skill; do
+    [ -n "$skill" ] || continue
+    entry="domains/$domain/skills/$skill"
+    { [ -e "$entry" ] || [ -L "$entry" ]; } ||
+      fail "$f" "allowlisted skill '$skill' is not declared by domain '$domain'"
+  done < <(allowed_agent_skills "$f")
 done
 
 # --- Commands ---

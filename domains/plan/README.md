@@ -197,19 +197,38 @@ Copy-ready hypothetical prompts and expected evidence are in [Plan flow test sce
 | Skill | `architecture-impact-review` | Classifies local versus architectural risk |
 | Skill | `behavior-characterization` | Records observable legacy behavior |
 | Skill | `characterization-test-scoping` | Scopes tests, seams, containment, and rollback |
+| Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
+| Skill | `complexity-big-o` | Evaluates algorithmic and control complexity |
+| Skill | `dependency-inversion` | Detects concrete boundary dependency risks |
 | Skill | `dependency-seam-detection` | Finds testability seams |
+| Skill | `design-patterns-pragmatic` | Applies patterns only to real forces |
+| Skill | `domain-modeling` | Builds and sharpens domain models |
+| Skill | `dry-business-knowledge` | Distinguishes knowledge duplication from similarity |
 | Skill | `evidence-first-planning` | Builds evidence-first plans and validates edges |
+| Skill | `general-naming-readability` | Improves language-neutral naming and readability |
+| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
+| Skill | `graphify-cli` | Queries code graphs read-only |
+| Skill | `grilling` | Stress-tests plans through focused interviews |
+| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
 | Skill | `java-api-design` | Reviews Java API boundaries |
 | Skill | `java-exception-robustness` | Reviews Java failure handling |
 | Skill | `java-immutability-modeling` | Reviews safe Java data models |
 | Skill | `java-naming-readability` | Reviews Java naming |
 | Skill | `java-secure-coding` | Reviews Java security practices |
 | Skill | `java-testing` | Designs Java test coverage |
+| Skill | `kiss-yagni` | Prevents speculative refactor complexity |
 | Skill | `legacy-code-safety` | Makes untested code safe to change |
+| Skill | `logging-observability` | Evaluates operational logging and observability |
+| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `null-safety` | Detects null hazards |
+| Skill | `open-closed-principle` | Detects extension pressure without speculation |
 | Skill | `refactor` | Supplies cross-language refactoring techniques |
+| Skill | `risk-assessment` | Classifies technical and functional legacy risk |
 | Skill | `scope-analysis` | Delimits the target boundary |
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `single-responsibility` | Detects multiple reasons to change |
+| Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
 | Skill | `tooling-audit` | Detects test-tooling gaps |
 | Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |
 | Skill | `type-contracts` | Detects weak type contracts |

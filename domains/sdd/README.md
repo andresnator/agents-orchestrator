@@ -50,6 +50,10 @@ Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-d
 | Agent (subagent) | `jd-solo` | Runs the light review path |
 | Agent (subagent) | `jd-fix` | Applies confirmed findings |
 | Command | `/judgment` | Routes adversarial review |
+| Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `graphify-cli` | Queries code graphs read-only |
+| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `work-unit-commits` | Plans reviewable, cohesive commits |
 
 Static and opt-in model checks are summarized in [docs/sdd-test-plan.md](../../docs/sdd-test-plan.md).

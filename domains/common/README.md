@@ -40,7 +40,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
 | External server plugin | [`graphify-init`](https://github.com/andresnator/opencode-graphify-init) | Refreshes Graphify graphs under `.ai/graphify-out/` in the background, honoring the mode recorded by `/graphify-index`; it never performs first indexing |
 
-Use common skills by reference from domain-specific agents instead of duplicating them into each domain. Common is the single home for transversal skills used by 3+ domains (`grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, `risk-assessment`); consuming domains declare the dependency in their README instead of duplicating symlinks.
+Transversal skills have one body under top-level `skills/`. Common and every consuming domain declare that body with a relative symlink, so filtered domain installs remain complete without duplicating skill content.
 
 ```mermaid
 graph TD

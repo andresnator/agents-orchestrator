@@ -223,20 +223,57 @@ resolve_link_source() {
   esac
 }
 
-validate_installer_contents() {
+validate_installer_manifest_ownership() {
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing: $INSTALLER_MANIFEST"
 
-  local kind path expected actual source name descriptor expected_sha actual_sha
+  local kind path actual
   while IFS=$'\t' read -r kind path _; do
     [ -n "$kind" ] || continue
     case "$kind" in
       link|file|dir)
-        case "$path" in "$TARGET"|"$TARGET"/*) ;; *) die "global or broad manifest destination: $path" ;; esac
+        case "$path" in
+          "$TARGET"|"$TARGET"/*) ;;
+          *) die "global or broad manifest destination: $path" ;;
+        esac
+        case "$path" in
+          */../*|*/./*) die "non-canonical profile manifest destination: $path" ;;
+        esac
         ;;
       managed-array|managed-object) die "broad profile manifest contains managed runtime config: $path" ;;
       *) die "foreign installer manifest row: $kind" ;;
     esac
+
+    case "$kind" in
+      link)
+        [ -L "$path" ] || die "profile-owned link is missing or changed type: $path"
+        actual="$(resolve_link_source "$path")"
+        case "$actual" in
+          "$REPO_ROOT"/*) ;;
+          *) die "profile link target escaped this repository: $path" ;;
+        esac
+        case "$actual" in
+          */../*|*/./*) die "non-canonical profile link target: $path" ;;
+        esac
+        ;;
+      file)
+        [ -f "$path" ] && [ ! -L "$path" ] || die "profile-owned file is missing or changed type: $path"
+        ;;
+      dir)
+        [ -d "$path" ] && [ ! -L "$path" ] || die "profile-owned directory is missing or changed type: $path"
+        ;;
+    esac
   done < "$INSTALLER_MANIFEST"
+
+  manifest_has_row link "$TARGET/agents/sdlc-orchestrator.md" ||
+    die "sdlc-orchestrator is missing from the saved profile manifest"
+  [ -L "$TARGET/agents/sdlc-orchestrator.md" ] ||
+    die "sdlc-orchestrator is missing from the installed profile"
+}
+
+validate_installer_contents() {
+  validate_installer_manifest_ownership
+
+  local kind path expected actual source name descriptor expected_sha actual_sha
 
   TMP_THREE="$(new_tmp)"
   emit_expected_links | sort -u > "$TMP_THREE"
@@ -315,7 +352,7 @@ validate_profile_manifest() {
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
   [ -n "$expected_sha" ] && [ "$expected_sha" = "$actual_sha" ] ||
     die "installer manifest changed or became broad/foreign"
-  validate_installer_contents
+  validate_installer_manifest_ownership
 }
 
 write_profile_manifest() {

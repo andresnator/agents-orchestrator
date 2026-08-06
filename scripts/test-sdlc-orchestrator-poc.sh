@@ -47,6 +47,52 @@ set_scalar() {
   mv "$tmp" "$file"
 }
 
+replace_manifest_value() {
+  local file="$1" key="$2" value="$3" tmp
+  tmp="$file.tmp"
+  awk -F '\t' -v key="$key" -v value="$value" '
+    BEGIN { OFS = "\t" }
+    $1 == key { $2 = value }
+    { print }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
+simulate_previous_component_inventory() {
+  local project="$1" target installer_manifest profile_manifest manifest_sha
+  target="$(cd "$project" && pwd -P)/.opencode"
+  installer_manifest="$target/.agents-orchestrator-manifest"
+  profile_manifest="$target/.sdlc-orchestrator-poc-manifest"
+
+  rm "$target/skills/evidence-first-planning"
+  awk -F '\t' -v path="$target/skills/evidence-first-planning" \
+    '!($1 == "link" && $2 == path)' "$installer_manifest" > "$installer_manifest.tmp"
+  mv "$installer_manifest.tmp" "$installer_manifest"
+  ln -s "$ROOT/domains/plan/skills/wayfinder" "$target/skills/wayfinder"
+  printf 'link\t%s\n' "$target/skills/wayfinder" >> "$installer_manifest"
+  manifest_sha="$(shasum -a 256 "$installer_manifest" | awk '{print $1}')"
+  replace_manifest_value "$profile_manifest" installer-manifest-sha256 "$manifest_sha"
+}
+
+allowed_skills_for_domain() {
+  local domain="$1" agent
+  for agent in "$ROOT/domains/$domain/agents/"*.md; do
+    [ -e "$agent" ] || continue
+    awk '
+      NR == 1 && $0 == "---" { frontmatter = 1; next }
+      frontmatter && $0 == "---" { exit }
+      frontmatter && /^  skill:/ { skills = 1; next }
+      skills && /^  [^ ]/ { skills = 0 }
+      skills && /^    [A-Za-z0-9_-]+: allow$/ {
+        skill = $0
+        sub(/^    /, "", skill)
+        sub(/: allow$/, "", skill)
+        print skill
+      }
+    ' "$agent"
+  done | sort -u
+}
+
 expect_failure() {
   local expected="$1"
   shift
@@ -322,6 +368,58 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   pass shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 }
 
+shouldSyncAndUninstallWhenComponentInventoryChanges() {
+  local sync_project uninstall_project target skill
+  sync_project="$(make_project changed-inventory-sync)"
+
+  # Given a valid profile created by a checkout with a different component set
+  run_profile install --project-root "$sync_project" >/dev/null
+  simulate_previous_component_inventory "$sync_project"
+
+  # When status and reinstall run from the current checkout
+  run_profile status --project-root "$sync_project" >/dev/null
+  run_profile install --project-root "$sync_project" >/dev/null
+
+  # Then the installer syncs the new set and the profile remains removable
+  target="$sync_project/.opencode"
+  [ -L "$target/skills/evidence-first-planning" ] || fail "changed inventory: new skill was not installed"
+  [ ! -e "$target/skills/wayfinder" ] && [ ! -L "$target/skills/wayfinder" ] ||
+    fail "changed inventory: retired skill remains"
+  run_profile uninstall --project-root "$sync_project" >/dev/null
+
+  uninstall_project="$(make_project changed-inventory-uninstall)"
+  run_profile install --project-root "$uninstall_project" >/dev/null
+  simulate_previous_component_inventory "$uninstall_project"
+  run_profile uninstall --project-root "$uninstall_project" >/dev/null
+  [ ! -e "$uninstall_project/.opencode" ] || fail "changed inventory: stale profile target remains"
+
+  for skill in evidence-first-planning wayfinder; do
+    [ ! -e "$uninstall_project/.opencode/skills/$skill" ] &&
+      [ ! -L "$uninstall_project/.opencode/skills/$skill" ] ||
+      fail "changed inventory: uninstall retained $skill"
+  done
+  pass shouldSyncAndUninstallWhenComponentInventoryChanges
+}
+
+shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain() {
+  local project target skill
+  project="$(make_project filtered-plan)"
+  target="$project/.opencode"
+
+  # Given a filtered Plan-only installation
+  "$ROOT/installers/opencode.sh" install --domain plan --target "$target" >/dev/null
+
+  # When each Plan agent skill permission is inspected
+  # Then every allowlisted skill is present without relying on Common co-installation
+  while IFS= read -r skill; do
+    [ -n "$skill" ] || continue
+    [ -L "$target/skills/$skill" ] || fail "filtered plan: allowlisted skill is missing: $skill"
+  done < <(allowed_skills_for_domain plan)
+
+  "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
+  pass shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain
+}
+
 command -v jq >/dev/null 2>&1 || fail "jq is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
@@ -337,5 +435,7 @@ shouldRejectForeignAndBroadManifests
 shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
 shouldRejectSymlinkedProjectTargetBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
+shouldSyncAndUninstallWhenComponentInventoryChanges
+shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain
 
 printf 'PASS: %d SDLC orchestrator profile contracts OK.\n' "$PASSES"

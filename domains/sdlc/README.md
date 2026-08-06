@@ -47,5 +47,7 @@ This local contract adapts [Caveman Cavecrew's compressed subagent-return patter
 |---|---|---|
 | Agent (primary) | `sdlc-orchestrator` | Routes SDLC intent and owns user-facing questions |
 | Agent (subagent) | `review-coordinator` | Coordinates Judgment and Defend |
+| Skill | `judgment-day` | Runs dual blind adversarial reviews |
+| Skill | `programming-practices-core` | Evaluates language-neutral code quality |
 
 The domain defines no commands. Compatibility aliases stay with their owner domains.

@@ -44,8 +44,18 @@ The domain declares the shared `sdd-draft-change` contract directly. It assumes 
 | Skill | `architecture-map` | Creates evidence-backed C4-lite docs |
 | Skill | `architecture-state` | Detects architecture state and gaps |
 | Skill | `cognitive-doc-design` | Reduces document cognitive load |
+| Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
+| Skill | `dependency-inversion` | Detects concrete boundary dependency risks |
 | Skill | `dependency-security-audit` | Audits dependency and observability posture |
+| Skill | `design-patterns-pragmatic` | Applies patterns only to real forces |
+| Skill | `domain-modeling` | Builds and sharpens domain models |
+| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
+| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
 | Skill | `java-secure-coding` | Reviews Java security practices |
+| Skill | `kiss-yagni` | Prevents speculative architecture complexity |
+| Skill | `logging-observability` | Evaluates operational logging and observability |
+| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `prd` | Creates rigorous PRDs |
 | Skill | `prd-light` | Creates lightweight PRDs |
 | Skill | `repo-issues` | Ranks repository issues |
