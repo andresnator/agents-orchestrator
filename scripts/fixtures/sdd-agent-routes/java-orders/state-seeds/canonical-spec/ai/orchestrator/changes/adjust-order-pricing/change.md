@@ -40,6 +40,7 @@ changing production code.
 ### 1. Reconciliation
 
 Files: .ai/orchestrator/specs/order-pricing/spec.md
+Skills: none
 
 - [x] 1.1 Confirm the bulk discount, per-line share, and monetary rounding in production code.
 - [x] 1.2 Confirm no production or test source references leaflet rounding.
@@ -47,6 +48,7 @@ Files: .ai/orchestrator/specs/order-pricing/spec.md
 ### 2. Tests
 
 Files: src/test/java/com/example/orders/OrderPricingTest.java
+Skills: code-conventions, java-testing
 
 - [x] 2.1 Run the existing suite unchanged.
 

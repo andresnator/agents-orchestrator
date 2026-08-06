@@ -29,6 +29,7 @@ domain vocabulary matches how the value is used, keeping the field itself intact
 ### 1. Rename accessor
 
 Files: src/main/java/com/example/orders/Order.java, src/test/java/com/example/orders/
+Skills: code-conventions, legacy-code-safety
 
 - [ ] 1.1 Rename `reference()` to `orderNumber()` and update every call site.
 

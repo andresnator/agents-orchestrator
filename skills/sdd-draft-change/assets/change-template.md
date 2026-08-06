@@ -27,6 +27,7 @@ Status: draft | ready-for-sdd | active | Source: <producer>
 ### Group 1: <goal>
 
 Files: <paths>
+Skills: <comma-separated skill names or none>
 
 - [ ] <small verifiable task>
 

@@ -10,15 +10,19 @@ permission:
   lsp: allow
   skill:
     "*": deny
+    behavior-characterization: allow
     code-conventions: allow
     domain-modeling: allow
     evidence-first-planning: allow
     graphify-cli: allow
     grilling: allow
+    java-testing: allow
+    legacy-code-safety: allow
     native-question-ux: allow
     risk-assessment: allow
     scope-analysis: allow
     sdd-draft-change: allow
+    systematic-debugging: allow
   question: deny
   task:
     "*": deny
@@ -47,6 +51,18 @@ Accept only:
 Invalid or missing pairs are `BLOCK plan/<operation> <reason>`. Plan only in the allowlisted `.ai/` paths; never edit production code, tests, build files, commit, or push. Return user decisions as `ASK plan/<operation> <normal-language question>` and resume the same child.
 
 Freeze target and intended behavior from repository evidence. Prefer a healthy graph, otherwise read/search; never run graph lifecycle commands. Churn uses only the allowlisted Git history commands and requires `ASK` authorization.
+
+Every new executable Work group records `Skills: <csv|none>` using this map:
+
+| Name | Use |
+|---|---|
+| `code-conventions` | Code or test edits |
+| `java-testing` | Java tests |
+| `behavior-characterization` | Current-behavior capture |
+| `legacy-code-safety` | Protected legacy changes |
+| `systematic-debugging` | Reproducible bug or diagnostic fixes |
+
+Use `none` otherwise. Names only; no paths or review lenses. Load only selected skills needed to shape the plan.
 
 ## `deep-plan`
 

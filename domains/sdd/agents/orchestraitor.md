@@ -41,9 +41,15 @@ Judgment rounds: <n>
 Last verified: none | working-tree | <baseline>..HEAD | <sha>
 ```
 
+## Skill resolution
+
+Each new Work group declares `Skills: <csv|none>`. A legacy group without it resolves to `code-conventions` for code/test work and `none` otherwise; do not rewrite the producer body. Supported names: `code-conventions`, `java-testing`, `behavior-characterization`, `legacy-code-safety`, `systematic-debugging`.
+
+Resolve names from `.ai/atl/skill-registry.md` when present; its startup refresh is asynchronous, so fall back to the runtime skill catalog. Registry is discovery only: pass names, never paths. Before implementation, block unsupported or unavailable names with `BLOCK sdd/<operation> skill=<name> unavailable; next=install-or-revise`.
+
 ## Execute
 
-1. Group unchecked Work items by dependencies and `Files:`. Parallelize only clearly disjoint scopes; otherwise serialize. Brief `sdd-implement` with exact change path, ids, behavior scenarios, decisions, scope, TDD, and scoped check. Workers never stage, commit, push, or edit planning/state.
+1. Group unchecked Work items by dependencies and `Files:`. Parallelize only clearly disjoint scopes; otherwise serialize. Brief `sdd-implement` with exact change path, ids, behavior scenarios, decisions, scope, TDD, `skills=<csv|none>`, and scoped check. Workers never stage, commit, push, or edit planning/state.
 2. Accept only `OK wave=<id> files=<csv> check=<one-line>` matching the assignment. One clarification retry is allowed; second ambiguity is `FAIL`. Run the round check, then mark boxes.
 3. With `Delivery: commit-per-wave`, record baseline before wave 1. Only you stage the exact verified worker files, exclude `.ai/`, and create one work-unit commit. Never push or land; otherwise all changes remain uncommitted.
 4. Set `Phase: verify`; send all behavior scenarios, implementation scope, check, and explicit diff range to `sdd-verify`. Clean is `PASS <passed>/<total> evidence=<pointer or one-line test>`. Failures become scoped fix waves. Allow at most two fix rounds; then `ASK` continue, re-scope, or stop.

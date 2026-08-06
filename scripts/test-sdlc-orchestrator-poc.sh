@@ -369,20 +369,24 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
 }
 
 shouldSyncAndUninstallWhenComponentInventoryChanges() {
-  local sync_project uninstall_project target skill
+  local sync_project uninstall_project target old_skill_source skill
   sync_project="$(make_project changed-inventory-sync)"
 
   # Given a valid profile created by a checkout with a different component set
   run_profile install --project-root "$sync_project" >/dev/null
   simulate_previous_component_inventory "$sync_project"
+  target="$sync_project/.opencode"
+  old_skill_source="$ROOT/domains/plan/skills/java-testing"
+  ln -sfn "$old_skill_source" "$target/skills/java-testing"
 
   # When status and reinstall run from the current checkout
   run_profile status --project-root "$sync_project" >/dev/null
   run_profile install --project-root "$sync_project" >/dev/null
 
   # Then the installer syncs the new set and the profile remains removable
-  target="$sync_project/.opencode"
   [ -L "$target/skills/evidence-first-planning" ] || fail "changed inventory: new skill was not installed"
+  [ "$(readlink "$target/skills/java-testing")" = "$ROOT/skills/java-testing" ] ||
+    fail "changed inventory: manifest-owned skill was not relinked to its current source"
   [ ! -e "$target/skills/wayfinder" ] && [ ! -L "$target/skills/wayfinder" ] ||
     fail "changed inventory: retired skill remains"
   run_profile uninstall --project-root "$sync_project" >/dev/null
@@ -401,23 +405,26 @@ shouldSyncAndUninstallWhenComponentInventoryChanges() {
   pass shouldSyncAndUninstallWhenComponentInventoryChanges
 }
 
-shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain() {
-  local project target skill
-  project="$(make_project filtered-plan)"
-  target="$project/.opencode"
+shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
+  local domain project target skill
 
-  # Given a filtered Plan-only installation
-  "$ROOT/installers/opencode.sh" install --domain plan --target "$target" >/dev/null
+  for domain in plan sdd; do
+    project="$(make_project "filtered-$domain")"
+    target="$project/.opencode"
 
-  # When each Plan agent skill permission is inspected
-  # Then every allowlisted skill is present without relying on Common co-installation
-  while IFS= read -r skill; do
-    [ -n "$skill" ] || continue
-    [ -L "$target/skills/$skill" ] || fail "filtered plan: allowlisted skill is missing: $skill"
-  done < <(allowed_skills_for_domain plan)
+    # Given a one-domain installation
+    "$ROOT/installers/opencode.sh" install --domain "$domain" --target "$target" >/dev/null
 
-  "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
-  pass shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain
+    # When each agent skill permission is inspected
+    # Then every allowlisted skill is present without relying on another domain
+    while IFS= read -r skill; do
+      [ -n "$skill" ] || continue
+      [ -L "$target/skills/$skill" ] || fail "filtered $domain: allowlisted skill is missing: $skill"
+    done < <(allowed_skills_for_domain "$domain")
+
+    "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
+  done
+  pass shouldInstallEveryAllowedSkillWhenFilteringOneDomain
 }
 
 command -v jq >/dev/null 2>&1 || fail "jq is required"
@@ -436,6 +443,6 @@ shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
 shouldRejectSymlinkedProjectTargetBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 shouldSyncAndUninstallWhenComponentInventoryChanges
-shouldInstallEveryAllowedSkillWhenFilteringToPlanDomain
+shouldInstallEveryAllowedSkillWhenFilteringOneDomain
 
 printf 'PASS: %d SDLC orchestrator profile contracts OK.\n' "$PASSES"

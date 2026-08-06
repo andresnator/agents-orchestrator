@@ -24,7 +24,7 @@ Copy-ready hypothetical prompts for the five Plan behaviors and their safety ali
 **Expected artifacts/A2A:**
 
 - One `.ai/deep-planner/changes/<change>/change.md` whose first line is `Status: ready-for-sdd | Source: deep-planner`.
-- Behavior scenarios, real `Files:` scopes, `mvn -o test` verification, and `OK plan/deep-plan` with `next=sdd` and the exact handoff path.
+- Behavior scenarios, real `Files:` scopes, `Skills: code-conventions, java-testing` for code/test work, `mvn -o test` verification, and `OK plan/deep-plan` with `next=sdd` and the exact handoff path.
 
 **Forbidden behavior:** Production/test edits, roadmap creation, companion proposal/design/spec/tasks files, or execution choices in the planner artifact.
 
@@ -107,7 +107,7 @@ Continue the exact discovery plan you just created. For this scenario choose EUR
 
 **Expected artifacts/A2A:**
 
-- One ready refactor `change.md` with preservation scenarios, affected paths, rollback, and end-to-end verification.
+- One ready refactor `change.md` with preservation scenarios, affected paths, `Skills: code-conventions, legacy-code-safety`, rollback, and end-to-end verification.
 - At most one analyzer for medium/high risk or two evidence-backed lenses for critical risk.
 - `OK plan/refactor` with `next=sdd` and the exact handoff.
 
@@ -127,7 +127,7 @@ Continue the exact discovery plan you just created. For this scenario choose EUR
 
 **Expected artifacts/A2A:**
 
-- One `.ai/deep-planner/changes/harden-<target>/change.md` containing tooling if needed, minimal seams, characterization tests, and a coverage baseline in that order.
+- One `.ai/deep-planner/changes/harden-<target>/change.md` containing tooling if needed, minimal seams, characterization tests, a coverage baseline in that order, and the applicable `java-testing`, `behavior-characterization`, and `legacy-code-safety` skill names.
 - `OK plan/refactor` with `next=sdd`; the documented next planning action after SDD is `/refactor-plan` again.
 
 **Forbidden behavior:** Production refactor tasks, bug fixes, or hardening and restructuring in the same change.

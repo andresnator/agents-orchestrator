@@ -35,18 +35,21 @@ current pricing behavior and valid order construction.
 ### 1. Exception
 
 Files: src/main/java/com/example/orders/OrderLimitExceededException.java
+Skills: code-conventions
 
 - [ ] 1.1 Add the exception with the offending count, maximum, and clear message.
 
 ### 2. Guard
 
 Files: src/main/java/com/example/orders/Order.java
+Skills: code-conventions
 
 - [ ] 2.1 Add `MAX_LINES` and reject construction above it.
 
 ### 3. Tests
 
 Files: src/test/java/com/example/orders/OrderLimitTest.java
+Skills: code-conventions, java-testing
 
 - [ ] 3.1 Cover the maximum, above the maximum, and empty-order cases.
 

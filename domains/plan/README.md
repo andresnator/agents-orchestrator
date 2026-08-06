@@ -178,7 +178,7 @@ Hardening and restructuring remain separate handoffs. Discovered bugs are charac
 ## Contracts
 
 - A ready change starts with `Status: ready-for-sdd | Source: deep-planner`; roadmap slices add `Roadmap: <goal> | Slice: <n>/<total>` on line two.
-- `change.md` contains outcome, scope, behavior deltas, approach, ordered work, verification, and non-empty risks. Disjoint `Files:` scopes may execute in parallel.
+- `change.md` contains outcome, scope, behavior deltas, approach, ordered work, verification, and non-empty risks. Each new Work group records implementation `Skills:` by name; disjoint `Files:` scopes may execute in parallel.
 - Decision and discovery plans use the shared `evidence-first-planning` method. Roadmaps plan only the first pending slice whose dependencies are done.
 - Planner and analyzer returns use compact Caveman-style A2A; human artifacts and questions use normal English.
 
@@ -229,6 +229,7 @@ Copy-ready hypothetical prompts and expected evidence are in [Plan flow test sce
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
 | Skill | `single-responsibility` | Detects multiple reasons to change |
 | Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
+| Skill | `systematic-debugging` | Plans reproducible bug and diagnostic fix work |
 | Skill | `tooling-audit` | Detects test-tooling gaps |
 | Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |
 | Skill | `type-contracts` | Detects weak type contracts |

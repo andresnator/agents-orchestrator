@@ -174,11 +174,15 @@ assert_contains "$lite" 'sdd-lite'
 assert_contains "$lite" 'change.md'
 assert_contains "$lite" 'lite-verify'
 assert_contains "$lite" 'Judgment: none | Delivery: none'
+assert_contains "$lite" 'Skills: none'
 assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
 assert_compact_coordinator_return "$lite"
 
 assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'mode: subagent'
 assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'question: deny'
+assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'sdd-cold-verification: allow'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains domains/sdd-lite/agents/lite-verify.md 'Load `sdd-cold-verification`'
 assert_contains domains/sdd-lite/agents/lite-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 assert_contains domains/sdd/agents/sdd-implement.md 'OK wave=<id> files=<csv> check=<one-line result>'
 assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'

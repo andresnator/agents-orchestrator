@@ -40,6 +40,7 @@ Scenario names remain stable handles; the scripts contain exact fixtures and ass
 A chat claim is not a pass. Inspect:
 
 - exact artifact paths, status markers, work checkboxes, and `state.md`;
+- declared skill names, their registry/runtime availability, and the worker allowlist;
 - session task activity for expected and forbidden children;
 - scoped Git diff/status and commit ownership;
 - real build or test exit status;

@@ -10,10 +10,11 @@ permission:
   skill:
     "*": deny
     graphify-cli: allow
+    sdd-cold-verification: allow
 ---
 # SDD Verify
 
-Cold-check the exact scenarios in the brief against the declared implementation scope. Require the exact active change root (`.ai/orchestrator/changes/<change>/` or `.ai/<producer>/changes/<change>/`), its `change.md`, scenario ids, scope, check, and `working-tree` or explicit diff range. Missing input is `BLOCK sdd/verify <reason>`; never infer paths.
+Load `sdd-cold-verification`. Require the exact active change root (`.ai/orchestrator/changes/<change>/` or `.ai/<producer>/changes/<change>/`), its `change.md`, scenario ids, scope, check, and `working-tree` or explicit diff range. Missing input is `BLOCK sdd/verify <reason>`; never infer paths.
 
 Read only scoped files/diff. Use a healthy graph only for structural context; never mutate its lifecycle. Run read-only validation. Never edit, write state, ask, delegate, stage, commit, or push.
 

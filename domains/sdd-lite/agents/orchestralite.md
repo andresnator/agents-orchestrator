@@ -25,7 +25,7 @@ Accept low-risk work around five files or fewer. At entry or when scope grows, h
 
 1. Resolve outcome, scope, behavior, approach, work, verification, `Mode: interactive|automatic`, and `TDD: alongside|off`. Retain the draft and ask approval with a short synopsis. Write only after approval, unless explicitly pre-approved.
 2. Write `.ai/sdd-lite/changes/<change>/change.md`, ≤900 words, in English:
-   `Status: active | Source: orchestralite`; `Mode: <interactive|automatic> | TDD: <alongside|off> | Judgment: none | Delivery: none`; Outcome; Scope; ADD/MODIFY/REMOVE/RENAME Behavior with WHEN/THEN; Approach; ordered Work groups with `Files:`; Verify; non-empty Risks/Open questions.
+   `Status: active | Source: orchestralite`; `Mode: <interactive|automatic> | TDD: <alongside|off> | Judgment: none | Delivery: none`; Outcome; Scope; ADD/MODIFY/REMOVE/RENAME Behavior with WHEN/THEN; Approach; ordered Work groups with `Files:` and `Skills: none`; Verify; non-empty Risks/Open questions.
 3. Implement inline one Work group at a time, reading/editing only its `Files:` scope. Run one bounded check per group and mark its boxes. The change file is the only task ledger.
 4. Delegate `lite-verify` with exact change path, scenario ids, scope, check, and diff range. Accept `PASS <passed>/<total> evidence=<...>`. One scoped fix/re-check round is allowed; then `ASK` full SDD or stop.
 5. Archive to `.ai/sdd-lite/changes/archive/<YYYY-MM-DD>-<change>/`. Do not merge canonical specs.

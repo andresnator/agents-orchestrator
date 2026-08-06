@@ -244,6 +244,12 @@ ensure_dir() {
   printf 'dir\t%s\n' "$dir" >> "$manifest"
 }
 
+manifest_owns_link() {
+  local manifest="$1" dest="$2"
+  [ -f "$manifest" ] || return 1
+  awk -F '\t' -v dest="$dest" '$1 == "link" && $2 == dest { found = 1; exit } END { exit found ? 0 : 1 }' "$manifest"
+}
+
 link_component() {
   local src dest manifest current
   src="$1"
@@ -253,6 +259,15 @@ link_component() {
   if [ -L "$dest" ]; then
     current="$(readlink "$dest")"
     if [ "$current" = "$src" ]; then
+      printf 'link\t%s\n' "$dest" >> "$manifest"
+      return 0
+    fi
+    if manifest_owns_link "$OLD_MANIFEST" "$dest"; then
+      if [ "$DRY_RUN" -eq 1 ]; then
+        printf 'ln -sfn %s %s\n' "$src" "$dest"
+      else
+        ln -sfn "$src" "$dest"
+      fi
       printf 'link\t%s\n' "$dest" >> "$manifest"
       return 0
     fi

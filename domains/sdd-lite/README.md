@@ -29,7 +29,7 @@ sdlc-orchestrator -> orchestralite: draft + implement inline
 
 State stays under `.ai/sdd-lite/`, never `.ai/orchestrator/`. The archived `change.md` is the complete durable record. Missing changes, scope expansion, unsafe operations, or ambiguous verifier output block and return to the primary; they are never guessed.
 
-Lite is standalone internally: it loads no skills and denies Graphify because the scope gate makes direct reads cheaper. Normal profile routing still requires the `sdlc` domain.
+Lite coordinator loads no implementation skills and denies Graphify; bounded scope favors direct reads. `lite-verify` loads only shared cold verification. Normal profile routing still requires the `sdlc` domain.
 
 ## Components
 
@@ -37,5 +37,6 @@ Lite is standalone internally: it loads no skills and denies Graphify because th
 |---|---|---|
 | Agent (subagent coordinator) | `orchestralite` | Drafts, implements, fixes, and archives the bounded change |
 | Agent (subagent) | `lite-verify` | Cold-checks the implementation against `change.md` |
+| Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
 
 Run the `LITE-*` scenarios through the opt-in flow harness described in [docs/sdd-test-plan.md](../../docs/sdd-test-plan.md).

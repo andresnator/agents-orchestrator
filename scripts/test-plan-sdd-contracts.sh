@@ -90,8 +90,20 @@ assert_frontmatter_not_contains() {
 # One drafting contract replaces the retired phase fan-out.
 assert_exists skills/sdd-draft-change/SKILL.md
 assert_exists skills/sdd-draft-change/assets/change-template.md
+assert_exists skills/sdd-cold-verification/SKILL.md
 for owner in plan architecture common sdd; do
   assert_relative_symlink "domains/$owner/skills/sdd-draft-change" '../../../skills/sdd-draft-change'
+done
+for skill in behavior-characterization java-testing legacy-code-safety; do
+  for owner in plan sdd; do
+    assert_relative_symlink "domains/$owner/skills/$skill" "../../../skills/$skill"
+  done
+done
+for owner in common plan sdd; do
+  assert_relative_symlink "domains/$owner/skills/systematic-debugging" '../../../skills/systematic-debugging'
+done
+for owner in sdd sdd-lite; do
+  assert_relative_symlink "domains/$owner/skills/sdd-cold-verification" '../../../skills/sdd-cold-verification'
 done
 for retired in \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
@@ -112,12 +124,18 @@ assert_contains "$template" 'ADD|MODIFY|REMOVE|RENAME'
 assert_contains "$template" 'WHEN <condition>'
 assert_contains "$template" 'THEN <observable result>'
 assert_contains "$template" 'Files: <paths>'
+assert_contains "$template" 'Skills: <comma-separated skill names or none>'
 assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
 assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
 assert_contains skills/sdd-draft-change/SKILL.md 'omits execution choices'
 assert_contains skills/sdd-draft-change/SKILL.md 'preserves marker lines'
-assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "1.2.0"'
+assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "1.3.0"'
 assert_contains skills/sdd-draft-change/SKILL.md 'Roadmap: <goal> | Slice: <n>/<total>'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains skills/sdd-draft-change/SKILL.md 'Missing legacy fields default to `code-conventions`'
+assert_frontmatter_contains skills/sdd-cold-verification/SKILL.md 'version: "1.0.0"'
+assert_contains skills/sdd-cold-verification/SKILL.md 'A green but tautological test is a failure'
+assert_contains skills/sdd-cold-verification/SKILL.md "Judgment owns broader correctness"
 assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
 
 # One model-neutral planning skill owns decisions, discovery, and roadmaps.
@@ -153,6 +171,11 @@ done
 
 assert_contains domains/plan/agents/deep-planner.md '.ai/deep-planner/changes/'
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'evidence-first-planning: allow'
+for skill in behavior-characterization code-conventions java-testing legacy-code-safety systematic-debugging; do
+  assert_frontmatter_contains domains/plan/agents/deep-planner.md "$skill: allow"
+done
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains domains/plan/agents/deep-planner.md 'Every new executable Work group records `Skills: <csv|none>`'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'fable-planning: allow'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'wayfinder: allow'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md '".ai/wayfinder/**": allow'
@@ -186,6 +209,9 @@ assert_regex "$orchestrator" 'adopt.*in place|in-place'
 assert_regex "$orchestrator" '(keep|preserve).*producer marker'
 assert_regex "$orchestrator" 'canonical spec'
 assert_contains "$orchestrator" 'Roadmap: <goal> | Slice: <n>/<total>'
+assert_contains "$orchestrator" '.ai/atl/skill-registry.md'
+assert_contains "$orchestrator" 'fall back to the runtime skill catalog'
+assert_contains "$orchestrator" 'skills=<csv|none>'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains "$orchestrator" 'planned` to `adopted'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
@@ -199,11 +225,21 @@ assert_regex "$implement" 'never .*commit.*push|never .*stage.*commit'
 assert_not_contains "$implement" 'commit: "<sha> | none"'
 assert_not_contains "$implement" 'tcr: allow'
 assert_not_contains "$implement" 'work-unit-commits: allow'
+for skill in behavior-characterization code-conventions java-testing legacy-code-safety systematic-debugging; do
+  assert_frontmatter_contains "$implement" "$skill: allow"
+done
+assert_contains "$implement" 'Load only the named allowlisted skills'
 verify=domains/sdd/agents/sdd-verify.md
 assert_frontmatter_contains "$verify" 'edit: deny'
 assert_frontmatter_contains "$verify" 'write: deny'
 assert_contains "$verify" 'change.md'
 assert_contains "$verify" 'explicit diff range'
+assert_frontmatter_contains "$verify" 'sdd-cold-verification: allow'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$verify" 'Load `sdd-cold-verification`'
+assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'sdd-cold-verification: allow'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains domains/sdd-lite/agents/lite-verify.md 'Load `sdd-cold-verification`'
 
 # No runtime/profile/fixture contract may retain the deleted drafting inventory.
 inventory_roots=(domains/plan domains/architecture domains/sdd domains/sdd-lite profiles scripts/fixtures/sdd-agent-routes/java-orders)
@@ -225,6 +261,7 @@ for change_dir in \
   "$fixture_root/canonical-spec/ai/orchestrator/changes/adjust-order-pricing" \
   "$fixture_root/legacy/orchestraitor/changes/rename-order-reference"; do
   assert_exists "$change_dir/change.md"
+  assert_contains "$change_dir/change.md" 'Skills:'
   assert_absent "$change_dir/proposal.md"
   assert_absent "$change_dir/design.md"
   assert_absent "$change_dir/tasks.md"

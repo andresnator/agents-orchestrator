@@ -13,7 +13,7 @@ Full spec-driven implementation around one human-readable pre-implementation fil
 
 Direct work lives at `.ai/orchestrator/changes/<change>/change.md`. Planner handoffs stay at `.ai/<producer>/changes/<change>/change.md` and begin with `Status: ready-for-sdd`; SDD adopts that exact file, preserves its producer marker, and adds active execution in `state.md`. Legacy proposal/design/spec/task bundles are not auto-migrated.
 
-The shared `sdd-draft-change` skill defines the concise shape: outcome, scope, behavior deltas, approach, work groups with optional `Files:` scopes, verification, and non-empty risks. One file may contain several waves. Disjoint scopes may run in parallel; unclear overlap runs sequentially.
+The shared `sdd-draft-change` skill defines outcome, scope, behavior deltas, approach, work groups, verification, and non-empty risks. Work groups use optional `Files:` scopes and required `Skills:` names. Disjoint scopes may run in parallel; unclear overlap runs sequentially. SDD resolves names through the generated registry or runtime catalog, then enforces the worker allowlist.
 
 A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. SDD preserves that marker, moves its row from `planned` to `adopted` at intake and to `done` at archive, then offers but never auto-plans the next unblocked slice.
 
@@ -50,10 +50,15 @@ Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-d
 | Agent (subagent) | `jd-solo` | Runs the light review path |
 | Agent (subagent) | `jd-fix` | Applies confirmed findings |
 | Command | `/judgment` | Routes adversarial review |
+| Skill | `behavior-characterization` | Captures current behavior during hardening |
 | Skill | `code-conventions` | Applies repository code and test conventions |
 | Skill | `graphify-cli` | Queries code graphs read-only |
+| Skill | `java-testing` | Implements Java tests and characterization seams |
+| Skill | `legacy-code-safety` | Protects behavior during legacy changes |
 | Skill | `native-question-ux` | Presents questions through portable native UX |
+| Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `systematic-debugging` | Applies evidence-first debugging to fix waves |
 | Skill | `work-unit-commits` | Plans reviewable, cohesive commits |
 
 Static and opt-in model checks are summarized in [docs/sdd-test-plan.md](../../docs/sdd-test-plan.md).

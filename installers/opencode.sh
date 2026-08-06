@@ -713,12 +713,6 @@ copy_source() {
   cat "$1"
 }
 
-manifest_owns_link() {
-  local manifest="$1" dest="$2"
-  [ -f "$manifest" ] || return 1
-  awk -F '\t' -v dest="$dest" '$1 == "link" && $2 == dest { found = 1; exit } END { exit found ? 0 : 1 }' "$manifest"
-}
-
 ensure_managed_array_entry() {
   local file="$1" field="$2" value="$3" manifest="$4" owns=0
   manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$file" "$field" "$value" && owns=1
