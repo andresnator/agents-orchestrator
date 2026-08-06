@@ -64,9 +64,9 @@ Direct SDD writes the same shape under `.ai/orchestrator/changes/`. SDD Lite kee
 
 ## Ownership and rollback
 
-`.agents-orchestrator-manifest` owns installed components. `.sdlc-orchestrator-poc-manifest` owns the selected profile and the prior values of `default_agent` and `subagent_depth`.
+`.agents-orchestrator-manifest` owns installed components. `.sdlc-orchestrator-poc-manifest` owns the selected profile, prior scalar values, and whether the local config and target existed.
 
-Install preflights downloads and refuses broad, foreign, invalid, escaping, home, root, source-repository, or worktree targets. Status and uninstall fail closed on tampering. A clean uninstall removes only manifest-owned components, restores prior JSONC scalar values, preserves comments and foreign keys, and removes the profile manifest.
+Install preflights downloads and refuses broad, foreign, invalid, escaping, home, root, source-repository, or worktree targets. Status and uninstall fail closed on tampering. A clean uninstall restores missing config to absence, preserves comments and foreign keys, and prunes only an empty target created by the profile.
 
 ## Verification
 

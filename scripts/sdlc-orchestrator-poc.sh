@@ -138,6 +138,10 @@ render_restored_config() {
   fi
 }
 
+is_empty_jsonc_object() {
+  [ "$(tr -d '[:space:]' < "$1")" = "{}" ]
+}
+
 manifest_value() {
   local key="$1"
   awk -F '\t' -v key="$key" '$1 == key { print substr($0, length($1) + 2); exit }' "$PROFILE_MANIFEST"
@@ -300,8 +304,12 @@ validate_profile_manifest() {
   [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign POC profile manifest root"
   [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign POC profile target"
   [ "$(manifest_value domains)" = "$PROFILE_DOMAINS" ] || die "broad POC profile domain selection"
+  local config_existed target_existed expected_sha actual_sha
+  config_existed="$(manifest_value config-existed)"
+  case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in POC profile manifest" ;; esac
+  target_existed="$(manifest_value target-existed)"
+  case "$target_existed" in ""|0|1) ;; *) die "invalid target-existed value in POC profile manifest" ;; esac
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing"
-  local expected_sha actual_sha
   expected_sha="$(manifest_value installer-manifest-sha256)"
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
   [ -n "$expected_sha" ] && [ "$expected_sha" = "$actual_sha" ] ||
@@ -310,7 +318,7 @@ validate_profile_manifest() {
 }
 
 write_profile_manifest() {
-  local default_state="$1" default_json="$2" depth_state="$3" depth_json="$4" config_existed="$5"
+  local default_state="$1" default_json="$2" depth_state="$3" depth_json="$4" config_existed="$5" target_existed="$6"
   TMP_THREE="$(mktemp "$TARGET/.sdlc-orchestrator-poc-manifest.tmp.XXXXXX")"
   {
     printf 'contract\t%s\n' "$PROFILE_CONTRACT"
@@ -318,6 +326,7 @@ write_profile_manifest() {
     printf 'target\t%s\n' "$TARGET"
     printf 'domains\t%s\n' "$PROFILE_DOMAINS"
     printf 'config-existed\t%s\n' "$config_existed"
+    printf 'target-existed\t%s\n' "$target_existed"
     printf 'previous-default-agent-state\t%s\n' "$default_state"
     printf 'previous-default-agent-json\t%s\n' "$default_json"
     printf 'previous-subagent-depth-state\t%s\n' "$depth_state"
@@ -329,7 +338,7 @@ write_profile_manifest() {
 }
 
 run_install() {
-  local default_state default_json depth_state depth_json config_existed=0
+  local default_state default_json depth_state depth_json config_existed=0 target_existed=0
   if [ -f "$PROFILE_MANIFEST" ]; then
     validate_profile_manifest
     validate_managed_config
@@ -338,9 +347,12 @@ run_install() {
     depth_state="$(manifest_value previous-subagent-depth-state)"
     depth_json="$(manifest_value previous-subagent-depth-json)"
     config_existed="$(manifest_value config-existed)"
+    target_existed="$(manifest_value target-existed)"
+    [ -n "$target_existed" ] || target_existed=1
   else
     [ ! -e "$INSTALLER_MANIFEST" ] || die "foreign installer manifest already exists: $INSTALLER_MANIFEST"
     preflight_fresh_destinations
+    if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then target_existed=1; fi
     [ ! -e "$CONFIG_FILE" ] || config_existed=1
     read_scalar "$CONFIG_FILE" default_agent
     default_state="$JSON_STATE"; default_json="$JSON_VALUE"
@@ -354,7 +366,7 @@ run_install() {
   mkdir -p "$TARGET"
   mv "$TMP_TWO" "$CONFIG_FILE"
   TMP_TWO=""
-  write_profile_manifest "$default_state" "$default_json" "$depth_state" "$depth_json" "$config_existed"
+  write_profile_manifest "$default_state" "$default_json" "$depth_state" "$depth_json" "$config_existed" "$target_existed"
   validate_managed_config
   printf 'status: installed\nproject-root: %s\ndefault_agent: sdlc-orchestrator\nsubagent_depth: 2\n' "$PROJECT_ROOT"
 }
@@ -375,18 +387,26 @@ run_uninstall() {
   validate_profile_manifest
   validate_managed_config
 
-  local default_state default_json depth_state depth_json
+  local default_state default_json depth_state depth_json config_existed target_existed
   default_state="$(manifest_value previous-default-agent-state)"
   default_json="$(manifest_value previous-default-agent-json)"
   depth_state="$(manifest_value previous-subagent-depth-state)"
   depth_json="$(manifest_value previous-subagent-depth-json)"
+  config_existed="$(manifest_value config-existed)"
+  target_existed="$(manifest_value target-existed)"
+  [ -n "$target_existed" ] || target_existed=1
   render_restored_config "$default_state" "$default_json" "$depth_state" "$depth_json"
 
   "$INSTALLER" uninstall --target "$TARGET"
-  mkdir -p "$TARGET"
-  mv "$TMP_TWO" "$CONFIG_FILE"
-  TMP_TWO=""
+  if [ "$config_existed" = 0 ] && is_empty_jsonc_object "$TMP_TWO"; then
+    rm -f "$CONFIG_FILE"
+  else
+    mkdir -p "$TARGET"
+    mv "$TMP_TWO" "$CONFIG_FILE"
+    TMP_TWO=""
+  fi
   rm -f "$PROFILE_MANIFEST"
+  if [ "$target_existed" = 0 ]; then rmdir "$TARGET" 2>/dev/null || true; fi
   printf 'status: uninstalled\nproject-root: %s\n' "$PROJECT_ROOT"
 }
 

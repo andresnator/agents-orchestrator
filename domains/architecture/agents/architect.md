@@ -63,7 +63,7 @@ Verify language, toolchain, modules, and architecture with `architecture-state`;
 - `prd`: infer behavior from code; use `prd-light` unless rigorous `prd` requested; never invent intent.
 - `ideate`: `architecture-ideation`; write an ADR, then one `.ai/architect/changes/<change>/change.md` with `Status: ready-for-sdd | Source: architect`. First Work group establishes fitness-function guardrails. No proposal/design/spec/tasks companions.
 - `audit`: `dependency-security-audit`; run only authorized allowlisted read-only commands, otherwise `method: manifest-fallback`.
-- `boundary`: delegate one target to `boundary-inspector`; persist its report under `.ai/architect/reports/`.
+- `boundary`: choose an exact target-specific path under `.ai/architect/reports/`; delegate the target and path to `boundary-inspector`, then confirm the returned path matches and the report exists before `OK`.
 
 ```text
 OK architecture/<operation>

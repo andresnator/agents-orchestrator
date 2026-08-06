@@ -114,6 +114,8 @@ for operation in map review prd ideate audit boundary; do
   assert_contains "$architect" "$operation"
 done
 assert_contains "$architect" 'change.md'
+assert_contains "$architect" 'exact target-specific path'
+assert_contains "$architect" 'report exists'
 assert_not_contains "$architect" "$RUNTIME_ARGUMENTS"
 assert_compact_coordinator_return "$architect"
 
@@ -136,6 +138,9 @@ for analyzer in \
   assert_frontmatter_contains "$analyzer" '"*": deny'
 done
 assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md 'service-boundary-analysis: allow'
+assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md '".ai/architect/reports/**": allow'
+assert_contains domains/architecture/agents/boundary-inspector.md 'caller-supplied report path'
+assert_contains domains/architecture/agents/boundary-inspector.md 'no logs or report body in A2A'
 
 for coordinator in domains/plan/agents/deep-planner.md domains/sdd/agents/orchestraitor.md; do
   assert_frontmatter_contains "$coordinator" 'mode: subagent'

@@ -252,6 +252,11 @@ def set_scalar(text: str, property_name: str, encoded_value: str) -> tuple[str, 
     return rendered, True
 
 
+def comma_tokens_between(text: str, start: int, end: int) -> list[int]:
+    """Absolute positions of syntactic commas, excluding strings and comments."""
+    return [start + token.start for token in tokenize(text[start:end]) if token.kind == ","]
+
+
 def property_separator_comma(text: str, root: Node, property_name: str) -> int | None:
     assert root.properties is not None
     assert root.property_keys is not None
@@ -261,17 +266,15 @@ def property_separator_comma(text: str, root: Node, property_name: str) -> int |
     close = root.end - 1
     if index < len(ordered) - 1:
         next_key = root.property_keys[ordered[index + 1]]
-        comma = text.find(",", value.end, next_key.start)
-        return None if comma == -1 else comma
-    probe = value.end
-    while probe < close and text[probe] in " \t\r\n":
-        probe += 1
-    if probe < close and text[probe] == ",":
-        return probe
+        commas = comma_tokens_between(text, value.end, next_key.start)
+        return commas[0] if commas else None
+    commas = comma_tokens_between(text, value.end, close)
+    if commas:
+        return commas[0]
     if index > 0:
         previous = root.properties[ordered[index - 1]]
-        comma = text.rfind(",", previous.end, root.property_keys[property_name].start)
-        return None if comma == -1 else comma
+        commas = comma_tokens_between(text, previous.end, root.property_keys[property_name].start)
+        return commas[-1] if commas else None
     return None
 
 
@@ -334,17 +337,15 @@ def separator_comma(text: str, array: Node, item: Node, close_bracket: int) -> i
     items = array.items
     index = items.index(item)
     if index < len(items) - 1:
-        comma = text.find(",", item.end, items[index + 1].start)
-        return None if comma == -1 else comma
+        commas = comma_tokens_between(text, item.end, items[index + 1].start)
+        return commas[0] if commas else None
 
-    probe = item.end
-    while probe < close_bracket and text[probe] in " \t\r\n":
-        probe += 1
-    if probe < close_bracket and text[probe] == ",":
-        return probe
+    commas = comma_tokens_between(text, item.end, close_bracket)
+    if commas:
+        return commas[0]
     if index > 0:
-        comma = text.rfind(",", items[index - 1].end, item.start)
-        return None if comma == -1 else comma
+        commas = comma_tokens_between(text, items[index - 1].end, item.start)
+        return commas[-1] if commas else None
     return None
 
 
@@ -382,7 +383,7 @@ def remove_value(text: str, array: Node, item: Node) -> str:
 
 
 def has_comma_between(text: str, start: int, end: int) -> bool:
-    return any(token.kind == "," for token in tokenize(text[start:end]))
+    return bool(comma_tokens_between(text, start, end))
 
 
 def has_trailing_comma(text: str, node: Node) -> bool:

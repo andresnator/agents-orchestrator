@@ -154,6 +154,41 @@ shouldHandleMissingPropertyAndTrailingComment() {
   pass "shouldHandleMissingPropertyAndTrailingComment"
 }
 
+shouldIgnoreCommentCommasWhenRemovingJsoncSeparators() {
+  local scratch scalar_source scalar_removed array_source array_removed
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-jsonc-comment-comma.XXXXXX")"
+  scalar_source="$scratch/scalar-source.jsonc"
+  scalar_removed="$scratch/scalar-removed.jsonc"
+  array_source="$scratch/array-source.jsonc"
+  array_removed="$scratch/array-removed.jsonc"
+  cat > "$scalar_source" <<'EOF'
+{
+  "theme": "dark", // keep, please
+  "subagent_depth": 2
+}
+EOF
+  cat > "$array_source" <<EOF
+{
+  "plugin": [
+    "./foreign.tsx", // keep, please
+    "$PLUGIN_SPEC"
+  ]
+}
+EOF
+
+  # Given scalar and array separators followed by comments containing commas
+  # When the final managed property and array value are removed
+  # Then only syntactic separator tokens are deleted
+  python3 "$ROOT/scripts/jsonc-array.py" remove-property "$scalar_source" subagent_depth > "$scalar_removed"
+  python3 "$ROOT/scripts/jsonc-array.py" remove "$array_source" plugin "$PLUGIN_SPEC" > "$array_removed"
+  assert_contains "$scalar_removed" "// keep, please" "scalar remove changed a comment comma"
+  assert_contains "$array_removed" "// keep, please" "array remove changed a comment comma"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$array_removed" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 &&
+    fail "array remove retained the managed value"
+  rm -rf "$scratch"
+  pass "shouldIgnoreCommentCommasWhenRemovingJsoncSeparators"
+}
+
 shouldPreserveJsoncScalarProperties() {
   local scratch original managed depth restored removed status
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-jsonc-scalar.XXXXXX")"
@@ -523,6 +558,7 @@ shouldMatchPinnedRemoteArtifacts() {
 run_contracts() {
   shouldPreserveJsoncManagedEntry
   shouldHandleMissingPropertyAndTrailingComment
+  shouldIgnoreCommentCommasWhenRemovingJsoncSeparators
   shouldPreserveJsoncScalarProperties
   shouldInstallRepairStatusAndUninstallExternalPlugins
   shouldStageSameNamedArtifactsByKind

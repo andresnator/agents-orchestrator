@@ -110,7 +110,7 @@ shouldRestoreAbsentValuesWithoutLosingComments() {
   cat > "$config" <<'EOF'
 {
   // foreign-only config survives the round trip
-  "theme": "dark",
+  "theme": "dark" // keep, please
 }
 EOF
   run_profile install --project-root "$project" >/dev/null
@@ -126,8 +126,104 @@ EOF
   set -e
   [ "$status" -eq 1 ] || fail "absent restore: subagent_depth still exists"
   grep -Fq '// foreign-only config survives the round trip' "$config" || fail "absent restore: comment lost"
+  grep -Fq '// keep, please' "$config" || fail "absent restore: inline comment comma changed"
   grep -Fq '"theme": "dark"' "$config" || fail "absent restore: foreign key lost"
   pass shouldRestoreAbsentValuesWithoutLosingComments
+}
+
+shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent() {
+  local project manifest
+  project="$(make_project generated-target)"
+
+  # Given a project without a local OpenCode target or config
+  # When the profile is installed and uninstalled
+  # Then both generated paths return to absence
+  run_profile install --project-root "$project" >/dev/null
+  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  grep -Fq $'config-existed\t0' "$manifest" || fail "generated config: prior absence was not recorded"
+  grep -Fq $'target-existed\t0' "$manifest" || fail "generated target: prior absence was not recorded"
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "generated config: uninstall retained config"
+  [ ! -e "$project/.opencode" ] || fail "generated target: uninstall retained empty target"
+  pass shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent
+}
+
+shouldPreservePreexistingTargetWithoutConfig() {
+  local project manifest
+  project="$(make_project existing-target)"
+  mkdir -p "$project/.opencode"
+
+  # Given an existing local OpenCode target without a config
+  # When the profile is installed and uninstalled
+  # Then the target remains while the generated config is removed
+  run_profile install --project-root "$project" >/dev/null
+  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  grep -Fq $'config-existed\t0' "$manifest" || fail "existing target: prior config absence was not recorded"
+  grep -Fq $'target-existed\t1' "$manifest" || fail "existing target: prior target presence was not recorded"
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ -d "$project/.opencode" ] || fail "existing target: uninstall removed target"
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "existing target: uninstall retained generated config"
+  pass shouldPreservePreexistingTargetWithoutConfig
+}
+
+shouldPreserveForeignConfigAddedAfterInstall() {
+  local project config status
+  project="$(make_project config-added-after-install)"
+
+  # Given a profile-owned config that later gains a foreign property
+  # When the profile is uninstalled
+  # Then only managed properties are removed and the foreign config survives
+  run_profile install --project-root "$project" >/dev/null
+  config="$project/.opencode/opencode.jsonc"
+  set_scalar "$config" theme '"dark"'
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ "$(scalar "$config" theme)" = '"dark"' ] || fail "foreign config: added property was not preserved"
+  set +e
+  python3 "$JSONC_EDITOR" get "$config" default_agent >/dev/null
+  status=$?
+  set -e
+  [ "$status" -eq 1 ] || fail "foreign config: default_agent still exists"
+  set +e
+  python3 "$JSONC_EDITOR" get "$config" subagent_depth >/dev/null
+  status=$?
+  set -e
+  [ "$status" -eq 1 ] || fail "foreign config: subagent_depth still exists"
+  pass shouldPreserveForeignConfigAddedAfterInstall
+}
+
+shouldPreserveForeignTargetContentAddedAfterInstall() {
+  local project foreign_file
+  project="$(make_project target-content-added-after-install)"
+
+  # Given a profile-created target that later gains a foreign file
+  # When the profile is uninstalled
+  # Then the generated config is removed without pruning foreign content
+  run_profile install --project-root "$project" >/dev/null
+  foreign_file="$project/.opencode/foreign.txt"
+  printf 'keep me\n' > "$foreign_file"
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "foreign target: generated config remains"
+  grep -Fq 'keep me' "$foreign_file" || fail "foreign target: user file was removed"
+  pass shouldPreserveForeignTargetContentAddedAfterInstall
+}
+
+shouldAcceptLegacyManifestWithoutTargetOwnership() {
+  local project manifest rewritten
+  project="$(make_project legacy-profile-manifest)"
+
+  # Given a v1 profile manifest created before target ownership was recorded
+  # When status and uninstall read that manifest
+  # Then they accept it and conservatively retain the target directory
+  run_profile install --project-root "$project" >/dev/null
+  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  rewritten="$project/legacy-profile-manifest"
+  awk -F '\t' '$1 != "target-existed"' "$manifest" > "$rewritten"
+  mv "$rewritten" "$manifest"
+  run_profile status --project-root "$project" >/dev/null
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "legacy manifest: generated config remains"
+  [ -d "$project/.opencode" ] || fail "legacy manifest: unknown target ownership was pruned"
+  pass shouldAcceptLegacyManifestWithoutTargetOwnership
 }
 
 shouldAbortUninstallWhenManagedConfigChanges() {
@@ -209,6 +305,11 @@ command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
 shouldInstallStatusAndRestoreExistingJsonc
 shouldRestoreAbsentValuesWithoutLosingComments
+shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent
+shouldPreservePreexistingTargetWithoutConfig
+shouldPreserveForeignConfigAddedAfterInstall
+shouldPreserveForeignTargetContentAddedAfterInstall
+shouldAcceptLegacyManifestWithoutTargetOwnership
 shouldAbortUninstallWhenManagedConfigChanges
 shouldRejectForeignAndBroadManifests
 shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
