@@ -1,33 +1,10 @@
-# SDLC Orchestrator POC
+# Run the SDLC Orchestrator POC
 
-Status: opt-in project profile. It is not the repository's global install default and does not replace standalone domains outside the selected profile.
+The opt-in project profile makes `sdlc-orchestrator` the single natural-language entrypoint. It owns routing and user questions; six domain coordinators own specialized work and may delegate only their phase agents.
 
-## Outcome
+## Quick path
 
-The POC gives one natural-language entrypoint, `sdlc-orchestrator`, responsibility for route selection and every user-facing question. It delegates domain work to six coordinators; those coordinators delegate only their own phase agents. The primary cannot edit files or run commands.
-
-```mermaid
-flowchart LR
-  U[User] --> P[sdlc-orchestrator\nprimary + question owner]
-  P --> DP[deep-planner]
-  P --> RP[refactor-planner]
-  P --> AR[architect]
-  P --> SD[orchestraitor]
-  P --> SL[orchestralite]
-  P --> RV[review-coordinator]
-  DP --> DRAFT[sdd-proposal / spec / design / tasks]
-  RP --> RA[refactor-analyzer]
-  AR --> AA[arch-analyzer / boundary-inspector]
-  SD --> PHASE[sdd phase agents]
-  SL --> LV[lite-verify]
-  RV --> JD[jd phase agents]
-```
-
-The two-level child topology depends on OpenCode's project configuration and task continuation contracts. Relevant upstream references are the official [configuration](https://opencode.ai/docs/config/), [agents](https://opencode.ai/docs/agents/), [commands](https://opencode.ai/docs/commands/), and [permissions](https://opencode.ai/docs/permissions/) documentation, plus the pinned [OpenCode 1.18.10 Task implementation](https://github.com/anomalyco/opencode/blob/v1.18.10/packages/opencode/src/tool/task.ts). This POC requires OpenCode 1.18.10 or a compatible release with `default_agent`, `subagent_depth`, and Task `task_id` continuation behavior.
-
-## Install, inspect, and remove
-
-Always name an absolute project root. The profile owns only that project's `.opencode/` directory.
+Use an absolute target outside this source repository and its worktrees:
 
 ```bash
 scripts/sdlc-orchestrator-poc.sh install --project-root /absolute/path/to/project
@@ -35,13 +12,7 @@ scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
 scripts/sdlc-orchestrator-poc.sh uninstall --project-root /absolute/path/to/project
 ```
 
-Install selects exactly these domains:
-
-```text
-sdlc,plan,sdd,architecture,refactor,sdd-lite,common
-```
-
-It then applies these comment-preserving project properties:
+The profile installs `sdlc,plan,sdd,architecture,refactor,sdd-lite,common` into the project's `.opencode/` and applies:
 
 ```jsonc
 {
@@ -50,96 +21,66 @@ It then applies these comment-preserving project properties:
 }
 ```
 
-Learning and its `mentor` primary are intentionally outside the profile. The generic installer remains available for standalone or global domain installations; the POC wrapper is the only supported way to apply this profile.
+The generic installer remains the supported route for other domain combinations.
 
-## Natural routes
+## Routes
 
-The primary routes immediately when intent is clear. It shows a compact menu only for genuinely ambiguous intent or an explicit help request.
-
-| Intent | Coordinator | Operation |
+| Intent | Coordinator | Durable result |
 |---|---|---|
-| Executable or decision planning | `deep-planner` | `deep-plan` or `wayfinder` |
-| Test safety-net planning | `refactor-planner` | `hardening` |
-| Behavior-preserving refactor planning | `refactor-planner` | `refactor` |
-| Full implementation, resume, or ready bundle | `orchestraitor` | `direct-sdd`, `resume`, or `execute-handoff` |
-| Obviously bounded low-risk implementation | `orchestralite` | `sdd-lite` |
-| Architecture map, review, PRD, ideation, audit, or boundary inspection | `architect` | matching architecture operation |
-| Judgment or Socratic defense | `review-coordinator` | `judgment` or `defend` |
+| Executable or decision planning | `deep-planner` | `change.md`, decision plan, or Wayfinder map |
+| Test hardening or behavior-preserving refactor | `refactor-planner` | Ready `change.md` or reasoned no-plan result |
+| Full SDD, resume, or ready handoff | `orchestraitor` | Implementation, canonical specs, archived change |
+| Bounded low-risk implementation | `orchestralite` | Implementation and archived `change.md` |
+| Architecture operation | `architect` | Architecture docs, reports, ADR, or ready `change.md` |
+| Judgment or Defend | `review-coordinator` | Findings, fixes, verdict, or defense outcome |
 
-Refactor and SDD Lite are named `[Beta] Refactor` and `[Beta] SDD Lite` in user-facing route choices.
+Commands such as `/deep-plan`, `/harden-plan`, `/arch-ideate`, `/judgment`, and `/defend` are compatibility aliases through the same primary. The primary shows options only for ambiguous intent.
 
-The compatibility aliases routed through the primary are exactly:
+## Topology decision
 
-```text
-/arch-audit  /arch-ideate  /arch-map  /arch-prd  /arch-review
-/boundary-inspector  /deep-plan  /wayfinder  /harden-plan
-/refactor-plan  /judgment  /defend
-```
+The profile uses `primary -> domain coordinator -> phase agent`. This keeps question ownership and routing small while domain coordinators retain their sequencing, permissions, and model assignment. `subagent_depth: 2` is therefore load-bearing. A monolithic primary would mix every workflow; direct primary-to-worker routing would duplicate domain sequencing.
 
-`/graphify-index`, `/grill`, and commands from domains outside the profile remain unchanged and do not route through this primary.
-
-## Coordinator dependencies
-
-| Coordinator | Owns | May delegate to | Durable output |
-|---|---|---|---|
-| `deep-planner` | Deep Plan and Wayfinder | `general`, four SDD drafting agents | `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/wayfinder/` |
-| `refactor-planner` | Hardening and refactor plans | `refactor-analyzer` | `.ai/refactor-planner/changes/` |
-| `architect` | Six architecture operations | `arch-analyzer`, `boundary-inspector` | project architecture docs, `.ai/architect/` |
-| `orchestraitor` | Full SDD and ready-bundle execution | SDD phase agents | `.ai/orchestrator/` or the producer bundle root |
-| `orchestralite` | Bounded implementation in one child | `lite-verify` only | `.ai/sdd-lite/` |
-| `review-coordinator` | Judgment and Defend | `jd-judge-a`, `jd-judge-b`, `jd-solo`, `jd-fix` | review receipt and any workflow ledger |
-
-Every coordinator returns one `sdlc-coordinator-receipt/v1`. A `needs_input` receipt contains exactly the next unresolved question. The primary asks it, then resumes the same coordinator child with the Task `task_id`; it does not create a replacement child or answer for the user. The same rule preserves SDD Lite's retained pre-approval draft and optional audit or Git-history consent.
-
-## Plan to SDD without redrafting
-
-Deep Plan, Hard Plan, Refactor Plan, and architecture ideation produce a complete four-artifact bundle under their producer root:
+Coordinators return compact A2A fragments rather than a shared wide schema:
 
 ```text
-.ai/<producer>/changes/<change>/
-  proposal.md
-  design.md
-  specs/<capability>/spec.md
-  tasks.md
+OK architecture/ideate
+artifact=.ai/architect/changes/modularize-orders/change.md
+next=sdd handoff=.ai/architect/changes/modularize-orders/change.md
 ```
 
-The planning receipt names the exact producer, change, and bundle path. When the user asks to implement, the primary sends that receipt and path to `orchestraitor` as `execute-handoff`. SDD validates the marker and shape, makes the producer directory its active root, adds only execution state and kickoff settings, and starts at implementation. It does not copy or move the bundle into `.ai/orchestrator/changes/`, and it does not relaunch proposal, spec, design, or task drafting. On completion, it archives beside the producer's `changes/` directory.
+Absent fields are omitted. Clean returns are at most five lines; findings use one line per finding. The primary paraphrases for humans and switches to normal language for questions, security, irreversible actions, or ambiguity.
 
-Direct SDD remains different: without a ready handoff, `orchestraitor` owns planning under `.ai/orchestrator/changes/` before implementation.
+## One-document SDD handoff
 
-## Session continuity and reconstruction
+Deep Plan, Refactor/Hardening, and Architecture Ideate write one file:
 
-Within one primary conversation, Task IDs are stored per coordinator. A response to `needs_input` or a continuation of the same operation resumes that exact child. Crossing from Plan to SDD starts a separate SDD child but keeps the planning receipt and planner Task ID as provenance in the same parent session.
+```text
+.ai/<producer>/changes/<change>/change.md
+```
 
-A prior chat is not required for recovery. In a new primary session, the exact ready-for-sdd marker and four artifacts on disk reconstruct the handoff. In-flight SDD resumes from `state.md`, kickoff settings, task checkboxes, and the exact active root. Ambiguous duplicate paths return `needs_input`; the primary never guesses.
+Its marker is `Status: ready-for-sdd | Source: <producer>`. The rest records outcome, scope, behavior deltas, approach, work groups, verification, and non-empty risks. SDD receives the exact path, adopts it in place, adds `state.md`, and starts execution without copying or redrafting. Old four-file bundles are not discovered automatically.
 
-## Ownership, tamper checks, and rollback
+Direct SDD writes the same shape under `.ai/orchestrator/changes/`. SDD Lite keeps its state under `.ai/sdd-lite/` and does not merge canonical specs.
 
-The wrapper composes two narrow ownership records:
+## Ownership and rollback
 
-- `.agents-orchestrator-manifest` owns the selected installer links, verified external files, and created directories.
-- `.sdlc-orchestrator-poc-manifest` owns the profile selection, installer-manifest checksum, and the previous JSONC states and values for `default_agent` and `subagent_depth`.
+`.agents-orchestrator-manifest` owns installed components. `.sdlc-orchestrator-poc-manifest` owns the selected profile and the prior values of `default_agent` and `subagent_depth`.
 
-Before mutation, install rejects `/`, the user's home, this source repository and its worktrees, a foreign installer manifest, foreign expected destinations, invalid JSONC, and paths escaping the supplied project. Downloads and checksums complete before the transactional installer mutates the target.
+Install preflights downloads and refuses broad, foreign, invalid, escaping, home, root, source-repository, or worktree targets. Status and uninstall fail closed on tampering. A clean uninstall removes only manifest-owned components, restores prior JSONC scalar values, preserves comments and foreign keys, and removes the profile manifest.
 
-`status` and `uninstall` fail closed if the installer manifest becomes broad or foreign, its checksum changes, either managed config value is changed, or a selected component is stale, missing, or foreign. A failed uninstall leaves components in place for inspection. A clean uninstall removes only manifest-owned components, restores the exact prior scalar values (or removes properties that were originally absent), preserves comments and foreign JSONC keys, and removes the profile manifest.
-
-## Validation
+## Verification
 
 Free checks:
 
 ```bash
 scripts/test-sdlc-orchestrator-contracts.sh
+scripts/test-plan-sdd-contracts.sh
 scripts/test-sdlc-orchestrator-poc.sh
 scripts/test-external-plugin-install.sh contracts
 scripts/validate-harness.sh
 ```
 
-The structure contract checks the single primary, single question owner, six coordinator allowlist, coordinator receipts, nested question denies, exact 12 aliases, and unchanged excluded commands. The profile suite uses scratch projects and deterministic external-plugin fixtures to cover install/status/idempotence/uninstall, absent and existing JSONC values, comments and foreign keys, tampering, broad and foreign manifests, foreign destinations, invalid JSONC, exact domain selection, and source-worktree refusal.
-
-Post-run deterministic result: 225 SDLC topology checks, 89 Plan/SDD handoff checks, all 6 profile cases, and the full `validate-harness.sh` inventory passed (24 agents, 21 commands, 3 external plugins, 1 TUI plugin, 83 skills, 91 domain skill links, and 1 model profile).
-
-The paid proof is explicit and is never part of the deterministic harness:
+The paid POC runner performs exactly one Plan-to-SDD workflow and one bounded Lite workflow, with no automatic retry:
 
 ```bash
 SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows \
@@ -147,44 +88,13 @@ SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows \
   scripts/test-sdlc-orchestrator-e2e.sh
 ```
 
-It performs exactly two workflows once each with no retry loop: Deep Plan followed by SDD in the same primary session, and one natural bounded request through SDD Lite. Those two workflows require three OpenCode turns because the Plan workflow deliberately has a planning turn and a same-session execution turn. Evidence includes raw parent events, sanitized exports for the full recursive session tree, coordinator and phase routes, token/cost totals, resolved project config, profile status, manifests, producer paths, `.ai/` state, Git diff/status, and Maven logs. It is stored under ignored `.ai/evidence/sdlc-orchestrator-poc/<timestamp>/` and is never committed.
-
-### Recorded real-model run
-
-The one authorized run executed at repository head `c13486963cacd84291526227465ee5710a231e23` with OpenCode 1.18.10. Evidence is retained outside Git at `.ai/evidence/sdlc-orchestrator-poc/20260805T230631Z/`.
-
-| Workflow | Result | Observed route and durable outcome |
-|---|---|---|
-| Natural Deep Plan → same-session SDD | PASS | Parent `ses_02bd0d5d5ffetdU7ivK9THqEQd`; `sdlc-orchestrator → deep-planner → sdd-proposal/spec/design/tasks`, then the same parent → `orchestraitor → sdd-implement → sdd-verify → sdd-implement` for canonical merge. No drafting-session ID was added during execution. Maven passed, and the exact bundle archived at `.ai/deep-planner/changes/archive/2026-08-06-add-order-line-count/`; no copy appeared under `.ai/orchestrator/changes/`. |
-| Natural bounded request → SDD Lite | FAIL at protocol close | Parent `ses_02bc0666effe4uVhJLImunf1N4`; exactly `sdlc-orchestrator → orchestralite → lite-verify`. Implementation changed only the two declared files, scoped verification reported `VERIFY: ALL PASS — 1/1 scenarios.`, and an independent post-failure `mvn -q test` passed. `orchestralite` nevertheless misclassified the valid receipt twice and did not archive `.ai/sdd-lite/changes/add-order-total-quantity/`. |
-
-The runner made three OpenCode calls across two workflow attempts, with zero runner retries. The Plan→SDD tree used 10 sessions, 271,529 input tokens, 22,146 output tokens, 24,223 reasoning tokens, and 1,194,496 cache-read tokens. The SDD Lite tree used 3 sessions, 53,382 input tokens, 4,253 output tokens, 8,423 reasoning tokens, and 243,200 cache-read tokens. OpenCode reported zero metered cost for both trees in this environment.
-
-The failed transcript exposed one exact contract ambiguity: `lite-verify` correctly defines its clean token as the first line, including the word `scenarios.`; `orchestralite` invented a conflicting final-line token without that word. The coordinator contract now repeats the verifier's exact spelling and first-line position and forbids that transformation, with deterministic assertions. Per the evidence policy, the paid workflow was not retried after this fix. The report therefore records one full pass and one verified implementation with a failed archive gate, not two passing E2Es.
+The simplified POC passed its authorized real-model run on 2026-08-06 with OpenCode 1.18.10: exactly two workflows, three OpenCode calls, and zero retries. Plan produced one ready `change.md`; the same primary session routed it through SDD implementation, cold verification, canonical-spec merge, and producer-root archive. Lite routed through `orchestralite` and one `lite-verify`, kept full-SDD state absent, archived its single `change.md`, and finished with Maven green. Ignored evidence is under `.ai/evidence/sdlc-orchestrator-poc/20260806T074118Z/`.
 
 ## Limitations
 
-- This is an opt-in POC, not a migration of every repository domain to one primary. Learning, docs, meta utilities, Graphify lifecycle, and Grill remain outside the profile unless explicitly selected through other install paths.
-- Route quality is model behavior constrained by a deterministic contract, not a static parser. The optional menu is a recovery surface for genuine ambiguity.
-- `subagent_depth: 2` is load-bearing: primary → coordinator → phase agent. Coordinators cannot introduce a deeper delegation layer without revisiting the profile.
-- Question centralization applies to the selected profile. Standalone learning agents keep their own interactive contracts.
-- Same-child continuation depends on OpenCode preserving Task IDs. Durable artifacts cover a new session, but not unpersisted pre-approval reasoning from a lost child.
-- The wrapper does not reconcile user edits to owned values automatically. It stops and requires the user to restore or intentionally resolve the conflict.
-
-## Markdown documentation audit
-
-Audit baseline: `b7dff6a36415987b34ffc776f9bf248c0f388678`. The audit covered all 302 Markdown paths present at that base plus the five Markdown paths introduced by this POC: 307 current paths, zero removals. Every path was classified against primary/coordinator role names, question ownership, command routing, project installation, Plan→SDD location semantics, profile scope, validation instructions, and relative links. Relative documentation links resolve; ten links inside reusable templates deliberately remain placeholders such as `overview.md`, `tickets/<ticket-slug>.md`, and generated context paths.
-
-### Changed: 43
-
-The 43 changed paths are the contract or documentation surfaces whose behavior, examples, role labels, or validation instructions changed:
-
-- Root and reference docs (10): `AGENTS.md`, `README.md`, `docs/agent-models.md`, `docs/architecture/adr/0001-adopt-sdlc-orchestrator.md`, `docs/delegation-receipts.md`, `docs/learning-domain.md`, `docs/plan-handoff.md`, `docs/sdd-automode.md`, `docs/sdd-test-plan.md`, and this report.
-- Domain overviews (7): `domains/architecture/README.md`, `domains/learning/README.md`, `domains/plan/README.md`, `domains/refactor/README.md`, `domains/sdd/README.md`, `domains/sdd-lite/README.md`, `domains/sdlc/README.md`.
-- Agent contracts (13): the three architecture agents, `deep-planner`, both refactor agents, `orchestraitor`, `orchestralite`, `sdd-proposal`, `sdd-implement`, `sdd-verify`, `review-coordinator`, and `sdlc-orchestrator`.
-- Command contracts (12): the six architecture aliases, `deep-plan`, `wayfinder`, `harden-plan`, `refactor-plan`, `judgment`, and `defend`.
-- Fixture documentation (1): `scripts/fixtures/sdd-agent-routes/java-orders/README.md`.
-
-### Unchanged: 264
-
-The unchanged classification is also concrete: 224 skill contracts/assets, 23 unaffected domain Markdown files (`common` 3, `docs` 4, `learning` 4, `meta` 3, `sdd` 8, `sdd-lite` 1), 11 fixture state artifacts, 4 unrelated reference guides (`graphify`, `hot-reload`, `lm-studio`, `opencode-db-growth`), `global/AGENTS.md`, and the `CLAUDE.md` symlink. They do not state a conflicting selected-profile primary, command route, question owner, or producer-bundle movement contract, so changing them would add churn without correcting behavior.
+- Route selection is model behavior constrained by contracts, not a static parser.
+- Learning remains independent: `/learn` uses `mentor` and is not routed through this SDLC profile.
+- Same-child continuation depends on OpenCode Task IDs; persisted `change.md` and `state.md` support new-session recovery.
+- Ambiguous active changes require the user to select an exact path.
+- User edits to manifest-owned config stop status or uninstall until resolved.
+- The profile is reversible POC scope, not a migration of unrelated domains or global OpenCode state.

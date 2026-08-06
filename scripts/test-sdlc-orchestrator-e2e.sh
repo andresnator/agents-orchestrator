@@ -243,7 +243,7 @@ run_plan_sdd_workflow() {
   assert_tree_has "$tree_before" deep-planner || return 1
   assert_tree_lacks "$tree_before" orchestraitor || return 1
   for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_tree_has "$tree_before" "$agent" || return 1
+    assert_tree_lacks "$tree_before" "$agent" || return 1
   done
 
   bundle_dir="$(find "$project/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d ! -name archive -print -quit 2>/dev/null)"
@@ -251,13 +251,14 @@ run_plan_sdd_workflow() {
   bundle_rel="${bundle_dir#"$project/"}"
   change="$(basename "$bundle_dir")"
   printf '%s\n' "$bundle_rel" > "$evidence/bundle-before-path.txt"
-  for path in proposal.md design.md tasks.md; do
-    [ -f "$bundle_dir/$path" ] || { fail "producer bundle is missing $path"; return 1; }
+  [ -f "$bundle_dir/change.md" ] || { fail "producer bundle is missing change.md"; return 1; }
+  for path in proposal.md design.md tasks.md specs; do
+    [ ! -e "$bundle_dir/$path" ] || { fail "producer bundle retains retired $path"; return 1; }
   done
-  [ -n "$(find "$bundle_dir/specs" -name spec.md -print -quit 2>/dev/null)" ] ||
-    { fail "producer bundle has no delta spec"; return 1; }
-  head -n 1 "$bundle_dir/proposal.md" | grep -Fxq 'Status: ready-for-sdd | Source: deep-planner' ||
+  head -n 1 "$bundle_dir/change.md" | grep -Fxq 'Status: ready-for-sdd | Source: deep-planner' ||
     { fail "producer marker is invalid"; return 1; }
+  grep -Fq '## Behavior' "$bundle_dir/change.md" || { fail "change.md has no Behavior section"; return 1; }
+  grep -Fq '## Work' "$bundle_dir/change.md" || { fail "change.md has no Work section"; return 1; }
   (cd "$project" && find "$bundle_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
     > "$evidence/bundle-before.sha256"
   (
@@ -270,7 +271,7 @@ run_plan_sdd_workflow() {
 
   run_turn "$project" "$execute_events" "$evidence/02-execute.stderr" \
     "SDLC POC E2E plan and execute" \
-    "Implementa ahora mediante SDD exactamente el bundle ready-for-sdd que acabas de producir. Reutiliza ese handoff y no vuelvas a redactar proposal, design, specs ni tasks. Usa Mode automatic, TDD alongside, Judgment none y Delivery none." \
+    "Implementa ahora mediante SDD exactamente el change.md ready-for-sdd que acabas de producir. Reutiliza ese handoff y no vuelvas a redactarlo. Usa Mode automatic, TDD alongside, Judgment none y Delivery none." \
     "$root_id" || return 1
 
   [ "$(session_id_from_events "$execute_events")" = "$root_id" ] ||
@@ -283,11 +284,7 @@ run_plan_sdd_workflow() {
   done
 
   for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    local before_ids after_ids
-    before_ids="$(awk -F '\t' -v a="$agent" 'NR > 1 && $3 == a {print $1}' "$tree_before" | sort)"
-    after_ids="$(awk -F '\t' -v a="$agent" 'NR > 1 && $3 == a {print $1}' "$tree_after" | sort)"
-    [ "$before_ids" = "$after_ids" ] ||
-      { fail "SDD re-launched $agent instead of executing the handoff"; return 1; }
+    assert_tree_lacks "$tree_after" "$agent" || return 1
   done
 
   archived="$(find "$project/.ai/deep-planner/changes/archive" -mindepth 1 -maxdepth 1 -type d -name "*-$change" -print -quit 2>/dev/null)"
@@ -326,7 +323,7 @@ run_lite_workflow() {
     assert_tree_has "$tree" "$agent" || return 1
   done
   for agent in deep-planner refactor-planner architect orchestraitor review-coordinator \
-    sdd-proposal sdd-spec sdd-design sdd-tasks sdd-implement sdd-verify; do
+    sdd-implement sdd-verify; do
     assert_tree_lacks "$tree" "$agent" || return 1
   done
   grep -Rq 'totalQuantity' "$project/src/main" || { fail "totalQuantity was not implemented"; return 1; }

@@ -33,9 +33,9 @@ restores the dot.
 
 | Seed | Feeds | Content |
 | --- | --- | --- |
-| `ready-plan` | SDD-ADOPT-01…05 | A complete ready-for-sdd bundle at `ai/refactor-planner/changes/enforce-order-limit/`. `proposal.md` line 1 is exactly `Status: ready-for-sdd | Source: refactor-planner`, with no kickoff line — SDD intake adds it in place. `tasks.md` carries the five forecast guard lines and a `Files:` scope per group. All three task groups are unchecked, so execution runs from implement onward. |
-| `canonical-spec` | SDD-ARCH-01, SDD-ARCH-02 | A canonical `ai/orchestrator/specs/order-pricing/spec.md` plus a finished change at `ai/orchestrator/changes/adjust-order-pricing/` whose every task is `[x]`, so the session goes straight to archive. Its delta covers all four operations — ADDED (`Discount share per line`), MODIFIED (`Bulk discount`), REMOVED (`Legacy leaflet rounding`) and RENAMED (`Money scale → Monetary rounding`) — which is what lets one archive run feed both the positive merge test and the RENAMED negative. The change is specification-only: the code already implements everything the delta describes, so nothing needs implementing before the merge. |
-| `legacy` | SDD-MIG-01 | A pre-`.ai/` `orchestraitor/` tree — the runner drops it at the project root as `.orchestraitor/` rather than under `.ai/`. Holds a canonical spec and one light-depth change so the migration has both file kinds to move. |
+| `ready-plan` | SDD-ADOPT-01 | One ready `change.md` at `ai/refactor-planner/changes/enforce-order-limit/`. It has no execution-choice line; SDD adds that line in place and keeps the producer root. |
+| `canonical-spec` | SDD-ARCH-01, SDD-ARCH-02 | A canonical `ai/orchestrator/specs/order-pricing/spec.md` plus a completed `change.md`. Its behavior rows cover ADD, MODIFY, REMOVE, and RENAME so one archive run exercises canonical reconciliation. |
+| `legacy` | SDD-MIG-01 | A pre-`.ai/` `orchestraitor/` tree containing one canonical spec and one `change.md`. The storage location is legacy; the change document already uses the current one-file shape. |
 
 Three more seeds are named in the test plan but not populated yet, because no
 automated scenario consumes them: `resume-full` (a half-implemented
@@ -47,7 +47,6 @@ stay manual until a runner case needs them.
 
 ## Changing the fixture
 
-The pricing behavior is load-bearing for the `canonical-spec` seed: its delta asserts
-that the bulk discount, the per-line discount share, and the two-decimal money scale
-are implemented as described. Changing `OrderPricing` without updating that seed makes
-the archive scenario describe behavior the code no longer has.
+The pricing behavior is load-bearing for `canonical-spec`: its `change.md` states
+that the bulk discount, per-line share, and monetary rounding already exist. Update
+the seed if `OrderPricing` changes.

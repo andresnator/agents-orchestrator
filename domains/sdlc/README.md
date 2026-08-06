@@ -1,40 +1,52 @@
 # SDLC Domain
 
-Use `sdlc-orchestrator` as the single project-local entrypoint for software-delivery work. It routes natural language to existing domain coordinators, keeps their specialized phase agents behind one boundary, and is the only profile agent that asks the user questions.
+`sdlc-orchestrator` is the project profile's single entrypoint and user-question owner. It routes intent; domain coordinators own execution and may delegate one level further.
 
 ## Quick path
 
-1. Install the SDLC profile into a project.
-2. Describe the outcome in natural language; a clear request routes immediately.
-3. Answer questions in the primary session. The primary resumes the same coordinator child rather than restarting it.
-
-The primary shows a menu only for ambiguous requests or when the user asks for options. Refactor and SDD Lite are presented as `[Beta] Refactor` and `[Beta] SDD Lite`.
+1. Install the [SDLC POC profile](../../docs/sdlc-orchestrator-poc.md).
+2. Describe the outcome in natural language.
+3. Answer any question in the primary session; the primary resumes the same coordinator child.
 
 ## Routes
 
-| Route | Coordinator | Notes |
-| --- | --- | --- |
-| Plan — Deep Plan | `deep-planner` | Produces a durable ready-for-sdd bundle for executable goals. |
-| Plan — Hard Plan | `refactor-planner` | Uses `operation: hardening`. |
-| [Beta] Refactor | `refactor-planner` | Behavior-preserving work only. |
-| SDD | `orchestraitor` | Direct entry plans locally; a ready handoff starts at execution. |
-| [Beta] SDD Lite | `orchestralite` | Bounded, low-risk changes with one cold verify. |
-| Architecture | `architect` | Map, review, PRD, ideate, audit, or boundary work. |
-| Review | `review-coordinator` | Judgment and Socratic Defend. |
+| Intent | Coordinator | Operation |
+|---|---|---|
+| Executable or decision planning | `deep-planner` | `deep-plan` or `wayfinder` |
+| Test safety-net planning | `refactor-planner` | `hardening` |
+| Behavior-preserving refactor | `refactor-planner` | `refactor` |
+| Full implementation, resume, or ready change | `orchestraitor` | `direct-sdd`, `resume`, or `execute-handoff` |
+| Bounded low-risk implementation | `orchestralite` | `sdd-lite` |
+| Architecture work | `architect` | requested architecture operation |
+| Judgment or Socratic defense | `review-coordinator` | `judgment` or `defend` |
 
-The profile sets OpenCode's `subagent_depth` to `2`, allowing the topology `primary -> domain coordinator -> phase agent`. The primary's Task allowlist stops at coordinators.
+The primary shows choices only when intent is ambiguous. The profile sets `subagent_depth: 2`; its Task allowlist stops at the coordinators.
 
-## Question and receipt loop
+## Compact A2A
 
-Coordinators have `question: deny`. If one needs a decision, it returns `status: needs_input` in an `sdlc-coordinator-receipt/v1`; the primary asks the question and resumes that coordinator through the Task result's `task_id`. Completed coordinators return the same schema with compact artifacts, decisions, scope, acceptance criteria, risks, next-route advice, and optional ready-for-sdd handoff.
+Coordinator and worker returns use terse Caveman-style fragments. Omit absent fields and keep a clean return to five lines or fewer:
 
-The schema and receipt conventions are documented in [`docs/delegation-receipts.md`](../../docs/delegation-receipts.md). Plan-to-SDD artifact semantics are in [`docs/plan-handoff.md`](../../docs/plan-handoff.md).
+```text
+OK plan/deep-plan
+artifact=.ai/deep-planner/changes/add-timeout/change.md
+next=sdd handoff=.ai/deep-planner/changes/add-timeout/change.md
+```
+
+```text
+ASK sdd/direct-sdd Which test mode should be used?
+BLOCK sdd/resume ambiguous active changes; next=choose path
+FAIL sdd/verify mvn test failed
+```
+
+Findings use one line per finding plus one totals line. Paths, symbols, ids, commands, errors, and numbers stay exact. Security, irreversible actions, user questions, and ambiguous compressed text use normal language. Raw A2A is never the final user response.
+
+This local contract adapts [Caveman Cavecrew's compressed subagent-return pattern](https://github.com/JuliusBrussee/caveman/tree/main/skills/cavecrew); it adds no runtime dependency.
 
 ## Components
 
 | Type | Name | Purpose |
-| --- | --- | --- |
-| Agent (primary) | `sdlc-orchestrator` | Routes natural-language SDLC intent and owns every user question |
-| Agent (subagent) | `review-coordinator` | Coordinates Judgment and Defend through primary-mediated questions |
+|---|---|---|
+| Agent (primary) | `sdlc-orchestrator` | Routes SDLC intent and owns user-facing questions |
+| Agent (subagent) | `review-coordinator` | Coordinates Judgment and Defend |
 
-The domain contains no commands. Existing commands remain compatibility aliases in their owner domains, while the primary supports the same workflows without commands.
+The domain defines no commands. Compatibility aliases stay with their owner domains.

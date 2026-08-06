@@ -1,123 +1,59 @@
 # AGENTS.md
 
-This repo stores reusable agent artifacts, not application code. Keep additions compact, contract-focused, and domain-organized.
+This repository stores reusable OpenCode agent artifacts, not application code. Keep changes compact, contract-focused, and organized by domain. Start with [README.md](README.md), then read the README for the domain you change.
 
-**OpenCode is the runtime and the authoring format.** Components are written in OpenCode format and installed into OpenCode via `installers/opencode.sh`. The repo stores no tracked runtime state — the installer writes into targets like `~/.config/opencode`, but those directories never become repo artifacts.
+## Repository contract
 
-## Repo Shape
+- Write documentation, descriptions, prompts, and comments in English.
+- Preserve literal runtime triggers such as `"ejecuta el plan <change>"` and Spanish skill triggers. They are activation contracts, not prose to translate.
+- `domains/` owns agents, commands, repository plugins, external-plugin locks, and domain skill usage.
+- `skills/` owns reusable skill bodies.
+- `global/AGENTS.md` is the installable runtime rules file. Root `AGENTS.md` is maintainer guidance; do not merge their roles.
+- `installers/opencode.sh` discovers and installs components. Adding a component must not require installer edits.
+- `.ai/` and other runtime-state directories are ignored state, not repository artifacts.
+- `CLAUDE.md` must remain a symlink to this file.
 
-- All documentation and descriptive text in this repo — including READMEs, `docs/`, skill contracts, frontmatter descriptions, and comments — is written in English. Preserve literal runtime trigger phrases (for example, `"ejecuta el plan <change>"` and Spanish skill triggers) because they are activation contracts, not documentation; translating existing legacy Spanish prose is out of scope for this forward-looking rule.
-- `domains/` is the source of truth for agents, commands, plugins, and domain skill usage.
-- `skills/` is the source of truth for reusable skill bodies.
-- `domains/{sdlc,sdd,sdd-lite,refactor,architecture,plan,learning,docs,meta,common}/README.md` explains each domain.
-- `domains/<domain>/agents/<name>.md` stores one fused OpenCode agent file: frontmatter plus prompt body.
-- `domains/<domain>/commands/<name>.md` stores one fused OpenCode command file: frontmatter plus prompt body.
-- `skills/<skill>/SKILL.md` stores self-contained skill contracts.
-- `domains/<domain>/skills/<skill>` is a relative symlink to `skills/<skill>` that declares domain usage.
-- `domains/<domain>/plugins/*.ts` stores repository-owned OpenCode plugins installed with that domain.
-- `domains/<domain>/external-plugins/<name>.server.json` and `<name>.tui.json` lock reusable standalone plugins by version, GitHub repository, full commit, artifact path, and SHA-256. Their source, tests, and releases live in the named external repositories.
-- `domains/common/external-plugins/graphify-init.server.json` pins the default-on (opt out with `OPENCODE_GRAPHIFY_AUTOINIT=0`), non-blocking Graphify graph **refresher**. First indexing remains human-gated behind `domains/common/commands/graphify-index.md`, which records the per-repo mode in `.ai/graphify-out/.opencode-index-mode`; setup and recovery live in `docs/graphify.md`.
-- `global/AGENTS.md` is the installable global rules file (agent personality, skill-registry usage, documentation rules, and the context7 block); the installer links it to `$TARGET/AGENTS.md`.
-- `docs/` stores reference docs for live mechanisms.
-- `profiles/<name>.json` stores abstract model-tier profiles (never concrete model ids) consumed by the meta `model-configurator` TUI plugin; see `docs/agent-models.md`.
-- The externally maintained meta `model-configurator` TUI plugin is the interactive per-agent model/variant assistant; it writes user OpenCode config, never repo artifacts (see `docs/agent-models.md` and `docs/hot-reload.md`).
-- `scripts/sdd-automode.sh` toggles SDD auto-mode: per-agent `permission` blocks in user OpenCode config, never repo artifacts (see `docs/sdd-automode.md`).
-- `scripts/sdlc-orchestrator-poc.sh` installs or removes the opt-in SDLC profile only under a supplied project's `.opencode/`; it never targets global OpenCode config.
-- `installers/opencode.sh` installs selected domain components into OpenCode; `installers/lib/common.sh` is the discovery/manifest library.
-- `CLAUDE.md` is a symlink to this file; keep shared agent guidance here.
-- There is no root package manifest, lockfile, CI workflow, or single root test command. Component-specific validation commands are documented below.
-- `.ai/` is ignored local tool state. `.ai/atl/skill-registry.md` is the generated index produced by the meta `skill-registry` plugin; `.atl/` is legacy ignored state during migration. Top-level `skills/<skill>/SKILL.md` remains the source of truth for skills.
-- Runtime state directories such as `.engram/`, `.claude/`, `.cursor/`, or tool-local memory chunks must not become managed repo artifacts unless explicitly adopted as an OpenCode component.
+## Agents and commands
 
-## Domains
+Store fused OpenCode files at `domains/<domain>/agents/<name>.md` and `domains/<domain>/commands/<name>.md`. Names must be globally unique within their type.
 
-Each `domains/<domain>/README.md` is the authoritative description; one-liners:
+Agent frontmatter order:
 
-- `sdlc`: the POC's single natural-language primary; delegates to domain coordinators and owns every user-facing question.
-- `sdd`: spec-driven development through the `orchestraitor` subagent coordinator; executes ready-for-sdd planner bundles in place (see `docs/plan-handoff.md`).
-- `sdd-lite`: POC of a single-child flow for bounded changes around the `orchestralite` coordinator; only the cold verify is delegated.
-- `refactor`: risk-gated refactor and test-hardening (CDD) planning producing ready-for-sdd bundles, plus Java refactor skills.
-- `architecture`: architecture mapping, state reviews, reverse-engineered PRDs, audits, and ADR + ideation bundles.
-- `plan`: Fable-style planning coordinator (ready-for-sdd bundles for executable goals, plan docs for decisions) and Wayfinder multi-session discovery maps under `.ai/`.
-- `learning`: interactive multi-session learning around the `mentor` primary agent (`/learn`) plus `/english` coaching (see `docs/learning-domain.md`).
-- `docs`: product docs, Jira ticketing, summaries, and transcription skills.
-- `meta`: prompt and skill maintenance utilities.
-- `common`: shared engineering, quality, question UX, and output-refinement skills.
-
-## Agents And Commands
-
-- Component names must be unique globally within their type because installer targets are flat.
-- Do not use `name:` or `prompt:` in agent or command frontmatter; OpenCode derives the name from the filename and the prompt is the file body.
-- Agent frontmatter order: `description`, `mode`, `temperature?`, `permission`, `tools?`, `disable?`.
-- Command frontmatter order: `description`, `agent?`, `model?`, `subtask?`, `argument-hint?`.
-- Do not add `license` or `metadata` to agent or command frontmatter; OpenCode routes unrecognized agent fields into model options and providers can reject them.
-- `argument-hint` may remain inline; OpenCode tolerates extra frontmatter keys.
-- Agent `mode` is `primary` or `subagent`.
-- Do not hardcode `model:` (or provider/variant options) in agent frontmatter; agents stay provider-agnostic and per-agent model assignment is user-side via `opencode.json`, documented in `docs/agent-models.md`.
-- Stub/prompt/override splitting is gone. Do not add separate prompt files for new components.
-- Track fork attribution for agents or commands outside OpenCode frontmatter; do not put attribution fields in executable agent or command metadata.
-
-## Skill Files
-
-- Skills live as one top-level directory per skill under `skills/`, with the runtime contract in `SKILL.md`.
-- Domain skill folders contain only symlinks to top-level skills. Add, remove, or move a domain symlink to change which domain uses a skill.
-- Transversal skills (used by 3+ domains) keep a single symlink in `common` — or in their owner domain, like `sdd-draft-*` in sdd; consuming domains declare the dependency in their README ("assumes the `common` domain is installed"), not with duplicate symlinks. Two-domain overlaps do keep both symlinks as real usage declarations.
-- Skill frontmatter uses `name`, `description`, `license`, and `metadata` with `author`, strict SemVer `version` such as `"1.0.0"`, and `status`.
-- `metadata.status` is the lifecycle mechanism: `backlog`, `in-progress`, `testing`, or `done`. Changing state means editing that field and applying a patch version bump, not moving the skill directory.
-- When a skill changes, bump `metadata.version` in the same change: patch for wording/path/template/internal contract fixes, minor for new capabilities or optional flows, and major for breaking activation/output behavior.
-- Keep `SKILL.md` concise; move long examples/templates to `references/` or `assets/`.
-- Put concrete generated templates, schemas, fixtures, and generated examples in `assets/`; keep `references/` for conceptual guidance, edge cases, and longer explanatory docs.
-- Agent-agnostic rule: do not add runtime tool allowlists; runtime-specific tool names may appear only as examples with a generic fallback. Use `skills/native-question-ux` for portable question presentation.
-- Forked skills keep their original author and license, and record `metadata.adapted_by` plus `metadata.source`.
-
-## Installers
-
-CLI surface:
-
-```bash
-installers/opencode.sh install [--domain d1,d2] [--status s1,s2] [--project] [--target DIR] [--dry-run] [--force] [--reload]
-installers/opencode.sh uninstall [--project] [--target DIR] [--dry-run]
-installers/opencode.sh status [--domain d1,d2] [--status s1,s2] [--project] [--target DIR]
+```text
+description, mode, temperature?, permission, tools?, disable?
 ```
 
-- Default target `~/.config/opencode`, `--project` targets `./.opencode`; repository artifacts are symlinked. External plugins require OpenCode >= 1.17.15, `curl`, `jq`, and `shasum` or `sha256sum`; an external TUI plugin additionally requires `python3` so its exact entry can be added to `tui.json` without losing JSONC comments. Preflight and downloads finish before the transaction mutates the target. Global rules link to `$TARGET/AGENTS.md`.
-- All plugins install under `$TARGET/plugins/`. Repository-owned server plugins are symlinked at the top level. External server bundles are verified regular `<name>.js` files at the top level. External TUI bundles live at `<name>/tui.js` and load only through the exact managed `tui.json` entry, so OpenCode's top-level server-plugin glob does not load them twice.
-- Default filter is `--domain all --status all`.
-- Valid skill statuses are `backlog`, `in-progress`, `testing`, and `done`; agents, commands, plugins, and external plugins are not status-filtered.
-- The installer discovers agent/command regular files, domain skill symlinks, repository plugins, and external-plugin descriptors. Installed skill links point to the top-level `skills/` directory.
-- `install` always installs the global rules regardless of `--domain`/`--status` filters. A pre-existing foreign destination is skipped with a warning unless `--force`.
-- The installer writes `.agents-orchestrator-manifest` in its manifest root with `link<TAB>dest`, `file<TAB>dest` (generated or downloaded files), and `dir<TAB>path` lines, plus `managed-array` rows that narrowly own an exact `tui.json` plugin entry. Pre-existing identical entries are never claimed. Legacy `managed-object` rows are still understood so upgrading removes the retired `jsonc-parser` package dependency safely.
-- `install` is a sync: links, generated files, and managed values from the previous manifest that are no longer selected are removed (type-guarded and exact-value-guarded, so user-replaced content is never deleted), then directories the previous manifest created and the current one no longer claims are pruned deepest-first with `rmdir`, so one that still holds anything is kept. OpenCode installs are transactional: a failure mid-install rolls the target back to its prior state.
-- `uninstall` removes manifest-owned symlinks, generated files, and still-matching managed values plus empty created directories.
-- Downloaded bundles and copied profiles do not auto-update when a descriptor or repo profile changes; re-run install. `status` reports external bundles with their pinned version and distinguishes installed, stale, foreign, and missing state.
-- `install --reload` additionally hot-reloads running OpenCode servers after the transaction commits (best-effort, never fails the install); plugin code still needs a restart. Mechanism in `docs/hot-reload.md`.
-- The `skill-registry` plugin generates the skill index consumed at runtime (`.ai/atl/skill-registry.md`).
+Command frontmatter order:
 
-## Adding A Component
+```text
+description, agent?, model?, subtask?, argument-hint?
+```
 
-1. Pick the domain first: `sdlc`, `sdd`, `sdd-lite`, `refactor`, `architecture`, `plan`, `learning`, `docs`, `meta`, or `common`.
-2. Add one fused file under `domains/<domain>/agents/` or `domains/<domain>/commands/`, or add one skill directory under `skills/` plus a symlink from each using domain under `domains/<domain>/skills/`.
-3. For skills, set `metadata.status` deliberately. The installer includes all statuses unless filtered.
-4. For skills, bump `metadata.version` when changing an existing skill.
-5. Add a plugin under `domains/<domain>/plugins/` only when it is repository-specific. A reusable server or TUI plugin belongs in a standalone repository; add a `.server.json` or `.tui.json` lock under `domains/<domain>/external-plugins/` instead of copying its implementation here.
-6. For an external plugin update, change `version`, `commit`, `artifact`, and `sha256` together, then run the remote artifact check below. A TUI descriptor may also name a repository-local `profileSource` copied beside its bundle.
-7. When adding, removing, or moving a component, update the domain README's `## Components` table; if its entry points changed, update that domain's row in the root README too.
-8. Run `installers/opencode.sh install --dry-run` to confirm discovery and target behavior.
+Do not add `name`, `prompt`, `license`, or `metadata` to agent or command frontmatter. Agent `mode` is `primary` or `subagent`. Do not hardcode agent models or provider options; users configure those in OpenCode.
 
-Adding a component must not require editing any installer.
+Keep prompts short: role, accepted operation, ownership and safety boundaries, happy path, real stop conditions, artifact paths, and compact return contract. Put fork attribution outside executable frontmatter.
+
+## Skills
+
+Each skill lives at `skills/<skill>/SKILL.md`. A domain declares usage with a relative symlink at `domains/<domain>/skills/<skill>`; domain skill directories contain no copied skill bodies.
+
+Skill frontmatter contains `name`, `description`, `license`, and `metadata.author`, strict SemVer `metadata.version`, and `metadata.status`. Status is `backlog`, `in-progress`, `testing`, or `done`.
+
+Bump the version whenever a skill changes: patch for wording or internal fixes, minor for additive capability, major for breaking activation or output behavior. Keep the runtime contract concise; place concrete templates in `assets/` and extended guidance in `references/`.
+
+## Keeping the catalog accurate
+
+When adding, removing, or moving a component, update the owning domain README's single `## Components` table. Update the root domain table only when entry points or domain purpose change. For external plugins, update the version, commit, artifact, and SHA-256 lock together.
 
 ## Validation
 
-- For doc-only changes, inspect the edited Markdown/frontmatter directly.
-- For installer changes, run `bash -n` on the touched scripts; `scripts/validate-harness.sh` syntax-checks `installers/opencode.sh` plus `installers/lib/common.sh` and runs `shellcheck -x` when available.
-- For install behavior, use `installers/opencode.sh install --target <scratch>` and inspect the manifest, symlinks, and generated files.
-- For structure checks, run `scripts/validate-harness.sh`: it enforces agent/command and skill frontmatter contracts, domain skill symlink integrity, global component-name uniqueness, external descriptor shape, profile JSON shape, script syntax (plus `shellcheck -x` when available), deterministic external-plugin installer contracts, and the remaining component-specific checks.
-- For external-plugin installation changes, run `scripts/test-external-plugin-install.sh contracts`; it covers JSONC preservation, install/repair/status/uninstall, foreign-file protection, rollback, filtered sync, migration from the old internal plugins, and project-target containment without network access. Run `scripts/test-external-plugin-install.sh remote` to download every descriptor's real pinned artifact and verify its SHA-256.
-- Plugin implementation checks belong to their standalone repositories: `opencode-agent-model-configurator`, `opencode-skill-registry`, and `opencode-graphify-init` each expose `npm run check` and CI. Changes here validate the descriptor and integration, not copied source.
-- For recall calculator changes, run `scripts/test-recall-calc.sh`; it needs Node >= 22.18 (native TypeScript type stripping).
-- For `scripts/sdd-automode.sh` changes, run `scripts/test-sdd-automode.sh`; it needs `jq` and runs every case against a scratch `--target`, never the user's real OpenCode config.
-- For SDLC orchestrator contract changes, run `scripts/test-sdlc-orchestrator-contracts.sh`; it is deterministic and is also invoked by `scripts/validate-harness.sh`.
-- For SDLC POC profile changes, run `scripts/test-sdlc-orchestrator-poc.sh`; it uses scratch projects and deterministic external-plugin fixtures, never a real project or global config.
-- For the opt-in paid POC proof, run `SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows OPENCODE_BIN=<path> scripts/test-sdlc-orchestrator-e2e.sh`; it runs exactly the Plan-to-SDD and bounded-SDD-Lite workflows once each, without retries, and preserves ignored evidence under `.ai/evidence/`.
-- For sdd flow behavior, run `OPENCODE_BIN=<path> scripts/test-sdd-flows.sh probe` first, then `smoke`, `lite` (the sdd-lite `LITE-*` scenarios, driving `orchestralite`), or a single scenario id. It drives `orchestraitor` headlessly against `scripts/fixtures/sdd-agent-routes/java-orders/` and asserts the scenarios in `docs/sdd-test-plan.md`. It calls a real model and spends credits, so it is opt-in and deliberately not wired into `validate-harness.sh`.
-- Do not commit unless explicitly asked.
+Run the narrowest relevant check, then the structural harness:
+
+```bash
+installers/opencode.sh install --dry-run
+scripts/validate-harness.sh
+```
+
+Use the touched script's syntax/test command for executable changes. External-plugin changes use `scripts/test-external-plugin-install.sh contracts`; remote lock verification is opt-in. Model-backed SDD flows spend credits and run only when explicitly authorized; see [docs/sdd-test-plan.md](docs/sdd-test-plan.md).
+
+Do not commit unless explicitly asked.

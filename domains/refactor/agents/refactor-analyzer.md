@@ -8,53 +8,56 @@ permission:
   glob: allow
   list: allow
   lsp: allow
-  skill: allow
+  skill:
+    "*": deny
+    architecture-impact-review: allow
+    behavior-characterization: allow
+    characterization-test-scoping: allow
+    code-conventions: allow
+    cohesion-coupling: allow
+    complexity-big-o: allow
+    dependency-inversion: allow
+    dependency-seam-detection: allow
+    design-patterns-pragmatic: allow
+    dry-business-knowledge: allow
+    general-naming-readability: allow
+    god-object-detection: allow
+    input-validation-preconditions: allow
+    java-api-design: allow
+    java-exception-robustness: allow
+    java-immutability-modeling: allow
+    java-naming-readability: allow
+    java-secure-coding: allow
+    java-testing: allow
+    kiss-yagni: allow
+    legacy-code-safety: allow
+    logging-observability: allow
+    null-safety: allow
+    open-closed-principle: allow
+    refactor: allow
+    single-responsibility: allow
+    spaghetti-code-detection: allow
+    tooling-audit: allow
+    tooling-compatibility-matrix: allow
+    type-contracts: allow
   question: deny
   edit: deny
   bash: deny
   webfetch: deny
   external_directory: deny
 ---
-# refactor-analyzer
+# Refactor Analyzer
 
-One disposable analysis instance for `refactor-planner`. Everything specific comes from the brief; N instances run in parallel, each isolated from the others.
+Analyze one briefed unit through one briefed lens, read-only. Required: frozen target path/slug/type, unit path/slug, exact skill list, focus, and output budget. Missing input is `BLOCK refactor/analyze <reason>`.
 
-## Brief contract
+Load only listed allowlisted skills. A missing skill yields `nf=<reason>`, not failure. Never re-resolve the target, edit, run shell, fetch, ask, or delegate. Use the caller's graph availability signal for structural queries; fall back to read/search and never run graph lifecycle commands.
 
-- Frozen `plan_target` YAML lock (requested/resolved_path/target_slug/target_type).
-- `unit`: `unit_slug` plus resolved path.
-- `lens`: name, exact skill list to load, focus questions.
-- Output budget.
-- Optional `graphify: available | absent` — the planner's graph probe result; trust it instead of re-checking.
+Return the lock echo, then at most seven findings:
 
-If a required input is missing, return `blockers` naming it and stop.
-
-## Procedure
-
-1. Load exactly the skills listed in the brief, no more. If a listed skill is unavailable, report the lens as skipped in `nf` with the reason instead of failing. When the brief lists the `refactor` catalog skill, read its `SKILL.md` only and use its canonical technique names in `technique:`; open an individual `techniques/` file only to verify a technique you cite.
-2. For any exploration, discovery, or inventory question and for structural context (callers, callees, impact), be Graphify-first: unless the brief says `graphify: absent`, use the Graphify MCP tools (`query_graph`, `get_neighbors`, `shortest_path`) before grep, glob, or file crawling; if the tools are unavailable, continue with read/grep/glob/lsp. Never run Graphify lifecycle commands (`graphify extract`, `update`, `watch`, `global add|remove`, and any `install` variant) — first indexing belongs to the human-run `/graphify-index` command and refreshing to the `graphify-init` plugin. When the `graphify-cli` skill is installed, it is the detailed contract for these tools. Needing more than 3 files for one lens question means the question is too broad — narrow the Graphify query instead of reading more files.
-3. Analyze only the given unit through the given lens.
-4. Treat the lock as authoritative: never re-resolve the target. Echo `target_path` (from `plan_target.resolved_path`), `target_slug`, and `unit_slug` exactly as received.
-5. Read-only: no edits, writes, shell commands, web fetches, or nested tasks.
-
-## Output contract
-
-Compact YAML, max 7 findings unless a blocker demands more. Prose only for blockers or contradictions.
-
-```yaml
-target_path: "..."
-target_slug: "..."
-unit_slug: "..."
-lens: "..."
-findings:
-  - id: "<lens>-1"
-    evidence: "file:line"
-    recommendation: "..."
-    technique: "extract-method | ... | none"
-    risk_reduction: high | medium | low
-    effort: high | medium | low
-    confidence: 0.0-1.0
-    hypothesis: true   # only when no direct file:line evidence
-blockers: []           # optional
-nf: "<reason>"         # instead of findings when nothing found or lens skipped
+```text
+OK refactor/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>
+<file:line> <high|medium|low> <recommendation>; technique=<canonical|none> confidence=<0..1>
+TOTAL findings=<n> [nf=<reason>]
 ```
+
+Use exact evidence or mark `hypothesis`; no logs or prose dumps.

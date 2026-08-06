@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deterministic contracts for the SDLC orchestrator POC.
+# Deterministic contracts for routing, ownership, and compact SDLC A2A returns.
 
 set -u
 
@@ -37,6 +37,12 @@ assert_not_contains() {
   ! grep -Fq "$text" "$file" || fail "$file" "retains forbidden contract text: $text"
 }
 
+assert_regex() {
+  local file="$1" pattern="$2"
+  CHECKS=$((CHECKS + 1))
+  grep -Eq "$pattern" "$file" || fail "$file" "missing contract pattern: $pattern"
+}
+
 assert_frontmatter_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
@@ -49,128 +55,112 @@ assert_frontmatter_not_contains() {
   ! frontmatter "$file" | grep -Fq "$text" || fail "$file" "frontmatter retains: $text"
 }
 
-assert_receipt_schema() {
-  local file="$1" field
-  for field in contract status domain operation summary artifacts decisions scope acceptance_criteria risks open_questions next handoff; do
-    assert_contains "$file" "$field:"
-  done
-  assert_contains "$file" 'sdlc-coordinator-receipt/v1'
-  assert_contains "$file" 'complete | needs_input | blocked | failed'
+assert_compact_coordinator_return() {
+  local file="$1"
+  assert_regex "$file" 'OK [^[:space:]]+/[^[:space:]]+'
+  assert_regex "$file" 'ASK( |`)'
+  assert_regex "$file" 'BLOCK( |`)'
+  assert_regex "$file" 'FAIL( |`)'
+  assert_not_contains "$file" 'sdlc-coordinator-receipt/v1'
+  assert_not_contains "$file" 'acceptance_criteria:'
+  assert_not_contains "$file" 'open_questions:'
 }
 
-primary="domains/sdlc/agents/sdlc-orchestrator.md"
+primary=domains/sdlc/agents/sdlc-orchestrator.md
 assert_frontmatter_contains "$primary" 'mode: primary'
 assert_frontmatter_contains "$primary" 'question: allow'
-assert_frontmatter_contains "$primary" 'edit: deny'
-assert_frontmatter_contains "$primary" 'write: deny'
-assert_frontmatter_contains "$primary" 'bash: deny'
-assert_frontmatter_contains "$primary" 'lsp: deny'
-assert_frontmatter_contains "$primary" 'todowrite: deny'
-assert_frontmatter_contains "$primary" 'skill: deny'
-assert_frontmatter_contains "$primary" 'webfetch: deny'
-assert_frontmatter_contains "$primary" 'websearch: deny'
-assert_frontmatter_contains "$primary" 'external_directory: deny'
-assert_frontmatter_contains "$primary" 'doom_loop: deny'
-assert_frontmatter_not_contains "$primary" 'sdd-proposal: allow'
-assert_frontmatter_not_contains "$primary" 'jd-judge-a: allow'
+for denied in edit write bash lsp todowrite skill webfetch websearch external_directory doom_loop; do
+  assert_frontmatter_contains "$primary" "$denied: deny"
+done
 
+# The primary delegates only to domain coordinators.
 for coordinator in deep-planner refactor-planner architect orchestraitor orchestralite review-coordinator; do
   assert_frontmatter_contains "$primary" "$coordinator: allow"
 done
-
-assert_contains "$primary" 'Do not show a menu when one route is clearly safest.'
-assert_contains "$primary" '[Beta] Refactor'
-assert_contains "$primary" '[Beta] SDD Lite'
-assert_contains "$primary" 'task_id'
+for worker in \
+  sdd-explore sdd-implement sdd-verify lite-verify refactor-analyzer arch-analyzer \
+  boundary-inspector jd-judge-a jd-judge-b jd-solo jd-fix general; do
+  assert_frontmatter_not_contains "$primary" "$worker: allow"
+done
+for route in plan refactor architecture sdd sdd-lite review; do
+  assert_contains "$primary" "$route"
+done
+assert_regex "$primary" 'Task id|task_id'
 assert_contains "$primary" 'same child'
-assert_contains "$primary" 'operation: execute-handoff'
-assert_contains "$primary" 'must not redraft proposal, design, specifications, or tasks'
-assert_contains "$primary" 'operation: direct-sdd'
-assert_receipt_schema "$primary"
+assert_contains "$primary" 'execute-handoff'
+assert_contains "$primary" 'direct-sdd'
+assert_compact_coordinator_return "$primary"
+assert_regex "$primary" 'normal[- ](human[- ])?language|human-readable|paraphrase.*user'
+assert_regex "$primary" 'security|irreversible|destructive'
 
-review="domains/sdlc/agents/review-coordinator.md"
+review=domains/sdlc/agents/review-coordinator.md
 assert_frontmatter_contains "$review" 'mode: subagent'
 assert_frontmatter_contains "$review" 'question: deny'
 for phase_agent in jd-judge-a jd-judge-b jd-solo jd-fix; do
   assert_frontmatter_contains "$review" "$phase_agent: allow"
 done
-assert_contains "$review" 'Supported operations are'
 assert_contains "$review" 'judgment'
 assert_contains "$review" 'defend'
-assert_contains "$review" 'same child through Task'
-assert_contains "$review" 'task_id'
-assert_receipt_schema "$review"
+assert_compact_coordinator_return "$review"
 
-architect="domains/architecture/agents/architect.md"
+architect=domains/architecture/agents/architect.md
 assert_frontmatter_contains "$architect" 'mode: subagent'
 assert_frontmatter_contains "$architect" 'question: deny'
 assert_frontmatter_contains "$architect" 'arch-analyzer: allow'
 assert_frontmatter_contains "$architect" 'boundary-inspector: allow'
-assert_frontmatter_contains "$architect" '"npm audit*": allow'
-assert_contains "$architect" 'raw user request in the coordinator brief'
-assert_not_contains "$architect" "$RUNTIME_ARGUMENTS"
+assert_frontmatter_not_contains "$architect" 'skill: allow'
+assert_frontmatter_contains "$architect" '"*": deny'
 for operation in map review prd ideate audit boundary; do
   assert_contains "$architect" "$operation"
 done
-assert_contains "$architect" 'producer: architect'
-assert_receipt_schema "$architect"
+assert_contains "$architect" 'change.md'
+assert_not_contains "$architect" "$RUNTIME_ARGUMENTS"
+assert_compact_coordinator_return "$architect"
 
-refactor="domains/refactor/agents/refactor-planner.md"
+refactor=domains/refactor/agents/refactor-planner.md
 assert_frontmatter_contains "$refactor" 'mode: subagent'
 assert_frontmatter_contains "$refactor" 'question: deny'
 assert_frontmatter_contains "$refactor" 'refactor-analyzer: allow'
-assert_frontmatter_contains "$refactor" '"git log*": allow'
-assert_contains "$refactor" 'raw user request in the coordinator brief'
+assert_frontmatter_not_contains "$refactor" 'skill: allow'
+assert_frontmatter_contains "$refactor" '"*": deny'
+assert_contains "$refactor" 'refactor'
+assert_contains "$refactor" 'hardening'
+assert_contains "$refactor" 'change.md'
 assert_not_contains "$refactor" "$RUNTIME_ARGUMENTS"
-assert_contains "$refactor" 'operation: refactor | hardening'
-assert_contains "$refactor" 'producer: refactor-planner'
-assert_receipt_schema "$refactor"
+assert_compact_coordinator_return "$refactor"
 
-lite="domains/sdd-lite/agents/orchestralite.md"
+for analyzer in \
+  domains/architecture/agents/arch-analyzer.md \
+  domains/architecture/agents/boundary-inspector.md \
+  domains/refactor/agents/refactor-analyzer.md; do
+  assert_frontmatter_contains "$analyzer" '"*": deny'
+done
+assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md 'service-boundary-analysis: allow'
+
+for coordinator in domains/plan/agents/deep-planner.md domains/sdd/agents/orchestraitor.md; do
+  assert_frontmatter_contains "$coordinator" 'mode: subagent'
+  assert_frontmatter_contains "$coordinator" 'question: deny'
+  assert_compact_coordinator_return "$coordinator"
+done
+
+lite=domains/sdd-lite/agents/orchestralite.md
 assert_frontmatter_contains "$lite" 'mode: subagent'
 assert_frontmatter_contains "$lite" 'question: deny'
 assert_frontmatter_contains "$lite" 'lite-verify: allow'
-assert_contains "$lite" 'operation: sdd-lite'
-assert_contains "$lite" 'raw user request'
-assert_contains "$lite" 'same Task child'
+assert_contains "$lite" 'sdd-lite'
+assert_contains "$lite" 'change.md'
 assert_contains "$lite" 'lite-verify'
-assert_contains "$lite" 'VERIFY: ALL PASS — <n>/<n> scenarios.'
-assert_contains "$lite" "receipt's first line"
-assert_contains "$lite" "never ask the verifier to move the token to the final line or remove \`scenarios.\`"
+assert_contains "$lite" 'Judgment: none | Delivery: none'
 assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
-assert_receipt_schema "$lite"
+assert_compact_coordinator_return "$lite"
 
 assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'mode: subagent'
 assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'question: deny'
+assert_contains domains/sdd-lite/agents/lite-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
+assert_contains domains/sdd/agents/sdd-implement.md 'OK wave=<id> files=<csv> check=<one-line result>'
+assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 
-for command in deep-plan wayfinder judgment defend; do
-  case "$command" in
-    deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
-    judgment) file="domains/sdd/commands/$command.md" ;;
-    defend) file="domains/common/commands/$command.md" ;;
-  esac
-  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
-  assert_frontmatter_contains "$file" 'subtask: false'
-  assert_contains "$file" "$RUNTIME_ARGUMENTS"
-  assert_contains "$file" 'Explicit SDLC route:'
-done
-
-for command in arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector; do
-  file="domains/architecture/commands/$command.md"
-  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
-  assert_frontmatter_contains "$file" 'subtask: false'
-  assert_contains "$file" "$RUNTIME_ARGUMENTS"
-  assert_contains "$file" 'Explicit SDLC route:'
-done
-
-for command in harden-plan refactor-plan; do
-  file="domains/refactor/commands/$command.md"
-  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
-  assert_frontmatter_contains "$file" 'subtask: false'
-  assert_contains "$file" "$RUNTIME_ARGUMENTS"
-  assert_contains "$file" 'Explicit SDLC route:'
-done
-
+# Exactly one question owner and one primary in the installed SDLC profile.
 profile_primary_count=0
 profile_question_owner_count=0
 for domain in sdlc plan sdd architecture refactor sdd-lite common; do
@@ -178,25 +168,23 @@ for domain in sdlc plan sdd architecture refactor sdd-lite common; do
     [ -f "$file" ] || continue
     CHECKS=$((CHECKS + 1))
     frontmatter "$file" | grep -Eq '^  question: (allow|deny)$' ||
-      fail "$file" 'profile agent must declare question: allow or deny explicitly'
+      fail "$file" 'profile agent must declare question permission explicitly'
     if frontmatter "$file" | grep -Eq '^mode: primary$'; then
       profile_primary_count=$((profile_primary_count + 1))
-      [ "$file" = "$primary" ] || fail "$file" 'unexpected repository-owned primary in the SDLC profile'
+      [ "$file" = "$primary" ] || fail "$file" 'unexpected repository-owned primary'
     fi
     if frontmatter "$file" | grep -Eq '^  question: allow$'; then
       profile_question_owner_count=$((profile_question_owner_count + 1))
-      [ "$file" = "$primary" ] || fail "$file" 'unexpected question owner in the SDLC profile'
+      [ "$file" = "$primary" ] || fail "$file" 'unexpected question owner'
     fi
   done
 done
-
 CHECKS=$((CHECKS + 1))
-[ "$profile_primary_count" -eq 1 ] ||
-  fail domains "expected exactly one profile primary, found $profile_primary_count"
+[ "$profile_primary_count" -eq 1 ] || fail domains "expected one profile primary, found $profile_primary_count"
 CHECKS=$((CHECKS + 1))
-[ "$profile_question_owner_count" -eq 1 ] ||
-  fail domains "expected exactly one profile question owner, found $profile_question_owner_count"
+[ "$profile_question_owner_count" -eq 1 ] || fail domains "expected one question owner, found $profile_question_owner_count"
 
+# Routed commands carry only their raw argument and route through the primary.
 expected_aliases="$(printf '%s\n' \
   arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector \
   deep-plan defend harden-plan judgment refactor-plan wayfinder | sort)"
@@ -206,8 +194,21 @@ actual_aliases="$(find domains -path '*/commands/*.md' -type f -print | while IF
   fi
 done | sort)"
 CHECKS=$((CHECKS + 1))
-[ "$actual_aliases" = "$expected_aliases" ] ||
-  fail domains "SDLC alias set differs from the required 12 commands"
+[ "$actual_aliases" = "$expected_aliases" ] || fail domains 'SDLC alias set differs from the required 12 commands'
+
+for command in $expected_aliases; do
+  case "$command" in
+    arch-*) file="domains/architecture/commands/$command.md" ;;
+    boundary-inspector) file="domains/architecture/commands/$command.md" ;;
+    deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
+    harden-plan|refactor-plan) file="domains/refactor/commands/$command.md" ;;
+    judgment) file="domains/sdd/commands/$command.md" ;;
+    defend) file="domains/common/commands/$command.md" ;;
+  esac
+  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
+  assert_frontmatter_contains "$file" 'subtask: false'
+  assert_contains "$file" "$RUNTIME_ARGUMENTS"
+done
 
 for command in graphify-index grill; do
   file="domains/common/commands/$command.md"
@@ -215,10 +216,6 @@ for command in graphify-index grill; do
   ! frontmatter "$file" | grep -Eq '^agent: sdlc-orchestrator$' ||
     fail "$file" 'must remain outside SDLC alias routing'
 done
-
-CHECKS=$((CHECKS + 1))
-command_count="$(find domains -path '*/commands/*.md' -type f | wc -l | tr -d ' ')"
-[ "$command_count" = "21" ] || fail domains "expected 21 commands, found $command_count"
 
 if [ "$FAILS" -gt 0 ]; then
   printf 'FAIL: %d SDLC orchestrator contract violation(s) across %d checks.\n' "$FAILS" "$CHECKS" >&2

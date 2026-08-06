@@ -221,6 +221,23 @@ assert_not_launched() {
     verdict_fail "the run launched $1 and should not have"
 }
 
+assert_no_drafting_agents() {
+  local agent
+  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
+    assert_not_launched "$agent" || return 1
+  done
+}
+
+assert_one_change_document() {
+  local dir="$1"
+  assert_file "$dir/change.md" || return 1
+  assert_absent "$dir/proposal.md" || return 1
+  assert_absent "$dir/design.md" || return 1
+  assert_absent "$dir/tasks.md" || return 1
+  [ -z "$(find "$dir/specs" -type f -print -quit 2>/dev/null)" ] ||
+    { verdict_fail "$(short "$dir/specs") contains retired delta-spec files"; return 1; }
+}
+
 word_count() { wc -w < "$1" | tr -d ' '; }
 
 # A completed run archives the change, so a scenario's folder may be either
@@ -284,84 +301,74 @@ probe() {
 scenario_SDD_LIGHT_01() {
   CURRENT=SDD-LIGHT-01
   setup_scenario none
-  run_agent "usa SDD en modo automático para agregar a Order un método totalQuantity() que devuelva la suma de las cantidades de sus líneas, con su test. Es un cambio acotado: elegí depth light, TDD tests alongside, judgment none, delivery none." ||
+  run_agent "usa SDD en modo automático para agregar a Order un método totalQuantity() que devuelva la suma de las cantidades de sus líneas, con su test. Es un cambio acotado: TDD alongside, judgment none, delivery none." ||
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   local change_dir
   change_dir="$(find_change_dir)"
   [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/orchestrator/changes/"; return; }
 
-  assert_file "$change_dir/change.md" || return
+  assert_one_change_document "$change_dir" || return
   assert_file "$change_dir/state.md" || return
-  assert_absent "$change_dir/proposal.md" || return
-  assert_absent "$change_dir/tasks.md" || return
-  assert_first_line_matches "$change_dir/change.md" '*Depth: light*' || return
-  assert_grep "$change_dir/change.md" '## Spec Deltas' || return
-  assert_grep "$change_dir/change.md" '## Tasks' || return
+  assert_first_line_matches "$change_dir/change.md" 'Status: active | Source: orchestraitor' || return
+  assert_grep "$change_dir/change.md" '## Behavior' || return
+  assert_grep "$change_dir/change.md" '## Work' || return
+  assert_grep "$change_dir/change.md" '## Verify' || return
   assert_grep "$change_dir/change.md" 'Files:' || return
 
   local words
   words="$(word_count "$change_dir/change.md")"
-  [ "$words" -lt 800 ] || { verdict_fail "change.md is $words words, the light budget is under 800"; return; }
+  [ "$words" -le 900 ] || { verdict_fail "change.md is $words words, the budget is at most 900"; return; }
 
-  # Light depth delegates the draft to sdd-proposal in light mode; the other
-  # drafting phases stay out of a light run.
-  assert_launched sdd-proposal || return
-  local agent
-  for agent in sdd-spec sdd-design sdd-tasks; do
-    assert_not_launched "$agent" || return
-  done
+  assert_no_drafting_agents || return
+  assert_launched sdd-implement || return
+  assert_launched sdd-verify || return
   verdict_pass
 }
 
 scenario_SDD_FULL_02() {
   CURRENT=SDD-FULL-02
   setup_scenario none
-  run_agent "vamos con sdd en modo automático, depth full, TDD tests alongside, judgment none, delivery none: quiero cupones de descuento por porcentaje aplicables a una orden, que convivan con el descuento por volumen existente y se reflejen en el total." ||
+  run_agent "vamos con sdd en modo automático, TDD alongside, judgment none, delivery none: quiero cupones de descuento por porcentaje aplicables a una orden, que convivan con el descuento por volumen existente y se reflejen en el total." ||
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   local change_dir
   change_dir="$(find_change_dir)"
   [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/orchestrator/changes/"; return; }
 
-  assert_file "$change_dir/proposal.md" || return
+  assert_one_change_document "$change_dir" || return
   assert_file "$change_dir/state.md" || return
-  assert_file "$change_dir/tasks.md" || return
-  [ -n "$(find "$change_dir/specs" -name spec.md -print -quit 2>/dev/null)" ] ||
-    { verdict_fail "no specs/<capability>/spec.md delta was written"; return; }
-  assert_first_line_matches "$change_dir/proposal.md" '*Depth: full*' || return
-  assert_grep "$change_dir/tasks.md" 'Shared hotspots:' || return
-  assert_grep "$change_dir/tasks.md" 'Files:' || return
+  assert_first_line_matches "$change_dir/change.md" 'Status: active | Source: orchestraitor' || return
+  assert_grep "$change_dir/change.md" '## Behavior' || return
+  assert_grep "$change_dir/change.md" '## Work' || return
+  assert_grep "$change_dir/change.md" 'Files:' || return
 
-  assert_launched sdd-proposal || return
-  assert_launched sdd-spec || return
-  assert_launched sdd-design || return
-  assert_launched sdd-tasks || return
+  assert_no_drafting_agents || return
+  assert_launched sdd-implement || return
+  assert_launched sdd-verify || return
   verdict_pass
 }
 
 scenario_SDD_ADOPT_01() {
   CURRENT=SDD-ADOPT-01
   setup_scenario ready-plan
-  run_agent "ejecuta el plan enforce-order-limit en modo automático, TDD tests alongside, judgment none, delivery none." ||
+  run_agent "ejecuta el plan enforce-order-limit en modo automático, TDD alongside, judgment none, delivery none." ||
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   local adopted
   adopted="$(find_change_dir enforce-order-limit "$PROJECT/.ai/refactor-planner/changes")"
   [ -n "$adopted" ] || { verdict_fail "enforce-order-limit was not executed under its producer root"; return; }
-  assert_file "$adopted/proposal.md" || return
+  assert_one_change_document "$adopted" || return
   assert_file "$adopted/state.md" || return
   assert_absent "$PROJECT/.ai/orchestrator/changes/enforce-order-limit" || return
-  assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: refactor-planner' || return
+  assert_first_line_matches "$adopted/change.md" 'Status: ready-for-sdd | Source: refactor-planner' || return
   # The kickoff line goes on the first line after the marker block.
-  sed -n '2,4p' "$adopted/proposal.md" | grep -q 'Mode:.*Depth: full' ||
-    { verdict_fail "no kickoff line with Depth: full right after the marker"; return; }
+  sed -n '2,4p' "$adopted/change.md" | grep -q 'Mode:.*TDD: alongside.*Judgment: none.*Delivery: none' ||
+    { verdict_fail "no execution-choice line after the marker"; return; }
 
-  local agent
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_not_launched "$agent" || return
-  done
+  assert_no_drafting_agents || return
   assert_launched sdd-implement || return
+  assert_launched sdd-verify || return
   verdict_pass
 }
 
@@ -372,23 +379,19 @@ scenario_PLAN_HANDOFF_01() {
   run_agent "Planifica, sin implementar, agregar a Order un método lineCount() que devuelva la cantidad de líneas y su test. Es un objetivo ejecutable acotado para un único bundle, no un roadmap ni una investigación. No hay decisiones de producto abiertas: usa las convenciones existentes y produce el bundle ready-for-sdd." ||
     { verdict_fail "the deep-planner run exited non-zero or timed out"; return; }
 
-  local bundle_dir change agent
+  local bundle_dir change
   bundle_dir="$(find "$PROJECT/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
   [ -n "$bundle_dir" ] || { verdict_fail "deep-planner produced no bundle under .ai/deep-planner/changes/"; return; }
   change="$(basename "$bundle_dir")"
 
-  assert_file "$bundle_dir/proposal.md" || return
-  assert_file "$bundle_dir/design.md" || return
-  assert_file "$bundle_dir/tasks.md" || return
-  [ -n "$(find "$bundle_dir/specs" -name spec.md -print -quit 2>/dev/null)" ] ||
-    { verdict_fail "deep-planner bundle has no specs/<capability>/spec.md"; return; }
-  assert_first_line_matches "$bundle_dir/proposal.md" 'Status: ready-for-sdd | Source: deep-planner' || return
-  ! sed -n '1,5p' "$bundle_dir/proposal.md" | grep -q '^Mode:' ||
-    { verdict_fail "handoff proposal contains a kickoff line"; return; }
+  assert_one_change_document "$bundle_dir" || return
+  assert_first_line_matches "$bundle_dir/change.md" 'Status: ready-for-sdd | Source: deep-planner' || return
+  ! sed -n '1,5p' "$bundle_dir/change.md" | grep -q '^Mode:' ||
+    { verdict_fail "handoff change.md contains execution choices before adoption"; return; }
+  assert_grep "$bundle_dir/change.md" '## Behavior' || return
+  assert_grep "$bundle_dir/change.md" '## Work' || return
 
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_launched "$agent" || return
-  done
+  assert_no_drafting_agents || return
 
   local non_planning_changes
   non_planning_changes="$(
@@ -399,17 +402,21 @@ scenario_PLAN_HANDOFF_01() {
     { verdict_fail "deep-planner modified non-planning files: $non_planning_changes"; return; }
 
   RUN_AGENT=orchestraitor
-  run_agent "ejecuta el plan $change en modo automático, TDD tests alongside, judgment none, delivery none." ||
+  run_agent "ejecuta el plan $change en modo automático, TDD alongside, judgment none, delivery none." ||
     { verdict_fail "the orchestraitor adoption run exited non-zero or timed out"; return; }
 
   local adopted
   adopted="$(find_change_dir "$change" "$PROJECT/.ai/deep-planner/changes")"
   [ -n "$adopted" ] || { verdict_fail "$change was not executed under its producer root"; return; }
   assert_absent "$PROJECT/.ai/orchestrator/changes/$change" || return
+  assert_one_change_document "$adopted" || return
   assert_file "$adopted/state.md" || return
-  assert_first_line_matches "$adopted/proposal.md" 'Status: ready-for-sdd | Source: deep-planner' || return
-  sed -n '2,4p' "$adopted/proposal.md" | grep -q 'Mode:.*Depth: full' ||
-    { verdict_fail "adopted producer bundle has no kickoff line after its marker block"; return; }
+  assert_first_line_matches "$adopted/change.md" 'Status: ready-for-sdd | Source: deep-planner' || return
+  sed -n '2,4p' "$adopted/change.md" | grep -q 'Mode:.*TDD: alongside.*Judgment: none.*Delivery: none' ||
+    { verdict_fail "adopted producer change.md has no execution-choice line"; return; }
+  assert_no_drafting_agents || return
+  assert_launched sdd-implement || return
+  assert_launched sdd-verify || return
   verdict_pass
 }
 
@@ -446,7 +453,7 @@ scenario_SDD_ARCH_01() {
 scenario_SDD_JDG_04() {
   CURRENT=SDD-JDG-04
   setup_scenario none
-  run_agent "usa SDD en modo automático, depth light, TDD tests alongside, judgment light, delivery none: agregá a OrderPricing un método discountShare(Order, BigDecimal) que reemplace a discountPerLine y devuelva el descuento repartido por línea, con su test." ||
+  run_agent "usa SDD en modo automático, TDD alongside, judgment light, delivery none: agregá a OrderPricing un método discountShare(Order, BigDecimal) que reemplace a discountPerLine y devuelva el descuento repartido por línea, con su test." ||
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   assert_launched jd-solo || return
@@ -485,13 +492,14 @@ scenario_LITE_01() {
   [ -n "$change_dir" ] || { verdict_fail "no change folder under .ai/sdd-lite/changes/"; return; }
 
   assert_file "$change_dir/change.md" || return
-  assert_first_line_matches "$change_dir/change.md" 'Lite: *' || return
-  assert_grep "$change_dir/change.md" '## Spec Deltas' || return
-  assert_grep "$change_dir/change.md" '## Tasks' || return
+  assert_one_change_document "$change_dir" || return
+  assert_first_line_matches "$change_dir/change.md" 'Status: active | Source: orchestralite' || return
+  assert_grep "$change_dir/change.md" '## Behavior' || return
+  assert_grep "$change_dir/change.md" '## Work' || return
 
   local words
   words="$(word_count "$change_dir/change.md")"
-  [ "$words" -lt 800 ] || { verdict_fail "change.md is $words words, the lite budget is under 800"; return; }
+  [ "$words" -le 900 ] || { verdict_fail "change.md is $words words, the budget is at most 900"; return; }
 
   # The lite flow never touches SDD state and delegates only to lite-verify
   # (a re-delegated verify round is within contract, another agent is not).
