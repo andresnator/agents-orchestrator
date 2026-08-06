@@ -44,7 +44,7 @@ Use common skills by reference from domain-specific agents instead of duplicatin
 ```mermaid
 graph TD
   grillcmd[/grill/] --> grillskill[grill router --> grilling]
-  quality[quality skills] --> refactor[refactor domain]
+  quality[quality skills] --> plan[protected planning]
   practices[engineering practices] --> sdd[SDD domain]
   native[native-question-ux] --> meta[meta domain]
   output[cognitive-output-refiner] --> docs[docs domain]

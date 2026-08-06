@@ -13,8 +13,8 @@
 | Intent | Coordinator | Operation |
 |---|---|---|
 | Executable or decision planning | `deep-planner` | `deep-plan` or `wayfinder` |
-| Test safety-net planning | `refactor-planner` | `hardening` |
-| Behavior-preserving refactor | `refactor-planner` | `refactor` |
+| Test safety-net planning | `deep-planner` | `hardening` |
+| Behavior-preserving refactor | `deep-planner` | `refactor` |
 | Full implementation, resume, or ready change | `orchestraitor` | `direct-sdd`, `resume`, or `execute-handoff` |
 | Bounded low-risk implementation | `orchestralite` | `sdd-lite` |
 | Architecture work | `architect` | requested architecture operation |

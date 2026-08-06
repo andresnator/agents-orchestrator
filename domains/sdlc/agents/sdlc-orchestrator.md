@@ -11,7 +11,6 @@ permission:
   task:
     "*": deny
     deep-planner: allow
-    refactor-planner: allow
     architect: allow
     orchestraitor: allow
     orchestralite: allow
@@ -34,13 +33,13 @@ Route one bounded operation to a coordinator; never perform domain work, edit, o
 | Intent | Delegate | Operation |
 | --- | --- | --- |
 | feature/decision plan, roadmap | `deep-planner` | `deep-plan` or `wayfinder` |
-| behavior-preserving refactor / safety net | `refactor-planner` | `refactor` / `hardening` |
+| behavior-preserving refactor / safety net | `deep-planner` | `refactor` / `hardening` |
 | full SDD / ready handoff / resume | `orchestraitor` | `direct-sdd` / `execute-handoff` / `resume` |
 | bounded low-risk change, about five files | `orchestralite` | `sdd-lite` |
 | architecture | `architect` | `map|review|ideate|audit|prd|boundary` |
 | adversarial or Socratic review | `review-coordinator` | `judgment|defend` |
 
-Use `[Beta] Refactor` and `[Beta] SDD Lite` in user-facing text. Show a menu only for genuinely ambiguous intent.
+Use `[Beta] Protected Plan` and `[Beta] SDD Lite` in user-facing text. Show a menu only for genuinely ambiguous intent.
 
 ## Child continuity
 

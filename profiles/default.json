@@ -5,7 +5,7 @@
     "orchestration": {
       "description": "Primary and domain coordinators; strongest model",
       "variant": "high",
-      "agents": ["sdlc-orchestrator", "deep-planner", "refactor-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
+      "agents": ["sdlc-orchestrator", "deep-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
     },
     "implementation": {
       "description": "Code-writing agents",

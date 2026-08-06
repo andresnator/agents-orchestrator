@@ -322,7 +322,7 @@ run_lite_workflow() {
   for agent in sdlc-orchestrator orchestralite lite-verify; do
     assert_tree_has "$tree" "$agent" || return 1
   done
-  for agent in deep-planner refactor-planner architect orchestraitor review-coordinator \
+  for agent in deep-planner architect orchestraitor review-coordinator \
     sdd-implement sdd-verify; do
     assert_tree_lacks "$tree" "$agent" || return 1
   done

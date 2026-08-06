@@ -356,12 +356,12 @@ scenario_SDD_ADOPT_01() {
     { verdict_fail "the run exited non-zero or timed out"; return; }
 
   local adopted
-  adopted="$(find_change_dir enforce-order-limit "$PROJECT/.ai/refactor-planner/changes")"
+  adopted="$(find_change_dir enforce-order-limit "$PROJECT/.ai/deep-planner/changes")"
   [ -n "$adopted" ] || { verdict_fail "enforce-order-limit was not executed under its producer root"; return; }
   assert_one_change_document "$adopted" || return
   assert_file "$adopted/state.md" || return
   assert_absent "$PROJECT/.ai/orchestrator/changes/enforce-order-limit" || return
-  assert_first_line_matches "$adopted/change.md" 'Status: ready-for-sdd | Source: refactor-planner' || return
+  assert_first_line_matches "$adopted/change.md" 'Status: ready-for-sdd | Source: deep-planner' || return
   # The kickoff line goes on the first line after the marker block.
   sed -n '2,4p' "$adopted/change.md" | grep -q 'Mode:.*TDD: alongside.*Judgment: none.*Delivery: none' ||
     { verdict_fail "no execution-choice line after the marker"; return; }

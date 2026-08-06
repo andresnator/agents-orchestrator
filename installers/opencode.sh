@@ -39,8 +39,9 @@ Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
               (currently: architecture, common, docs, learning, meta, plan,
-              refactor, sdd, sdd-lite).
-              Domain skills are symlinks to the top-level skills/ directory.
+              sdd, sdd-lite).
+              Exclusive skills live in their domain; shared skills use relative
+              symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
               Agents, commands, plugins, external plugins, and TUI plugins are not
@@ -70,8 +71,8 @@ Examples:
   installers/opencode.sh install --project
       Install into ./.opencode for the current project.
 
-  installers/opencode.sh install --domain refactor --status done,testing
-      Install only done/testing refactor components.
+  installers/opencode.sh install --domain plan --status done,testing
+      Install only done/testing planning components.
 
   installers/opencode.sh install --domain sdd,common --target /tmp/opencode-test --dry-run
       Preview a scratch install for selected domains.

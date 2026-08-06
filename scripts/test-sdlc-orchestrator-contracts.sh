@@ -74,7 +74,7 @@ for denied in edit write bash lsp todowrite skill webfetch websearch external_di
 done
 
 # The primary delegates only to domain coordinators.
-for coordinator in deep-planner refactor-planner architect orchestraitor orchestralite review-coordinator; do
+for coordinator in deep-planner architect orchestraitor orchestralite review-coordinator; do
   assert_frontmatter_contains "$primary" "$coordinator: allow"
 done
 for worker in \
@@ -119,22 +119,26 @@ assert_contains "$architect" 'report exists'
 assert_not_contains "$architect" "$RUNTIME_ARGUMENTS"
 assert_compact_coordinator_return "$architect"
 
-refactor=domains/refactor/agents/refactor-planner.md
-assert_frontmatter_contains "$refactor" 'mode: subagent'
-assert_frontmatter_contains "$refactor" 'question: deny'
-assert_frontmatter_contains "$refactor" 'refactor-analyzer: allow'
-assert_frontmatter_not_contains "$refactor" 'skill: allow'
-assert_frontmatter_contains "$refactor" '"*": deny'
-assert_contains "$refactor" 'refactor'
-assert_contains "$refactor" 'hardening'
-assert_contains "$refactor" 'change.md'
-assert_not_contains "$refactor" "$RUNTIME_ARGUMENTS"
-assert_compact_coordinator_return "$refactor"
+planner=domains/plan/agents/deep-planner.md
+assert_frontmatter_contains "$planner" 'mode: subagent'
+assert_frontmatter_contains "$planner" 'question: deny'
+assert_frontmatter_contains "$planner" 'refactor-analyzer: allow'
+assert_frontmatter_not_contains "$planner" 'skill: allow'
+assert_frontmatter_contains "$planner" '"*": deny'
+for operation in deep-plan refactor hardening wayfinder; do
+  assert_contains "$planner" "$operation"
+done
+assert_contains "$planner" 'change.md'
+assert_contains "$planner" 'never combine hardening and restructuring'
+assert_not_contains "$planner" "$RUNTIME_ARGUMENTS"
+assert_compact_coordinator_return "$planner"
+CHECKS=$((CHECKS + 1))
+[ ! -e domains/refactor ] || fail domains/refactor 'retired planning domain still exists'
 
 for analyzer in \
   domains/architecture/agents/arch-analyzer.md \
   domains/architecture/agents/boundary-inspector.md \
-  domains/refactor/agents/refactor-analyzer.md; do
+  domains/plan/agents/refactor-analyzer.md; do
   assert_frontmatter_contains "$analyzer" '"*": deny'
 done
 assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md 'service-boundary-analysis: allow'
@@ -168,7 +172,7 @@ assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence
 # Exactly one question owner and one primary in the installed SDLC profile.
 profile_primary_count=0
 profile_question_owner_count=0
-for domain in sdlc plan sdd architecture refactor sdd-lite common; do
+for domain in sdlc plan sdd architecture sdd-lite common; do
   for file in "domains/$domain/agents/"*.md; do
     [ -f "$file" ] || continue
     CHECKS=$((CHECKS + 1))
@@ -205,8 +209,7 @@ for command in $expected_aliases; do
   case "$command" in
     arch-*) file="domains/architecture/commands/$command.md" ;;
     boundary-inspector) file="domains/architecture/commands/$command.md" ;;
-    deep-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
-    harden-plan|refactor-plan) file="domains/refactor/commands/$command.md" ;;
+    deep-plan|harden-plan|refactor-plan|wayfinder) file="domains/plan/commands/$command.md" ;;
     judgment) file="domains/sdd/commands/$command.md" ;;
     defend) file="domains/common/commands/$command.md" ;;
   esac

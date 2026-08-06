@@ -8,7 +8,7 @@ INSTALLER="$REPO_ROOT/installers/opencode.sh"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 
 PROFILE_CONTRACT="sdlc-orchestrator-poc-profile/v1"
-PROFILE_DOMAINS="sdlc,plan,sdd,architecture,refactor,sdd-lite,common"
+PROFILE_DOMAINS="sdlc,plan,sdd,architecture,sdd-lite,common"
 MANAGED_DEFAULT_AGENT='"sdlc-orchestrator"'
 MANAGED_SUBAGENT_DEPTH='2'
 
@@ -167,7 +167,7 @@ emit_expected_links() {
         done
     done
     if [ -d "$REPO_ROOT/domains/$domain/skills" ]; then
-      find "$REPO_ROOT/domains/$domain/skills" -mindepth 1 -maxdepth 1 -type l | sort |
+      find "$REPO_ROOT/domains/$domain/skills" -mindepth 1 -maxdepth 1 \( -type l -o -type d \) | sort |
         while IFS= read -r file; do
           name="$(basename "$file")"
           source="$(cd -P "$file" && pwd -P)"

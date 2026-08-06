@@ -33,7 +33,7 @@ restores the dot.
 
 | Seed | Feeds | Content |
 | --- | --- | --- |
-| `ready-plan` | SDD-ADOPT-01 | One ready `change.md` at `ai/refactor-planner/changes/enforce-order-limit/`. It has no execution-choice line; SDD adds that line in place and keeps the producer root. |
+| `ready-plan` | SDD-ADOPT-01 | One protected ready `change.md` at `ai/deep-planner/changes/enforce-order-limit/`. It has no execution-choice line; SDD adds that line in place and keeps the producer root. |
 | `canonical-spec` | SDD-ARCH-01, SDD-ARCH-02 | A canonical `ai/orchestrator/specs/order-pricing/spec.md` plus a completed `change.md`. Its behavior rows cover ADD, MODIFY, REMOVE, and RENAME so one archive run exercises canonical reconciliation. |
 | `legacy` | SDD-MIG-01 | A pre-`.ai/` `orchestraitor/` tree containing one canonical spec and one `change.md`. The storage location is legacy; the change document already uses the current one-file shape. |
 

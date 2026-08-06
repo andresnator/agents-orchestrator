@@ -6,8 +6,8 @@ This repository stores reusable OpenCode agent artifacts, not application code. 
 
 - Write documentation, descriptions, prompts, and comments in English.
 - Preserve literal runtime triggers such as `"ejecuta el plan <change>"` and Spanish skill triggers. They are activation contracts, not prose to translate.
-- `domains/` owns agents, commands, repository plugins, external-plugin locks, and domain skill usage.
-- `skills/` owns reusable skill bodies.
+- `domains/` owns agents, commands, repository plugins, external-plugin locks, and skills used by one domain.
+- `skills/` owns only skill bodies shared by multiple domains.
 - `global/AGENTS.md` is the installable runtime rules file. Root `AGENTS.md` is maintainer guidance; do not merge their roles.
 - `installers/opencode.sh` discovers and installs components. Adding a component must not require installer edits.
 - `.ai/` and other runtime-state directories are ignored state, not repository artifacts.
@@ -35,7 +35,7 @@ Keep prompts short: role, accepted operation, ownership and safety boundaries, h
 
 ## Skills
 
-Each skill lives at `skills/<skill>/SKILL.md`. A domain declares usage with a relative symlink at `domains/<domain>/skills/<skill>`; domain skill directories contain no copied skill bodies.
+Each skill has exactly one body. A skill used by one domain lives directly at `domains/<domain>/skills/<skill>/SKILL.md`. A skill used by multiple domains lives at `skills/<skill>/SKILL.md`, and every owning domain declares it with a relative `domains/<domain>/skills/<skill>` symlink. Do not copy skill bodies or keep an exclusive skill at the top level.
 
 Skill frontmatter contains `name`, `description`, `license`, and `metadata.author`, strict SemVer `metadata.version`, and `metadata.status`. Status is `backlog`, `in-progress`, `testing`, or `done`.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Validates repo harness artifacts against the contracts in AGENTS.md:
 # agent/command frontmatter shape and key order, skill frontmatter with
-# strict SemVer and lifecycle status, domain skill symlink integrity, and
+# strict SemVer and lifecycle status, domain skill ownership integrity, and
 # global name uniqueness across flat OpenCode targets.
 
 set -u
@@ -13,7 +13,7 @@ FAILS=0
 AGENTS=0
 COMMANDS=0
 SKILLS=0
-LINKS=0
+DOMAIN_SKILLS=0
 PROFILES=0
 TUI_PLUGINS=0
 EXTERNAL_PLUGINS=0
@@ -145,18 +145,17 @@ if command -v jq >/dev/null 2>&1; then
 fi
 
 # --- Skills ---
-for d in skills/*/; do
-  s="${d%/}"
-  name="${s#skills/}"
+check_skill_body() {
+  local s="$1" name="$2" f fm meta refs ref found cand
   SKILLS=$((SKILLS + 1))
   f="$s/SKILL.md"
   if [ ! -f "$f" ]; then
     fail "$s" "missing SKILL.md"
-    continue
+    return
   fi
   if ! fm="$(frontmatter "$f")"; then
     fail "$f" "missing or unterminated --- frontmatter"
-    continue
+    return
   fi
   printf '%s\n' "$fm" | grep -q "^name: $name\$" ||
     fail "$f" "frontmatter name must match directory name '$name'"
@@ -184,7 +183,7 @@ for d in skills/*/; do
     esac
     ref="${ref%[.,:;)]}" # strip one trailing sentence-punctuation char
     found=0
-    for cand in skills/*/"$ref"; do
+    for cand in skills/*/"$ref" domains/*/skills/*/"$ref"; do
       [ -e "$cand" ] && {
         found=1
         break
@@ -195,32 +194,51 @@ for d in skills/*/; do
   done <<EOF
 $refs
 EOF
+}
+
+for s in skills/*; do
+  [ -d "$s" ] && [ ! -L "$s" ] || continue
+  name="$(basename "$s")"
+  check_skill_body "$s" "$name"
+  link_count="$(find domains -mindepth 3 -maxdepth 3 -type l -path "*/skills/$name" -print | wc -l | tr -d ' ')"
+  [ "$link_count" -ge 2 ] ||
+    fail "$s" "top-level skill must be shared by at least two domain symlinks; found $link_count"
 done
 
-# --- Domain skill symlinks ---
-for l in domains/*/skills/*; do
-  { [ -e "$l" ] || [ -L "$l" ]; } || continue
-  LINKS=$((LINKS + 1))
-  name="$(basename "$l")"
-  if [ ! -L "$l" ]; then
-    fail "$l" "must be a symlink to skills/$name"
-    continue
-  fi
-  target="$(readlink "$l")"
-  case "$target" in
-    /*)
-      fail "$l" "symlink must be relative, found absolute target '$target'"
+# --- Domain skill ownership ---
+for entry in domains/*/skills/*; do
+  { [ -e "$entry" ] || [ -L "$entry" ]; } || continue
+  DOMAIN_SKILLS=$((DOMAIN_SKILLS + 1))
+  name="$(basename "$entry")"
+  if [ -L "$entry" ]; then
+    target="$(readlink "$entry")"
+    case "$target" in
+      /*)
+        fail "$entry" "shared-skill symlink must be relative, found absolute target '$target'"
+        continue
+        ;;
+    esac
+    expected="$(cd "skills/$name" 2>/dev/null && pwd -P)" || expected=""
+    if [ -z "$expected" ]; then
+      fail "$entry" "top-level shared skill skills/$name does not exist"
       continue
-      ;;
-  esac
-  expected="$(cd "skills/$name" 2>/dev/null && pwd -P)" || expected=""
-  if [ -z "$expected" ]; then
-    fail "$l" "top-level skills/$name does not exist"
+    fi
+    resolved="$(cd "$(dirname "$entry")" 2>/dev/null && cd "$target" 2>/dev/null && pwd -P)" || resolved=""
+    [ "$resolved" = "$expected" ] ||
+      fail "$entry" "symlink resolves to '${resolved:-broken}', expected skills/$name"
     continue
   fi
-  resolved="$(cd "$(dirname "$l")" 2>/dev/null && cd "$target" 2>/dev/null && pwd -P)" || resolved=""
-  [ "$resolved" = "$expected" ] ||
-    fail "$l" "symlink resolves to '${resolved:-broken}', expected skills/$name"
+
+  if [ ! -d "$entry" ]; then
+    fail "$entry" "domain skill entry must be a directory or shared-skill symlink"
+    continue
+  fi
+  [ ! -e "skills/$name" ] && [ ! -L "skills/$name" ] ||
+    fail "$entry" "exclusive domain skill duplicates top-level skills/$name"
+  owner_count="$(find domains -mindepth 3 -maxdepth 3 -path "*/skills/$name" -print | wc -l | tr -d ' ')"
+  [ "$owner_count" -eq 1 ] ||
+    fail "$entry" "direct skill body must have exactly one domain owner; found $owner_count"
+  check_skill_body "$entry" "$name"
 done
 
 # --- Model-tier profiles (jq-gated so the validator runs on jq-less machines) ---
@@ -348,9 +366,9 @@ if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
 fi
 
 if [ "$FAILS" -gt 0 ]; then
-  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill links, %d profiles.\n' \
-    "$FAILS" "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
+  printf 'FAIL: %d violation(s) across %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill entries, %d profiles.\n' \
+    "$FAILS" "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$DOMAIN_SKILLS" "$PROFILES"
   exit 1
 fi
-printf 'PASS: %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill links, %d profiles, script syntax and deterministic contracts OK.\n' \
-  "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$LINKS" "$PROFILES"
+printf 'PASS: %d agents, %d commands, %d external plugins, %d TUI plugins, %d skills, %d domain skill entries, %d profiles, script syntax and deterministic contracts OK.\n' \
+  "$AGENTS" "$COMMANDS" "$EXTERNAL_PLUGINS" "$TUI_PLUGINS" "$SKILLS" "$DOMAIN_SKILLS" "$PROFILES"

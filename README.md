@@ -17,15 +17,14 @@ scripts/sdlc-orchestrator-poc.sh install --project-root /absolute/path/to/projec
 scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `sdlc,plan,sdd,architecture,refactor,sdd-lite,common`, sets `sdlc-orchestrator` as the default, and allows two delegation levels. See the [POC runbook](docs/sdlc-orchestrator-poc.md).
+The project profile selects `sdlc,plan,sdd,architecture,sdd-lite,common`, sets `sdlc-orchestrator` as the default, and allows two delegation levels. See the [POC runbook](docs/sdlc-orchestrator-poc.md).
 
 ## Domains
 
 | Domain | Purpose | Entry points |
 |---|---|---|
 | [sdlc](domains/sdlc/README.md) | Natural-language routing and user-question ownership | `sdlc-orchestrator` |
-| [plan](domains/plan/README.md) | Executable plans, decision plans, and Wayfinder maps | `/deep-plan`, `/wayfinder` |
-| [refactor](domains/refactor/README.md) | Risk-gated refactor and test-hardening plans | `/refactor-plan`, `/harden-plan` |
+| [plan](domains/plan/README.md) | Delivery, refactor, hardening, decision, and Wayfinder plans | `/deep-plan`, `/refactor-plan`, `/harden-plan`, `/wayfinder` |
 | [architecture](domains/architecture/README.md) | Maps, reviews, PRDs, audits, boundaries, and ideation | `/arch-*`, `/boundary-inspector` |
 | [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/judgment` |
 | [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite` |
@@ -40,8 +39,9 @@ The project profile selects `sdlc,plan,sdd,architecture,refactor,sdd-lite,common
 |---|---|
 | `domains/<domain>/agents/` | Fused OpenCode agent definitions |
 | `domains/<domain>/commands/` | Fused OpenCode commands |
-| `skills/<skill>/SKILL.md` | Reusable skill contracts |
-| `domains/<domain>/skills/` | Symlinks declaring domain usage |
+| `domains/<domain>/skills/<skill>/` | Skills used by one domain |
+| `skills/<skill>/` | Skill bodies shared by multiple domains |
+| `domains/<domain>/skills/<shared-skill>` | Relative symlinks declaring shared usage |
 | `domains/<domain>/plugins/` | Repository-specific plugins |
 | `domains/<domain>/external-plugins/` | Pinned standalone plugin descriptors |
 | `profiles/` | Provider-independent agent tiers |
@@ -51,7 +51,7 @@ The project profile selects `sdlc,plan,sdd,architecture,refactor,sdd-lite,common
 Filtered installation is a sync: include every domain and lifecycle status you want to keep.
 
 ```bash
-installers/opencode.sh install --domain refactor --status done,testing
+installers/opencode.sh install --domain plan --status done,testing
 installers/opencode.sh install --project
 installers/opencode.sh status --domain sdd
 ```

@@ -1,17 +1,18 @@
 # Skills
 
-This directory is the source of truth for reusable skill bodies.
+This directory is the source of truth only for skill bodies shared by multiple domains.
 
-Each skill lives at:
+An exclusive skill lives with its domain:
+
+```text
+domains/<domain>/skills/<skill>/SKILL.md
+```
+
+A shared skill has one top-level body and a relative symlink from every owning domain:
 
 ```text
 skills/<skill>/SKILL.md
-```
-
-Domains declare skill usage with relative symlinks:
-
-```text
 domains/<domain>/skills/<skill> -> ../../../skills/<skill>
 ```
 
-Edit skill content only under `skills/`. Add or remove domain symlinks to change which domains install or advertise a skill.
+Never copy a body. When ownership changes from one domain to several, move it to `skills/` and add the symlinks together; when it becomes exclusive, move the body into that domain and remove the top-level entry.

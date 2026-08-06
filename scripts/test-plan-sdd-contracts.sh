@@ -60,9 +60,8 @@ assert_frontmatter_contains() {
 }
 
 # One drafting contract replaces the retired phase fan-out.
-assert_exists skills/sdd-draft-change/SKILL.md
-assert_exists skills/sdd-draft-change/assets/change-template.md
-assert_exists domains/sdd/skills/sdd-draft-change
+assert_exists domains/sdd/skills/sdd-draft-change/SKILL.md
+assert_exists domains/sdd/skills/sdd-draft-change/assets/change-template.md
 for retired in \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
   assert_absent "skills/$retired"
@@ -72,7 +71,7 @@ for retired in sdd-proposal sdd-spec sdd-design sdd-tasks; do
   assert_absent "domains/sdd/agents/$retired.md"
 done
 
-template=skills/sdd-draft-change/assets/change-template.md
+template=domains/sdd/skills/sdd-draft-change/assets/change-template.md
 for heading in '# Change:' '## Outcome' '## Scope' '## Behavior' '## Approach' '## Work' '## Verify'; do
   assert_contains "$template" "$heading"
 done
@@ -81,16 +80,15 @@ assert_contains "$template" 'ADD|MODIFY|REMOVE|RENAME'
 assert_contains "$template" 'WHEN <condition>'
 assert_contains "$template" 'THEN <observable result>'
 assert_contains "$template" 'Files: <paths>'
-assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
-assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
-assert_contains skills/sdd-draft-change/SKILL.md 'omits the execution-choice line'
-assert_contains skills/sdd-draft-change/SKILL.md 'preserves the producer marker'
-assert_contains skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
+assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'at most 900 words'
+assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
+assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'omits the execution-choice line'
+assert_contains domains/sdd/skills/sdd-draft-change/SKILL.md 'preserves the producer marker'
+assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
 
 # Every current producer/consumer uses change.md and compact returns.
 for file in \
   domains/plan/agents/deep-planner.md \
-  domains/refactor/agents/refactor-planner.md \
   domains/architecture/agents/architect.md; do
   assert_frontmatter_contains "$file" 'mode: subagent'
   assert_frontmatter_contains "$file" 'question: deny'
@@ -100,7 +98,13 @@ for file in \
 done
 
 assert_contains domains/plan/agents/deep-planner.md '.ai/deep-planner/changes/'
-assert_contains domains/refactor/agents/refactor-planner.md '.ai/refactor-planner/changes/'
+for operation in deep-plan refactor hardening wayfinder; do
+  assert_contains domains/plan/agents/deep-planner.md "$operation"
+done
+assert_frontmatter_contains domains/plan/agents/deep-planner.md 'refactor-analyzer: allow'
+assert_exists domains/plan/agents/refactor-analyzer.md
+assert_absent domains/refactor
+assert_absent domains/plan/agents/refactor-planner.md
 assert_contains domains/architecture/agents/architect.md '.ai/architect/changes/'
 
 orchestrator=domains/sdd/agents/orchestraitor.md
@@ -133,7 +137,7 @@ assert_contains "$verify" 'change.md'
 assert_contains "$verify" 'explicit diff range'
 
 # No runtime/profile/fixture contract may retain the deleted drafting inventory.
-inventory_roots=(domains/plan domains/refactor domains/architecture domains/sdd domains/sdd-lite profiles scripts/fixtures/sdd-agent-routes/java-orders)
+inventory_roots=(domains/plan domains/architecture domains/sdd domains/sdd-lite profiles scripts/fixtures/sdd-agent-routes/java-orders)
 for retired in \
   sdd-proposal sdd-spec sdd-design sdd-tasks \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
@@ -148,7 +152,7 @@ assert_absent docs/delegation-receipts.md
 
 fixture_root=scripts/fixtures/sdd-agent-routes/java-orders/state-seeds
 for change_dir in \
-  "$fixture_root/ready-plan/ai/refactor-planner/changes/enforce-order-limit" \
+  "$fixture_root/ready-plan/ai/deep-planner/changes/enforce-order-limit" \
   "$fixture_root/canonical-spec/ai/orchestrator/changes/adjust-order-pricing" \
   "$fixture_root/legacy/orchestraitor/changes/rename-order-reference"; do
   assert_exists "$change_dir/change.md"
@@ -160,7 +164,7 @@ for change_dir in \
     fail "$change_dir/specs" 'retired delta-spec files remain'
 done
 
-for command in deep-plan wayfinder; do
+for command in deep-plan harden-plan refactor-plan wayfinder; do
   file="domains/plan/commands/$command.md"
   assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
   assert_frontmatter_contains "$file" 'subtask: false'

@@ -145,15 +145,16 @@ discover_components() {
 
     dir="$domain/skills"
     if [ -d "$dir" ]; then
-      find "$dir" -mindepth 1 -maxdepth 1 ! -type l | sort | while IFS= read -r file; do
-        warn "$file: domain skill entries must be symlinks to skills/<skill>; skipped"
-      done
-      find "$dir" -mindepth 1 -maxdepth 1 -type l | sort | while IFS= read -r file; do
+      find "$dir" -mindepth 1 -maxdepth 1 -print | sort | while IFS= read -r file; do
+        if [ ! -L "$file" ] && [ ! -d "$file" ]; then
+          warn "$file: domain skill entry must be a directory or shared-skill symlink; skipped"
+          continue
+        fi
         name="$(basename "$file")"
         src="$(skill_source_dir "$file")"
         skill_file="$src/SKILL.md"
         if [ ! -f "$skill_file" ]; then
-          warn "$file: skill link does not resolve to a SKILL.md; skipped"
+          warn "$file: skill entry does not resolve to a SKILL.md; skipped"
           continue
         fi
         status="$(status_from_file "$skill_file")"

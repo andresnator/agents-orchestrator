@@ -1,6 +1,6 @@
 # Run the SDLC Orchestrator POC
 
-The opt-in project profile makes `sdlc-orchestrator` the single natural-language entrypoint. It owns routing and user questions; six domain coordinators own specialized work and may delegate only their phase agents.
+The opt-in project profile makes `sdlc-orchestrator` the single natural-language entrypoint. It owns routing and user questions; five domain coordinators own specialized work and may delegate only their phase agents.
 
 ## Quick path
 
@@ -12,7 +12,7 @@ scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
 scripts/sdlc-orchestrator-poc.sh uninstall --project-root /absolute/path/to/project
 ```
 
-The profile installs `sdlc,plan,sdd,architecture,refactor,sdd-lite,common` into the project's `.opencode/` and applies:
+The profile installs `sdlc,plan,sdd,architecture,sdd-lite,common` into the project's `.opencode/` and applies:
 
 ```jsonc
 {
@@ -28,7 +28,7 @@ The generic installer remains the supported route for other domain combinations.
 | Intent | Coordinator | Durable result |
 |---|---|---|
 | Executable or decision planning | `deep-planner` | `change.md`, decision plan, or Wayfinder map |
-| Test hardening or behavior-preserving refactor | `refactor-planner` | Ready `change.md` or reasoned no-plan result |
+| Test hardening or behavior-preserving refactor | `deep-planner` | Ready `change.md` or reasoned no-plan result |
 | Full SDD, resume, or ready handoff | `orchestraitor` | Implementation, canonical specs, archived change |
 | Bounded low-risk implementation | `orchestralite` | Implementation and archived `change.md` |
 | Architecture operation | `architect` | Architecture docs, reports, ADR, or ready `change.md` |
@@ -52,7 +52,7 @@ Absent fields are omitted. Clean returns are at most five lines; findings use on
 
 ## One-document SDD handoff
 
-Deep Plan, Refactor/Hardening, and Architecture Ideate write one file:
+Deep Plan, protected Refactor/Hardening, and Architecture Ideate write one file:
 
 ```text
 .ai/<producer>/changes/<change>/change.md
