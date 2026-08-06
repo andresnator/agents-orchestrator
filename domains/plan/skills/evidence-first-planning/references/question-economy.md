@@ -22,4 +22,4 @@ Edge-case validation may surface decisions only the user can make (retention, fa
 
 ## Record the answers
 
-Every answer becomes a decision line in the plan's Context, with its rationale — so a fresh session (or the executor) never re-litigates it.
+Every answer becomes a line in the plan's Decisions section, with its rationale, so a fresh session or executor never re-litigates it.

@@ -15,6 +15,8 @@ Direct work lives at `.ai/orchestrator/changes/<change>/change.md`. Planner hand
 
 The shared `sdd-draft-change` skill defines the concise shape: outcome, scope, behavior deltas, approach, work groups with optional `Files:` scopes, verification, and non-empty risks. One file may contain several waves. Disjoint scopes may run in parallel; unclear overlap runs sequentially.
 
+A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. SDD preserves that marker, moves its row from `planned` to `adopted` at intake and to `done` at archive, then offers but never auto-plans the next unblocked slice.
+
 ## Flow
 
 ```text

@@ -51,6 +51,21 @@ assert_regex() {
   grep -Eiq "$pattern" "$file" || fail "$file" "missing contract pattern: $pattern"
 }
 
+assert_first_line() {
+  local file="$1" expected="$2"
+  CHECKS=$((CHECKS + 1))
+  [ "$(sed -n '1p' "$file")" = "$expected" ] ||
+    fail "$file" "expected first line: $expected"
+}
+
+assert_match_count() {
+  local file="$1" pattern="$2" expected="$3" actual
+  CHECKS=$((CHECKS + 1))
+  actual="$(grep -Ec "$pattern" "$file" || true)"
+  [ "$actual" -eq "$expected" ] ||
+    fail "$file" "expected $expected matches for $pattern, found $actual"
+}
+
 frontmatter() {
   awk '
     NR == 1 { if ($0 != "---") exit 1; next }
@@ -64,6 +79,12 @@ assert_frontmatter_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
   frontmatter "$file" | grep -Fq "$text" || fail "$file" "frontmatter missing: $text"
+}
+
+assert_frontmatter_not_contains() {
+  local file="$1" text="$2"
+  CHECKS=$((CHECKS + 1))
+  ! frontmatter "$file" | grep -Fq "$text" || fail "$file" "frontmatter retains: $text"
 }
 
 # One drafting contract replaces the retired phase fan-out.
@@ -86,15 +107,38 @@ for heading in '# Change:' '## Outcome' '## Scope' '## Behavior' '## Approach' '
   assert_contains "$template" "$heading"
 done
 assert_contains "$template" 'Status: draft | ready-for-sdd | active | Source: <producer>'
+assert_first_line "$template" 'Status: draft | ready-for-sdd | active | Source: <producer>'
 assert_contains "$template" 'ADD|MODIFY|REMOVE|RENAME'
 assert_contains "$template" 'WHEN <condition>'
 assert_contains "$template" 'THEN <observable result>'
 assert_contains "$template" 'Files: <paths>'
 assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
 assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
-assert_contains skills/sdd-draft-change/SKILL.md 'omits the execution-choice line'
-assert_contains skills/sdd-draft-change/SKILL.md 'preserves the producer marker'
+assert_contains skills/sdd-draft-change/SKILL.md 'omits execution choices'
+assert_contains skills/sdd-draft-change/SKILL.md 'preserves marker lines'
+assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "1.2.0"'
+assert_contains skills/sdd-draft-change/SKILL.md 'Roadmap: <goal> | Slice: <n>/<total>'
 assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
+
+# One model-neutral planning skill owns decisions, discovery, and roadmaps.
+planning_skill=domains/plan/skills/evidence-first-planning
+assert_exists "$planning_skill/SKILL.md"
+assert_exists "$planning_skill/assets/plan-template.md"
+assert_exists "$planning_skill/assets/roadmap-template.md"
+assert_frontmatter_contains "$planning_skill/SKILL.md" 'name: evidence-first-planning'
+assert_frontmatter_contains "$planning_skill/SKILL.md" 'version: "3.0.0"'
+assert_absent domains/plan/skills/fable-planning
+assert_absent domains/plan/skills/wayfinder
+assert_first_line "$planning_skill/assets/plan-template.md" 'Status: discovery | final | Source: deep-planner'
+for heading in '## Destination' '## Evidence' '## Decisions' '## Open questions' '## Edge cases' '## Verification' '## Out of scope' '## Next'; do
+  assert_contains "$planning_skill/assets/plan-template.md" "$heading"
+done
+assert_first_line "$planning_skill/assets/roadmap-template.md" 'Status: active | done | abandoned | Source: deep-planner'
+for field in \
+  '| # | Slice | Scope | Depends on | Status | Change |' \
+  pending planned adopted 'done' dropped; do
+  assert_contains "$planning_skill/assets/roadmap-template.md" "$field"
+done
 
 # Every current producer/consumer uses change.md and compact returns.
 for file in \
@@ -108,9 +152,19 @@ for file in \
 done
 
 assert_contains domains/plan/agents/deep-planner.md '.ai/deep-planner/changes/'
-for operation in deep-plan refactor hardening wayfinder; do
-  assert_contains domains/plan/agents/deep-planner.md "$operation"
-done
+assert_frontmatter_contains domains/plan/agents/deep-planner.md 'evidence-first-planning: allow'
+assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'fable-planning: allow'
+assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'wayfinder: allow'
+assert_frontmatter_not_contains domains/plan/agents/deep-planner.md '".ai/wayfinder/**": allow'
+assert_contains domains/plan/agents/deep-planner.md 'operation=deep-plan intent=auto|discovery'
+assert_contains domains/plan/agents/deep-planner.md 'operation=refactor intent=auto|hardening'
+assert_contains domains/plan/agents/deep-planner.md 'Medium/high risk permits one'
+assert_contains domains/plan/agents/deep-planner.md 'critical risk permits at most two'
+assert_contains domains/plan/agents/deep-planner.md 'continúa el roadmap <goal>'
+assert_contains domains/plan/agents/deep-planner.md '.ai/roadmaps/<goal>.md'
+assert_contains domains/plan/agents/deep-planner.md 'planned|adopted'
+assert_contains domains/plan/agents/deep-planner.md 'first unblocked'
+assert_contains domains/plan/agents/deep-planner.md 'OK plan/<deep-plan|refactor>'
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'refactor-analyzer: allow'
 assert_exists domains/plan/agents/refactor-analyzer.md
 assert_absent domains/refactor
@@ -129,8 +183,13 @@ assert_contains "$orchestrator" '.ai/<producer>/changes/<change>/'
 assert_contains "$orchestrator" 'Status: active'
 assert_not_contains "$orchestrator" 'sdlc-coordinator-receipt/v1'
 assert_regex "$orchestrator" 'adopt.*in place|in-place'
-assert_contains "$orchestrator" 'keep the producer marker'
+assert_regex "$orchestrator" '(keep|preserve).*producer marker'
 assert_regex "$orchestrator" 'canonical spec'
+assert_contains "$orchestrator" 'Roadmap: <goal> | Slice: <n>/<total>'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$orchestrator" 'planned` to `adopted'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$orchestrator" 'set the matching slice `done`'
 
 # Implementation owns code and canonical merge, but never Git publication.
 implement=domains/sdd/agents/sdd-implement.md
@@ -179,6 +238,26 @@ for command in deep-plan harden-plan refactor-plan wayfinder; do
   assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
   assert_frontmatter_contains "$file" 'subtask: false'
   assert_contains "$file" "$RUNTIME_ARGUMENTS"
+done
+assert_contains domains/plan/commands/deep-plan.md 'operation=deep-plan intent=auto'
+assert_contains domains/plan/commands/wayfinder.md 'operation=deep-plan intent=discovery'
+assert_contains domains/plan/commands/refactor-plan.md 'operation=refactor intent=auto'
+assert_contains domains/plan/commands/harden-plan.md 'operation=refactor intent=hardening'
+
+# Human documentation carries one overview, five behavioral sequences, and prompts.
+plan_readme=domains/plan/README.md
+scenario_doc=docs/plan-flow-test-scenarios.md
+assert_match_count "$plan_readme" '^flowchart LR$' 1
+assert_match_count "$plan_readme" '^sequenceDiagram$' 5
+assert_match_count "$plan_readme" '^```mermaid$' 6
+assert_exists "$scenario_doc"
+for scenario in \
+  PLAN-BOUNDED-01 PLAN-DECISION-01 PLAN-DISCOVERY-01 PLAN-ROADMAP-01 \
+  PLAN-REFACTOR-01 PLAN-HARDEN-AUTO-01 PLAN-HARDEN-ALIAS-01 PLAN-REFACTOR-GUARD-01; do
+  assert_contains "$scenario_doc" "$scenario"
+done
+for heading in '**Prompt:**' '**Expected artifacts/A2A:**' '**Forbidden behavior:**'; do
+  assert_contains "$scenario_doc" "$heading"
 done
 
 if [ "$FAILS" -gt 0 ]; then

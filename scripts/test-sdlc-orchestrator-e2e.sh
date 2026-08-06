@@ -223,7 +223,7 @@ run_plan_sdd_workflow() {
   local project="$SCRATCH/plan-project" evidence="$EVIDENCE_ROOT/plan-sdd"
   local plan_events="$evidence/01-plan.events.jsonl"
   local execute_events="$evidence/02-execute.events.jsonl"
-  local root_id bundle_dir bundle_rel change archived tree_before="$evidence/session-tree-before.tsv"
+  local root_id change_dir change_rel change archived tree_before="$evidence/session-tree-before.tsv"
   local tree_after="$evidence/session-tree-after.tsv" agent
 
   log "E2E 1/2: natural Deep Plan -> same-session SDD"
@@ -233,7 +233,7 @@ run_plan_sdd_workflow() {
 
   run_turn "$project" "$plan_events" "$evidence/01-plan.stderr" \
     "SDLC POC E2E plan and execute" \
-    "Quiero planificar a fondo, sin implementar todavía, un cambio acotado: agrega a Order un método público lineCount() que devuelva exactamente el número de líneas de la orden y una prueba automatizada. Es un único bundle ejecutable, no un roadmap ni una investigación. Conserva las convenciones Java y JUnit existentes; no hay decisiones de producto abiertas, no cambies precios ni cantidades y usa la recomendación segura para cualquier detalle menor." || return 1
+    "Quiero planificar a fondo, sin implementar todavía, un cambio acotado: agrega a Order un método público lineCount() que devuelva exactamente el número de líneas de la orden y una prueba automatizada. Produce un único change.md ejecutable, no un roadmap ni una investigación. Conserva las convenciones Java y JUnit existentes; no hay decisiones de producto abiertas, no cambies precios ni cantidades y usa la recomendación segura para cualquier detalle menor." || return 1
 
   root_id="$(session_id_from_events "$plan_events")"
   assert_session_id "$root_id"
@@ -246,21 +246,21 @@ run_plan_sdd_workflow() {
     assert_tree_lacks "$tree_before" "$agent" || return 1
   done
 
-  bundle_dir="$(find "$project/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d ! -name archive -print -quit 2>/dev/null)"
-  [ -n "$bundle_dir" ] || { fail "Deep Plan produced no active producer bundle"; return 1; }
-  bundle_rel="${bundle_dir#"$project/"}"
-  change="$(basename "$bundle_dir")"
-  printf '%s\n' "$bundle_rel" > "$evidence/bundle-before-path.txt"
-  [ -f "$bundle_dir/change.md" ] || { fail "producer bundle is missing change.md"; return 1; }
+  change_dir="$(find "$project/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d ! -name archive -print -quit 2>/dev/null)"
+  [ -n "$change_dir" ] || { fail "Deep Plan produced no active producer change"; return 1; }
+  change_rel="${change_dir#"$project/"}"
+  change="$(basename "$change_dir")"
+  printf '%s\n' "$change_rel" > "$evidence/change-before-path.txt"
+  [ -f "$change_dir/change.md" ] || { fail "producer change is missing change.md"; return 1; }
   for path in proposal.md design.md tasks.md specs; do
-    [ ! -e "$bundle_dir/$path" ] || { fail "producer bundle retains retired $path"; return 1; }
+    [ ! -e "$change_dir/$path" ] || { fail "producer change retains retired $path"; return 1; }
   done
-  head -n 1 "$bundle_dir/change.md" | grep -Fxq 'Status: ready-for-sdd | Source: deep-planner' ||
+  head -n 1 "$change_dir/change.md" | grep -Fxq 'Status: ready-for-sdd | Source: deep-planner' ||
     { fail "producer marker is invalid"; return 1; }
-  grep -Fq '## Behavior' "$bundle_dir/change.md" || { fail "change.md has no Behavior section"; return 1; }
-  grep -Fq '## Work' "$bundle_dir/change.md" || { fail "change.md has no Work section"; return 1; }
-  (cd "$project" && find "$bundle_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
-    > "$evidence/bundle-before.sha256"
+  grep -Fq '## Behavior' "$change_dir/change.md" || { fail "change.md has no Behavior section"; return 1; }
+  grep -Fq '## Work' "$change_dir/change.md" || { fail "change.md has no Work section"; return 1; }
+  (cd "$project" && find "$change_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
+    > "$evidence/change-before.sha256"
   (
     cd "$project" || exit 1
     git status --porcelain --untracked-files=all |
@@ -288,15 +288,15 @@ run_plan_sdd_workflow() {
   done
 
   archived="$(find "$project/.ai/deep-planner/changes/archive" -mindepth 1 -maxdepth 1 -type d -name "*-$change" -print -quit 2>/dev/null)"
-  [ -n "$archived" ] || { fail "executed bundle was not archived under its producer root"; return 1; }
+  [ -n "$archived" ] || { fail "executed change was not archived under its producer root"; return 1; }
   [ ! -e "$project/.ai/orchestrator/changes/$change" ] ||
-    { fail "producer bundle was copied into the direct-SDD root"; return 1; }
+    { fail "producer change was copied into the direct-SDD root"; return 1; }
   grep -Rq 'lineCount' "$project/src/main" || { fail "lineCount was not implemented"; return 1; }
   grep -Rq 'lineCount' "$project/src/test" || { fail "lineCount has no test"; return 1; }
   assert_maven_green "$project" "$evidence/maven-test.log" || return 1
 
-  printf '%s\n' "${archived#"$project/"}" > "$evidence/bundle-after-path.txt"
-  log "PASS E2E 1/2: session $root_id, bundle ${archived#"$project/"}"
+  printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
+  log "PASS E2E 1/2: session $root_id, change ${archived#"$project/"}"
 }
 
 run_lite_workflow() {

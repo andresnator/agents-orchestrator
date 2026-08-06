@@ -27,14 +27,14 @@ The generic installer remains the supported route for other domain combinations.
 
 | Intent | Coordinator | Durable result |
 |---|---|---|
-| Executable or decision planning | `deep-planner` | `change.md`, decision plan, or Wayfinder map |
+| Executable, decision, discovery, or roadmap planning | `deep-planner` | `change.md`, durable plan, or roadmap slice |
 | Test hardening or behavior-preserving refactor | `deep-planner` | Ready `change.md` or reasoned no-plan result |
 | Full SDD, resume, or ready handoff | `orchestraitor` | Implementation, canonical specs, archived change |
 | Bounded low-risk implementation | `orchestralite` | Implementation and archived `change.md` |
 | Architecture operation | `architect` | Architecture docs, reports, ADR, or ready `change.md` |
 | Judgment or Defend | `review-coordinator` | Findings, fixes, verdict, or defense outcome |
 
-Commands such as `/deep-plan`, `/harden-plan`, `/arch-ideate`, `/judgment`, and `/defend` are compatibility aliases through the same primary. The primary shows options only for ambiguous intent.
+Commands such as `/deep-plan`, `/wayfinder`, `/harden-plan`, `/arch-ideate`, `/judgment`, and `/defend` route through the same primary. Plan aliases select `auto`, `discovery`, or `hardening` intent; the primary shows options only for ambiguous intent.
 
 ## Topology decision
 

@@ -1,6 +1,6 @@
-# Change: <title>
-
 Status: draft | ready-for-sdd | active | Source: <producer>
+
+# Change: <title>
 
 ## Outcome
 

@@ -27,7 +27,7 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 
 ## Hidden State Directories
 
-Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/wayfinder/`, `.ai/absorb/`) — and default file search skips them:
+Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/absorb/`) — and default file search skips them:
 
 - Wildcard globs and file-finding tools do not descend into dot-directories by default. An empty result for a `.ai/...` pattern is inconclusive, never proof the state is absent.
 - To check state under `.ai/` (or any dot-directory), read the literal path directly (`.ai/<subpath>`), list it explicitly (`ls -la .ai/`), or search with hidden files enabled (`rg --hidden`, a glob with the dot option on).

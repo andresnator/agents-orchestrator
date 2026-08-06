@@ -376,20 +376,20 @@ scenario_PLAN_HANDOFF_01() {
   CURRENT="PLAN-HANDOFF-01"
   setup_scenario none
   RUN_AGENT=deep-planner
-  run_agent "Planifica, sin implementar, agregar a Order un método lineCount() que devuelva la cantidad de líneas y su test. Es un objetivo ejecutable acotado para un único bundle, no un roadmap ni una investigación. No hay decisiones de producto abiertas: usa las convenciones existentes y produce el bundle ready-for-sdd." ||
+  run_agent "operation=deep-plan intent=auto. Planifica, sin implementar, agregar a Order un método lineCount() que devuelva la cantidad de líneas y su test. Es un objetivo ejecutable acotado para un único change.md, no un roadmap ni una investigación. No hay decisiones de producto abiertas: usa las convenciones existentes y produce el change.md ready-for-sdd." ||
     { verdict_fail "the deep-planner run exited non-zero or timed out"; return; }
 
-  local bundle_dir change
-  bundle_dir="$(find "$PROJECT/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
-  [ -n "$bundle_dir" ] || { verdict_fail "deep-planner produced no bundle under .ai/deep-planner/changes/"; return; }
-  change="$(basename "$bundle_dir")"
+  local change_dir change
+  change_dir="$(find "$PROJECT/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
+  [ -n "$change_dir" ] || { verdict_fail "deep-planner produced no change under .ai/deep-planner/changes/"; return; }
+  change="$(basename "$change_dir")"
 
-  assert_one_change_document "$bundle_dir" || return
-  assert_first_line_matches "$bundle_dir/change.md" 'Status: ready-for-sdd | Source: deep-planner' || return
-  ! sed -n '1,5p' "$bundle_dir/change.md" | grep -q '^Mode:' ||
+  assert_one_change_document "$change_dir" || return
+  assert_first_line_matches "$change_dir/change.md" 'Status: ready-for-sdd | Source: deep-planner' || return
+  ! sed -n '1,5p' "$change_dir/change.md" | grep -q '^Mode:' ||
     { verdict_fail "handoff change.md contains execution choices before adoption"; return; }
-  assert_grep "$bundle_dir/change.md" '## Behavior' || return
-  assert_grep "$bundle_dir/change.md" '## Work' || return
+  assert_grep "$change_dir/change.md" '## Behavior' || return
+  assert_grep "$change_dir/change.md" '## Work' || return
 
   assert_no_drafting_agents || return
 

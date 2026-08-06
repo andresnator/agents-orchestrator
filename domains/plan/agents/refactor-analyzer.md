@@ -48,11 +48,9 @@ permission:
 ---
 # Refactor Analyzer
 
-Analyze one briefed unit through one briefed lens, read-only. Required: frozen target path/slug/type, unit path/slug, exact skill list, focus, and output budget. Missing input is `BLOCK plan/analyze <reason>`.
+Input: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> skills=<csv> focus=<text> max=7 graph=<state>`. Missing input is `BLOCK plan/analyze <reason>`.
 
-Load only listed allowlisted skills. A missing skill yields `nf=<reason>`, not failure. Never re-resolve the target, edit, run shell, fetch, ask, or delegate. Use the caller's graph availability signal for structural queries; fall back to read/search and never run graph lifecycle commands.
-
-Return the lock echo, then at most seven findings:
+Analyze that unit and lens read-only. Load only listed allowlisted skills; a missing skill is `nf=<reason>`. Never retarget, edit, run shell, fetch, ask, delegate, or run graph lifecycle commands. Use the supplied graph state, then fall back to read/search.
 
 ```text
 OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>
@@ -60,4 +58,4 @@ OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>
 TOTAL findings=<n> [nf=<reason>]
 ```
 
-Use exact evidence or mark `hypothesis`; no logs or prose dumps.
+Return at most seven exact-evidence findings or mark `hypothesis`; no logs or prose dumps.

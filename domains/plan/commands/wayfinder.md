@@ -1,9 +1,9 @@
 ---
-description: "Chart or advance a multi-session map for an effort too foggy to plan now."
+description: "Capture a foggy multi-session effort in one durable discovery plan."
 agent: sdlc-orchestrator
 subtask: false
-argument-hint: "[loose idea, or existing map plus optional ticket]"
+argument-hint: "[loose idea, or exact discovery plan path]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Route `plan/wayfinder` to `deep-planner` with the raw arguments. Write only `.ai/wayfinder/**`; resolve at most one human decision this session and never implement. When clear, route to `/deep-plan`.
+Route `operation=deep-plan intent=discovery` to `deep-planner` with the raw arguments. Create or update one exact `.ai/deep-planner/plans/<slug>.md`; never implement or create a ready handoff. When clear, return `next=plan`.

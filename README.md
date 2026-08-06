@@ -24,7 +24,7 @@ The project profile selects `sdlc,plan,sdd,architecture,sdd-lite,common`, sets `
 | Domain | Purpose | Entry points |
 |---|---|---|
 | [sdlc](domains/sdlc/README.md) | Natural-language routing and user-question ownership | `sdlc-orchestrator` |
-| [plan](domains/plan/README.md) | Delivery, refactor, hardening, decision, and Wayfinder plans | `/deep-plan`, `/refactor-plan`, `/harden-plan`, `/wayfinder` |
+| [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `/deep-plan`, `/refactor-plan` plus compatibility aliases |
 | [architecture](domains/architecture/README.md) | Maps, reviews, PRDs, audits, boundaries, and ideation | `/arch-*`, `/boundary-inspector` |
 | [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/judgment` |
 | [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite` |
@@ -62,6 +62,7 @@ installers/opencode.sh status --domain sdd
 |---|---|
 | [SDLC POC](docs/sdlc-orchestrator-poc.md) | Install, route, validate, and roll back the project profile |
 | [SDD test plan](docs/sdd-test-plan.md) | Choose deterministic or model-backed flow checks |
+| [Plan flow scenarios](docs/plan-flow-test-scenarios.md) | Copy-ready hypothetical prompts and expected Plan evidence |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |
 | [SDD auto mode](docs/sdd-automode.md) | Toggle coordinator and worker permissions |
 | [Learning](docs/learning-domain.md) | Run durable learning topics |

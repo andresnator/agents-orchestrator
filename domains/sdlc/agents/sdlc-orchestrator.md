@@ -32,8 +32,10 @@ Route one bounded operation to a coordinator; never perform domain work, edit, o
 
 | Intent | Delegate | Operation |
 | --- | --- | --- |
-| feature/decision plan, roadmap | `deep-planner` | `deep-plan` or `wayfinder` |
-| behavior-preserving refactor / safety net | `deep-planner` | `refactor` / `hardening` |
+| feature, decision, roadmap | `deep-planner` | `deep-plan`, `intent=auto` |
+| discovery or `/wayfinder` | `deep-planner` | `deep-plan`, `intent=discovery` |
+| behavior-preserving refactor | `deep-planner` | `refactor`, `intent=auto` |
+| safety net or `/harden-plan` | `deep-planner` | `refactor`, `intent=hardening` |
 | full SDD / ready handoff / resume | `orchestraitor` | `direct-sdd` / `execute-handoff` / `resume` |
 | bounded low-risk change, about five files | `orchestralite` | `sdd-lite` |
 | architecture | `architect` | `map|review|ideate|audit|prd|boundary` |
@@ -43,7 +45,7 @@ Use `[Beta] Protected Plan` and `[Beta] SDD Lite` in user-facing text. Show a me
 
 ## Child continuity
 
-Keep each coordinator's Task id. Resume it for its questions and same-domain continuation; never reuse it across coordinators. Send operation, raw request, constraints, exact artifact path, and prior A2A when relevant.
+Keep each coordinator's Task id. Resume it for questions and same-domain continuation; never reuse it across coordinators. Send operation, intent when applicable, raw request, constraints, exact artifact path, and prior A2A.
 
 - `ASK`: ask its normal-language question, then resume the same child with the answer.
 - `OK`: summarize for the user. Follow `next` only when already authorized.
@@ -52,7 +54,7 @@ Keep each coordinator's Task id. Resume it for its questions and same-domain con
 
 A ready handoff is one exact `.ai/<producer>/changes/<change>/change.md`. On authorized execution, pass it unchanged to `orchestraitor`; a new session may use the exact disk path. After verified SDD requests review, call `review-coordinator`, then resume the same SDD child with its result.
 
-Machine returns use at most five lines and omit absent fields:
+Machine returns omit absent fields; clean returns use at most three lines:
 
 ```text
 OK <domain>/<operation>

@@ -85,6 +85,14 @@ done
 for route in plan refactor architecture sdd sdd-lite review; do
   assert_contains "$primary" "$route"
 done
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$primary" 'deep-plan`, `intent=auto'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$primary" 'deep-plan`, `intent=discovery'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$primary" 'refactor`, `intent=auto'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$primary" 'refactor`, `intent=hardening'
 assert_regex "$primary" 'Task id|task_id'
 assert_contains "$primary" 'same child'
 assert_contains "$primary" 'execute-handoff'
@@ -125,11 +133,12 @@ assert_frontmatter_contains "$planner" 'question: deny'
 assert_frontmatter_contains "$planner" 'refactor-analyzer: allow'
 assert_frontmatter_not_contains "$planner" 'skill: allow'
 assert_frontmatter_contains "$planner" '"*": deny'
-for operation in deep-plan refactor hardening wayfinder; do
-  assert_contains "$planner" "$operation"
-done
+assert_contains "$planner" 'operation=deep-plan intent=auto|discovery'
+assert_contains "$planner" 'operation=refactor intent=auto|hardening'
+assert_contains "$planner" 'OK plan/<deep-plan|refactor>'
+assert_not_contains "$planner" 'OK plan/<deep-plan|refactor|hardening|wayfinder>'
 assert_contains "$planner" 'change.md'
-assert_contains "$planner" 'never combine hardening and restructuring'
+assert_regex "$planner" '[Nn]ever combine hardening and restructuring'
 assert_not_contains "$planner" "$RUNTIME_ARGUMENTS"
 assert_compact_coordinator_return "$planner"
 CHECKS=$((CHECKS + 1))
@@ -141,6 +150,11 @@ for analyzer in \
   domains/plan/agents/refactor-analyzer.md; do
   assert_frontmatter_contains "$analyzer" '"*": deny'
 done
+
+assert_contains domains/plan/commands/deep-plan.md 'operation=deep-plan intent=auto'
+assert_contains domains/plan/commands/wayfinder.md 'operation=deep-plan intent=discovery'
+assert_contains domains/plan/commands/refactor-plan.md 'operation=refactor intent=auto'
+assert_contains domains/plan/commands/harden-plan.md 'operation=refactor intent=hardening'
 assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md 'service-boundary-analysis: allow'
 assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md '".ai/architect/reports/**": allow'
 assert_contains domains/architecture/agents/boundary-inspector.md 'caller-supplied report path'

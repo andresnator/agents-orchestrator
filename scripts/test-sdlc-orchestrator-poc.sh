@@ -303,9 +303,13 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   [ -L "$project/.opencode/agents/sdlc-orchestrator.md" ] || fail "selection: SDLC primary missing"
   [ -L "$project/.opencode/agents/architect.md" ] || fail "selection: architecture coordinator missing"
   [ -L "$project/.opencode/skills/sdd-draft-change" ] || fail "selection: one-document SDD skill missing"
+  [ -L "$project/.opencode/skills/evidence-first-planning" ] || fail "selection: evidence-first planning skill missing"
   local removed
   for removed in sdd-proposal sdd-spec sdd-design sdd-tasks; do
     [ ! -e "$project/.opencode/agents/$removed.md" ] || fail "selection: removed agent $removed leaked"
+  done
+  for removed in fable-planning wayfinder; do
+    [ ! -e "$project/.opencode/skills/$removed" ] || fail "selection: retired skill $removed leaked"
   done
   [ ! -e "$project/.opencode/agents/mentor.md" ] || fail "selection: learning domain leaked"
   [ ! -e "$project/.opencode/commands/absorb.md" ] || fail "selection: meta domain leaked"
