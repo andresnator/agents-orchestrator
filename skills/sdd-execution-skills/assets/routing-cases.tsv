@@ -1,0 +1,10 @@
+case	producer	work signal	expected Skills
+bounded-code	deep-planner	production code	code-conventions
+java-test	deep-planner	Java test	code-conventions, java-testing
+characterization	deep-planner	Java current-behavior test	code-conventions, java-testing, behavior-characterization
+legacy-refactor	deep-planner	covered behavior-preserving legacy refactor	code-conventions, legacy-code-safety
+bug-fix	orchestraitor	reproducible production defect	code-conventions, systematic-debugging
+architecture-fitness	architect	Java fitness-function test	code-conventions, java-testing
+human-docs	grill-sdd	human-facing guide	cognitive-doc-design
+canonical-merge	orchestraitor	canonical-spec merge	none
+bounded-lite	orchestralite	inline Lite execution	none

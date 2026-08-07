@@ -32,6 +32,7 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `programming-practices-core` | Evaluate language-neutral code quality |
 | Skill | `risk-assessment` | Classify technical and functional legacy risk |
 | Skill | `sdd-draft-change` | Draft the single pre-implementation change document used by `/grill sdd` |
+| Skill | `sdd-execution-skills` | Select implementation skills for `/grill sdd` Work groups |
 | Skill | `single-responsibility` | Detect multiple reasons to change |
 | Skill | `small-functions` | Detect oversized and extractable functions |
 | Skill | `spaghetti-code-detection` | Detect tangled flow and hidden ordering |

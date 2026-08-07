@@ -127,7 +127,7 @@ Continue the exact discovery plan you just created. For this scenario choose EUR
 
 **Expected artifacts/A2A:**
 
-- One `.ai/deep-planner/changes/harden-<target>/change.md` containing tooling if needed, minimal seams, characterization tests, a coverage baseline in that order, and the applicable `java-testing`, `behavior-characterization`, and `legacy-code-safety` skill names.
+- One `.ai/deep-planner/changes/harden-<target>/change.md` containing tooling if needed, minimal seams, characterization tests, and a coverage baseline in that order. Characterization-test groups use `code-conventions, java-testing, behavior-characterization`; later protected-code groups use `code-conventions, legacy-code-safety`.
 - `OK plan/refactor` with `next=sdd`; the documented next planning action after SDD is `/refactor-plan` again.
 
 **Forbidden behavior:** Production refactor tasks, bug fixes, or hardening and restructuring in the same change.

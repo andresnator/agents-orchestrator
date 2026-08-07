@@ -58,7 +58,7 @@ Deep Plan, protected Refactor/Hardening, and Architecture Ideate write one file:
 .ai/<producer>/changes/<change>/change.md
 ```
 
-Its marker is `Status: ready-for-sdd | Source: <producer>`. It records outcome, scope, behavior deltas, approach, work groups with skill names, verification, and non-empty risks. SDD adopts the exact path, resolves names through the generated registry or runtime catalog, adds `state.md`, and executes without copying or redrafting. Old four-file bundles are not discovered automatically.
+Its marker is `Status: ready-for-sdd | Source: <producer>`. It records outcome, scope, behavior deltas, approach, work groups with up to three routed skill names, verification, and non-empty risks. SDD adopts the exact path, resolves names through the generated registry or runtime catalog, adds `state.md`, and executes without copying or redrafting.
 
 Direct SDD writes the same shape under `.ai/orchestrator/changes/`. SDD Lite keeps its state under `.ai/sdd-lite/` and does not merge canonical specs.
 

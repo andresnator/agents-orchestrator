@@ -91,17 +91,22 @@ assert_frontmatter_not_contains() {
 assert_exists skills/sdd-draft-change/SKILL.md
 assert_exists skills/sdd-draft-change/assets/change-template.md
 assert_exists skills/sdd-cold-verification/SKILL.md
+assert_exists skills/sdd-execution-skills/SKILL.md
+assert_exists skills/sdd-execution-skills/assets/routing-cases.tsv
 for owner in plan architecture common sdd; do
   assert_relative_symlink "domains/$owner/skills/sdd-draft-change" '../../../skills/sdd-draft-change'
+  assert_relative_symlink "domains/$owner/skills/sdd-execution-skills" '../../../skills/sdd-execution-skills'
 done
 for skill in behavior-characterization java-testing legacy-code-safety; do
   for owner in plan sdd; do
     assert_relative_symlink "domains/$owner/skills/$skill" "../../../skills/$skill"
   done
 done
-for owner in common plan sdd; do
+for owner in common sdd; do
   assert_relative_symlink "domains/$owner/skills/systematic-debugging" '../../../skills/systematic-debugging'
 done
+assert_absent domains/plan/skills/systematic-debugging
+assert_relative_symlink domains/sdd/skills/cognitive-doc-design '../../../skills/cognitive-doc-design'
 for owner in sdd sdd-lite; do
   assert_relative_symlink "domains/$owner/skills/sdd-cold-verification" '../../../skills/sdd-cold-verification'
 done
@@ -129,14 +134,50 @@ assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
 assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
 assert_contains skills/sdd-draft-change/SKILL.md 'omits execution choices'
 assert_contains skills/sdd-draft-change/SKILL.md 'preserves marker lines'
-assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "1.3.0"'
+assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "2.0.0"'
 assert_contains skills/sdd-draft-change/SKILL.md 'Roadmap: <goal> | Slice: <n>/<total>'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains skills/sdd-draft-change/SKILL.md 'Missing legacy fields default to `code-conventions`'
+assert_contains skills/sdd-draft-change/SKILL.md 'Missing fields are invalid'
+assert_not_contains skills/sdd-draft-change/SKILL.md 'legacy fields'
 assert_frontmatter_contains skills/sdd-cold-verification/SKILL.md 'version: "1.0.0"'
 assert_contains skills/sdd-cold-verification/SKILL.md 'A green but tautological test is a failure'
 assert_contains skills/sdd-cold-verification/SKILL.md "Judgment owns broader correctness"
 assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
+
+# One routing contract selects implementation skills without loading them in producers.
+routing_skill=skills/sdd-execution-skills/SKILL.md
+routing_cases=skills/sdd-execution-skills/assets/routing-cases.tsv
+assert_frontmatter_contains "$routing_skill" 'version: "1.0.0"'
+for skill in code-conventions java-testing behavior-characterization legacy-code-safety systematic-debugging cognitive-doc-design; do
+  assert_contains "$routing_skill" "\`$skill\`"
+done
+assert_contains "$routing_skill" 'more than three names are invalid'
+assert_contains "$routing_skill" 'producers never load the selected implementation skill bodies'
+assert_contains "$routing_skill" 'Registry paths resolve availability only'
+assert_frontmatter_contains skills/code-conventions/SKILL.md 'version: "2.0.0"'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains skills/code-conventions/SKILL.md 'Executable-change producers select its name through `sdd-execution-skills`'
+assert_not_contains skills/code-conventions/SKILL.md 'writing or planning production code'
+assert_contains global/AGENTS.md 'routing-only parents load neither skill body'
+assert_not_contains global/AGENTS.md 'When writing or planning code or tests'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains global/AGENTS.md 'never bypass denied skill access by reading a `SKILL.md` path'
+assert_first_line "$routing_cases" $'case\tproducer\twork signal\texpected Skills'
+for producer in deep-planner architect orchestraitor grill-sdd orchestralite; do
+  assert_contains "$routing_cases" $'\t'"$producer"$'\t'
+done
+CHECKS=$((CHECKS + 1))
+awk -F '\t' '
+  NR == 1 { next }
+  {
+    if ($4 == "none") next
+    count = split($4, names, /, /)
+    if (count > 3) exit 1
+    for (i = 1; i <= count; i++) {
+      if (names[i] !~ /^(code-conventions|java-testing|behavior-characterization|legacy-code-safety|systematic-debugging|cognitive-doc-design)$/) exit 1
+    }
+  }
+' "$routing_cases" || fail "$routing_cases" 'contains an unknown or overloaded skill selection'
 
 # One model-neutral planning skill owns decisions, discovery, and roadmaps.
 planning_skill=domains/plan/skills/evidence-first-planning
@@ -171,11 +212,13 @@ done
 
 assert_contains domains/plan/agents/deep-planner.md '.ai/deep-planner/changes/'
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'evidence-first-planning: allow'
-for skill in behavior-characterization code-conventions java-testing legacy-code-safety systematic-debugging; do
-  assert_frontmatter_contains domains/plan/agents/deep-planner.md "$skill: allow"
+assert_frontmatter_contains domains/plan/agents/deep-planner.md 'sdd-execution-skills: allow'
+for skill in behavior-characterization code-conventions java-testing legacy-code-safety systematic-debugging cognitive-doc-design; do
+  assert_frontmatter_not_contains domains/plan/agents/deep-planner.md "$skill: allow"
 done
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains domains/plan/agents/deep-planner.md 'Every new executable Work group records `Skills: <csv|none>`'
+assert_contains domains/plan/agents/deep-planner.md 'Load `sdd-execution-skills` before drafting any executable change'
+assert_contains domains/plan/agents/deep-planner.md 'never load or read implementation skill bodies'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'fable-planning: allow'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md 'wayfinder: allow'
 assert_frontmatter_not_contains domains/plan/agents/deep-planner.md '".ai/wayfinder/**": allow'
@@ -193,6 +236,17 @@ assert_exists domains/plan/agents/refactor-analyzer.md
 assert_absent domains/refactor
 assert_absent domains/plan/agents/refactor-planner.md
 assert_contains domains/architecture/agents/architect.md '.ai/architect/changes/'
+assert_frontmatter_contains domains/architecture/agents/architect.md 'sdd-execution-skills: allow'
+assert_frontmatter_not_contains domains/architecture/agents/architect.md 'code-conventions: allow'
+assert_contains domains/architecture/agents/architect.md 'Every Work group records the routing result'
+assert_contains domains/architecture/agents/architect.md 'never load or read implementation skill bodies'
+assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.0"'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains domains/architecture/skills/architecture-ideation/SKILL.md 'Load `sdd-execution-skills`'
+assert_frontmatter_contains domains/common/skills/grill/SKILL.md 'version: "4.0.0"'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains domains/common/skills/grill/SKILL.md 'Load `sdd-execution-skills`'
+assert_contains domains/common/skills/grill/SKILL.md 'never load or read implementation skill bodies'
 
 orchestrator=domains/sdd/agents/orchestraitor.md
 assert_frontmatter_contains "$orchestrator" 'mode: subagent'
@@ -200,6 +254,7 @@ assert_frontmatter_contains "$orchestrator" 'question: deny'
 for operation in direct-sdd execute-handoff resume; do
   assert_contains "$orchestrator" "$operation"
 done
+assert_frontmatter_contains "$orchestrator" 'sdd-canonical-merge: allow'
 assert_contains "$orchestrator" 'change.md'
 assert_contains "$orchestrator" 'state.md'
 assert_contains "$orchestrator" '.ai/<producer>/changes/<change>/'
@@ -212,23 +267,51 @@ assert_contains "$orchestrator" 'Roadmap: <goal> | Slice: <n>/<total>'
 assert_contains "$orchestrator" '.ai/atl/skill-registry.md'
 assert_contains "$orchestrator" 'fall back to the runtime skill catalog'
 assert_contains "$orchestrator" 'skills=<csv|none>'
+assert_frontmatter_contains "$orchestrator" 'sdd-execution-skills: allow'
+assert_frontmatter_not_contains "$orchestrator" 'code-conventions: allow'
+assert_contains "$orchestrator" 'missing or invalid fields block before implementation'
+assert_contains "$orchestrator" 'never load or read implementation skill bodies'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains "$orchestrator" 'planned` to `adopted'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains "$orchestrator" 'set the matching slice `done`'
 
-# Implementation owns code and canonical merge, but never Git publication.
+# Separate workers own implementation and canonical merge; neither owns Git publication.
 implement=domains/sdd/agents/sdd-implement.md
 assert_contains "$implement" 'change.md'
-assert_contains "$implement" "Never edit \`change.md\` or \`state.md\`"
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$implement" 'Never edit `change.md`, `state.md`, or canonical specs'
 assert_regex "$implement" 'never .*commit.*push|never .*stage.*commit'
 assert_not_contains "$implement" 'commit: "<sha> | none"'
 assert_not_contains "$implement" 'tcr: allow'
 assert_not_contains "$implement" 'work-unit-commits: allow'
-for skill in behavior-characterization code-conventions java-testing legacy-code-safety systematic-debugging; do
+assert_not_contains "$implement" 'MERGED <kind>'
+for skill in behavior-characterization code-conventions cognitive-doc-design java-testing legacy-code-safety systematic-debugging; do
   assert_frontmatter_contains "$implement" "$skill: allow"
 done
-assert_contains "$implement" 'Load only the named allowlisted skills'
+CHECKS=$((CHECKS + 1))
+implementation_skill_count="$(frontmatter "$implement" | awk '
+  /^  skill:/ { inside=1; next }
+  inside && /^  [a-z_]+:/ { exit }
+  inside && /^    [a-z0-9-]+: allow$/ { count++ }
+  END { print count+0 }
+')"
+[ "$implementation_skill_count" -eq 6 ] ||
+  fail "$implement" "expected exactly 6 implementation skills, found $implementation_skill_count"
+assert_contains "$implement" 'Load every named allowlisted skill and no others'
+spec_merge=domains/sdd/agents/sdd-canonical-merge.md
+assert_exists "$spec_merge"
+assert_frontmatter_contains "$spec_merge" 'mode: subagent'
+assert_frontmatter_contains "$spec_merge" 'question: deny'
+assert_frontmatter_contains "$spec_merge" 'bash: deny'
+assert_frontmatter_contains "$spec_merge" 'skill: deny'
+assert_frontmatter_contains "$spec_merge" '".ai/orchestrator/specs/**": allow'
+assert_contains "$spec_merge" 'skills=none'
+assert_contains "$spec_merge" 'MERGED <ADD|MODIFY|REMOVE|RENAME>'
+assert_contains "$spec_merge" 'OK merge count=<n> stale=0'
+assert_contains "$spec_merge" 'Never block an ADD only because the canonical root is absent'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$spec_merge" 'Never edit implementation, tests, `change.md`, or `state.md`'
 verify=domains/sdd/agents/sdd-verify.md
 assert_frontmatter_contains "$verify" 'edit: deny'
 assert_frontmatter_contains "$verify" 'write: deny'

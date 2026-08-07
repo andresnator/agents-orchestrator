@@ -6,7 +6,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "3.0.0"
   status: in-progress
 ---
 
@@ -21,6 +21,6 @@ Ideate architecture-level change from verified current state. Class/method refac
 3. Present 2-3 candidates with forces, trade-offs, migration cost, and first reversible step. Recommend one; microservices must justify their operational cost.
 4. Converge on target, boundaries, and incremental migration. Never propose a big-bang migration.
 5. Write the decision and rejected candidates as an ADR.
-6. Write one `Status: ready-for-sdd | Source: architect` `change.md` using `sdd-draft-change`. Group 1 establishes fitness-function guardrails; later work remains incremental and keeps the build green.
+6. Load `sdd-execution-skills`, then write one `Status: ready-for-sdd | Source: architect` `change.md` using `sdd-draft-change`. Every Work group records the selected names; group 1 establishes fitness-function guardrails and later work keeps the build green.
 
 Every pattern must solve an evidenced force and pass pragmatic/KISS gates. Every work item ties to an ADR decision or architecture gap and names real files. Return the chosen architecture, ADR path, `change.md` path, first reversible step, and `ejecuta el plan <change>`.

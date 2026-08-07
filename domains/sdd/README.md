@@ -11,9 +11,9 @@ Full spec-driven implementation around one human-readable pre-implementation fil
 
 ## Change contract
 
-Direct work lives at `.ai/orchestrator/changes/<change>/change.md`. Planner handoffs stay at `.ai/<producer>/changes/<change>/change.md` and begin with `Status: ready-for-sdd`; SDD adopts that exact file, preserves its producer marker, and adds active execution in `state.md`. Legacy proposal/design/spec/task bundles are not auto-migrated.
+Direct work lives at `.ai/orchestrator/changes/<change>/change.md`. Planner handoffs stay at `.ai/<producer>/changes/<change>/change.md` and begin with `Status: ready-for-sdd`; SDD adopts that exact file, preserves its producer marker, and adds active execution in `state.md`.
 
-The shared `sdd-draft-change` skill defines outcome, scope, behavior deltas, approach, work groups, verification, and non-empty risks. Work groups use optional `Files:` scopes and required `Skills:` names. Disjoint scopes may run in parallel; unclear overlap runs sequentially. SDD resolves names through the generated registry or runtime catalog, then enforces the worker allowlist.
+The shared `sdd-draft-change` skill defines outcome, scope, behavior deltas, approach, work groups, verification, and non-empty risks. Every Work group uses `sdd-execution-skills` to declare at most three `Skills:` names. Disjoint `Files:` scopes may run in parallel; unclear overlap runs sequentially. SDD resolves names through the generated registry or runtime catalog, then enforces the worker allowlist.
 
 A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. SDD preserves that marker, moves its row from `planned` to `adopted` at intake and to `done` at archive, then offers but never auto-plans the next unblocked slice.
 
@@ -43,7 +43,8 @@ Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-d
 |---|---|---|
 | Agent (subagent coordinator) | `orchestraitor` | Coordinates direct SDD, handoffs, resume, and archive |
 | Agent (subagent) | `sdd-explore` | Explores code read-only |
-| Agent (subagent) | `sdd-implement` | Implements a work wave or merges canonical specs |
+| Agent (subagent) | `sdd-implement` | Implements one scoped code or test wave |
+| Agent (subagent) | `sdd-canonical-merge` | Merges verified deltas into canonical specs |
 | Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
 | Agent (subagent) | `jd-judge-a` | Reviews correctness independently |
 | Agent (subagent) | `jd-judge-b` | Reviews security independently |
@@ -52,12 +53,14 @@ Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-d
 | Command | `/judgment` | Routes adversarial review |
 | Skill | `behavior-characterization` | Captures current behavior during hardening |
 | Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `cognitive-doc-design` | Keeps human-facing documentation easy to scan |
 | Skill | `graphify-cli` | Queries code graphs read-only |
 | Skill | `java-testing` | Implements Java tests and characterization seams |
 | Skill | `legacy-code-safety` | Protects behavior during legacy changes |
 | Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `sdd-execution-skills` | Selects and validates implementation skills per Work group |
 | Skill | `systematic-debugging` | Applies evidence-first debugging to fix waves |
 | Skill | `work-unit-commits` | Plans reviewable, cohesive commits |
 

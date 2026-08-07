@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "3.0.0"
+  version: "4.0.0"
 ---
 
 ## Modes
@@ -28,7 +28,7 @@ metadata:
 
 - Plain: load `grilling`; interview until the decision is clear.
 - Docs: also load `domain-modeling`; write notes only with approval.
-- SDD: confirm a kebab-case change name and collision handling; interview outcome, scope, behavior, approach, work, verification, Mode, TDD, Judgment, and Delivery; then draft with `sdd-draft-change`. Ask once to write `.ai/orchestrator/changes/<change>/change.md`; on approval write only that file with `Status: active`. On refusal, keep the draft in chat.
+- SDD: confirm a kebab-case change name and collision handling; interview outcome, scope, behavior, approach, work, verification, Mode, TDD, Judgment, and Delivery. Load `sdd-execution-skills`, never load or read implementation skill bodies, record its result for every Work group, then draft with `sdd-draft-change`. Ask once to write `.ai/orchestrator/changes/<change>/change.md`; on approval write only that file with `Status: active`. On refusal, keep the draft in chat.
 
 Return the current question or conclusion, write status, path, and unresolved decisions. Missing skills are reported, never silently skipped.
 

@@ -41,6 +41,7 @@ A chat claim is not a pass. Inspect:
 
 - exact artifact paths, status markers, work checkboxes, and `state.md`;
 - declared skill names, their registry/runtime availability, and the worker allowlist;
+- producer routing-skill calls, worker skill calls, and `skills=<csv|none>` delegation briefs;
 - session task activity for expected and forbidden children;
 - scoped Git diff/status and commit ownership;
 - real build or test exit status;

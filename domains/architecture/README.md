@@ -21,7 +21,7 @@ Architecture-level mapping, review, PRD recovery, audit, boundary analysis, and 
 
 `architect` performs the state scan and delegates independent read-only lenses to `arch-analyzer` or boundary work to `boundary-inspector`. Audit commands are deny-by-default; missing or declined tools fall back to manifest inspection.
 
-Ideation keeps its ADR because it records an architecture decision. Its executable SDD handoff is only `change.md`, marked `Status: ready-for-sdd | Source: architect`; SDD executes it in place without redrafting.
+Ideation keeps its ADR because it records an architecture decision. Its executable SDD handoff is only `change.md`, marked `Status: ready-for-sdd | Source: architect`; every Work group records a routed `Skills:` set and SDD executes it in place without redrafting.
 
 The domain declares the shared `sdd-draft-change` contract directly. It assumes `sdlc` and `common` for routing and analysis; SDD owns later execution. Graph exploration follows the independent [Graphify guide](../../docs/graphify.md).
 
@@ -60,6 +60,7 @@ The domain declares the shared `sdd-draft-change` contract directly. It assumes 
 | Skill | `prd-light` | Creates lightweight PRDs |
 | Skill | `repo-issues` | Ranks repository issues |
 | Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `sdd-execution-skills` | Selects implementation skills per Work group |
 | Skill | `service-boundary-analysis` | Maps service contracts |
 | Skill | `tooling-audit` | Detects test-tooling gaps |
 | Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |

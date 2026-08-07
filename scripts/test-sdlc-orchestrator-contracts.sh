@@ -100,6 +100,7 @@ assert_contains "$primary" 'direct-sdd'
 assert_compact_coordinator_return "$primary"
 assert_regex "$primary" 'normal[- ](human[- ])?language|human-readable|paraphrase.*user'
 assert_regex "$primary" 'security|irreversible|destructive'
+assert_contains "$primary" 'never perform domain work, load skill bodies'
 
 review=domains/sdlc/agents/review-coordinator.md
 assert_frontmatter_contains "$review" 'mode: subagent'
@@ -185,6 +186,10 @@ assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'sdd-cold-ver
 assert_contains domains/sdd-lite/agents/lite-verify.md 'Load `sdd-cold-verification`'
 assert_contains domains/sdd-lite/agents/lite-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 assert_contains domains/sdd/agents/sdd-implement.md 'OK wave=<id> files=<csv> check=<one-line result>'
+assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'mode: subagent'
+assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'question: deny'
+assert_contains domains/sdd/agents/sdd-canonical-merge.md 'OK merge count=<n> stale=0'
+assert_contains domains/sdd/agents/sdd-canonical-merge.md 'Never block an ADD only because the canonical root is absent'
 assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 
 # Exactly one question owner and one primary in the installed SDLC profile.

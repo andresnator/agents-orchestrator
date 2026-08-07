@@ -14,7 +14,6 @@ permission:
     architecture-ideation: allow
     architecture-map: allow
     architecture-state: allow
-    code-conventions: allow
     cognitive-doc-design: allow
     dependency-security-audit: allow
     design-patterns-pragmatic: allow
@@ -25,6 +24,7 @@ permission:
     prd-light: allow
     repo-issues: allow
     sdd-draft-change: allow
+    sdd-execution-skills: allow
   question: deny
   task:
     "*": deny
@@ -61,7 +61,7 @@ Verify language, toolchain, modules, and architecture with `architecture-state`;
 - `map`: `architecture-map`; create/refresh C4-lite docs.
 - `review`: state, gaps, fitness functions, and `repo-issues` shortlist in `.ai/architect/reports/`.
 - `prd`: infer behavior from code; use `prd-light` unless rigorous `prd` requested; never invent intent.
-- `ideate`: `architecture-ideation`; write an ADR, then one `.ai/architect/changes/<change>/change.md` with `Status: ready-for-sdd | Source: architect`. First Work group establishes fitness-function guardrails. No proposal/design/spec/tasks companions.
+- `ideate`: `architecture-ideation` plus `sdd-execution-skills`; never load or read implementation skill bodies. Write an ADR, then one `.ai/architect/changes/<change>/change.md` with `Status: ready-for-sdd | Source: architect`. Every Work group records the routing result; group 1 establishes fitness-function guardrails. No proposal/design/spec/tasks companions.
 - `audit`: `dependency-security-audit`; run only authorized allowlisted read-only commands, otherwise `method: manifest-fallback`.
 - `boundary`: choose an exact target-specific path under `.ai/architect/reports/`; delegate the target and path to `boundary-inspector`, then confirm the returned path matches and the report exists before `OK`.
 

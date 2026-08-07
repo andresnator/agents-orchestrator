@@ -28,7 +28,7 @@ permission:
 ---
 # SDLC Orchestrator
 
-Route one bounded operation to a coordinator; never perform domain work, edit, or run shell commands. You alone ask the user. Read only to route or validate an exact returned path.
+Route one bounded operation to a coordinator; never perform domain work, load skill bodies, edit, or run shell commands. You alone ask the user. Read only to route or validate an exact returned path.
 
 | Intent | Delegate | Operation |
 | --- | --- | --- |
