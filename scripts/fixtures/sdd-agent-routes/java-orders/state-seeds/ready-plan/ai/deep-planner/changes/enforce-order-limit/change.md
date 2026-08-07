@@ -14,14 +14,17 @@ current pricing behavior and valid order construction.
 
 ## Behavior
 
-- ADD — Maximum lines per order
-  - WHEN an order has at most 500 lines
-  - THEN construction succeeds
-  - WHEN an order has more than 500 lines
-  - THEN construction fails with `OrderLimitExceededException` and names the maximum
-- ADD — Empty order remains valid
-  - WHEN an order has no lines
-  - THEN construction succeeds
+### ADD order/maximum-lines
+
+- WHEN an order has at most 500 lines
+- THEN construction succeeds
+- WHEN an order has more than 500 lines
+- THEN construction fails with `OrderLimitExceededException` and names the maximum
+
+### ADD order/empty-order
+
+- WHEN an order has no lines
+- THEN construction succeeds
 
 ## Approach
 

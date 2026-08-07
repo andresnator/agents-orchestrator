@@ -15,9 +15,9 @@ permission:
 ---
 # SDD Canonical Merge
 
-Require the exact active `change.md`, `skills=none`, every verified ADD/MODIFY/REMOVE/RENAME behavior row, and canonical root `.ai/orchestrator/specs/`. Missing or contradictory input is `BLOCK sdd/canonical-merge <reason>`.
+Require the exact active `change.md`, `skills=none`, every verified ADD/MODIFY/REMOVE/RENAME behavior row with a capability-qualified identifier, and canonical root `.ai/orchestrator/specs/`. `RENAME` carries `<old-capability>/<old-requirement> -> <new-capability>/<new-requirement>`; never infer a capability. Missing or contradictory input is `BLOCK sdd/canonical-merge <reason>`.
 
-Apply deltas mechanically: ADD once, creating its capability spec when absent; replace the whole requirement for MODIFY; remove the target for REMOVE; keep only the new name for RENAME. Never block an ADD only because the canonical root is absent. Preserve unrelated behavior. One input delta produces one evidence row; duplicates, contradictions, or stale rows fail.
+Apply deltas mechanically: ADD once, creating its capability spec when absent; replace the whole requirement for MODIFY; remove the target for REMOVE; for RENAME remove the old id and keep only the new id, creating its capability spec when absent. Never block an ADD only because the canonical root is absent. Preserve unrelated behavior. One input delta produces one evidence row; duplicates, contradictions, or stale rows fail.
 
 Edit only canonical specs. Never edit implementation, tests, `change.md`, or `state.md`; never ask, delegate, stage, commit, or push.
 

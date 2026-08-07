@@ -171,11 +171,18 @@ lite=domains/sdd-lite/agents/orchestralite.md
 assert_frontmatter_contains "$lite" 'mode: subagent'
 assert_frontmatter_contains "$lite" 'question: deny'
 assert_frontmatter_contains "$lite" 'lite-verify: allow'
+for skill in behavior-characterization code-conventions cognitive-doc-design java-testing legacy-code-safety sdd-execution-skills systematic-debugging; do
+  assert_frontmatter_contains "$lite" "$skill: allow"
+done
 assert_contains "$lite" 'sdd-lite'
 assert_contains "$lite" 'change.md'
 assert_contains "$lite" 'lite-verify'
 assert_contains "$lite" 'Judgment: none | Delivery: none'
-assert_contains "$lite" 'Skills: none'
+assert_contains "$lite" '<capability>/<requirement>'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$lite" 'Load `sdd-execution-skills`'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$lite" 'code/test work requires `code-conventions`'
 assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
 assert_compact_coordinator_return "$lite"
 
@@ -190,6 +197,7 @@ assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'mode: sub
 assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'question: deny'
 assert_contains domains/sdd/agents/sdd-canonical-merge.md 'OK merge count=<n> stale=0'
 assert_contains domains/sdd/agents/sdd-canonical-merge.md 'Never block an ADD only because the canonical root is absent'
+assert_contains domains/sdd/agents/sdd-canonical-merge.md 'capability-qualified identifier'
 assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 
 # Exactly one question owner and one primary in the installed SDLC profile.

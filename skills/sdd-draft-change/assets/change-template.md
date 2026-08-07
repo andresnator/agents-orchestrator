@@ -13,7 +13,7 @@ Status: draft | ready-for-sdd | active | Source: <producer>
 
 ## Behavior
 
-### ADD|MODIFY|REMOVE|RENAME <requirement>
+### ADD|MODIFY|REMOVE <capability>/<requirement> | RENAME <old-capability>/<old-requirement> -> <new-capability>/<new-requirement>
 
 - WHEN <condition>
 - THEN <observable result>

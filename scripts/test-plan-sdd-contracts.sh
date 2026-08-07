@@ -97,6 +97,7 @@ for owner in plan architecture common sdd; do
   assert_relative_symlink "domains/$owner/skills/sdd-draft-change" '../../../skills/sdd-draft-change'
   assert_relative_symlink "domains/$owner/skills/sdd-execution-skills" '../../../skills/sdd-execution-skills'
 done
+assert_relative_symlink domains/sdd-lite/skills/sdd-execution-skills '../../../skills/sdd-execution-skills'
 for skill in behavior-characterization java-testing legacy-code-safety; do
   for owner in plan sdd; do
     assert_relative_symlink "domains/$owner/skills/$skill" "../../../skills/$skill"
@@ -107,6 +108,9 @@ for owner in common sdd; do
 done
 assert_absent domains/plan/skills/systematic-debugging
 assert_relative_symlink domains/sdd/skills/cognitive-doc-design '../../../skills/cognitive-doc-design'
+for skill in behavior-characterization code-conventions cognitive-doc-design java-testing legacy-code-safety systematic-debugging; do
+  assert_relative_symlink "domains/sdd-lite/skills/$skill" "../../../skills/$skill"
+done
 for owner in sdd sdd-lite; do
   assert_relative_symlink "domains/$owner/skills/sdd-cold-verification" '../../../skills/sdd-cold-verification'
 done
@@ -125,7 +129,8 @@ for heading in '# Change:' '## Outcome' '## Scope' '## Behavior' '## Approach' '
 done
 assert_contains "$template" 'Status: draft | ready-for-sdd | active | Source: <producer>'
 assert_first_line "$template" 'Status: draft | ready-for-sdd | active | Source: <producer>'
-assert_contains "$template" 'ADD|MODIFY|REMOVE|RENAME'
+assert_contains "$template" '<capability>/<requirement>'
+assert_contains "$template" 'RENAME <old-capability>/<old-requirement> -> <new-capability>/<new-requirement>'
 assert_contains "$template" 'WHEN <condition>'
 assert_contains "$template" 'THEN <observable result>'
 assert_contains "$template" 'Files: <paths>'
@@ -134,8 +139,9 @@ assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
 assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
 assert_contains skills/sdd-draft-change/SKILL.md 'omits execution choices'
 assert_contains skills/sdd-draft-change/SKILL.md 'preserves marker lines'
-assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "2.0.0"'
+assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "2.0.1"'
 assert_contains skills/sdd-draft-change/SKILL.md 'Roadmap: <goal> | Slice: <n>/<total>'
+assert_contains skills/sdd-draft-change/SKILL.md 'canonical merge never guesses a capability'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains skills/sdd-draft-change/SKILL.md 'Missing fields are invalid'
 assert_not_contains skills/sdd-draft-change/SKILL.md 'legacy fields'
@@ -147,7 +153,7 @@ assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and D
 # One routing contract selects implementation skills without loading them in producers.
 routing_skill=skills/sdd-execution-skills/SKILL.md
 routing_cases=skills/sdd-execution-skills/assets/routing-cases.tsv
-assert_frontmatter_contains "$routing_skill" 'version: "1.0.0"'
+assert_frontmatter_contains "$routing_skill" 'version: "1.0.1"'
 for skill in code-conventions java-testing behavior-characterization legacy-code-safety systematic-debugging cognitive-doc-design; do
   assert_contains "$routing_skill" "\`$skill\`"
 done
@@ -234,6 +240,7 @@ assert_contains domains/plan/agents/deep-planner.md 'OK plan/<deep-plan|refactor
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'refactor-analyzer: allow'
 assert_exists domains/plan/agents/refactor-analyzer.md
 assert_absent domains/refactor
+assert_contains domains/architecture/README.md "Plan domain's protected \`refactor\` route (\`/refactor-plan\`)"
 assert_absent domains/plan/agents/refactor-planner.md
 assert_contains domains/architecture/agents/architect.md '.ai/architect/changes/'
 assert_frontmatter_contains domains/architecture/agents/architect.md 'sdd-execution-skills: allow'

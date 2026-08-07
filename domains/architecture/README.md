@@ -1,6 +1,6 @@
 # Architecture Domain
 
-Architecture-level mapping, review, PRD recovery, audit, boundary analysis, and ideation. Class-level cleanup belongs to the `refactor` domain.
+Architecture-level mapping, review, PRD recovery, audit, boundary analysis, and ideation. Class-level cleanup belongs to the Plan domain's protected `refactor` route (`/refactor-plan`).
 
 ## Quick path
 

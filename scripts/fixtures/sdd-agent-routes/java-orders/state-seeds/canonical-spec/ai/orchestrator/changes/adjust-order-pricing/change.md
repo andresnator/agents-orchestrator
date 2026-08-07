@@ -15,20 +15,27 @@ changing production code.
 
 ## Behavior
 
-- ADD — Discount share per line
-  - WHEN a discount is shared across an order's lines
-  - THEN each line receives the discount divided by the line count at two-decimal half-up rounding
-- MODIFY — Bulk discount
-  - WHEN the subtotal is below one hundred units
-  - THEN no discount is applied
-  - WHEN the subtotal is at least one hundred units
-  - THEN a five percent discount is applied
-- REMOVE — Legacy leaflet rounding
-  - WHEN canonical behavior is merged
-  - THEN the unsupported paper-catalogue rule is absent
-- RENAME — Money scale -> Monetary rounding
-  - WHEN canonical behavior is merged
-  - THEN the unchanged two-decimal half-up rule uses the new requirement name only
+### ADD order-pricing/discount-share-per-line
+
+- WHEN a discount is shared across an order's lines
+- THEN each line receives the discount divided by the line count at two-decimal half-up rounding
+
+### MODIFY order-pricing/bulk-discount
+
+- WHEN the subtotal is below one hundred units
+- THEN no discount is applied
+- WHEN the subtotal is at least one hundred units
+- THEN a five percent discount is applied
+
+### REMOVE order-pricing/legacy-leaflet-rounding
+
+- WHEN canonical behavior is merged
+- THEN the unsupported paper-catalogue rule is absent
+
+### RENAME order-pricing/money-scale -> order-pricing/monetary-rounding
+
+- WHEN canonical behavior is merged
+- THEN the unchanged two-decimal half-up rule uses the new requirement name only
 
 ## Approach
 

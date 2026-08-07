@@ -81,6 +81,14 @@ resolve_project_root() {
   PROFILE_MANIFEST="$TARGET/.sdlc-orchestrator-poc-manifest"
 }
 
+reject_symlinked_managed_directories() {
+  local directory path
+  for directory in agents commands skills plugins; do
+    path="$TARGET/$directory"
+    [ ! -L "$path" ] || die "refusing symlinked managed directory: $path"
+  done
+}
+
 read_scalar() {
   local file="$1" property="$2" status
   JSON_STATE="absent"
@@ -472,6 +480,7 @@ main() {
   command -v jq >/dev/null 2>&1 || die "jq is required"
   trap cleanup EXIT INT TERM
   resolve_project_root
+  reject_symlinked_managed_directories
   case "$ACTION" in
     install) run_install ;;
     status) run_status ;;

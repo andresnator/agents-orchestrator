@@ -16,9 +16,10 @@ domain vocabulary matches how the value is used, keeping the field itself intact
 
 ## Behavior
 
-- RENAME — Reference accessor -> Order number accessor
-  - WHEN a caller reads an order's identifier through `orderNumber()`
-  - THEN the value supplied at construction is returned
+### RENAME order/reference-accessor -> order/order-number-accessor
+
+- WHEN a caller reads an order's identifier through `orderNumber()`
+- THEN the value supplied at construction is returned
 
 ## Approach
 

@@ -4,7 +4,7 @@ description: "Trigger: SDD Skills field, implementation skill routing, execution
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 

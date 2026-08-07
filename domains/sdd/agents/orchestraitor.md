@@ -44,7 +44,7 @@ Last verified: none | working-tree | <baseline>..HEAD | <sha>
 
 ## Skill resolution
 
-Load `sdd-execution-skills`. Every Work group must satisfy its `Skills:` contract; missing or invalid fields block before implementation.
+Load `sdd-execution-skills`. Every Work group must satisfy its `Skills:` contract, and every behavior identifier must be capability-qualified; missing or invalid fields block before implementation.
 
 Resolve names from `.ai/atl/skill-registry.md` when present; its startup refresh is asynchronous, so fall back to the runtime skill catalog. Registry is discovery only: pass names, never paths. Before implementation, block unsupported or unavailable names with `BLOCK sdd/<operation> skill=<name> unavailable; next=install-or-revise`.
 

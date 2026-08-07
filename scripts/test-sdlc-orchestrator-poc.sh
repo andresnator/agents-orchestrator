@@ -342,6 +342,33 @@ shouldRejectSymlinkedProjectTargetBeforeMutation() {
   pass shouldRejectSymlinkedProjectTargetBeforeMutation
 }
 
+shouldRejectSymlinkedManagedDirectoriesBeforeMutation() {
+  local directory project external
+
+  # Given each managed child redirects outside the project
+  for directory in agents commands skills plugins; do
+    project="$(make_project "symlinked-$directory")"
+    external="$SCRATCH/external-$directory"
+    mkdir -p "$project/.opencode" "$external"
+    printf 'keep me\n' > "$external/foreign.txt"
+    ln -s "$external" "$project/.opencode/$directory"
+
+    # When installation sees a managed directory that escapes the project
+    expect_failure 'refusing symlinked managed directory' run_profile install --project-root "$project"
+
+    # Then it stops before the generic installer mutates either location
+    grep -Fq 'keep me' "$external/foreign.txt" || fail "symlinked $directory: foreign content changed"
+    [ "$(find "$external" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" -eq 1 ] ||
+      fail "symlinked $directory: managed content escaped project"
+    [ ! -e "$project/.opencode/.agents-orchestrator-manifest" ] ||
+      fail "symlinked $directory: installer manifest created"
+    [ ! -e "$project/.opencode/.sdlc-orchestrator-poc-manifest" ] ||
+      fail "symlinked $directory: profile manifest created"
+  done
+
+  pass shouldRejectSymlinkedManagedDirectoriesBeforeMutation
+}
+
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   local project aliases
   project="$(make_project selected-domains)"
@@ -408,7 +435,7 @@ shouldSyncAndUninstallWhenComponentInventoryChanges() {
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
   local domain project target skill
 
-  for domain in plan sdd; do
+  for domain in plan sdd sdd-lite; do
     project="$(make_project "filtered-$domain")"
     target="$project/.opencode"
 
@@ -441,6 +468,7 @@ shouldAbortUninstallWhenManagedConfigChanges
 shouldRejectForeignAndBroadManifests
 shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
 shouldRejectSymlinkedProjectTargetBeforeMutation
+shouldRejectSymlinkedManagedDirectoriesBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 shouldSyncAndUninstallWhenComponentInventoryChanges
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain
