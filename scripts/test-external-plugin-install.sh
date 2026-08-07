@@ -154,6 +154,80 @@ shouldHandleMissingPropertyAndTrailingComment() {
   pass "shouldHandleMissingPropertyAndTrailingComment"
 }
 
+shouldIgnoreCommentCommasWhenRemovingJsoncSeparators() {
+  local scratch scalar_source scalar_removed array_source array_removed
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-jsonc-comment-comma.XXXXXX")"
+  scalar_source="$scratch/scalar-source.jsonc"
+  scalar_removed="$scratch/scalar-removed.jsonc"
+  array_source="$scratch/array-source.jsonc"
+  array_removed="$scratch/array-removed.jsonc"
+  cat > "$scalar_source" <<'EOF'
+{
+  "theme": "dark", // keep, please
+  "subagent_depth": 2
+}
+EOF
+  cat > "$array_source" <<EOF
+{
+  "plugin": [
+    "./foreign.tsx", // keep, please
+    "$PLUGIN_SPEC"
+  ]
+}
+EOF
+
+  # Given scalar and array separators followed by comments containing commas
+  # When the final managed property and array value are removed
+  # Then only syntactic separator tokens are deleted
+  python3 "$ROOT/scripts/jsonc-array.py" remove-property "$scalar_source" subagent_depth > "$scalar_removed"
+  python3 "$ROOT/scripts/jsonc-array.py" remove "$array_source" plugin "$PLUGIN_SPEC" > "$array_removed"
+  assert_contains "$scalar_removed" "// keep, please" "scalar remove changed a comment comma"
+  assert_contains "$array_removed" "// keep, please" "array remove changed a comment comma"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$array_removed" plugin "$PLUGIN_SPEC" >/dev/null 2>&1 &&
+    fail "array remove retained the managed value"
+  rm -rf "$scratch"
+  pass "shouldIgnoreCommentCommasWhenRemovingJsoncSeparators"
+}
+
+shouldPreserveJsoncScalarProperties() {
+  local scratch original managed depth restored removed status
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-jsonc-scalar.XXXXXX")"
+  original="$scratch/original.jsonc"
+  managed="$scratch/managed.jsonc"
+  depth="$scratch/depth.jsonc"
+  restored="$scratch/restored.jsonc"
+  removed="$scratch/removed.jsonc"
+  cat > "$original" <<'EOF'
+{
+  // Keep this profile comment.
+  "default_agent": "mentor", // Keep this inline comment.
+  "subagent_depth": 4,
+  "foreign": {"keep": true},
+}
+EOF
+
+  python3 "$ROOT/scripts/jsonc-array.py" set "$original" default_agent '"sdlc-orchestrator"' > "$managed"
+  python3 "$ROOT/scripts/jsonc-array.py" set "$managed" subagent_depth 2 > "$depth"
+  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" default_agent)" = '"sdlc-orchestrator"' ] ||
+    fail "JSONC scalar set/get lost default_agent"
+  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" subagent_depth)" = 2 ] ||
+    fail "JSONC scalar set/get lost subagent_depth"
+  assert_contains "$depth" "// Keep this profile comment." "JSONC scalar set dropped a comment"
+  assert_contains "$depth" '"foreign": {"keep": true}' "JSONC scalar set dropped a foreign key"
+
+  python3 "$ROOT/scripts/jsonc-array.py" set "$depth" default_agent '"mentor"' > "$restored"
+  python3 "$ROOT/scripts/jsonc-array.py" remove-property "$restored" subagent_depth > "$removed"
+  set +e
+  python3 "$ROOT/scripts/jsonc-array.py" get "$removed" subagent_depth >/dev/null
+  status=$?
+  set -e
+  [ "$status" -eq 1 ] || fail "JSONC scalar remove retained subagent_depth"
+  assert_contains "$removed" "// Keep this inline comment." "JSONC scalar restore dropped inline comment"
+  assert_contains "$removed" '"foreign": {"keep": true}' "JSONC scalar remove dropped a foreign key"
+  rm -rf "$scratch"
+  pass "shouldPreserveJsoncScalarProperties"
+}
+
 shouldInstallRepairStatusAndUninstallExternalPlugins() {
   local scratch target artifacts binary status_output before_package
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-install.XXXXXX")"
@@ -484,6 +558,8 @@ shouldMatchPinnedRemoteArtifacts() {
 run_contracts() {
   shouldPreserveJsoncManagedEntry
   shouldHandleMissingPropertyAndTrailingComment
+  shouldIgnoreCommentCommasWhenRemovingJsoncSeparators
+  shouldPreserveJsoncScalarProperties
   shouldInstallRepairStatusAndUninstallExternalPlugins
   shouldStageSameNamedArtifactsByKind
   shouldPreservePreexistingTuiRegistration

@@ -1,18 +1,18 @@
 ---
 name: code-conventions
-description: "Trigger: writing or planning production code or tests, defining test naming/assert style, extracting constants, placing DTOs or characterization tests. Andres's personal code and test conventions."
+description: "Trigger: writing production code or tests, applying test naming/assert style, extracting constants, placing DTOs or characterization tests. Andres's personal code and test conventions."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
 # Code Conventions
 
 ## Activation Contract
 
-Load this skill whenever writing production code or tests, or when a plan prescribes how code and tests will be written (naming, asserts, constants, DTO placement, characterization tests).
+Load this skill when writing production code or tests. Executable-change producers select its name through `sdd-execution-skills`; they do not load this body.
 
 Do not use for documentation, prose artifacts, or infrastructure config with no code.
 

@@ -1,11 +1,11 @@
 {
   "name": "default",
-  "description": "Balanced tiering for all harness agents",
+  "description": "Balanced tiering for SDLC and utility agents",
   "tiers": {
     "orchestration": {
-      "description": "Primary planners and orchestrators; strongest model",
+      "description": "Primary and domain coordinators; strongest model",
       "variant": "high",
-      "agents": ["orchestraitor", "deep-planner", "refactor-planner", "architect"]
+      "agents": ["sdlc-orchestrator", "deep-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
     },
     "implementation": {
       "description": "Code-writing agents",
@@ -17,15 +17,10 @@
       "variant": null,
       "agents": ["sdd-explore", "arch-analyzer", "refactor-analyzer", "boundary-inspector"]
     },
-    "drafting": {
-      "description": "Document drafting from decided inputs",
-      "variant": null,
-      "agents": ["sdd-design", "sdd-proposal", "sdd-spec", "sdd-tasks"]
-    },
     "verification": {
       "description": "Independent verification",
       "variant": "high",
-      "agents": ["sdd-verify"]
+      "agents": ["sdd-verify", "lite-verify"]
     },
     "judge-a": {
       "description": "Blind judge A; keep provider distinct from judge-b",

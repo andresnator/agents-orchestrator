@@ -24,6 +24,7 @@ class Node:
     end: int
     value: object = None
     properties: dict[str, "Node"] | None = None
+    property_keys: dict[str, Token] | None = None
     items: list["Node"] | None = None
 
 
@@ -55,22 +56,42 @@ class Parser:
 
     def parse_object(self, opening: Token) -> Node:
         properties: dict[str, Node] = {}
+        property_keys: dict[str, Token] = {}
         if self.peek("}"):
             closing = self.take()
-            return Node("object", opening.start, closing.end, properties=properties)
+            return Node(
+                "object",
+                opening.start,
+                closing.end,
+                properties=properties,
+                property_keys=property_keys,
+            )
         while True:
             key = self.take()
             if key.kind != "string" or not isinstance(key.value, str):
                 raise JsoncError(f"expected object key at offset {key.start}")
             self.expect(":")
             properties[key.value] = self.parse_value()
+            property_keys[key.value] = key
             if self.peek("}"):
                 closing = self.take()
-                return Node("object", opening.start, closing.end, properties=properties)
+                return Node(
+                    "object",
+                    opening.start,
+                    closing.end,
+                    properties=properties,
+                    property_keys=property_keys,
+                )
             self.expect(",")
             if self.peek("}"):
                 closing = self.take()
-                return Node("object", opening.start, closing.end, properties=properties)
+                return Node(
+                    "object",
+                    opening.start,
+                    closing.end,
+                    properties=properties,
+                    property_keys=property_keys,
+                )
 
     def parse_array(self, opening: Token) -> Node:
         items: list[Node] = []
@@ -189,6 +210,90 @@ def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, b
     raise JsoncError(f"unsupported action '{action}'")
 
 
+def scalar_property(text: str, property_name: str) -> tuple[Node, Node | None]:
+    root = Parser(text).parse()
+    if root.kind != "object" or root.properties is None:
+        raise JsoncError("JSONC root must be an object")
+    node = root.properties.get(property_name)
+    if node is not None and node.kind not in {"string", "number", "literal"}:
+        raise JsoncError(f"property '{property_name}' must be a JSON scalar")
+    return root, node
+
+
+def get_scalar(text: str, property_name: str) -> tuple[str, bool]:
+    _, node = scalar_property(text, property_name)
+    if node is None:
+        return "", False
+    return json.dumps(node.value, ensure_ascii=False, separators=(",", ":")), True
+
+
+def set_scalar(text: str, property_name: str, encoded_value: str) -> tuple[str, bool]:
+    try:
+        value = json.loads(encoded_value)
+    except json.JSONDecodeError as error:
+        raise JsoncError(f"invalid JSON scalar: {error.msg}") from error
+    if isinstance(value, (dict, list)):
+        raise JsoncError("managed value must be a JSON scalar")
+
+    root, node = scalar_property(text, property_name)
+    encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if node is not None:
+        if node.value == value and type(node.value) is type(value):
+            return text, False
+        return text[: node.start] + encoded + text[node.end :], True
+
+    close = root.end - 1
+    if root.properties and not has_trailing_comma(text, root):
+        last = max(root.properties.values(), key=lambda item: item.end)
+        text = text[: last.end] + "," + text[last.end :]
+        close += 1
+    insertion = f'\n  {json.dumps(property_name)}: {encoded}\n'
+    rendered = text[: trim_before(text, close, root.start + 1)] + insertion + text[close:]
+    return rendered, True
+
+
+def comma_tokens_between(text: str, start: int, end: int) -> list[int]:
+    """Absolute positions of syntactic commas, excluding strings and comments."""
+    return [start + token.start for token in tokenize(text[start:end]) if token.kind == ","]
+
+
+def property_separator_comma(text: str, root: Node, property_name: str) -> int | None:
+    assert root.properties is not None
+    assert root.property_keys is not None
+    ordered = sorted(root.properties, key=lambda name: root.property_keys[name].start)
+    index = ordered.index(property_name)
+    value = root.properties[property_name]
+    close = root.end - 1
+    if index < len(ordered) - 1:
+        next_key = root.property_keys[ordered[index + 1]]
+        commas = comma_tokens_between(text, value.end, next_key.start)
+        return commas[0] if commas else None
+    commas = comma_tokens_between(text, value.end, close)
+    if commas:
+        return commas[0]
+    if index > 0:
+        previous = root.properties[ordered[index - 1]]
+        commas = comma_tokens_between(text, previous.end, root.property_keys[property_name].start)
+        return commas[-1] if commas else None
+    return None
+
+
+def remove_property(text: str, property_name: str) -> tuple[str, bool]:
+    root, node = scalar_property(text, property_name)
+    if node is None:
+        return text, False
+    assert root.property_keys is not None
+    start = root.property_keys[property_name].start
+    end = node.end
+    comma = property_separator_comma(text, root, property_name)
+    if comma is not None:
+        text = text[:comma] + text[comma + 1 :]
+        if comma < start:
+            start -= 1
+            end -= 1
+    return text[:start] + text[end:], True
+
+
 def trim_before(text: str, close: int, floor: int) -> int:
     """Start of the whitespace run that ends at `close`, never crossing `floor`.
 
@@ -232,17 +337,15 @@ def separator_comma(text: str, array: Node, item: Node, close_bracket: int) -> i
     items = array.items
     index = items.index(item)
     if index < len(items) - 1:
-        comma = text.find(",", item.end, items[index + 1].start)
-        return None if comma == -1 else comma
+        commas = comma_tokens_between(text, item.end, items[index + 1].start)
+        return commas[0] if commas else None
 
-    probe = item.end
-    while probe < close_bracket and text[probe] in " \t\r\n":
-        probe += 1
-    if probe < close_bracket and text[probe] == ",":
-        return probe
+    commas = comma_tokens_between(text, item.end, close_bracket)
+    if commas:
+        return commas[0]
     if index > 0:
-        comma = text.rfind(",", items[index - 1].end, item.start)
-        return None if comma == -1 else comma
+        commas = comma_tokens_between(text, items[index - 1].end, item.start)
+        return commas[-1] if commas else None
     return None
 
 
@@ -280,7 +383,7 @@ def remove_value(text: str, array: Node, item: Node) -> str:
 
 
 def has_comma_between(text: str, start: int, end: int) -> bool:
-    return any(token.kind == "," for token in tokenize(text[start:end]))
+    return bool(comma_tokens_between(text, start, end))
 
 
 def has_trailing_comma(text: str, node: Node) -> bool:
@@ -291,18 +394,44 @@ def has_trailing_comma(text: str, node: Node) -> bool:
 
 
 def main() -> int:
-    if len(sys.argv) != 5:
-        print("usage: jsonc-array.py <has|add|remove> <file> <property> <value>", file=sys.stderr)
+    if len(sys.argv) < 4:
+        print(
+            "usage: jsonc-array.py <has|add|remove> <file> <property> <value>\n"
+            "       jsonc-array.py <get|remove-property> <file> <property>\n"
+            "       jsonc-array.py set <file> <property> <json-scalar>",
+            file=sys.stderr,
+        )
         return 2
-    action, file_name, property_name, value = sys.argv[1:]
+    action, file_name, property_name = sys.argv[1:4]
+    value = sys.argv[4] if len(sys.argv) == 5 else None
+    if action in {"has", "add", "remove", "set"} and value is None:
+        print(f"error: action '{action}' requires a value", file=sys.stderr)
+        return 2
+    if action in {"get", "remove-property"} and len(sys.argv) != 4:
+        print(f"error: action '{action}' takes no value", file=sys.stderr)
+        return 2
+    if action not in {"has", "add", "remove", "get", "set", "remove-property"}:
+        print(f"error: unsupported action '{action}'", file=sys.stderr)
+        return 2
     file = Path(file_name)
     text = file.read_text() if file.exists() else "{}\n"
     try:
-        rendered, changed = edit(text, property_name, value, action)
+        if action in {"has", "add", "remove"}:
+            assert value is not None
+            rendered, changed = edit(text, property_name, value, action)
+        elif action == "get":
+            rendered, changed = get_scalar(text, property_name)
+        elif action == "set":
+            assert value is not None
+            rendered, changed = set_scalar(text, property_name, value)
+        else:
+            rendered, changed = remove_property(text, property_name)
     except (OSError, JsoncError) as error:
         print(f"error: {file}: {error}", file=sys.stderr)
         return 2
-    if action == "has":
+    if action in {"has", "get"}:
+        if action == "get" and changed:
+            print(rendered)
         return 0 if changed else 1
     sys.stdout.write(rendered)
     return 0 if changed else 3

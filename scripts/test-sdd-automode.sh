@@ -108,29 +108,17 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     assert_json_value "$config" ".agent[\"$name\"].permission.write" deny \
       "on: $name lost its write deny"
   done
-  # Drafting agents keep bash deny.
-  for name in sdd-proposal sdd-spec sdd-tasks; do
-    assert_json_value "$config" ".agent[\"$name\"].permission.bash" deny \
-      "on: $name lost its bash deny"
-  done
-  # Drafting agents keep their nested planning-artifact write boundary.
+  # Removed drafting agents must not leak stale user-config blocks.
   for name in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_json_value "$config" ".agent[\"$name\"].permission.edit[\"*\"]" deny \
-      "on: $name lost its edit wildcard deny"
-    assert_json_value "$config" ".agent[\"$name\"].permission.edit[\".ai/*/changes/**\"]" allow \
-      "on: $name lost its planning edit allow"
-    assert_json_value "$config" ".agent[\"$name\"].permission.write[\"*\"]" deny \
-      "on: $name lost its write wildcard deny"
-    assert_json_value "$config" ".agent[\"$name\"].permission.write[\".ai/*/changes/**\"]" allow \
-      "on: $name lost its planning write allow"
+    assert_json_value "$config" ".agent | has(\"$name\")" false \
+      "on: removed agent $name was written"
   done
-  # Subagents never ask; the orchestraitor always may.
-  for name in sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
+  # SDD agents never ask; the sdlc-orchestrator owns user questions outside
+  # this domain-specific toggle.
+  for name in orchestraitor sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
     assert_json_value "$config" ".agent[\"$name\"].permission.question" deny \
       "on: $name lost its question deny"
   done
-  assert_json_value "$config" '.agent.orchestraitor.permission.question' allow \
-    "on: orchestraitor lost question allow"
   # The nested task allowlist is copied verbatim over the flat allow.
   assert_json_value "$config" '.agent.orchestraitor.permission.task | type' object \
     "on: orchestraitor task map collapsed to a scalar"
@@ -138,6 +126,10 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     "on: orchestraitor task wildcard is not deny"
   assert_json_value "$config" '.agent.orchestraitor.permission.task["sdd-explore"]' allow \
     "on: orchestraitor task allowlist lost sdd-explore"
+  assert_json_value "$config" '.agent.orchestraitor.permission.task["sdd-implement"]' allow \
+    "on: orchestraitor task allowlist lost sdd-implement"
+  assert_json_value "$config" '.agent.orchestraitor.permission.task["sdd-verify"]' allow \
+    "on: orchestraitor task allowlist lost sdd-verify"
   # Unrelated config is untouched.
   assert_json_value "$config" '.agent.mentor.model' openai/gpt-5.6-sol \
     "on: clobbered an unrelated agent's model"

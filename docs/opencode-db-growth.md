@@ -33,8 +33,8 @@ result — is re-persisted *in full* on every stream delta, as a fresh event row
 complete snapshot. A part that streams to 1 MB (the largest one here is 1.11 MB) is written
 out once per delta, so its cost is quadratic in its final length, and the whole growth curve
 of the part lands in the event log. Long turns produce long parts: the same high-context turns
-that make the orchestrator feel slow are what fills this table. Keeping agents' context small
-(see [delegation receipts](delegation-receipts.md)) shrinks this file as a side effect.
+that make the orchestrator feel slow are what fills this table. Keeping agent contexts and A2A
+returns small shrinks this file as a side effect.
 
 ## Inspecting it
 

@@ -1,57 +1,66 @@
 # Architecture Domain
 
-Project-architecture analysis: visual C4-lite docs, state reviews with gap analysis, reverse-engineered PRDs, security/observability audits, and question-driven architecture refactor ideation. Architecture-level only — code-level style and class refactors belong to the `refactor` domain.
+Architecture-level mapping, review, PRD recovery, audit, boundary analysis, and ideation. Class-level cleanup belongs to the Plan domain's protected `refactor` route (`/refactor-plan`).
 
-One primary agent: `architect`. One subagent: `arch-analyzer` (generic read-only analysis instance, launched N times in parallel with per-lens briefs). A second agent/command pair: `boundary-inspector` (backend service boundary mapping via `service-boundary-analysis`). Five commands sharing the primary: `/arch-map` (C4-lite Mermaid doc set with drift refresh), `/arch-review` (project state + gaps + ranked issue shortlist), `/arch-prd` (reverse-engineered PRD via `prd`/`prd-light`), `/arch-ideate` (ADR + ready-for-sdd bundle), and `/arch-audit` (dependency CVEs, runtime EOL, secrets heuristics, logging posture).
+## Quick path
 
-Every mode starts from an inline `architecture-state` scan (toolchain with evidence, architecture style, gaps with fitness-function proposals). Visual docs and PRDs land under the target project's `<docfolder>/architecture/` (existing `docs/`, else `doc/`, else a created `doc/`); reports land under `.ai/architect/reports/`. `/arch-ideate` composes OpenSpec bundles under `.ai/architect/changes/<change>/` using the `sdd-draft-*` templates, adopted by the sdd `orchestraitor` via `docs/plan-handoff.md` ("ejecuta el plan <change>"); group 1 of every ideation bundle turns the decided boundaries into fitness functions (ArchUnit / Spring Modulith / dependency-cruiser / import-linter).
+1. Describe the architecture outcome through `sdlc-orchestrator` or use an alias below.
+2. Review evidence-backed outputs under project architecture docs or `.ai/architect/`.
+3. For ideation, review the ADR and the single ready `change.md`, then hand that change to SDD.
 
-Deliberate precedent: `architect` is the repo's first agent with non-deny bash — an ask-gated allowlist of read-only audit commands (`npm audit`, `mvn dependency:tree`, `pip-audit`, `osv-scanner`, …) under a default `"*": deny`, used only in `/arch-audit`; a denied or missing tool degrades to manifest inspection (`method: manifest-fallback`). `arch-analyzer` stays fully read-only with `bash: deny`.
+## Operations
 
-Structural exploration is Graphify-first (`docs/graphify.md`): `architect` probes the graph once per repository during the inline state scan and passes `graphify: available | absent` in every analyzer brief; `arch-analyzer` and `boundary-inspector` query the graph via MCP only and never run lifecycle commands. Multi-project workspaces (nested manifests or repos) are analyzed per project: per-project toolchains and styles from `architecture-state`, per-deployable containers from `architecture-map`, one `service-boundary-analysis` report per service, and cross-repository claims backed by manifests (the global Graphify graph may corroborate, never replace, that evidence).
+| Alias | Result |
+|---|---|
+| `/arch-map` | C4-lite architecture documentation |
+| `/arch-review` | Ranked architecture issues and fitness functions |
+| `/arch-prd` | PRD reverse-engineered from current behavior |
+| `/arch-ideate` | ADR plus `.ai/architect/changes/<change>/change.md` |
+| `/arch-audit` | Read-only security and observability audit |
+| `/boundary-inspector` | Service input, output, API, and consumer map |
 
-Full lens coverage assumes the `common` domain is installed (lens skills such as `cohesion-coupling` or `logging-observability` live there, as do the transversal `code-conventions` and `risk-assessment`); missing lens skills are reported as skipped, never as failures. Bundle composition uses the `sdd-draft-*` templates from the `sdd` domain.
+`architect` performs the state scan and delegates independent read-only lenses to `arch-analyzer` or boundary work to `boundary-inspector`. Audit commands are deny-by-default; missing or declined tools fall back to manifest inspection.
+
+Ideation keeps its ADR because it records an architecture decision. Its executable SDD handoff is only `change.md`, marked `Status: ready-for-sdd | Source: architect`; every Work group records a routed `Skills:` set and SDD executes it in place without redrafting.
+
+The domain declares the shared `sdd-draft-change` contract directly. It assumes `sdlc` and `common` for routing and analysis; SDD owns later execution. Graph exploration follows the independent [Graphify guide](../../docs/graphify.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `architect` | Analyzes architecture and produces evidence-backed artifacts |
-| Agent (subagent) | `arch-analyzer` | Analyzes one architecture lens read-only |
-| Agent (subagent) | `boundary-inspector` | Maps backend service boundaries read-only |
-| Command | `/arch-audit` | Audits security and observability read-only |
-| Command | `/arch-ideate` | Produces an ADR and ready-for-sdd bundle |
-| Command | `/arch-map` | Generates or refreshes C4-lite architecture docs |
-| Command | `/arch-prd` | Reverse-engineers a PRD from code |
-| Command | `/arch-review` | Ranks evidence-backed architecture issues |
-| Command | `/boundary-inspector` | Inspects service inputs and outputs |
-| Skill | `adr` | Document decisions and architectural trade-offs |
-| Skill | `architecture-ideation` | Produce ADR and ready-for-sdd architecture bundle |
-| Skill | `architecture-impact-review` | Classify risk as local or architectural |
-| Skill | `architecture-map` | Generate evidence-backed C4-lite Mermaid docs |
-| Skill | `architecture-state` | Detect architecture gaps and propose fitness functions |
-| Skill | `cognitive-doc-design` | Design docs that reduce cognitive load |
-| Skill | `dependency-security-audit` | Audit dependency and observability posture |
-| Skill | `java-secure-coding` | Review Java security practices |
-| Skill | `prd` | Create rigorous high-stakes PRDs |
-| Skill | `prd-light` | Create lightweight MVP PRDs |
-| Skill | `repo-issues` | Rank evidence-backed repository issues |
-| Skill | `service-boundary-analysis` | Map service boundaries with evidence |
-| Skill | `tooling-audit` | Detect test safety tooling gaps |
-| Skill | `tooling-compatibility-matrix` | Guide test, coverage, and mutation tooling |
-
-```mermaid
-graph TD
-  map[/arch-map/] --> architect[architect]
-  review[/arch-review/] --> architect
-  prd[/arch-prd/] --> architect
-  ideate[/arch-ideate/] --> architect
-  audit[/arch-audit/] --> architect
-  architect --> state[inline state scan<br/>architecture-state]
-  state --> fanout[arch-analyzer x N<br/>parallel: per-lens briefs]
-  fanout --> consolidate[consolidate + adversarial filter]
-  consolidate --> docfolder["&lt;docfolder&gt;/architecture/<br/>overview + flows + PRD + ADRs"]
-  consolidate --> reports[".ai/architect/reports/<br/>review + audit"]
-  consolidate --> bundle[".ai/architect/changes/&lt;change&gt;<br/>Status: ready-for-sdd"]
-  bundle --> adopt[orchestraitor plan intake<br/>ejecuta el plan &lt;change&gt;]
-```
+| Agent (subagent coordinator) | `architect` | Owns architecture operations |
+| Agent (subagent) | `arch-analyzer` | Analyzes one read-only architecture lens |
+| Agent (subagent) | `boundary-inspector` | Maps service boundaries read-only |
+| Command | `/arch-audit` | Audits security and observability |
+| Command | `/arch-ideate` | Produces an ADR and executable change |
+| Command | `/arch-map` | Generates C4-lite docs |
+| Command | `/arch-prd` | Reconstructs a PRD |
+| Command | `/arch-review` | Ranks architecture issues |
+| Command | `/boundary-inspector` | Inspects service boundaries |
+| Skill | `adr` | Records architecture decisions |
+| Skill | `architecture-ideation` | Designs target architecture and executable work |
+| Skill | `architecture-impact-review` | Classifies architecture impact |
+| Skill | `architecture-map` | Creates evidence-backed C4-lite docs |
+| Skill | `architecture-state` | Detects architecture state and gaps |
+| Skill | `cognitive-doc-design` | Reduces document cognitive load |
+| Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
+| Skill | `dependency-inversion` | Detects concrete boundary dependency risks |
+| Skill | `dependency-security-audit` | Audits dependency and observability posture |
+| Skill | `design-patterns-pragmatic` | Applies patterns only to real forces |
+| Skill | `domain-modeling` | Builds and sharpens domain models |
+| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
+| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
+| Skill | `java-secure-coding` | Reviews Java security practices |
+| Skill | `kiss-yagni` | Prevents speculative architecture complexity |
+| Skill | `logging-observability` | Evaluates operational logging and observability |
+| Skill | `native-question-ux` | Presents questions through portable native UX |
+| Skill | `prd` | Creates rigorous PRDs |
+| Skill | `prd-light` | Creates lightweight PRDs |
+| Skill | `repo-issues` | Ranks repository issues |
+| Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `sdd-execution-skills` | Selects implementation skills per Work group |
+| Skill | `service-boundary-analysis` | Maps service contracts |
+| Skill | `tooling-audit` | Detects test-tooling gaps |
+| Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |

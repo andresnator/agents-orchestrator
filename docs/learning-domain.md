@@ -1,78 +1,75 @@
-# Using the learning domain
+# Use the Learning Domain
 
-Two commands, a primary mentor plus a hidden tutor, eight methods. `/learn` drives multi-session learning paths whose state lives in the project you run it from, under `.ai/learning/`; `/english` is the on-demand English coaching surface that feeds recurring gaps into those paths. The `mentor` is `mode: primary`, sdd-style: it shows up in OpenCode's agent switcher and you can talk to it directly (a direct message is routed like `/learn` input), with `/learn` as the front door. `english-tutor` stays `mode: subagent` and is only reachable through `/english`.
+`/learn` builds durable multi-session learning paths under `.ai/learning/`. `/english` provides explicit English coaching and can feed recurring synthetic gap patterns into a language topic.
 
-## Install
+## Quick path
 
 ```bash
-installers/opencode.sh install          # default --domain all; install is a SYNC
+installers/opencode.sh install
 ```
 
-Do not install with `--domain learning` alone if other domains are already installed: install syncs against the previous manifest and would remove them.
+Start a topic with `/learn <topic>`, confirm its mission and path, then use `/learn` regularly. Every session offers due reviews before new material; the queue is pull-based, not scheduled.
 
 ## Commands
 
-| Invocation | What happens |
-| --- | --- |
-| `/learn spring-security` | New topic: the mentor infers what it can, asks only the essentials (why and observable goal; native language for language topics), estimates the total effort and recommends a cadence — you adjust freely and own the final cadence — then drafts `mission.md` (success criteria and time budget included) for your correction, then a 4–8 module `path.md` with a Mermaid roadmap you confirm before module 1. If the slug already exists, it resumes. |
-| `/learn` | Continue: overdue-review check, then the active topic's next module (asks which topic if several are active). |
-| `/learn review` | Spaced-repetition session over all due cards (add a topic to scope it). |
-| `/learn quiz [topic]` | Retrieval quiz from the topic's Cornell cue bank. Recorded in `quizzes/`, informs pacing, never moves boxes. |
-| `/learn map [topic]` | Regenerate or expand the topic's Mermaid mindmap. |
-| `/learn teach [concept]` | Feynman teach-back: you explain, the mentor plays a curious novice and probes for gaps. |
-| `/learn vocab [words\|theme]` | Anki vocabulary batch for a language topic: natural phrases (situation-driven, built from already-learned vocabulary), exported as `;`-separated txt under `anki/` ready for Anki import; units registered in `vocabulary.md`. |
-| `/learn drill [unit]` | Bidirectional-translation drill on a dialogue unit (weakest-first when empty): retranslate the native text into the target language from memory, compare against the original, capture the differences. Language topics only. |
-| `/learn status` | Dashboard across topics: progress, due and upcoming reviews, mastered counts. |
-| `/english [text]` | Explicit English coaching: five-field corrections (`Original/Improved/Explanation/Learning gap/Practice suggestion`), practice prompts, or a progress summary over the gaps inbox. Opt-in only — never passive monitoring. |
+| Command | Outcome |
+|---|---|
+| `/learn <topic>` | Create or resume a topic with mission, cadence, and 4-8 modules |
+| `/learn` | Continue the active topic after the due check |
+| `/learn review [topic]` | Review due cards oldest-first and interleaved |
+| `/learn quiz [topic]` | Run retrieval practice and record pacing evidence |
+| `/learn map [topic]` | Refresh the topic mind map |
+| `/learn teach [concept]` | Run a Feynman teach-back |
+| `/learn vocab [theme]` | Export phrase-based Anki cards for a language topic |
+| `/learn drill [unit]` | Run delayed bidirectional translation |
+| `/learn status` | Rebuild the cross-topic dashboard |
+| `/english [text]` | Correct, explain, practice, or summarize explicit English input |
 
-Every `/learn` invocation, in every `/learn` mode, starts with the due-check: cards with `Next ≤ today` are offered (never forced) before new material. There is no scheduler — the queue is pull-based, so just invoking `/learn` regularly is the cadence.
+## Learning loop
 
-## The methods, and where they bite
+Each general module combines:
 
-- **70-20-10** (`learning-loop`): each module is 10% formal (a micro-lesson captured as a Cornell note, with a primary source), 70% doing (a real exercise in your own repo — the mentor proposes, constrains, and gives escalating hints, but never writes the solution), and 20% social (Socratic debrief plus curated community resources in `resources.md`). When you finish an exercise, the mentor may ask permission to run your repo's tests to check the outcome (verification only — it never edits your code). To design and review exercises it reads your repo graph-first (Graphify when available) before crawling files.
-- **Cornell** (`cornell-notes`): every lesson note is a Mermaid map + a `Cue (question) | Notes` table + a summary **in your own words** (the mentor records what you say, it never invents it). Each cue is a retrieval question.
-- **Spaced repetition** (`spaced-recall`): every cue becomes a card in `review-queue.md`. Leitner boxes 1–5 with intervals 1/3/7/14/30 days; grades Again/Hard/Good/Easy move cards down/same/up; every grade re-dates the card from today (today's date comes from the environment, never a guess), and Good or Easy at box 5 masters the card. A card failed (`Again`) 3× is flagged `⚠ leech` and reformulated or split instead of left to churn. Reviews are offered in chunks of ~15, oldest-first and **interleaved** across notes/topics rather than blocked by lesson. In a review the mentor asks the cue, waits for your attempt, then reveals and asks for the grade. When the learning domain's repository-owned `recall-calc` plugin is installed, the mentor takes the due list and every box/date transition from its read-only `recall_due`/`recall_schedule` tools and just transcribes the results — no model date arithmetic; without it, the transition table is applied manually.
-- **Anki vocab** (`anki-vocab`): for language topics — any target language, translated into your native language (from `mission.md`, Spanish by default) — `vocab` mode exports card batches you import into Anki. Each row anchors a natural target-language phrase/chunk (never an isolated word), chosen from real situations (the theme you pass, or your mission/path context) and built preferentially from vocabulary you already know (i+1). Format: `unit;meaning;part of speech;example;native translation` — UTF-8, no header, no IPA. Exported units are registered in `vocabulary.md` for reinforcement and duplicate prevention, but get no Leitner cards: Anki is their review system (no double SRS).
-- **Feynman** (`feynman-teachback`): in `teach` mode you explain a concept in simple terms; the mentor asks naive questions and never corrects mid-explanation. Gaps are classified (missing piece, hand-waved, wrong claim, jargon crutch), demote the matching cards to box 1, and each gets a return path to a source. You close with an analogy in your own words. A fluent teach-back never auto-promotes cards — only scheduled reviews promote.
+- 10% formal input captured as a Cornell note with retrieval cues;
+- 70% a real exercise that the mentor scopes but does not solve;
+- 20% Socratic debrief and curated community resources.
 
-When every module is ✅, the topic closes with a **capstone teach-back** against your mission's observable goal and success criteria. The capstone is an explicit gate row in `path.md`'s `## Completion` table (⬜ until the teach-back file exists as evidence), so a fresh session sees it pending from the files alone; only after the gate is ✅ does `mission.md` flip to `Status: completed` and `/learn status` list it under Completed. Reviews keep surfacing until every card is Mastered — completion closes the path, not the retention loop.
+Every cue becomes a Leitner card with 1/3/7/14/30-day intervals. Again, Hard, Good, and Easy update the box and next date. Repeated failures become leeches to reformulate or split. The optional `recall-calc` plugin performs date and due-list arithmetic; otherwise the mentor applies the same table.
 
-Materials are Markdown in English (never HTML); every path, lesson, and map embeds at least one Mermaid diagram (other records add one when it helps); Anki batch exports under `anki/` are plain `;`-separated `.txt`; the conversation follows your language.
+Feynman sessions classify gaps, attach return paths, and end with the learner's analogy. Completing modules is not enough: the mission closes only after a capstone teach-back satisfies the observable goal. Reviews continue until cards are mastered.
 
-## Language topics (English as a learning subdomain)
+## Language topics
 
-When a topic's `mission.md` names a target language, `language-loop` replaces the 70-20-10 module flow with an input-first, two-wave session (absorbed from Assimil, Lampariello, Kaufmann, and Krashen):
+Language topics replace the general module loop with bilingual dialogue units:
 
-- **Passive wave**: each session adds one new bilingual dialogue unit (`dialogues/NNNN-<slug>.md`) — target-language text with a natural native translation, built from your mission's situations and ~90% from vocabulary you already know (comprehensible i+1). You read for comprehension; unknowns are captured in context, not lectured. Production is invited, never forced early.
-- **Active wave** (`bidirectional-translation`): once 5+ units exist, each session also retranslates unit N−5 — you turn the native text back into the target language from memory, then compare against the original. Differences are classified (word choice, structure/order, missing chunk, grammar pattern) and captured: chunks → Anki candidates, patterns → recall cards. Noticing over grading; the delay is the method. `/learn drill [unit]` runs one standalone.
-- **Gap handoff** (`english-tutor` + `/english`): correction sessions can, with your opt-in, append recurring gap categories with **synthetic example patterns only** (never your actual sentences) as `pending` rows in the topic's `gaps.md` inbox. The mentor scans the inbox at every due-check and offers adopting each row as a recall card or a drill, flipping it to `adopted`. No topic yet → `/english` suggests `/learn english`. The old Notion-side `English Coach Memory` is retired; `gaps.md` is the recurring-gap memory.
-- Everything transversal still applies: the due-check runs first, vocabulary goes through `anki-vocab` (Anki is its SRS — no Leitner double-tracking), grammar patterns go through `spaced-recall`, and quizzes/teach-backs work as in any topic.
+1. Passive wave: read a comprehensible target-language dialogue with natural translation.
+2. Active wave after five units: translate unit N-5 back from memory and classify differences.
+3. Send phrases to Anki and grammar patterns to the recall queue.
 
-## State layout (per project, created by the mentor)
+`/english` never monitors passively. With explicit opt-in, it appends recurring categories as synthetic patterns to the topic's `gaps.md`; the mentor offers each pending row as a card or drill. Actual user sentences are not stored in that inbox.
 
-```
-.ai/learning/
-  dashboard.md                 # rebuilt by /learn status
-  <topic-slug>/
-    mission.md                 # why + observable goal + success criteria
-    path.md                    # Mermaid roadmap + module table + pacing log
-    review-queue.md            # Leitner queue + Mastered section
-    resources.md               # curated primary sources + community venues
-    vocabulary.md              # units exported to Anki (reinforcement inventory)
-    anki/NNNN-<batch>.txt      # Anki import batches (;-separated, no header)
-    notes/NNNN-<lesson>.md     # Cornell notes (10%)
-    exercises/NNNN-<name>.md   # briefs, hints, outcome log (70% + 20% debrief)
-    quizzes/NNNN-YYYY-MM-DD.md # quiz results (pacing signal)
-    teachbacks/NNNN-<concept>.md # Feynman sessions: gaps, return paths, analogy
-    dialogues/NNNN-<slug>.md   # language topics: bilingual units + retranslation log
-    gaps.md                    # language topics: gap inbox (english-tutor -> mentor)
+## State
+
+```text
+.ai/learning/<topic>/
+  mission.md
+  path.md
+  review-queue.md
+  resources.md
+  vocabulary.md
+  gaps.md
+  anki/
+  notes/
+  exercises/
+  quizzes/
+  teachbacks/
+  dialogues/
 ```
 
-The mentor writes only under `.ai/learning/**` — it reads your repos to design and review the 70% exercises but never edits them. The `english-tutor` agent is narrower still: its only writable path is `gaps.md` inside an existing language topic — opt-in appends only; the mentor seeds the file at topic creation and the tutor recreates it from `language-loop`'s template if it is missing.
+The mentor writes only under `.ai/learning/**`; it may read a repository to design exercises and may ask permission to run tests for verification, but never edits the learner's code. `english-tutor` can only append to an existing language topic's `gaps.md` after opt-in.
 
 ## Troubleshooting
 
-- **Native questions don't surface from the subtask session**: only `/english` runs its agent as a subtask (`agent: english-tutor` + `subtask: true` — its opt-in gap handoff is question-driven); `/learn` runs in the `mentor` primary session, where the question UI is native. If OpenCode doesn't show the question UI from `/english`'s child session, drop `subtask: true` from `domains/learning/commands/english.md` or set `english-tutor` to `mode: primary` (it becomes visible in the switcher) and re-run the installer.
-- **Reviews pile up**: `/learn review` clears the backlog oldest-first; `/learn status` shows what's coming so you can pick session days.
-- **Wrong pacing**: the mentor adjusts from quiz/review/teach-back evidence (zone of proximal development) and records every pacing decision in the `path.md` log — override it by just saying so during a session.
-- **The mentor asks to run tests**: when you close a 70% exercise it may ask permission to run your repo's test/build command to verify the outcome. Bash is ask-gated and narrow — it reads the date or runs your suite; it never edits your code or runs any other mutating command. Decline and just report the result yourself if you prefer.
+- Due reviews accumulate: run `/learn review`; `/learn status` shows the queue.
+- Cadence feels wrong: tell the mentor; the learner owns the final cadence.
+- `/english` questions do not surface: run it without subtask mode or expose `english-tutor` as a primary, then reinstall.
+- Decline test execution if verification should remain manual.

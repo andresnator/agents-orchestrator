@@ -31,6 +31,8 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `open-closed-principle` | Detect extension pressure without speculation |
 | Skill | `programming-practices-core` | Evaluate language-neutral code quality |
 | Skill | `risk-assessment` | Classify technical and functional legacy risk |
+| Skill | `sdd-draft-change` | Draft the single pre-implementation change document used by `/grill sdd` |
+| Skill | `sdd-execution-skills` | Select implementation skills for `/grill sdd` Work groups |
 | Skill | `single-responsibility` | Detect multiple reasons to change |
 | Skill | `small-functions` | Detect oversized and extractable functions |
 | Skill | `spaghetti-code-detection` | Detect tangled flow and hidden ordering |
@@ -39,12 +41,12 @@ Shared engineering, quality, native question UX, and output-refinement component
 | Skill | `work-unit-commits` | Plan reviewable, cohesive commits |
 | External server plugin | [`graphify-init`](https://github.com/andresnator/opencode-graphify-init) | Refreshes Graphify graphs under `.ai/graphify-out/` in the background, honoring the mode recorded by `/graphify-index`; it never performs first indexing |
 
-Use common skills by reference from domain-specific agents instead of duplicating them into each domain. Common is the single home for transversal skills used by 3+ domains (`grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, `code-conventions`, `risk-assessment`); consuming domains declare the dependency in their README instead of duplicating symlinks.
+Transversal skills have one body under top-level `skills/`. Common and every consuming domain declare that body with a relative symlink, so filtered domain installs remain complete without duplicating skill content.
 
 ```mermaid
 graph TD
   grillcmd[/grill/] --> grillskill[grill router --> grilling]
-  quality[quality skills] --> refactor[refactor domain]
+  quality[quality skills] --> plan[protected planning]
   practices[engineering practices] --> sdd[SDD domain]
   native[native-question-ux] --> meta[meta domain]
   output[cognitive-output-refiner] --> docs[docs domain]

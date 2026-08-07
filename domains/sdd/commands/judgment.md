@@ -1,11 +1,9 @@
 ---
 description: Run the judgment-day adversarial review protocol
+agent: sdlc-orchestrator
+subtask: false
 argument-hint: "[light] [target files, feature, or scope]"
 ---
-# /judgment
+Raw arguments: `$ARGUMENTS`
 
-Load and follow the `judgment-day` skill for the requested target.
-
-If the arguments start with `light` (or the request asks for a light/solo judgment), run the skill's Light Mode: one solo judge, automatic fix of CRITICALs only, no re-judge. Otherwise run the default dual protocol.
-
-If no target is provided, ask for the files, feature, or scope to review before starting the protocol.
+Route `review/judgment` to `review-coordinator`. Leading `light` selects one solo sweep; otherwise use blind dual review. Missing target returns `ASK`; code changes require the protocol's explicit fix authorization. Never commit or push.

@@ -145,15 +145,16 @@ discover_components() {
 
     dir="$domain/skills"
     if [ -d "$dir" ]; then
-      find "$dir" -mindepth 1 -maxdepth 1 ! -type l | sort | while IFS= read -r file; do
-        warn "$file: domain skill entries must be symlinks to skills/<skill>; skipped"
-      done
-      find "$dir" -mindepth 1 -maxdepth 1 -type l | sort | while IFS= read -r file; do
+      find "$dir" -mindepth 1 -maxdepth 1 -print | sort | while IFS= read -r file; do
+        if [ ! -L "$file" ] && [ ! -d "$file" ]; then
+          warn "$file: domain skill entry must be a directory or shared-skill symlink; skipped"
+          continue
+        fi
         name="$(basename "$file")"
         src="$(skill_source_dir "$file")"
         skill_file="$src/SKILL.md"
         if [ ! -f "$skill_file" ]; then
-          warn "$file: skill link does not resolve to a SKILL.md; skipped"
+          warn "$file: skill entry does not resolve to a SKILL.md; skipped"
           continue
         fi
         status="$(status_from_file "$skill_file")"
@@ -243,6 +244,12 @@ ensure_dir() {
   printf 'dir\t%s\n' "$dir" >> "$manifest"
 }
 
+manifest_owns_link() {
+  local manifest="$1" dest="$2"
+  [ -f "$manifest" ] || return 1
+  awk -F '\t' -v dest="$dest" '$1 == "link" && $2 == dest { found = 1; exit } END { exit found ? 0 : 1 }' "$manifest"
+}
+
 link_component() {
   local src dest manifest current
   src="$1"
@@ -252,6 +259,15 @@ link_component() {
   if [ -L "$dest" ]; then
     current="$(readlink "$dest")"
     if [ "$current" = "$src" ]; then
+      printf 'link\t%s\n' "$dest" >> "$manifest"
+      return 0
+    fi
+    if manifest_owns_link "$OLD_MANIFEST" "$dest"; then
+      if [ "$DRY_RUN" -eq 1 ]; then
+        printf 'ln -sfn %s %s\n' "$src" "$dest"
+      else
+        ln -sfn "$src" "$dest"
+      fi
       printf 'link\t%s\n' "$dest" >> "$manifest"
       return 0
     fi

@@ -1,30 +1,39 @@
-Mode: automatic | TDD: tests alongside | Judgment: none | Depth: light | Delivery: none
+Status: active | Source: orchestraitor
+Mode: automatic | TDD: alongside | Judgment: none | Delivery: none
 
 # Change: Expose the order reference under a clearer name
 
-## Why / What
+## Outcome
 
 `Order.reference()` is the only accessor for the order identifier, and callers read
 it as if it were a database id. Rename the accessor to `orderNumber()` so the
 domain vocabulary matches how the value is used, keeping the field itself intact.
 
-## Spec Deltas
+## Scope
 
-### order-entry
+- In: the `Order` accessor and every call site.
+- Out: persistence shape and the stored field name.
 
-#### ADDED Requirements
+## Behavior
 
-##### Requirement: Order number accessor
+### RENAME order/reference-accessor -> order/order-number-accessor
 
-The system MUST expose the order identifier through an accessor named for the
-order number.
+- WHEN a caller reads an order's identifier through `orderNumber()`
+- THEN the value supplied at construction is returned
 
-###### Scenario: Reading the identifier
+## Approach
 
-- **WHEN** a caller reads the identifier of an order
-- **THEN** the value supplied at construction is returned
+- Rename only the accessor; keep the stored field intact.
 
-## Tasks
+## Work
 
-- [ ] 1.1 Rename `reference()` to `orderNumber()` in `src/main/java/com/example/orders/Order.java`.
-- [ ] 1.2 Update every call site and test reference.
+### 1. Rename accessor
+
+Files: src/main/java/com/example/orders/Order.java, src/test/java/com/example/orders/
+Skills: code-conventions, legacy-code-safety
+
+- [ ] 1.1 Rename `reference()` to `orderNumber()` and update every call site.
+
+## Verify
+
+- `mvn -q test`

@@ -1,18 +1,9 @@
 ---
-description: "Chart or advance a wayfinder map: multi-session discovery for efforts too big and foggy to plan in one sitting."
-agent: deep-planner
+description: "Capture a foggy multi-session effort in one durable discovery plan."
+agent: sdlc-orchestrator
 subtask: false
-argument-hint: "[loose idea to chart, or existing map path plus optional ticket]"
+argument-hint: "[loose idea, or exact discovery plan path]"
 ---
-You are running `/wayfinder` with raw arguments:
-`$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
-Delegate this workflow to the primary agent `deep-planner` using the exact raw arguments above.
-
-Hard constraints:
-
-- Follow the `wayfinder` skill as the methodology contract.
-- This is a plan-only workflow: do not modify production code, tests, or build files. Map state lives under `.ai/wayfinder/`.
-- Two modes: a loose idea charts a new map; an existing map (path, optionally plus a ticket name) works exactly one ticket. Never resolve more than one decision per session; research tickets are the exception — burn them down in parallel via delegated research subagents, writing findings under the map directory.
-- HITL tickets (grilling, prototype) resolve only through a live exchange via the `grilling`, `domain-modeling`, and `native-question-ux` skills — never answer the human's side yourself.
-- When the way to the destination is clear, hand off: suggest `/deep-plan` (or sdd drafting) rather than continuing to execute.
+Route `operation=deep-plan intent=discovery` to `deep-planner` with the raw arguments. Create or update one exact `.ai/deep-planner/plans/<slug>.md`; never implement or create a ready handoff. When clear, return `next=plan`.

@@ -1,46 +1,235 @@
 # Plan Domain
 
-The planning front-door: where rigorous, evidence-first planning happens before any code is written, so the sdd `orchestraitor` stays lean at execution time. Fable-style planning is the method; the output has three shapes. For **executable goals** (feature, change, bugfix) `/deep-plan` produces a **ready-for-sdd bundle** the orchestraitor adopts and executes — oversized executable goals split into an ordered **slice roadmap** of such bundles, one slice planned per sitting. For **decisions and investigations** it produces a single **plan document** for humans. The `refactor` domain still owns refactor/hardening bundles — `deep-planner` recommends `/refactor-plan` or `/harden-plan` when a goal is purely behavior-preserving work on existing code; this domain covers everything else you want planned rigorously.
+`deep-planner` turns repository evidence into a durable plan or one executable `change.md`. Public planning has two behaviors: normal `deep-plan` and protected `refactor`; SDD owns implementation.
 
-One primary agent: `deep-planner` (plan-only; explores inline, with optional read-only fan-out to the built-in `general` subagent when scope spans several independent areas). Commands: `/deep-plan` and `/wayfinder` (discovery on-ramp, below). The methodology lives in the `fable-planning` skill so any agent can reuse it; `grilling` + `native-question-ux` drive the single clarification round, `code-conventions` supplies the language/tool-version evidence rule, and `judgment-day` is the opt-in adversarial review of the finished plan or bundle.
+## Quick path
 
-When the effort is too big and foggy for one `/deep-plan` sitting, `/wayfinder` sits upstream: the `wayfinder` skill charts a multi-session discovery map under `.ai/wayfinder/<map-slug>/` — decision tickets (research / prototype / grilling / task) resolved one decision per session, with `grilling` + `domain-modeling` driving the HITL tickets and research tickets burned down in parallel by delegated subagents — until the way is clear, then hands off to `/deep-plan`.
+1. Describe the outcome through `sdlc-orchestrator`, `/deep-plan`, or `/refactor-plan`.
+2. Answer only unresolved product, acceptance, or risk decisions.
+3. Review the returned plan, roadmap slice, or ready `change.md` before implementation.
 
-Assumes the `common` domain is installed: `grilling`, `judgment-day`, `native-question-ux`, `domain-modeling`, and `code-conventions` live there. Bundle drafting assumes the `sdd` domain is installed: the phase subagents `sdd-proposal`, `sdd-spec`, `sdd-design`, and `sdd-tasks` write the four artifacts from `Draft context: handoff` briefs under `.ai/deep-planner/changes/`; their active SDD context continues to target `.ai/orchestrator/changes/`.
+## Routes
 
-**Bundle output** (executable goals) lands under `.ai/deep-planner/changes/<change>/` with the four ready-for-sdd artifacts (`proposal.md` with the `Status: ready-for-sdd | Source: deep-planner` marker first line, `design.md`, `specs/<capability>/spec.md`, `tasks.md`), conforming to `docs/plan-handoff.md`. The orchestraitor discovers it on `ejecuta el plan <change>`, adopts it kickoff-lite, and runs implement onward — no re-interview, no re-drafting.
+| Entry | Internal route | Use |
+|---|---|---|
+| Natural-language planning or `/deep-plan` | `deep-plan`, `intent=auto` | Executable change, decision, or roadmap |
+| Discovery or `/wayfinder` | `deep-plan`, `intent=discovery` | One durable multi-session plan |
+| Protected planning or `/refactor-plan` | `refactor`, `intent=auto` | Refactor when safe; harden first otherwise |
+| Safety-net planning or `/harden-plan` | `refactor`, `intent=hardening` | Hardening only |
 
-**Roadmap output** (oversized executable goals) splits a goal too big for one bounded change into an ordered slice roadmap at `.ai/roadmaps/<goal>.md`, plus a ready-for-sdd bundle for the first slice only — later slices are planned just-in-time via "continúa el roadmap <goal>", so they absorb what executed slices taught. Each slice bundle carries a `Roadmap: <goal> | Slice: <n>/<total>` second line in `proposal.md`; at archive the orchestraitor flips the slice to `done` and offers the next hop in one line (the user confirms each hop). Contract in `docs/plan-handoff.md`.
+`/wayfinder` and `/harden-plan` are compatibility aliases. Machine returns use only `plan/deep-plan` or `plan/refactor`.
 
-**Plan-document output** (decisions) is a human-readable file under `.ai/deep-planner/plans/<plan-slug>.md` with four sections: Context (why + decisions made with the user), Design (approach, rejected alternatives, files, reused `path:symbol`), an Edge Case Matrix where every edge ends in exactly one destination (handled / out of scope / open question — never silently dropped), and an end-to-end Verification section that exercises the real flow.
+## Flow at a glance
+
+```mermaid
+flowchart LR
+    U[User] --> O[sdlc-orchestrator]
+    DP["/deep-plan"] --> O
+    WF["/wayfinder alias"] --> O
+    RP["/refactor-plan"] --> O
+    HP["/harden-plan alias"] --> O
+    O -->|deep-plan auto or discovery| P[deep-planner]
+    O -->|refactor auto or hardening| P
+    P --> D{Planned outcome}
+    D -->|bounded| C[ready change.md]
+    D -->|decision or discovery| N[plan.md]
+    D -->|oversized| R[roadmap plus next change.md]
+    D -->|protected and safe| F[refactor change.md]
+    D -->|protection missing| H[harden change.md]
+    C --> S[SDD]
+    R --> S
+    F --> S
+    H --> S
+    N -->|executable destination becomes clear| P
+```
+
+## Outputs
+
+| Need | Output | Next |
+|---|---|---|
+| Bounded executable goal | `.ai/deep-planner/changes/<change>/change.md` | SDD executes in place |
+| Decision or investigation | `.ai/deep-planner/plans/<slug>.md`, `Status: final` | Human review |
+| Foggy multi-session effort | Same path, `Status: discovery` | Continue the exact plan |
+| Oversized executable goal | `.ai/roadmaps/<goal>.md` plus one ready slice | Execute one slice, then `"continúa el roadmap <goal>"` |
+| Protected refactor with reliable coverage | Ready refactor `change.md` | SDD executes the refactor |
+| Protected refactor without reliable coverage | Ready `harden-*` `change.md` | SDD hardens, then plan the refactor again |
+
+## Flow sequences
+
+### 1. Bounded executable change
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SDLC as sdlc-orchestrator
+    participant Plan as deep-planner
+    participant Repo
+    participant SDD as orchestraitor
+    User->>SDLC: Plan one bounded executable goal
+    SDLC->>Plan: operation=deep-plan, intent=auto
+    Plan->>Repo: Inspect implementation, callers, tests, and toolchain
+    Plan->>Repo: Write one ready change.md
+    Plan-->>SDLC: OK plan/deep-plan, next=sdd
+    SDLC-->>User: Summarize outcome and exact path
+    opt Implementation is already authorized
+        SDLC->>SDD: execute-handoff(exact path)
+    end
+```
+
+The planner writes no production files and does not add execution choices; SDD adopts the exact producer-owned path.
+
+### 2. Decision or multi-session discovery
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SDLC as sdlc-orchestrator
+    participant Plan as deep-planner
+    participant Repo
+    participant Artifact as plan.md
+    User->>SDLC: Ask for a decision or foggy effort
+    SDLC->>Plan: operation=deep-plan, intent=auto or discovery
+    Plan->>Repo: Resolve discoverable facts
+    alt User-owned decisions remain
+        Plan->>Artifact: Write Status discovery
+        Plan-->>SDLC: ASK plan/deep-plan question
+        SDLC->>User: Ask in normal language
+        User->>SDLC: Answer
+        SDLC->>Plan: Resume same child and exact path
+    else Decision is complete
+        Plan->>Artifact: Write Status final
+        Plan-->>SDLC: OK plan/deep-plan, next=plan or none
+    end
+```
+
+Discovery updates one exact file. A final executable destination re-enters `/deep-plan`; discovery itself never creates a ready handoff.
+
+### 3. Oversized goal and roadmap slice
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SDLC as sdlc-orchestrator
+    participant Plan as deep-planner
+    participant Roadmap as roadmap.md
+    participant SDD as orchestraitor
+    User->>SDLC: Plan an oversized executable goal
+    SDLC->>Plan: operation=deep-plan, intent=auto
+    Plan->>Roadmap: Write ordered slices; first is planned
+    Plan->>Roadmap: Link one ready slice change.md
+    Plan-->>SDLC: OK plan/deep-plan, next=sdd
+    SDD->>Roadmap: planned to adopted at intake
+    SDD->>Roadmap: adopted to done after archive
+    SDD-->>User: Offer the next unblocked slice
+    User->>SDLC: "continúa el roadmap <goal>"
+    SDLC->>Plan: operation=deep-plan, intent=auto, exact goal
+    Plan->>Roadmap: First unblocked pending to planned
+    Plan->>Roadmap: Write exactly one next-slice change.md
+    Plan-->>SDLC: OK plan/deep-plan, next=sdd
+```
+
+Each slice is planned just in time. The continuation resolves only `.ai/roadmaps/<goal>.md`; it stops if another slice is already planned or adopted. The change marker identifies the roadmap and slice; SDD never plans the next slice automatically.
+
+### 4. Protected refactor with reliable coverage
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SDLC as sdlc-orchestrator
+    participant Plan as deep-planner
+    participant Analyzer as refactor-analyzer
+    participant Repo
+    participant SDD as orchestraitor
+    User->>SDLC: Plan behavior-preserving restructuring
+    SDLC->>Plan: operation=refactor, intent=auto
+    Plan->>Repo: Freeze behavior, scope, risk, and coverage
+    opt Evidence warrants delegated analysis
+        Plan->>Analyzer: Compact target, lens, skills, max=7 brief
+        Analyzer-->>Plan: path:line findings and total
+    end
+    Plan->>Repo: Write one ready refactor change.md
+    Plan-->>SDLC: OK plan/refactor, next=sdd
+    SDLC->>SDD: execute-handoff when authorized
+```
+
+The ready change includes behavior-preservation scenarios, affected paths, rollback, and end-to-end verification.
+
+### 5. Hardening before refactor
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SDLC as sdlc-orchestrator
+    participant Plan as deep-planner
+    participant Repo
+    participant SDD as orchestraitor
+    User->>SDLC: Request refactor or explicit hardening
+    SDLC->>Plan: operation=refactor, intent=auto or hardening
+    Plan->>Repo: Detect insufficient behavioral protection
+    Plan->>Repo: Write one ready harden-* change.md
+    Plan-->>SDLC: OK plan/refactor, next=sdd
+    SDLC->>SDD: execute-handoff when authorized
+    SDD-->>User: Hardening verified and archived
+    User->>SDLC: Run protected refactor planning again
+```
+
+Hardening and restructuring remain separate handoffs. Discovered bugs are characterized as current behavior and fixed in separate work.
+
+## Contracts
+
+- A ready change starts with `Status: ready-for-sdd | Source: deep-planner`; roadmap slices add `Roadmap: <goal> | Slice: <n>/<total>` on line two.
+- `change.md` contains outcome, scope, behavior deltas, approach, ordered work, verification, and non-empty risks. Every Work group records the smallest `Skills:` set selected by `sdd-execution-skills`; disjoint `Files:` scopes may execute in parallel.
+- Decision and discovery plans use the shared `evidence-first-planning` method. Roadmaps plan only the first pending slice whose dependencies are done.
+- Planner and analyzer returns use compact Caveman-style A2A; human artifacts and questions use normal English.
+
+Copy-ready hypothetical prompts and expected evidence are in [Plan flow test scenarios](../../docs/plan-flow-test-scenarios.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `deep-planner` | Produces ready-for-sdd bundles or evidence-first plan documents |
-| Command | `/deep-plan` | Plans an executable goal into a bundle, or a decision into a plan document |
-| Command | `/wayfinder` | Advances multi-session discovery maps |
-| Skill | `fable-planning` | Build evidence-first plans with edge validation |
-| Skill | `wayfinder` | Map multi-session discovery decisions |
-
-```mermaid
-graph TD
-  wf[/wayfinder loose idea/] --> map[".ai/wayfinder/&lt;map-slug&gt;/<br/>map + tickets, one decision per session"]
-  map -.->|way clear| cmd
-  cmd[/deep-plan goal/] --> architect[deep-planner]
-  architect --> explore[explore inline<br/>optional general x N read-only]
-  explore --> clarify[one clarification round<br/>grilling + native-question-ux]
-  clarify --> design[design: reuse-first,<br/>alternatives, files]
-  design --> edges[edge validation<br/>three-destinations rule]
-  edges --> shape{executable goal?}
-  shape -->|yes| waves[delegate in waves<br/>sdd-proposal → sdd-spec ∥ sdd-design → sdd-tasks]
-  shape -->|too big| roadmap[".ai/roadmaps/&lt;goal&gt;.md<br/>ordered slices, plan next slice only"]
-  roadmap --> waves
-  roadmap -.->|continúa el roadmap| cmd
-  waves --> bundle[".ai/deep-planner/changes/&lt;change&gt;/<br/>proposal + design + specs + tasks<br/>Status: ready-for-sdd"]
-  bundle -->|ejecuta el plan| orchestraitor[sdd orchestraitor adopts + executes]
-  shape -->|no, a decision| plan[".ai/deep-planner/plans/&lt;slug&gt;.md<br/>Context / Design / Edge Matrix / Verification"]
-  bundle -.->|opt-in| judgment[/judgment adversarial review/]
-  plan -.->|opt-in| judgment
-```
+| Agent (subagent coordinator) | `deep-planner` | Produces normal or protected plans and ready changes |
+| Agent (subagent) | `refactor-analyzer` | Applies one evidence-backed read-only lens |
+| Command | `/deep-plan` | Routes executable, decision, and roadmap planning |
+| Command alias | `/wayfinder` | Routes one durable discovery plan |
+| Command | `/refactor-plan` | Routes protected refactor planning |
+| Command alias | `/harden-plan` | Forces hardening-only planning |
+| Skill | `architecture-impact-review` | Classifies local versus architectural risk |
+| Skill | `behavior-characterization` | Records observable legacy behavior |
+| Skill | `characterization-test-scoping` | Scopes tests, seams, containment, and rollback |
+| Skill | `code-conventions` | Applies repository code and test conventions |
+| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
+| Skill | `complexity-big-o` | Evaluates algorithmic and control complexity |
+| Skill | `dependency-inversion` | Detects concrete boundary dependency risks |
+| Skill | `dependency-seam-detection` | Finds testability seams |
+| Skill | `design-patterns-pragmatic` | Applies patterns only to real forces |
+| Skill | `domain-modeling` | Builds and sharpens domain models |
+| Skill | `dry-business-knowledge` | Distinguishes knowledge duplication from similarity |
+| Skill | `evidence-first-planning` | Builds evidence-first plans and validates edges |
+| Skill | `general-naming-readability` | Improves language-neutral naming and readability |
+| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
+| Skill | `graphify-cli` | Queries code graphs read-only |
+| Skill | `grilling` | Stress-tests plans through focused interviews |
+| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
+| Skill | `java-api-design` | Reviews Java API boundaries |
+| Skill | `java-exception-robustness` | Reviews Java failure handling |
+| Skill | `java-immutability-modeling` | Reviews safe Java data models |
+| Skill | `java-naming-readability` | Reviews Java naming |
+| Skill | `java-secure-coding` | Reviews Java security practices |
+| Skill | `java-testing` | Designs Java test coverage |
+| Skill | `kiss-yagni` | Prevents speculative refactor complexity |
+| Skill | `legacy-code-safety` | Makes untested code safe to change |
+| Skill | `logging-observability` | Evaluates operational logging and observability |
+| Skill | `native-question-ux` | Presents questions through portable native UX |
+| Skill | `null-safety` | Detects null hazards |
+| Skill | `open-closed-principle` | Detects extension pressure without speculation |
+| Skill | `refactor` | Supplies cross-language refactoring techniques |
+| Skill | `risk-assessment` | Classifies technical and functional legacy risk |
+| Skill | `scope-analysis` | Delimits the target boundary |
+| Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
+| Skill | `sdd-execution-skills` | Selects implementation skills per Work group |
+| Skill | `single-responsibility` | Detects multiple reasons to change |
+| Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
+| Skill | `tooling-audit` | Detects test-tooling gaps |
+| Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |
+| Skill | `type-contracts` | Detects weak type contracts |
