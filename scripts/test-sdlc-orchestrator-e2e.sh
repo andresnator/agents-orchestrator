@@ -214,6 +214,100 @@ write_usage() {
   ' "$tree" > "$target"
 }
 
+write_skill_calls() {
+  local root_id="$1" target="$2"
+  assert_session_id "$root_id"
+  sqlite3 -header -separator $'\t' "$DATABASE" \
+    "WITH RECURSIVE tree(id,parent_id,agent) AS (
+       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+       UNION ALL
+       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+     )
+     SELECT t.agent,
+            json_extract(p.data,'$.state.input.name') AS skill,
+            json_extract(p.data,'$.state.status') AS status
+     FROM part p JOIN tree t ON p.session_id=t.id
+     WHERE json_extract(p.data,'$.tool')='skill'
+     ORDER BY p.time_created;" > "$target"
+}
+
+write_direct_skill_body_reads() {
+  local root_id="$1" target="$2"
+  assert_session_id "$root_id"
+  sqlite3 -header -separator $'\t' "$DATABASE" \
+    "WITH RECURSIVE tree(id,parent_id,agent) AS (
+       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+       UNION ALL
+       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+     )
+     SELECT t.agent,
+            json_extract(p.data,'$.state.input.filePath') AS path,
+            json_extract(p.data,'$.state.status') AS status
+     FROM part p JOIN tree t ON p.session_id=t.id
+     WHERE json_extract(p.data,'$.tool')='read'
+       AND json_extract(p.data,'$.state.input.filePath') GLOB '*/skills/*/SKILL.md'
+     ORDER BY p.time_created;" > "$target"
+}
+
+write_task_briefs() {
+  local root_id="$1" target="$2"
+  assert_session_id "$root_id"
+  sqlite3 -json "$DATABASE" \
+    "WITH RECURSIVE tree(id,parent_id,agent) AS (
+       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+       UNION ALL
+       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+     )
+     SELECT t.agent,
+            json_extract(p.data,'$.state.input.subagent_type') AS subagent,
+            json_extract(p.data,'$.state.input.prompt') AS prompt
+     FROM part p JOIN tree t ON p.session_id=t.id
+     WHERE json_extract(p.data,'$.tool')='task'
+     ORDER BY p.time_created;" > "$target"
+}
+
+assert_skill_call() {
+  local calls="$1" agent="$2" skill="$3"
+  awk -F '\t' -v agent="$agent" -v skill="$skill" \
+    'NR > 1 && $1 == agent && $2 == skill && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$calls" ||
+    fail "$agent did not load $skill"
+}
+
+assert_no_skill_call() {
+  local calls="$1" agent="$2" skill="$3"
+  ! awk -F '\t' -v agent="$agent" -v skill="$skill" \
+    'NR > 1 && $1 == agent && $2 == skill && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$calls" ||
+    fail "$agent unexpectedly loaded implementation skill $skill"
+}
+
+assert_no_direct_skill_body_read() {
+  local reads="$1" agent="$2"
+  ! awk -F '\t' -v agent="$agent" \
+    'NR > 1 && $1 == agent && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$reads" ||
+    fail "$agent bypassed its skill allowlist with a direct SKILL.md read"
+}
+
+assert_every_work_group_has_skills() {
+  local change="$1"
+  awk '
+    /^## Work[[:space:]]*$/ { work=1; next }
+    work && /^## / { work=0 }
+    work && /^### / { groups++ }
+    work && /^Skills: / {
+      skills++
+      value=$0
+      sub(/^Skills: /, "", value)
+      if (value == "none") next
+      count=split(value, names, /,[[:space:]]*/)
+      if (count > 3) invalid=1
+      for (i=1; i<=count; i++) {
+        if (names[i] !~ /^(code-conventions|java-testing|behavior-characterization|legacy-code-safety|systematic-debugging|cognitive-doc-design)$/) invalid=1
+      }
+    }
+    END { exit groups > 0 && groups == skills && !invalid ? 0 : 1 }
+  ' "$change" || fail "$change does not declare Skills for every Work group"
+}
+
 assert_maven_green() {
   local project="$1" target="$2"
   (cd "$project" && mvn -q test) > "$target" 2>&1 || fail "Maven verification failed for $project"
@@ -259,6 +353,18 @@ run_plan_sdd_workflow() {
     { fail "producer marker is invalid"; return 1; }
   grep -Fq '## Behavior' "$change_dir/change.md" || { fail "change.md has no Behavior section"; return 1; }
   grep -Fq '## Work' "$change_dir/change.md" || { fail "change.md has no Work section"; return 1; }
+  assert_every_work_group_has_skills "$change_dir/change.md" || return 1
+  grep -Fq 'Skills: code-conventions' "$change_dir/change.md" ||
+    { fail "change.md has no code-conventions selection"; return 1; }
+  grep -Fq 'java-testing' "$change_dir/change.md" ||
+    { fail "change.md has no java-testing selection"; return 1; }
+  write_skill_calls "$root_id" "$evidence/skill-calls-before.tsv"
+  write_direct_skill_body_reads "$root_id" "$evidence/direct-skill-body-reads-before.tsv"
+  assert_skill_call "$evidence/skill-calls-before.tsv" deep-planner sdd-execution-skills || return 1
+  assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner code-conventions || return 1
+  assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner java-testing || return 1
+  assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-before.tsv" sdlc-orchestrator || return 1
+  assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-before.tsv" deep-planner || return 1
   (cd "$project" && find "$change_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
     > "$evidence/change-before.sha256"
   (
@@ -279,7 +385,10 @@ run_plan_sdd_workflow() {
   write_session_tree "$root_id" "$tree_after"
   export_tree "$tree_after" "$evidence/sessions"
   write_usage "$tree_after" "$evidence/usage.tsv"
-  for agent in sdlc-orchestrator deep-planner orchestraitor sdd-implement sdd-verify; do
+  write_skill_calls "$root_id" "$evidence/skill-calls-after.tsv"
+  write_direct_skill_body_reads "$root_id" "$evidence/direct-skill-body-reads-after.tsv"
+  write_task_briefs "$root_id" "$evidence/task-briefs.json"
+  for agent in sdlc-orchestrator deep-planner orchestraitor sdd-canonical-merge sdd-implement sdd-verify; do
     assert_tree_has "$tree_after" "$agent" || return 1
   done
 
@@ -287,12 +396,27 @@ run_plan_sdd_workflow() {
     assert_tree_lacks "$tree_after" "$agent" || return 1
   done
 
+  assert_skill_call "$evidence/skill-calls-after.tsv" orchestraitor sdd-execution-skills || return 1
+  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement code-conventions || return 1
+  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement java-testing || return 1
+  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-verify sdd-cold-verification || return 1
+  for agent in sdlc-orchestrator deep-planner orchestraitor; do
+    assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-after.tsv" "$agent" || return 1
+  done
+  jq -e 'any(.[]; .subagent == "sdd-implement" and (.prompt | contains("skills=") and contains("code-conventions") and contains("java-testing")))' \
+    "$evidence/task-briefs.json" >/dev/null ||
+    { fail "no implementation brief passed routed code/test skills"; return 1; }
+  jq -e 'any(.[]; .subagent == "sdd-canonical-merge" and (.prompt | contains("skills=none")))' \
+    "$evidence/task-briefs.json" >/dev/null ||
+    { fail "canonical merge brief did not pass skills=none"; return 1; }
+
   archived="$(find "$project/.ai/deep-planner/changes/archive" -mindepth 1 -maxdepth 1 -type d -name "*-$change" -print -quit 2>/dev/null)"
   [ -n "$archived" ] || { fail "executed change was not archived under its producer root"; return 1; }
   [ ! -e "$project/.ai/orchestrator/changes/$change" ] ||
     { fail "producer change was copied into the direct-SDD root"; return 1; }
   grep -Rq 'lineCount' "$project/src/main" || { fail "lineCount was not implemented"; return 1; }
   grep -Rq 'lineCount' "$project/src/test" || { fail "lineCount has no test"; return 1; }
+  grep -Rq 'lineCount' "$project/.ai/orchestrator/specs" || { fail "lineCount was not merged into canonical specs"; return 1; }
   assert_maven_green "$project" "$evidence/maven-test.log" || return 1
 
   printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
@@ -323,7 +447,7 @@ run_lite_workflow() {
     assert_tree_has "$tree" "$agent" || return 1
   done
   for agent in deep-planner architect orchestraitor review-coordinator \
-    sdd-implement sdd-verify; do
+    sdd-canonical-merge sdd-implement sdd-verify; do
     assert_tree_lacks "$tree" "$agent" || return 1
   done
   grep -Rq 'totalQuantity' "$project/src/main" || { fail "totalQuantity was not implemented"; return 1; }

@@ -196,6 +196,7 @@ short() { printf '%s' "${1#"$SCRATCH"/}"; }
 SUBAGENT_JQ='select(.part?.tool == "task") | .part.state.input.subagent_type // empty'
 TOOL_JQ='select(.part?.type == "tool") | .part.tool'
 TEXT_JQ='select(.part?.type == "text") | .part.text'
+SKILL_JQ='select(.part?.tool == "skill" and .part.state.status == "completed") | .part.state.input.name // empty'
 
 launched_subagents() {
   jq -r "$SUBAGENT_JQ" "$EVENTS" 2>/dev/null | sort -u
@@ -204,6 +205,10 @@ launched_subagents() {
 # Unlike launched_subagents this keeps duplicates, so rounds can be counted.
 launched_subagents_all() {
   jq -r "$SUBAGENT_JQ" "$EVENTS" 2>/dev/null
+}
+
+loaded_skills() {
+  jq -r "$SKILL_JQ" "$EVENTS" 2>/dev/null | sort -u
 }
 
 output_tokens() {
@@ -219,6 +224,16 @@ assert_launched() {
 assert_not_launched() {
   ! launched_subagents | grep -qx "$1" ||
     verdict_fail "the run launched $1 and should not have"
+}
+
+assert_loaded_skill() {
+  loaded_skills | grep -qx "$1" ||
+    verdict_fail "expected the run to load $1 (saw: $(loaded_skills | tr '\n' ' '))"
+}
+
+assert_not_loaded_skill() {
+  ! loaded_skills | grep -qx "$1" ||
+    verdict_fail "the producer loaded implementation skill $1"
 }
 
 assert_no_drafting_agents() {
@@ -239,6 +254,27 @@ assert_one_change_document() {
 }
 
 word_count() { wc -w < "$1" | tr -d ' '; }
+
+assert_every_work_group_has_skills() {
+  local change="$1"
+  awk '
+    /^## Work[[:space:]]*$/ { work=1; next }
+    work && /^## / { work=0 }
+    work && /^### / { groups++ }
+    work && /^Skills: / {
+      skills++
+      value=$0
+      sub(/^Skills: /, "", value)
+      if (value == "none") next
+      count=split(value, names, /,[[:space:]]*/)
+      if (count > 3) invalid=1
+      for (i=1; i<=count; i++) {
+        if (names[i] !~ /^(code-conventions|java-testing|behavior-characterization|legacy-code-safety|systematic-debugging|cognitive-doc-design)$/) invalid=1
+      }
+    }
+    END { exit groups > 0 && groups == skills && !invalid ? 0 : 1 }
+  ' "$change" || verdict_fail "$(short "$change") does not declare Skills for every Work group"
+}
 
 # A completed run archives the change, so a scenario's folder may be either
 # still active or already under changes/archive/<date>-<name>/. With a name,
@@ -313,6 +349,12 @@ scenario_SDD_LIGHT_01() {
   assert_first_line_matches "$change_dir/change.md" 'Status: active | Source: orchestraitor' || return
   assert_grep "$change_dir/change.md" '## Behavior' || return
   assert_grep "$change_dir/change.md" '## Work' || return
+  assert_every_work_group_has_skills "$change_dir/change.md" || return
+  assert_grep "$change_dir/change.md" 'Skills: code-conventions' || return
+  assert_grep "$change_dir/change.md" 'java-testing' || return
+  assert_loaded_skill sdd-execution-skills || return
+  assert_not_loaded_skill code-conventions || return
+  assert_not_loaded_skill java-testing || return
   assert_grep "$change_dir/change.md" '## Verify' || return
   assert_grep "$change_dir/change.md" 'Files:' || return
 
@@ -322,7 +364,15 @@ scenario_SDD_LIGHT_01() {
 
   assert_no_drafting_agents || return
   assert_launched sdd-implement || return
+  assert_launched sdd-canonical-merge || return
   assert_launched sdd-verify || return
+  assert_loaded_skill sdd-execution-skills || return
+  jq -s -e 'any(.[]; .part?.tool == "task" and .part.state.input.subagent_type == "sdd-implement" and (.part.state.input.prompt | contains("skills=") and contains("code-conventions") and contains("java-testing")))' \
+    "$EVENTS" >/dev/null ||
+    { verdict_fail "no implementation brief passed routed code/test skills"; return; }
+  jq -s -e 'any(.[]; .part?.tool == "task" and .part.state.input.subagent_type == "sdd-canonical-merge" and (.part.state.input.prompt | contains("skills=none")))' \
+    "$EVENTS" >/dev/null ||
+    { verdict_fail "canonical merge brief did not pass skills=none"; return; }
   verdict_pass
 }
 
@@ -345,6 +395,7 @@ scenario_SDD_FULL_02() {
 
   assert_no_drafting_agents || return
   assert_launched sdd-implement || return
+  assert_launched sdd-canonical-merge || return
   assert_launched sdd-verify || return
   verdict_pass
 }
@@ -368,6 +419,7 @@ scenario_SDD_ADOPT_01() {
 
   assert_no_drafting_agents || return
   assert_launched sdd-implement || return
+  assert_launched sdd-canonical-merge || return
   assert_launched sdd-verify || return
   verdict_pass
 }
@@ -390,6 +442,12 @@ scenario_PLAN_HANDOFF_01() {
     { verdict_fail "handoff change.md contains execution choices before adoption"; return; }
   assert_grep "$change_dir/change.md" '## Behavior' || return
   assert_grep "$change_dir/change.md" '## Work' || return
+  assert_every_work_group_has_skills "$change_dir/change.md" || return
+  assert_grep "$change_dir/change.md" 'Skills: code-conventions' || return
+  assert_grep "$change_dir/change.md" 'java-testing' || return
+  assert_loaded_skill sdd-execution-skills || return
+  assert_not_loaded_skill code-conventions || return
+  assert_not_loaded_skill java-testing || return
 
   assert_no_drafting_agents || return
 
@@ -416,7 +474,15 @@ scenario_PLAN_HANDOFF_01() {
     { verdict_fail "adopted producer change.md has no execution-choice line"; return; }
   assert_no_drafting_agents || return
   assert_launched sdd-implement || return
+  assert_launched sdd-canonical-merge || return
   assert_launched sdd-verify || return
+  assert_loaded_skill sdd-execution-skills || return
+  jq -s -e 'any(.[]; .part?.tool == "task" and .part.state.input.subagent_type == "sdd-implement" and (.part.state.input.prompt | contains("skills=") and contains("code-conventions") and contains("java-testing")))' \
+    "$EVENTS" >/dev/null ||
+    { verdict_fail "no implementation brief passed routed code/test skills"; return; }
+  jq -s -e 'any(.[]; .part?.tool == "task" and .part.state.input.subagent_type == "sdd-canonical-merge" and (.part.state.input.prompt | contains("skills=none")))' \
+    "$EVENTS" >/dev/null ||
+    { verdict_fail "canonical merge brief did not pass skills=none"; return; }
   verdict_pass
 }
 
@@ -439,11 +505,10 @@ scenario_SDD_ARCH_01() {
   [ -n "$(find "$PROJECT/.ai/orchestrator/changes/archive" -maxdepth 1 -name '*-adjust-order-pricing' -print -quit 2>/dev/null)" ] ||
     { verdict_fail "the change was not moved to changes/archive/<date>-adjust-order-pricing/"; return; }
   assert_absent "$PROJECT/.ai/orchestrator/changes/adjust-order-pricing" || return
+  assert_launched sdd-canonical-merge || return
   verdict_pass
 
-  # SDD-ARCH-02 rides the same run: the merge moved to sdd-implement, whose
-  # `## Merge procedure` defines RENAMED (new name only, old name gone), so the
-  # rename is asserted like any other delta kind.
+  # SDD-ARCH-02 shares the run; assert RENAME keeps only the new name.
   CURRENT=SDD-ARCH-02
   assert_grep "$canonical" 'Monetary rounding' || return
   assert_not_grep "$canonical" 'Requirement: Money scale' || return
