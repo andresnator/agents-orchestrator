@@ -1,7 +1,8 @@
 ---
 name: whisper-extract
 description: |
-  Extract, transcribe, and summarize audio or video files using OpenAI Whisper. Use this skill
+  Extract, transcribe, and summarize audio or video files using local OpenAI Whisper or an
+  explicitly selected Atlas Cloud ASR backend. Use this skill
   whenever the user wants to transcribe audio or video, extract what was said in a recording,
   get a transcript of a meeting/interview/lecture/podcast, or generate a summary of spoken content.
   Also trigger when the user mentions files like .mp3, .mp4, .wav, .m4a, .ogg, .flac, .webm,
@@ -15,17 +16,20 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Whisper Extract
 
-Transcribe audio or video with Whisper, then produce a `.md` file containing an AI summary
-followed by the complete literal transcript.
+Transcribe audio or video with local Whisper by default, then produce a `.md` file containing
+an AI summary followed by the complete literal transcript. Atlas Cloud Seed ASR 2.0 is an
+optional remote backend for supported audio files; use it only when the user explicitly asks
+for Atlas Cloud or remote transcription.
 
 ## Prerequisite check
 
-Before doing anything else, verify that Whisper is installed:
+Use local Whisper unless the user explicitly selected Atlas Cloud. For the default local
+backend, verify that Whisper is installed before doing anything else:
 
 ```bash
 whisper --help > /dev/null 2>&1 && echo "OK" || echo "NOT FOUND"
@@ -43,6 +47,10 @@ user to run `pipx upgrade openai-whisper`.
 
 Then stop and wait — do not proceed until Whisper is available.
 
+For the optional Atlas backend, do not require local Whisper. Verify that either
+`ATLASCLOUD_API_KEY` or `ATLAS_CLOUD_API_KEY` is set without printing its value. The bundled
+client reads the live model catalog and schema before it can submit anything.
+
 ---
 
 ## Step 1: Gather required information
@@ -59,6 +67,8 @@ Never ask more than once, and never ask for things already mentioned in the conv
 - **Whisper model** — default is `turbo` (recommended speed/accuracy balance). Options: `tiny` (fastest, less accurate), `base`, `small`, `medium`, `turbo`, `large-v3` (most accurate, slower). Ask only if the user wants a different speed/accuracy trade-off.
 - **Output directory** — where to save the `.md` file. Default: same directory as the audio file.
 - **Output language for summary** — language for the summary and headings. Default: same as the recording language. If the user wants the summary in a different language, note it.
+- **Remote Atlas backend** — never select it implicitly. Atlas accepts `mp3`, `wav`, `ogg`, or
+  `raw` audio; use local Whisper for video containers and other formats.
 
 Wait for the user's answers before proceeding to Step 2.
 
@@ -90,6 +100,29 @@ matches the input file, and extract the `text` field. This is the full raw trans
 
 If Whisper fails (file not found, unsupported format, ffmpeg missing), report the exact error
 and suggest a fix before continuing.
+
+### Optional: transcribe with Atlas Cloud
+
+Use this path only when the user explicitly selected Atlas Cloud. First run a safe preflight
+without `--yes`; it validates the live catalog and schema, prints the current catalog price,
+and makes no generation POST:
+
+```bash
+python3 scripts/atlas_transcribe.py "<file_path_or_public_https_url>" --language <language_code>
+```
+
+Show the catalog quote and ask for explicit cost approval. Only after approval, repeat the same
+command with `--yes`. Add `--enable-punc`, `--enable-speaker-info`, or `--show-utterances` when
+requested:
+
+```bash
+python3 scripts/atlas_transcribe.py "<file_path_or_public_https_url>" --language <language_code> --yes
+```
+
+The client submits exactly one `POST /api/v1/model/generateAudio` request and never retries it.
+It only retries the read-only prediction GET with bounded exponential backoff. Read the returned
+JSON `text` field as the literal transcript; `stt_result` may also contain duration, timestamps,
+and speaker IDs. Never expose the API key or send it to any host other than `api.atlascloud.ai`.
 
 ---
 
@@ -136,7 +169,7 @@ Use this exact template:
 ---
 title: "<recording context>"
 date: YYYY-MM-DD
-model: <whisper model used>
+model: <local Whisper model or bytedance/seed-asr-2.0>
 language: <detected or specified language>
 source: "<original filename>"
 duration: "<approximate duration if available>"
@@ -189,6 +222,9 @@ search or quote from the transcript, they can open the file.
 | Transcription empty / very short | Warn user — likely a silent file or wrong path |
 | Unknown model `turbo` | Tell user to run `pipx upgrade openai-whisper` (needs >= 20240930) |
 | Out of memory | Suggest a smaller model (`medium`, `small`) |
+| Atlas key missing | Ask the user to set `ATLASCLOUD_API_KEY`; never request the value in chat |
+| Atlas preflight changed | Stop before submission and report the catalog/schema mismatch |
+| Atlas prediction failed | Report the returned failure once; do not resubmit the generation request |
 
 ---
 
