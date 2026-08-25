@@ -6,8 +6,8 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1.1"
-  status: in-progress
+  version: "2.1.2"
+  status: testing
 ---
 
 # Dependency Security Audit

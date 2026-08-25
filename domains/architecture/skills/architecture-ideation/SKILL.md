@@ -6,8 +6,8 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.1"
-  status: in-progress
+  version: "3.0.2"
+  status: testing
 ---
 
 ## Contract

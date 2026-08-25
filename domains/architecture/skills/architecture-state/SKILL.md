@@ -6,8 +6,8 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
-  status: in-progress
+  version: "2.0.1"
+  status: testing
 ---
 
 # Architecture State
