@@ -1,122 +1,48 @@
-# OpenCode database growth
+# Manage OpenCode Database Growth
 
-OpenCode keeps every session, message, part, and event in one SQLite file at
-`~/.local/share/opencode/opencode.db` (`opencode db path` prints the exact location). Nothing
-prunes it. It is runtime state, never a repository artifact, so this repository ships **no
-script that touches it** — the recipes below are run by hand, by you, with OpenCode stopped.
+OpenCode stores sessions, messages, parts, and events in one SQLite database. It does not currently prune them automatically, so long streaming sessions can make the file large.
 
-## What grows
+The database is runtime state, never a repository artifact. This repository ships no cleanup script and does not edit it.
 
-Measured on 2026-07-30 against a database holding a single month of sessions (oldest session
-2026-06-30), 1.02 GiB total:
+## Quick inspection
 
-| Object | Size | Rows |
-|---|---|---|
-| `event` table | 628 MB | 260,536 |
-| `part` table | 278 MB | 76,256 |
-| `session_message` table | 40 MB | — |
-| `event` indexes (3) | 47 MB | — |
-| `message` table | 11 MB | 15,253 |
-| `session` table | <1 MB | 1,287 |
-
-The event log is the whole story, and one event type is two thirds of it:
-
-| Event type | Count | Size |
-|---|---|---|
-| `message.part.updated.1` | 165,984 | 422 MB |
-| `message.updated.1` | 56,746 | 72 MB |
-| `session.next.tool.success.1` | 3,115 | 32 MB |
-| `session.updated.1` | 17,568 | 13 MB |
-
-**Why that one type dominates.** A part — an assistant text block, a reasoning block, a tool
-result — is re-persisted *in full* on every stream delta, as a fresh event row carrying a
-complete snapshot. A part that streams to 1 MB (the largest one here is 1.11 MB) is written
-out once per delta, so its cost is quadratic in its final length, and the whole growth curve
-of the part lands in the event log. Long turns produce long parts: the same high-context turns
-that make the orchestrator feel slow are what fills this table. Keeping agent contexts and A2A
-returns small shrinks this file as a side effect.
-
-## Inspecting it
-
-`opencode db` opens a shell or runs one query against the live database:
+Print the exact path and current file size:
 
 ```bash
-opencode db "select count(*) as sessions from session"
-opencode db "select type, count(*) as n, sum(length(data)) as bytes from event group by type order by bytes desc limit 5"
+opencode db path
+ls -lh "$(opencode db path)"
 ```
 
-Per-object sizes come from the `dbstat` virtual table:
+List sessions by title and date:
 
 ```bash
-opencode db "select name, round(sum(pgsize)/1048576.0, 1) as mb from dbstat group by name order by sum(pgsize) desc limit 12"
+opencode session list
 ```
 
-## Pruning one session
+Large growth usually comes from event snapshots written during long streamed turns. Smaller agent contexts and compact A2A returns reduce future growth, but do not remove existing data.
 
-`opencode session delete <sessionID>` is the supported path, and it is complete: verified on a
-snapshot, deleting one session removed its 5,181 events, 369 parts, 77 messages, and its
-`event_sequence` row — plus its two child sessions (subagent sessions hang off `parent_id`).
+## Delete one session safely
+
+1. Stop every OpenCode TUI and `serve` process using the database.
+2. Find the session id with `opencode session list`.
+3. Export anything worth keeping.
+4. Delete through the supported session command.
+5. Restart OpenCode and confirm the session list and file size.
 
 ```bash
-opencode session list                 # pick by title and date
-opencode export <sessionID> > session.json   # only if you may want it back
+opencode export <sessionID> > session.json
 opencode session delete <sessionID>
+opencode session list
+ls -lh "$(opencode db path)"
 ```
 
-## Pruning by age in bulk
+Exports may contain prompts, tool output, and file data. Use `opencode export --sanitize <sessionID>` when the archive may leave the local machine.
 
-For hundreds of sessions, one CLI invocation each is too slow; SQL does it in under a second.
-The cascade needs two deletes, because events hang off `event_sequence` (by `aggregate_id`,
-which is the session id) rather than off `session`:
-
-**Stop OpenCode first** — every running instance, TUI and `serve` — then:
-
-```bash
-DB=$(opencode db path)
-
-# 1. Back up. Use .backup, not cp: the database is in WAL mode, so a plain copy of the
-#    .db file without its -wal sibling is a torn snapshot.
-sqlite3 "file:$DB?mode=ro" ".backup '$HOME/opencode-db-backup-$(date +%Y%m%d).db'"
-
-# 2. Prune. SQLite ignores ON DELETE CASCADE unless foreign keys are enabled for the
-#    connection — without this pragma you get orphaned parts and messages, not a prune.
-sqlite3 "$DB" <<'SQL'
-PRAGMA foreign_keys=ON;
-BEGIN;
-DELETE FROM session WHERE time_updated < (strftime('%s','now') - 14*86400)*1000;
-DELETE FROM event_sequence WHERE aggregate_id NOT IN (SELECT id FROM session);
-COMMIT;
-SQL
-
-# 3. Reclaim the disk. DELETE only frees pages inside the file; the file itself shrinks
-#    only on VACUUM, which needs free space roughly equal to the current database size.
-sqlite3 "$DB" "VACUUM;"
-
-# 4. Confirm.
-sqlite3 "file:$DB?mode=ro" "PRAGMA integrity_check; PRAGMA foreign_key_check;"
-```
-
-Measured result of exactly that run at a 14-day cut, on the 1.02 GiB snapshot above:
-
-| | Before | After |
-|---|---|---|
-| Sessions | 1,287 | 257 |
-| Events | 260,536 | 94,993 |
-| Parts | 76,256 | 30,734 |
-| Messages | 15,253 | 4,971 |
-| File size | 1,072 MB | 381 MB |
-
-The delete took 0.7 s and the vacuum 0.9 s. `integrity_check` and `foreign_key_check` both
-came back clean, and `opencode session list` read the pruned database normally.
+Session deletion also removes owned child-session data through OpenCode's supported lifecycle. There is no supported bulk age-prune command; repeat the CLI workflow for selected sessions instead of modifying database tables directly.
 
 ## Cautions
 
-- Deleting a session is irreversible and takes its whole transcript with it. `opencode export
-  <sessionID>` first for anything you might want to read again.
-- Run this with OpenCode stopped. SQLite will refuse or block on a locked database, and a
-  `VACUUM` racing a live writer is not worth finding out about.
-- The age cut is `session.time_updated`, in **milliseconds** — the `*1000` in the expression
-  above is not decoration.
-- Child (subagent) sessions carry their own `time_updated`. A parent older than the cut whose
-  subagent session is newer leaves that child behind as an orphan row; it is harmless and the
-  next cut collects it.
+- Deletion is irreversible. Export first when uncertain.
+- Stop OpenCode before cleanup to avoid live-writer conflicts.
+- Verify the exact session id; titles are not unique.
+- Store or delete exported JSON according to its sensitivity.

@@ -1,34 +1,23 @@
 # SDD Domain
 
-Full spec-driven implementation around one human-readable pre-implementation file: `change.md`. `orchestraitor` owns planning or handoff adoption, integration, verification, optional judgment, canonical specs, and archive.
+Full spec-driven implementation around one human-readable `change.md`. `orchestraitor` owns adoption, execution, verification, canonical specs, and archive.
 
 ## Quick path
 
-1. Start a direct SDD request or ask to execute a ready planner change.
-2. Confirm missing execution choices: Mode, TDD, Judgment, and Delivery.
-3. Follow progress in the `change.md` work checkboxes and `state.md`.
-4. Review verification evidence and the archived change.
+1. Request full implementation, resume, or execution of a ready change.
+2. Confirm unresolved Mode, TDD, Judgment, and Delivery choices.
+3. Review verification evidence and the archived change.
 
-## Change contract
+## Entry points
 
-Direct work lives at `.ai/orchestrator/changes/<change>/change.md`. Planner handoffs stay at `.ai/<producer>/changes/<change>/change.md` and begin with `Status: ready-for-sdd`; SDD adopts that exact file, preserves its producer marker, and adds active execution in `state.md`.
+| Entry | Operation | Result |
+|---|---|---|
+| Direct implementation request | `direct-sdd` | Planned and executed change |
+| Ready producer `change.md` | `execute-handoff` | Exact-path adoption and execution |
+| Existing active state | `resume` | Artifact-driven continuation |
+| `/judgment` | Adversarial review | Findings and bounded fixes |
 
-The shared `sdd-draft-change` skill defines outcome, scope, behavior deltas, approach, work groups, verification, and non-empty risks. Every Work group uses `sdd-execution-skills` to declare at most three `Skills:` names. Disjoint `Files:` scopes may run in parallel; unclear overlap runs sequentially. SDD resolves names through the generated registry or runtime catalog, then enforces the worker allowlist.
-
-A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. SDD preserves that marker, moves its row from `planned` to `adopted` at intake and to `done` at archive, then offers but never auto-plans the next unblocked slice.
-
-## Flow
-
-```text
-route -> explore if needed -> write/adopt change.md -> implement waves -> cold verify
-      -> optional judgment/fix -> merge canonical specs -> archive
-```
-
-Workers never stage, commit, or push. With `Delivery: commit-per-wave`, only `orchestraitor` owns the Git index and commits verified work; it never pushes. User questions return to `sdlc-orchestrator` as compact `ASK` lines.
-
-Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-driven from the exact active root and `state.md`; ambiguous active changes require the user to choose.
-
-## Execution choices
+Direct work lives at `.ai/orchestrator/changes/<change>/`. Producer handoffs remain at `.ai/<producer>/changes/<change>/`; SDD preserves their marker and adds `state.md`. Canonical behavior lives under `.ai/orchestrator/specs/`. Ambiguous active changes require an exact path.
 
 | Choice | Values |
 |---|---|
@@ -37,31 +26,31 @@ Canonical behavior remains under `.ai/orchestrator/specs/`. Resume is artifact-d
 | Judgment | `none`, `light`, or `full` |
 | Delivery | `none` or `commit-per-wave` |
 
+Work groups declare `Files:` and up to three routed `Skills:`. Disjoint scopes may run in parallel; overlapping scopes run sequentially. Workers never stage, commit, or push. With `commit-per-wave`, only `orchestraitor` commits verified work and it never pushes. See [SDD flow verification](../../docs/sdd-test-plan.md).
+
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (subagent coordinator) | `orchestraitor` | Coordinates direct SDD, handoffs, resume, and archive |
+| Agent (subagent coordinator) | `orchestraitor` | Coordinates full SDD execution |
 | Agent (subagent) | `sdd-explore` | Explores code read-only |
-| Agent (subagent) | `sdd-implement` | Implements one scoped code or test wave |
-| Agent (subagent) | `sdd-canonical-merge` | Merges verified deltas into canonical specs |
+| Agent (subagent) | `sdd-implement` | Implements one scoped work wave |
+| Agent (subagent) | `sdd-canonical-merge` | Merges verified canonical spec deltas |
 | Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
 | Agent (subagent) | `jd-judge-a` | Reviews correctness independently |
 | Agent (subagent) | `jd-judge-b` | Reviews security independently |
-| Agent (subagent) | `jd-solo` | Runs the light review path |
-| Agent (subagent) | `jd-fix` | Applies confirmed findings |
+| Agent (subagent) | `jd-solo` | Runs lightweight adversarial review |
+| Agent (subagent) | `jd-fix` | Applies confirmed review findings |
 | Command | `/judgment` | Routes adversarial review |
 | Skill | `behavior-characterization` | Captures current behavior during hardening |
-| Skill | `code-conventions` | Applies repository code and test conventions |
-| Skill | `cognitive-doc-design` | Keeps human-facing documentation easy to scan |
+| Skill | `code-conventions` | Applies code and test conventions |
+| Skill | `cognitive-doc-design` | Keeps human-facing documentation clear |
 | Skill | `graphify-cli` | Queries code graphs read-only |
-| Skill | `java-testing` | Implements Java tests and characterization seams |
+| Skill | `java-testing` | Implements focused Java tests |
 | Skill | `legacy-code-safety` | Protects behavior during legacy changes |
 | Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
-| Skill | `sdd-draft-change` | Drafts the single pre-implementation change document |
-| Skill | `sdd-execution-skills` | Selects and validates implementation skills per Work group |
-| Skill | `systematic-debugging` | Applies evidence-first debugging to fix waves |
-| Skill | `work-unit-commits` | Plans reviewable, cohesive commits |
-
-Static and opt-in model checks are summarized in [docs/sdd-test-plan.md](../../docs/sdd-test-plan.md).
+| Skill | `sdd-draft-change` | Drafts one pre-implementation change document |
+| Skill | `sdd-execution-skills` | Selects skills for implementation work |
+| Skill | `systematic-debugging` | Finds root causes before fixes |
+| Skill | `work-unit-commits` | Plans reviewable and cohesive commits |

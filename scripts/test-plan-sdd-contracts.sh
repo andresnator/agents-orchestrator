@@ -58,14 +58,6 @@ assert_first_line() {
     fail "$file" "expected first line: $expected"
 }
 
-assert_match_count() {
-  local file="$1" pattern="$2" expected="$3" actual
-  CHECKS=$((CHECKS + 1))
-  actual="$(grep -Ec "$pattern" "$file" || true)"
-  [ "$actual" -eq "$expected" ] ||
-    fail "$file" "expected $expected matches for $pattern, found $actual"
-}
-
 frontmatter() {
   awk '
     NR == 1 { if ($0 != "---") exit 1; next }
@@ -240,14 +232,15 @@ assert_contains domains/plan/agents/deep-planner.md 'OK plan/<deep-plan|refactor
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'refactor-analyzer: allow'
 assert_exists domains/plan/agents/refactor-analyzer.md
 assert_absent domains/refactor
-assert_contains domains/architecture/README.md "Plan domain's protected \`refactor\` route (\`/refactor-plan\`)"
+assert_contains domains/architecture/README.md 'Class-level refactors belong to Plan'
+assert_contains domains/architecture/README.md 'product requirements belong to Docs'
 assert_absent domains/plan/agents/refactor-planner.md
 assert_contains domains/architecture/agents/architect.md '.ai/architect/changes/'
 assert_frontmatter_contains domains/architecture/agents/architect.md 'sdd-execution-skills: allow'
 assert_frontmatter_not_contains domains/architecture/agents/architect.md 'code-conventions: allow'
 assert_contains domains/architecture/agents/architect.md 'Every Work group records the routing result'
 assert_contains domains/architecture/agents/architect.md 'never load or read implementation skill bodies'
-assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.1"'
+assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.2"'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains domains/architecture/skills/architecture-ideation/SKILL.md 'Load `sdd-execution-skills`'
 assert_frontmatter_contains domains/common/skills/grill/SKILL.md 'version: "4.0.0"'
@@ -371,12 +364,24 @@ assert_contains domains/plan/commands/wayfinder.md 'operation=deep-plan intent=d
 assert_contains domains/plan/commands/refactor-plan.md 'operation=refactor intent=auto'
 assert_contains domains/plan/commands/harden-plan.md 'operation=refactor intent=hardening'
 
-# Human documentation carries one overview, five behavioral sequences, and prompts.
+# Human documentation records compact routes, artifact contracts, and eight prompts.
 plan_readme=domains/plan/README.md
 scenario_doc=docs/plan-flow-test-scenarios.md
-assert_match_count "$plan_readme" '^flowchart LR$' 1
-assert_match_count "$plan_readme" '^sequenceDiagram$' 5
-assert_match_count "$plan_readme" '^```mermaid$' 6
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$plan_readme" '| `/deep-plan` | `deep-plan`, `intent=auto` |'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$plan_readme" '| `/wayfinder` | `deep-plan`, `intent=discovery` |'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$plan_readme" '| `/refactor-plan` | `refactor`, `intent=auto` |'
+# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
+assert_contains "$plan_readme" '| `/harden-plan` | `refactor`, `intent=hardening` |'
+assert_contains "$plan_readme" '.ai/deep-planner/changes/<change>/change.md'
+assert_contains "$plan_readme" '.ai/deep-planner/plans/<slug>.md'
+assert_contains "$plan_readme" '.ai/roadmaps/<goal>.md'
+assert_contains "$plan_readme" 'Status: ready-for-sdd | Source: deep-planner'
+assert_contains "$plan_readme" 'Roadmap: <goal> | Slice: <n>/<total>'
+assert_contains "$plan_readme" 'continúa el roadmap <goal>'
+assert_not_contains "$plan_readme" '```mermaid'
 assert_exists "$scenario_doc"
 for scenario in \
   PLAN-BOUNDED-01 PLAN-DECISION-01 PLAN-DISCOVERY-01 PLAN-ROADMAP-01 \

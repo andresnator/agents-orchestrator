@@ -1,53 +1,50 @@
 # Use the Learning Domain
 
-`/learn` builds durable multi-session learning paths under `.ai/learning/`. `/english` provides explicit English coaching and can feed recurring synthetic gap patterns into a language topic.
+`/learn` builds durable learning paths under `.ai/learning/`. `/english` coaches explicit English input and can feed synthetic recurring gaps into a language topic after opt-in.
 
 ## Quick path
 
 ```bash
-installers/opencode.sh install
+installers/opencode.sh install --domain learning,common
 ```
 
-Start a topic with `/learn <topic>`, confirm its mission and path, then use `/learn` regularly. Every session offers due reviews before new material; the queue is pull-based, not scheduled.
+Filtered installation is a sync; include every domain you want to keep in the selected list.
+
+Start with `/learn <topic>`, confirm the proposed mission and path, then return with `/learn`. Every session offers due reviews before new material; there is no background scheduler.
 
 ## Commands
 
 | Command | Outcome |
 |---|---|
-| `/learn <topic>` | Create or resume a topic with mission, cadence, and 4-8 modules |
-| `/learn` | Continue the active topic after the due check |
-| `/learn review [topic]` | Review due cards oldest-first and interleaved |
-| `/learn quiz [topic]` | Run retrieval practice and record pacing evidence |
-| `/learn map [topic]` | Refresh the topic mind map |
+| `/learn <topic>` | Start or resume a topic |
+| `/learn review [topic]` | Review due cards |
+| `/learn quiz [topic]` | Run retrieval practice |
+| `/learn map [topic]` | Refresh the topic map |
 | `/learn teach [concept]` | Run a Feynman teach-back |
-| `/learn vocab [theme]` | Export phrase-based Anki cards for a language topic |
+| `/learn vocab [theme]` | Export phrase-based Anki cards |
 | `/learn drill [unit]` | Run delayed bidirectional translation |
-| `/learn status` | Rebuild the cross-topic dashboard |
-| `/english [text]` | Correct, explain, practice, or summarize explicit English input |
+| `/learn status` | Rebuild the dashboard |
+| `/english [text]` | Correct, explain, or practice English |
 
 ## Learning loop
 
-Each general module combines:
+General modules combine 10% formal input in Cornell notes, 70% real exercises, and 20% Socratic debrief plus curated resources. The mentor scopes exercises but never solves or edits the learner's repository work.
 
-- 10% formal input captured as a Cornell note with retrieval cues;
-- 70% a real exercise that the mentor scopes but does not solve;
-- 20% Socratic debrief and curated community resources.
+Retrieval cues become Leitner cards with 1, 3, 7, 14, and 30-day intervals. Repeated failures become leeches to split or rewrite. `recall-calc` supplies read-only date arithmetic when installed; the skill tables are the fallback.
 
-Every cue becomes a Leitner card with 1/3/7/14/30-day intervals. Again, Hard, Good, and Easy update the box and next date. Repeated failures become leeches to reformulate or split. The optional `recall-calc` plugin performs date and due-list arithmetic; otherwise the mentor applies the same table.
-
-Feynman sessions classify gaps, attach return paths, and end with the learner's analogy. Completing modules is not enough: the mission closes only after a capstone teach-back satisfies the observable goal. Reviews continue until cards are mastered.
+Module completion is not mission completion. A capstone teach-back must satisfy the observable goal; reviews continue until cards are mastered.
 
 ## Language topics
 
-Language topics replace the general module loop with bilingual dialogue units:
+Language topics use two waves:
 
-1. Passive wave: read a comprehensible target-language dialogue with natural translation.
-2. Active wave after five units: translate unit N-5 back from memory and classify differences.
-3. Send phrases to Anki and grammar patterns to the recall queue.
+1. Read one comprehensible bilingual dialogue.
+2. After five units, translate unit N-5 from memory and compare it with the original.
+3. Send phrases to Anki and grammar patterns to the review queue.
 
-`/english` never monitors passively. With explicit opt-in, it appends recurring categories as synthetic patterns to the topic's `gaps.md`; the mentor offers each pending row as a card or drill. Actual user sentences are not stored in that inbox.
+`/english` never monitors passive conversation. With explicit opt-in, it stores only synthetic gap patterns in `gaps.md`; the mentor later offers them as cards or drills. Raw user sentences are not copied into that inbox.
 
-## State
+## State and safety
 
 ```text
 .ai/learning/<topic>/
@@ -65,11 +62,11 @@ Language topics replace the general module loop with bilingual dialogue units:
   dialogues/
 ```
 
-The mentor writes only under `.ai/learning/**`; it may read a repository to design exercises and may ask permission to run tests for verification, but never edits the learner's code. `english-tutor` can only append to an existing language topic's `gaps.md` after opt-in.
+The mentor writes only under `.ai/learning/**`. It may read repository files and ask permission to run tests, but never edits learner code. `english-tutor` may only append to an existing language topic after opt-in.
 
 ## Troubleshooting
 
-- Due reviews accumulate: run `/learn review`; `/learn status` shows the queue.
-- Cadence feels wrong: tell the mentor; the learner owns the final cadence.
-- `/english` questions do not surface: run it without subtask mode or expose `english-tutor` as a primary, then reinstall.
-- Decline test execution if verification should remain manual.
+- Due reviews accumulate: run `/learn review`; use `/learn status` for the queue.
+- Cadence feels wrong: tell the mentor; the learner owns final cadence.
+- `/english` questions do not surface: remove subtask mode or expose `english-tutor` as primary, then reinstall.
+- Verification should stay manual: decline test execution.

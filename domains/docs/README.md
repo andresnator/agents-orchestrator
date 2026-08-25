@@ -1,34 +1,40 @@
 # Docs Domain
 
-Product documentation, Jira tickets, summaries, slide decks, and transcription-oriented skills.
+Product documents, technical decisions, Jira artifacts, summaries, presentations, and transcription. The domain uses shared interview and question skills from `common`.
+
+## Quick path
+
+1. Include `docs,common` in the selected installer domains.
+2. Start with `/doc`, `/prd`, or `/adr`.
+3. Review the selected skill's artifact before publishing it externally.
+
+## Entry points
+
+| Entry | Use | Result |
+|---|---|---|
+| `/doc` | Route general documentation work | Most specific documentation skill |
+| `/prd` | Choose requirements depth | Full or lightweight PRD workflow |
+| `/adr` | Record a technical decision | Architecture Decision Record |
+
+The selected skill owns its workflow and output. Commands do not duplicate or override skill contracts.
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/adr` | Creates an ADR from a technical decision interview |
-| Command | `/doc` | Routes documentation work to the right skill |
-| Command | `/prd` | Selects the appropriate PRD workflow |
-| Skill | `adr` | Document decisions and architectural trade-offs |
-| Skill | `buildable-issue` | Create agent-ready implementation issues |
-| Skill | `cognitive-doc-design` | Design docs that reduce cognitive load |
-| Skill | `jira-spike` | Create research-ready Jira Spikes |
-| Skill | `jira-task` | Create developer-ready Jira Tasks |
-| Skill | `jira-user-story` | Create developer-ready Jira User Stories |
-| Skill | `prd` | Create rigorous high-stakes PRDs |
-| Skill | `prd-light` | Create lightweight MVP PRDs |
-| Skill | `rfc` | Create technical proposals with trade-offs |
-| Skill | `slidev-retro-deck` | Build retro Slidev decks — three switchable CRT themes with day/night schemes, themed Mermaid diagrams, and a PNG-verified export loop |
-| Skill | `summarize` | Synthesize book chapters pedagogically |
-| Skill | `usm` | Create journey-first MVP story maps |
-| Skill | `whisper-extract` | Transcribe and summarize audio or video |
-
-Assumes the `common` domain is installed: `grilling` and `native-question-ux` live there.
-
-```mermaid
-graph TD
-  commands[Docs commands] --> docs[documentation skills]
-  prd[prd] --> product[PRD / RFC / ADR / Jira / story map]
-  doc[doc] --> writing[writing and synthesis skills]
-  writing -.-> common[common output skills]
-```
+| Command | `/adr` | Creates technical decision ADRs |
+| Command | `/doc` | Routes general documentation work |
+| Command | `/prd` | Selects appropriate PRD depth |
+| Skill | `adr` | Documents decisions and trade-offs |
+| Skill | `buildable-issue` | Creates agent-ready implementation issues |
+| Skill | `cognitive-doc-design` | Reduces documentation cognitive load |
+| Skill | `jira-spike` | Creates research-ready Jira Spikes |
+| Skill | `jira-task` | Creates developer-ready Jira Tasks |
+| Skill | `jira-user-story` | Creates developer-ready User Stories |
+| Skill | `prd` | Creates rigorous high-stakes PRDs |
+| Skill | `prd-light` | Creates lightweight MVP PRDs |
+| Skill | `rfc` | Creates technical proposals with trade-offs |
+| Skill | `slidev-retro-deck` | Builds verified retro Slidev decks |
+| Skill | `summarize` | Synthesizes book chapters pedagogically |
+| Skill | `usm` | Creates journey-first MVP story maps |
+| Skill | `whisper-extract` | Transcribes and summarizes media |

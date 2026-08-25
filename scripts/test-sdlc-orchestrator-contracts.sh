@@ -176,7 +176,7 @@ assert_contains "$architect" 'inventory manifests without vulnerability or EOL v
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains "$architect" 'load `service-boundary-analysis`'
 
-assert_frontmatter_contains domains/architecture/skills/architecture-state/SKILL.md 'version: "2.0.0"'
+assert_frontmatter_contains domains/architecture/skills/architecture-state/SKILL.md 'version: "2.0.1"'
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains domains/architecture/skills/architecture-state/SKILL.md '`repo-issues` owns judgments and fitness functions'
 assert_frontmatter_contains domains/architecture/skills/repo-issues/SKILL.md 'version: "2.1.0"'
@@ -184,14 +184,14 @@ assert_contains domains/architecture/skills/repo-issues/SKILL.md 'references/fit
 assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md '## Go'
 assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md 'go list ./...'
 assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md 'go-arch-lint check'
-assert_frontmatter_contains domains/architecture/skills/architecture-map/SKILL.md 'version: "2.0.0"'
+assert_frontmatter_contains domains/architecture/skills/architecture-map/SKILL.md 'version: "2.0.1"'
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Default: one `index.md`'
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Write to `docs/architecture/` when `docs/` exists'
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Otherwise use existing `doc/architecture/`'
-assert_frontmatter_contains domains/architecture/skills/dependency-security-audit/SKILL.md 'version: "2.1.1"'
+assert_frontmatter_contains domains/architecture/skills/dependency-security-audit/SKILL.md 'version: "2.1.2"'
 # shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
 assert_contains domains/architecture/skills/dependency-security-audit/SKILL.md '`method: inventory-only`'
 dependency_audit_reference=domains/architecture/skills/dependency-security-audit/references/ecosystem-commands.md
