@@ -7,7 +7,6 @@ Prompt, skill, and registry maintenance utilities for this artifact repo.
 | Type | Name | Purpose |
 |---|---|---|
 | Command | `/absorb` | Compares external AI harness practices |
-| Command | `/prompt-checker` | Evaluates and refines prompt text |
 | Skill | `absorb` | Compare external AI harness practices |
 | Skill | `prompt-structure-writer` | Turn rough ideas into executable prompts |
 | Skill | `skill-creator` | Create Agent Skills-compliant skills |
@@ -17,7 +16,6 @@ Prompt, skill, and registry maintenance utilities for this artifact repo.
 
 ```mermaid
 graph TD
-  prompt[prompt-checker] --> writer[prompt-structure-writer]
   absorbCmd[/absorb command/] --> absorb[absorb]
   absorb --> external[external harnesses]
   creator[skill-creator] --> skills[project skills]
