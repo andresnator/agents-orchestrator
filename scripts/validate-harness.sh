@@ -261,6 +261,137 @@ for entry in domains/*/skills/*; do
   check_skill_body "$entry" "$name"
 done
 
+# --- Domain README catalogs ---
+domain_component_names() {
+  local domain="$1" entry base
+
+  for entry in "$domain"/agents/*.md "$domain"/commands/*.md; do
+    [ -e "$entry" ] || continue
+    base="$(basename "$entry")"
+    printf '%s\n' "${base%.md}"
+  done
+
+  for entry in "$domain"/skills/*; do
+    { [ -e "$entry" ] || [ -L "$entry" ]; } || continue
+    basename "$entry"
+  done
+
+  for entry in "$domain"/plugins/* "$domain"/tui-plugins/*; do
+    { [ -f "$entry" ] || [ -L "$entry" ]; } || continue
+    base="$(basename "$entry")"
+    printf '%s\n' "${base%.*}"
+  done
+
+  for entry in "$domain"/external-plugins/*.json; do
+    [ -e "$entry" ] || continue
+    base="$(basename "$entry")"
+    base="${base%.server.json}"
+    base="${base%.tui.json}"
+    printf '%s\n' "$base"
+  done
+}
+
+readme_component_names() {
+  awk -F '|' '
+    /^## Components$/ { components = 1; next }
+    components && /^## / { components = 0 }
+    components && /^\|/ {
+      name = $3
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+      if (name == "Name" || name ~ /^-+$/) next
+      gsub(/`/, "", name)
+      sub(/^\//, "", name)
+      if (name ~ /^\[/) {
+        sub(/^\[/, "", name)
+        sub(/\]\(.*/, "", name)
+      }
+      print name
+    }
+  ' "$1"
+}
+
+for readme in domains/*/README.md; do
+  domain_dir="$(dirname "$readme")"
+  headings="$(awk '/^## / { print }' "$readme")"
+  expected_headings="$(printf '%s\n' '## Quick path' '## Entry points' '## Components')"
+  [ "$headings" = "$expected_headings" ] ||
+    fail "$readme" "H2 sequence must be Quick path, Entry points, Components"
+
+  if grep -Eiq '^```[[:space:]]*mermaid' "$readme"; then
+    fail "$readme" "domain README must not contain Mermaid"
+  fi
+
+  while IFS=$'\t' read -r table_line table_width expected_width; do
+    [ -n "$table_line" ] || continue
+    fail "$readme:$table_line" "table row has $table_width separators; expected $expected_width"
+  done < <(awk '
+    function separator_count(line, count, cursor, char, previous) {
+      count = 0
+      for (cursor = 1; cursor <= length(line); cursor++) {
+        char = substr(line, cursor, 1)
+        previous = cursor > 1 ? substr(line, cursor - 1, 1) : ""
+        if (char == "|" && previous != "\\") count++
+      }
+      return count
+    }
+    !/^\|/ { expected = 0; next }
+    /^\|/ {
+      width = separator_count($0)
+      if (expected == 0) expected = width
+      if (width != expected) print NR "\t" width "\t" expected
+    }
+  ' "$readme")
+
+  intro_sentences="$(awk '
+    NR == 1 { next }
+    /^## Quick path$/ { exit }
+    NF {
+      line = $0
+      count += gsub(/[.!?]([[:space:]]|$)/, "&", line)
+    }
+    END { print count + 0 }
+  ' "$readme")"
+  [ "$intro_sentences" -le 2 ] ||
+    fail "$readme" "introduction must contain at most two sentences"
+
+  quick_steps="$(awk '
+    /^## Quick path$/ { quick = 1; next }
+    quick && /^## / { quick = 0 }
+    quick && /^[0-9]+\. / { count++ }
+    END { print count + 0 }
+  ' "$readme")"
+  if [ "$quick_steps" -lt 2 ] || [ "$quick_steps" -gt 3 ]; then
+    fail "$readme" "Quick path must contain two or three numbered steps"
+  fi
+
+  while IFS=$'\t' read -r component purpose_words; do
+    [ -n "$component" ] || continue
+    if [ "$purpose_words" -lt 3 ] || [ "$purpose_words" -gt 8 ]; then
+      fail "$readme" "component '$component' purpose must contain 3-8 words; found $purpose_words"
+    fi
+  done < <(awk -F '|' '
+    /^## Components$/ { components = 1; next }
+    components && /^## / { components = 0 }
+    components && /^\|/ {
+      name = $3
+      purpose = $4
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", purpose)
+      if (name == "Name" || name ~ /^-+$/) next
+      count = split(purpose, words, /[[:space:]]+/)
+      print name "\t" count
+    }
+  ' "$readme")
+
+  actual_components="$(domain_component_names "$domain_dir" | LC_ALL=C sort)"
+  documented_components="$(readme_component_names "$readme" | LC_ALL=C sort)"
+  if [ "$actual_components" != "$documented_components" ]; then
+    actual_inline="$(printf '%s\n' "$actual_components" | paste -sd ',' -)"
+    documented_inline="$(printf '%s\n' "$documented_components" | paste -sd ',' -)"
+    fail "$readme" "component names differ: filesystem=[$actual_inline] README=[$documented_inline]"
+  fi
+done
+
 # --- Model-tier profiles (jq-gated so the validator runs on jq-less machines) ---
 if command -v jq >/dev/null 2>&1; then
   for p in profiles/*.json; do

@@ -1,34 +1,33 @@
 # Assign Models to Agents
 
-Repository agents never hardcode `model:`. Model, provider, and variant assignment is user OpenCode state, configured globally or per project.
+Repository agents never hardcode `model:`. Users assign providers, models, and variants in global or project OpenCode state.
 
 ## Quick path
 
 1. Install the `meta` domain.
 2. Open `/model-configurator` in OpenCode.
-3. Choose scope, apply the `default` profile or an agent group, review, and save.
+3. Choose a scope, review the diff, and save.
 
-Project config overrides global config. Re-run the installer after a repository profile changes because profiles are copied beside the external TUI plugin.
+Project config overrides global config. Reinstall after changing repository profiles because the installer copies them beside the pinned TUI plugin.
 
-## Current tiers
+## Tier guidance
 
 | Tier | Agents | Guidance |
 |---|---|---|
-| Orchestration | `sdlc-orchestrator`, `deep-planner`, `architect`, `orchestraitor`, `orchestralite`, `review-coordinator` | Strongest reasoning; suggested `high` variant |
+| Orchestration | `sdlc-orchestrator`, `deep-planner`, `architect`, `orchestraitor`, `orchestralite`, `review-coordinator` | Strong reasoning; suggested `high` variant |
 | Implementation | `sdd-implement`, `jd-fix` | Strong code-writing model |
-| Analysis | `sdd-explore`, `refactor-analyzer` | Fast, economical read-heavy model |
-| Verification | `sdd-verify`, `lite-verify` | Strong independent model; suggested `high` variant |
-| Judge A | `jd-judge-a` | Strong model/provider A; suggested `high` |
-| Judge B | `jd-judge-b` | Strong model/provider B, distinct from A; suggested `high` |
+| Analysis | `sdd-explore`, `refactor-analyzer` | Fast economical model |
+| Verification | `sdd-verify`, `lite-verify` | Strong independent model; suggested `high` |
+| Judge A | `jd-judge-a` | Strong model or provider A |
+| Judge B | `jd-judge-b` | Distinct strong model or provider B |
 | Judge solo | `jd-solo` | Fast balanced reviewer |
 | Utility | `english-tutor` | Economical utility model |
 
-The coordinator now writes `change.md` itself, so there is no drafting tier. Distinct providers for judge A and B reduce shared model-specific blind spots.
-The learning coordinator `mentor` remains outside this default profile and is assigned separately when the `learning` domain is installed.
+Assign `mentor` separately when installing the `learning` domain. Distinct Judge A and B providers reduce shared blind spots.
 
 ## Manual configuration
 
-OpenCode merges installed Markdown agents with `agent.<name>` blocks in `opencode.json`:
+OpenCode merges installed Markdown agents with `agent.<name>` entries in `opencode.json` or `opencode.jsonc`:
 
 ```json
 {
@@ -52,19 +51,19 @@ OpenCode merges installed Markdown agents with `agent.<name>` blocks in `opencod
 }
 ```
 
-Model syntax is `provider_id/model_id`. `variant` names a provider or custom model variant; there is no `model#variant` syntax. Removing an agent's model and variant restores inheritance from its caller or OpenCode defaults.
+Model syntax is `provider_id/model_id`; `variant` is a separate key. Removing both restores caller or OpenCode defaults.
 
-## Model configurator behavior
+## Configurator behavior
 
-The external `model-configurator` TUI reads the live server's agent and connected-model catalog. It can edit one agent, a coordinator group, an abstract profile, or a saved concrete preset. Review shows `agent: before -> after` before any write.
+The pinned `model-configurator` reads agents and connected models from the live OpenCode server. It edits one agent, a coordinator group, an abstract profile, or a saved preset, and shows `agent: before -> after` before writing.
 
-Writes are targeted and transactional: JSONC comments and foreign keys are preserved, concurrent edits abort, and invalid or stale selections are rejected. Supported changes hot-apply to the current server; the wizard asks for a restart when they cannot. Other OpenCode processes still need a restart. See [hot reload](hot-reload.md).
+Writes preserve JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections abort. Supported changes hot-apply to the connected server; other OpenCode processes may need a restart. See [hot reload](hot-reload.md).
 
-Profiles under `profiles/` contain abstract tiers and optional suggested variants, never concrete model ids. Saved presets contain concrete assignments and live in user state at `~/.config/opencode/model-configurator-presets.json`.
+Abstract profiles live under `profiles/` and contain no concrete model ids. Concrete presets are user state at `~/.config/opencode/model-configurator-presets.json`.
 
 ## Troubleshooting
 
 - Missing agent: install its domain and reopen the configurator.
-- Missing model: authenticate the provider and refresh the live catalog.
-- Assignment appears unchanged: check project overrides and restart other OpenCode processes.
-- TUI plugin changed in this repository: reinstall so the pinned bundle and copied profiles refresh.
+- Missing model: authenticate its provider and refresh the live catalog.
+- Assignment unchanged: check project overrides and restart other OpenCode processes.
+- Updated plugin or profile missing: run the installer again.

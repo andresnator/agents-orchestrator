@@ -1,76 +1,60 @@
 # Graphify Integration
 
-Graphify is optional. This repository owns the `/graphify-index` consent command, the OpenCode integration lock, and the agent rules that consume graphs. The reusable refresher implementation, tests, releases, and standalone installation instructions live in [`opencode-graphify-init`](https://github.com/andresnator/opencode-graphify-init).
+Graphify is optional. This repository owns first-run consent, integration locks, and agent boundaries; [`opencode-graphify-init`](https://github.com/andresnator/opencode-graphify-init) owns refresher code, tests, and releases.
 
-The integration targets OpenCode >= 1.17.15 and [`graphifyy` 0.9.32](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.32). The repository installer fetches the refresher bundle from its exact locked commit and verifies its SHA-256 before changing the target.
+The supported baseline is OpenCode >= 1.17.15 and [`graphifyy` 0.9.32](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.32). The installer fetches the exact locked plugin commit and verifies its SHA-256 before changing a target.
 
-## Quick setup
+## Quick path
 
-1. Install the `common` domain, which includes `/graphify-index`, the `graphify-cli` skill, and the external refresher:
+1. Install the `common` domain:
 
    ```bash
    installers/opencode.sh install --domain common
    ```
 
-2. Install Graphify. Include its MCP extra when agents need to query the graph:
+2. Install Graphify with MCP support:
 
    ```bash
    uv tool install "graphifyy[mcp]==0.9.32"
    # or: pipx install "graphifyy[mcp]==0.9.32"
    ```
 
-3. Export the output path in the environment that launches OpenCode:
+3. Launch OpenCode with the standard output path:
 
    ```bash
    export GRAPHIFY_OUT=.ai/graphify-out
    ```
 
-4. Add the [MCP configuration](#mcp-configuration) when agents need graph queries.
+4. Add the MCP entry below when agents need graph queries.
+5. Run `/graphify-index` once in the repository and choose code-only or docs mode.
 
-5. Open a repository and run `/graphify-index` once. It asks whether to index and whether to use code-only or docs mode. Later OpenCode sessions refresh that repository automatically.
+Do not run `graphify opencode install`, `graphify install --platform opencode`, or `graphify claude install`. Those commands can overwrite installer-managed rules and plugins.
 
-Do not run `graphify opencode install`, `graphify install --platform opencode`, or `graphify claude install`. Those commands write their own instructions and plugin and can conflict with the installer-managed `AGENTS.md` and refresher.
+## Ownership and lifecycle
 
-## Lifecycle contract
+| Owner | Responsibility |
+|---|---|
+| `/graphify-index` | Requests consent, performs first extraction, and records mode |
+| `graphify-init` | Refreshes an approved graph when missing or stale |
+| Human operator | Installs Graphify, configures MCP, and performs recovery |
+| Agents | Query graphs and verify results against files |
 
-First indexing and background refresh are intentionally separate:
+Consent and mode live at `.ai/graphify-out/.opencode-index-mode`. Without that file, the refresher never starts first extraction. Code-only to docs adds document nodes; docs to code-only requires a confirmed rebuild. Aggregator directories discover nested Git repositories up to two levels deep, each with independent state.
 
-```mermaid
-flowchart LR
-  human[Human runs /graphify-index] --> consent{Index this repository?}
-  consent -->|yes| mode[Choose code-only or docs]
-  mode --> graph[Build graph and record mode]
-  graph --> later[Later OpenCode session]
-  later --> refresh[graphify-init refreshes only when stale]
-```
-
-- `/graphify-index` owns first indexing. It records standing consent and mode in `.ai/graphify-out/.opencode-index-mode`.
-- `graphify-init` is a refresher only. Without the mode file it may show a hint, but it never starts the first extraction.
-- With a recorded mode, a missing or stale graph is rebuilt in the background. A current graph is left untouched.
-- `OPENCODE_GRAPHIFY_AUTOINIT=0` disables refresh for one OpenCode process.
-- On a plain aggregator directory, the command and refresher discover nested Git repositories up to two levels deep. Each repository keeps independent state.
-- The implementation serializes competing extracts, terminates owned child processes on normal shutdown, preserves the recorded mode, and reports failures without blocking the OpenCode session. The external plugin README is authoritative for these runtime details.
-
-Mode changes are directional. Moving from code-only to docs adds semantic document nodes incrementally. Moving from docs to code-only requires removing the old graph first because Graphify otherwise preserves document nodes; `/graphify-index` handles the confirmation and rebuild workflow.
-
-## State and controls
-
-Per-repository state lives under `.ai/graphify-out/`, including `graph.json`, the incremental manifest and cache, the mode file, and generated reports. The integration adds `.ai/graphify-out` to `.git/info/exclude`; none of it is a managed repository artifact.
-
-Use `GRAPHIFY_OUT=.ai/graphify-out`, not `--out`, for the standard layout. Combining both can create a duplicated `.ai/.ai/graphify-out/` path, while using only `--out` can make MCP `project_path` resolution miss the graph.
+Graph state lives under ignored `.ai/graphify-out/`. Use `GRAPHIFY_OUT=.ai/graphify-out` without `--out`; combining both can create `.ai/.ai/graphify-out/` and break MCP resolution.
 
 | Variable | Effect |
 |---|---|
-| `GRAPHIFY_OUT=.ai/graphify-out` | Makes the CLI, refresher, and MCP server resolve the same graph path |
-| `OPENCODE_GRAPHIFY_AUTOINIT=0` | Disables background refresh for this OpenCode process |
-| `OPENCODE_GRAPHIFY_GLOBAL=0` | Keeps graphs local and skips the cross-repository merge |
-| `OPENCODE_GRAPHIFY_DOCS=1` | Defaults the docs question in `/graphify-index`; it does not override a recorded mode |
-| `OPENCODE_GRAPHIFY_BACKEND=<name>` | Defaults the docs backend question and supports legacy docs graphs without a recorded backend |
-| `GRAPHIFY_FORCE=1` | Forces Graphify to rescan instead of using its incremental manifest/cache; it does not imply `--allow-partial` |
+| `GRAPHIFY_OUT=.ai/graphify-out` | Aligns CLI, refresher, and MCP paths |
+| `OPENCODE_GRAPHIFY_AUTOINIT=0` | Disables refresh for one OpenCode process |
+| `OPENCODE_GRAPHIFY_GLOBAL=0` | Skips global graph registration |
+| `OPENCODE_GRAPHIFY_DOCS=1` | Defaults first-run docs mode |
+| `OPENCODE_GRAPHIFY_BACKEND=<name>` | Defaults the docs backend |
+| `GRAPHIFY_FORCE=1` | Forces a full rescan |
 
 ## MCP configuration
 
-The installer deliberately does not edit OpenCode's MCP configuration. Merge the entries you want into the user or project `opencode.jsonc`:
+The installer never edits MCP config. Add only the servers you need to user or project `opencode.jsonc`:
 
 ```jsonc
 {
@@ -90,27 +74,19 @@ The installer deliberately does not edit OpenCode's MCP configuration. Merge the
 }
 ```
 
-The relative local path assumes OpenCode starts the server at the repository root. For a frequently used project, prefer an absolute path in that project's `.opencode/opencode.json`. The global path must be absolute; command arrays do not expand `~`.
+The relative path assumes the server starts at the repository root. Prefer an absolute path in a frequently used project's `.opencode/opencode.json`; the global path must be absolute because command arrays do not expand `~`.
 
-Verify the connection rather than relying only on config shape:
+Verify both connection and data:
 
 ```bash
 opencode mcp list
 ```
 
-Then ask an agent to call `graph_stats` in a repository with `.ai/graphify-out/graph.json`. A node count proves the server resolved the graph. A `graph.json not found` response means the MCP path is wrong even if the server reports connected.
+Then call `graph_stats` in a repository with a graph. A node count proves path resolution; `graph.json not found` means the configured path is wrong. Keep the global server disabled unless cross-repository queries justify its context cost.
 
-Every enabled MCP server contributes tool schemas to agent context. Keep `graphify-global` disabled unless cross-repository questions justify that fixed context cost.
+## Local, global, and private data
 
-## Local and global graphs
-
-Each repository owns `.ai/graphify-out/graph.json`. Unless `OPENCODE_GRAPHIFY_GLOBAL=0`, first indexing and refresh also register it in Graphify's machine-wide graph:
-
-- graph: `~/.graphify/global-graph.json`
-- repository locations: `~/.graphify/global-manifest.json`
-- tag: sanitized repository directory name
-
-Useful human-run commands:
+Each repository owns `.ai/graphify-out/graph.json`. Unless disabled, Graphify also registers it in `~/.graphify/global-graph.json` and records locations in `~/.graphify/global-manifest.json`.
 
 ```bash
 graphify global list
@@ -119,49 +95,30 @@ graphify global remove <tag>
 graphify query "how does auth work" --graph ~/.graphify/global-graph.json
 ```
 
-Use the repository graph for questions about a named local symbol. Use the global graph for open-ended cross-repository questions; identical symbol labels can exist in several repositories.
+Use local graphs for named repository symbols and the global graph for cross-repository discovery. Reading global state may require `external_directory`; if enabled, deny agent edits to `~/.graphify/**`.
 
-Reading the global manifest or another repository may require OpenCode's `external_directory` permission. If you allow it globally, keep Graphify's machine state read-only to agents:
-
-```jsonc
-"permission": {
-  "external_directory": "allow",
-  "edit": { "~/.graphify/**": "deny" }
-}
-```
+Code-only mode parses locally and sends no corpus to an LLM. Docs mode performs semantic extraction and may be slower or billable. `/graphify-index` records the backend so refreshes cannot silently switch providers. Put custom OpenAI-compatible providers in `~/.graphify/providers.json`, not this repository.
 
 ## Recovery
 
-Reopening OpenCode retries a failed refresh. When the mode file exists, deleting an unreadable or obsolete `graph.json` also causes a full background rebuild on the next session.
-
-For an immediate manual rebuild, read `.ai/graphify-out/.opencode-index-mode` and run the matching command from the repository root:
+Reopen OpenCode to retry a failed refresh. With a mode file present, removing an unreadable `graph.json` triggers a rebuild on the next session. For immediate recovery, read the recorded mode and run the matching command from the repository root:
 
 ```bash
 # code-only
 GRAPHIFY_OUT=.ai/graphify-out graphify extract . --code-only --global --as <tag>
 
-# docs; use the backend recorded in the mode file
+# docs
 GRAPHIFY_OUT=.ai/graphify-out graphify extract . --backend <backend> --global --as <tag>
 ```
 
-Omit `--global --as <tag>` when global registration is disabled. Add `--allow-partial` only when Graphify explicitly refuses an incomplete extraction.
+Omit `--global --as <tag>` when global registration is disabled. Add `--allow-partial` only after Graphify rejects an incomplete extraction. Avoid `graphify update` and `graphify watch`; they bypass this integration's output contract.
 
-Common symptoms:
+Common failures:
 
-- `graphify: command not found`: reinstall `graphifyy==0.9.32` and ensure its executable directory is on OpenCode's `PATH`.
-- `graph.json not found` from MCP: export `GRAPHIFY_OUT`, verify the server working directory, or use an absolute `--graph` path.
-- `graphify-out/` at the repository root: a manual `update`, `watch`, or extract ran without the standard `GRAPHIFY_OUT`; remove that stray output and rebuild under `.ai/`.
-- `.ai/.ai/graphify-out/`: `GRAPHIFY_OUT` and `--out` were combined; remove the duplicated tree and use the environment variable alone.
-- stale global entry after moving or deleting a repository: run `graphify global remove <tag>`.
+- `graphify: command not found`: reinstall `graphifyy==0.9.32` and fix OpenCode's `PATH`.
+- `graph.json not found`: align `GRAPHIFY_OUT`, server working directory, and MCP path.
+- Root `graphify-out/`: remove stray manual output and rebuild under `.ai/`.
+- `.ai/.ai/graphify-out/`: remove the duplicate tree and stop combining `GRAPHIFY_OUT` with `--out`.
+- Stale global entry: run `graphify global remove <tag>`.
 
-Avoid `graphify update` and `graphify watch` in this integration; they can bypass the relocated output contract. `extract` is incremental and is the supported manual recovery path.
-
-## Docs mode and privacy
-
-Code-only mode is the default recommendation: it uses local parsing, needs no model credentials, and sends no corpus to an LLM. Docs mode performs semantic extraction and can be slower and billable. `/graphify-index` asks explicitly and records the selected backend so later refreshes cannot silently change providers based on whichever API key happens to be present.
-
-Custom OpenAI-compatible backends belong in `~/.graphify/providers.json`, not in this repository. Keep project-local provider files disabled unless you intentionally trust the repository to choose where its corpus is sent.
-
-## Agent boundary
-
-Installed global rules make exploration graph-first when `.ai/graphify-out/graph.json` exists and MCP tools are available. Agents may query the local or global graph, then verify exhaustive inventories with filesystem tools. They must not run Graphify lifecycle commands (`extract`, `update`, `watch`, `global add|remove`, or any install variant): first indexing belongs to `/graphify-index`, refresh belongs to `graphify-init`, and manual recovery belongs to the human.
+Agents must never run lifecycle commands: `extract`, `update`, `watch`, global mutation, or installation. First indexing belongs to `/graphify-index`, refresh to `graphify-init`, and recovery to the human operator.
