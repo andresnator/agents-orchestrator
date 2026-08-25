@@ -28,13 +28,13 @@ frontmatter() {
 assert_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
-  grep -Fq "$text" "$file" || fail "$file" "missing contract text: $text"
+  grep -Fq -- "$text" "$file" || fail "$file" "missing contract text: $text"
 }
 
 assert_not_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
-  ! grep -Fq "$text" "$file" || fail "$file" "retains forbidden contract text: $text"
+  ! grep -Fq -- "$text" "$file" || fail "$file" "retains forbidden contract text: $text"
 }
 
 assert_regex() {
@@ -46,13 +46,19 @@ assert_regex() {
 assert_frontmatter_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
-  frontmatter "$file" | grep -Fq "$text" || fail "$file" "frontmatter missing: $text"
+  frontmatter "$file" | grep -Fq -- "$text" || fail "$file" "frontmatter missing: $text"
 }
 
 assert_frontmatter_not_contains() {
   local file="$1" text="$2"
   CHECKS=$((CHECKS + 1))
-  ! frontmatter "$file" | grep -Fq "$text" || fail "$file" "frontmatter retains: $text"
+  ! frontmatter "$file" | grep -Fq -- "$text" || fail "$file" "frontmatter retains: $text"
+}
+
+assert_absent() {
+  local file="$1"
+  CHECKS=$((CHECKS + 1))
+  [ ! -e "$file" ] && [ ! -L "$file" ] || fail "$file" 'retired component still exists'
 }
 
 assert_compact_coordinator_return() {
@@ -78,8 +84,8 @@ for coordinator in deep-planner architect orchestraitor orchestralite review-coo
   assert_frontmatter_contains "$primary" "$coordinator: allow"
 done
 for worker in \
-  sdd-explore sdd-implement sdd-verify lite-verify refactor-analyzer arch-analyzer \
-  boundary-inspector jd-judge-a jd-judge-b jd-solo jd-fix general; do
+  sdd-explore sdd-implement sdd-verify lite-verify refactor-analyzer \
+  jd-judge-a jd-judge-b jd-solo jd-fix general; do
   assert_frontmatter_not_contains "$primary" "$worker: allow"
 done
 for route in plan refactor architecture sdd sdd-lite review; do
@@ -102,6 +108,11 @@ assert_regex "$primary" 'normal[- ](human[- ])?language|human-readable|paraphras
 assert_regex "$primary" 'security|irreversible|destructive'
 assert_contains "$primary" 'never perform domain work, load skill bodies'
 
+profile_installer=scripts/sdlc-orchestrator-poc.sh
+assert_contains "$profile_installer" '--install-brew-tools|--no-install-brew-tools'
+# shellcheck disable=SC2016 # Literal shell source is part of the contract.
+assert_contains "$profile_installer" 'installer_args+=("$BREW_TOOLS_OPTION")'
+
 review=domains/sdlc/agents/review-coordinator.md
 assert_frontmatter_contains "$review" 'mode: subagent'
 assert_frontmatter_contains "$review" 'question: deny'
@@ -115,11 +126,13 @@ assert_compact_coordinator_return "$review"
 architect=domains/architecture/agents/architect.md
 assert_frontmatter_contains "$architect" 'mode: subagent'
 assert_frontmatter_contains "$architect" 'question: deny'
-assert_frontmatter_contains "$architect" 'arch-analyzer: allow'
-assert_frontmatter_contains "$architect" 'boundary-inspector: allow'
+assert_regex "$architect" '^    service-boundary-analysis: allow$'
+assert_frontmatter_contains "$architect" 'dependency-security-audit: allow'
+assert_frontmatter_contains "$architect" '"govulncheck*": allow'
+assert_regex "$architect" '^  task: deny$'
 assert_frontmatter_not_contains "$architect" 'skill: allow'
 assert_frontmatter_contains "$architect" '"*": deny'
-for operation in map review prd ideate audit boundary; do
+for operation in map review ideate boundary; do
   assert_contains "$architect" "$operation"
 done
 assert_contains "$architect" 'change.md'
@@ -145,21 +158,58 @@ assert_compact_coordinator_return "$planner"
 CHECKS=$((CHECKS + 1))
 [ ! -e domains/refactor ] || fail domains/refactor 'retired planning domain still exists'
 
-for analyzer in \
+assert_frontmatter_contains domains/plan/agents/refactor-analyzer.md '"*": deny'
+for retired in \
   domains/architecture/agents/arch-analyzer.md \
   domains/architecture/agents/boundary-inspector.md \
-  domains/plan/agents/refactor-analyzer.md; do
-  assert_frontmatter_contains "$analyzer" '"*": deny'
+  domains/architecture/commands/arch-audit.md \
+  domains/architecture/commands/arch-prd.md; do
+  assert_absent "$retired"
 done
 
 assert_contains domains/plan/commands/deep-plan.md 'operation=deep-plan intent=auto'
 assert_contains domains/plan/commands/wayfinder.md 'operation=deep-plan intent=discovery'
 assert_contains domains/plan/commands/refactor-plan.md 'operation=refactor intent=auto'
 assert_contains domains/plan/commands/harden-plan.md 'operation=refactor intent=hardening'
-assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md 'service-boundary-analysis: allow'
-assert_frontmatter_contains domains/architecture/agents/boundary-inspector.md '".ai/architect/reports/**": allow'
-assert_contains domains/architecture/agents/boundary-inspector.md 'caller-supplied report path'
-assert_contains domains/architecture/agents/boundary-inspector.md 'no logs or report body in A2A'
+assert_frontmatter_contains "$architect" '".ai/architect/**": allow'
+assert_contains "$architect" 'inventory manifests without vulnerability or EOL verdicts'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains "$architect" 'load `service-boundary-analysis`'
+
+assert_frontmatter_contains domains/architecture/skills/architecture-state/SKILL.md 'version: "2.0.0"'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains domains/architecture/skills/architecture-state/SKILL.md '`repo-issues` owns judgments and fitness functions'
+assert_frontmatter_contains domains/architecture/skills/repo-issues/SKILL.md 'version: "2.1.0"'
+assert_contains domains/architecture/skills/repo-issues/SKILL.md 'references/fitness-functions.md'
+assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md '## Go'
+assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md 'go list ./...'
+assert_contains domains/architecture/skills/repo-issues/references/fitness-functions.md 'go-arch-lint check'
+assert_frontmatter_contains domains/architecture/skills/architecture-map/SKILL.md 'version: "2.0.0"'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Default: one `index.md`'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Write to `docs/architecture/` when `docs/` exists'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains domains/architecture/skills/architecture-map/SKILL.md 'Otherwise use existing `doc/architecture/`'
+assert_frontmatter_contains domains/architecture/skills/dependency-security-audit/SKILL.md 'version: "2.1.1"'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains domains/architecture/skills/dependency-security-audit/SKILL.md '`method: inventory-only`'
+dependency_audit_reference=domains/architecture/skills/dependency-security-audit/references/ecosystem-commands.md
+assert_contains "$dependency_audit_reference" 'osv-scanner scan source -r .'
+assert_not_contains "$dependency_audit_reference" 'osv-scanner .'
+assert_contains "$dependency_audit_reference" '| Go |'
+assert_contains "$dependency_audit_reference" 'govulncheck -json ./...'
+# shellcheck disable=SC2016 # Literal Markdown backticks are part of the contract.
+assert_contains "$dependency_audit_reference" '`go.sum` is not a lockfile'
+assert_contains "$dependency_audit_reference" 'minimum Go version'
+assert_frontmatter_contains domains/architecture/skills/service-boundary-analysis/SKILL.md 'version: "2.0.0"'
+assert_contains domains/architecture/skills/service-boundary-analysis/SKILL.md '| Category | Mechanism | Source/peer | Evidence | Confidence | Notes |'
+for retired_skill in \
+  architecture-impact-review cognitive-doc-design cohesion-coupling dependency-inversion \
+  domain-modeling god-object-detection input-validation-preconditions java-secure-coding \
+  logging-observability native-question-ux prd prd-light tooling-audit tooling-compatibility-matrix; do
+  assert_absent "domains/architecture/skills/$retired_skill"
+done
 
 for coordinator in domains/plan/agents/deep-planner.md domains/sdd/agents/orchestraitor.md; do
   assert_frontmatter_contains "$coordinator" 'mode: subagent'
@@ -226,7 +276,7 @@ CHECKS=$((CHECKS + 1))
 
 # Routed commands carry only their raw argument and route through the primary.
 expected_aliases="$(printf '%s\n' \
-  arch-audit arch-ideate arch-map arch-prd arch-review boundary-inspector \
+  arch-ideate arch-map arch-review boundary-inspector \
   deep-plan defend harden-plan judgment refactor-plan wayfinder | sort)"
 actual_aliases="$(find domains -path '*/commands/*.md' -type f -print | while IFS= read -r file; do
   if frontmatter "$file" | grep -Eq '^agent: sdlc-orchestrator$'; then
@@ -234,7 +284,7 @@ actual_aliases="$(find domains -path '*/commands/*.md' -type f -print | while IF
   fi
 done | sort)"
 CHECKS=$((CHECKS + 1))
-[ "$actual_aliases" = "$expected_aliases" ] || fail domains 'SDLC alias set differs from the required 12 commands'
+[ "$actual_aliases" = "$expected_aliases" ] || fail domains 'SDLC alias set differs from the required 10 commands'
 
 for command in $expected_aliases; do
   case "$command" in

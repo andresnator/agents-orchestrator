@@ -6,4 +6,4 @@ argument-hint: "[optional subpath or focus]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Route `architecture/map` to `architect`. Write only `<docfolder>/architecture/**`; refresh existing docs in place. No code, test, build, commit, or push.
+Route `architecture/map` to `architect`. Write only `<docfolder>/architecture/**`; refresh in place. No source edits, commit, push.

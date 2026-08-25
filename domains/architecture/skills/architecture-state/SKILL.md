@@ -2,80 +2,46 @@
 name: architecture-state
 description: >
   Trigger: architecture review, project state, toolchain detection,
-  architecture style, architecture gaps, fitness functions. Detect
-  language/toolchain with evidence, identify the architecture style, and
-  produce a gap analysis with fitness-function proposals.
+  architecture style. Record verified architecture facts for downstream work.
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.1"
+  version: "2.0.0"
   status: in-progress
 ---
 
 # Architecture State
 
-## Activation Contract
+## Contract
 
-Use this skill to establish the verified current state of a project's architecture: what it is built with, how it is shaped, and where the gaps are.
+Record current architecture facts. Do not rank problems, propose changes, inspect code style; `repo-issues` owns judgments and fitness functions.
 
-Do not use it for code-level findings (naming, method size, class design) — those belong to the refactor harness.
+Every claim needs `file:line`. Manifests, build files, configs, imports, deployment descriptors beat README claims; README-only facts `aspirational`.
 
-## Hard Rules
+## Inspect
 
-- Every claim carries `file:line` evidence. Build files, manifests, and configs beat READMEs; a README-only claim is `aspirational`, never `verified`.
-- Style identification names the concrete evidence that justifies it, plus the strongest counter-evidence when the style is mixed.
-- Gaps are architecture-level: boundaries, cycles, missing guardrails, missing CI/tests wiring — not style nits.
+- Languages, declared runtime versions.
+- Build and dependency tooling, including lockfiles.
+- Frameworks, platforms from dependencies.
+- Modules, dependency edges from manifests, imports, or healthy code graph.
+- Nested manifests, `.git` entries. Multiple independent projects require per-project facts.
+- Tests, CI, existing architecture checks.
 
-## Detection Checklist
+Classify each project's dominant style as `layered`, `hexagonal/ports-adapters`, `modular monolith`, `microservices`, `event-driven`, or `big-ball-of-mud`. Name evidence, strongest counter-evidence. Multi-project targets: also classify workspace composition as `monorepo`, `aggregator`, `app-plus-tooling`; never assign one project style to whole workspace.
 
-Record, each with evidence:
-
-- Languages and runtime versions (e.g. `java.version` in `pom.xml`, `engines` in `package.json`, `requires-python`).
-- Build and dependency tooling (Maven/Gradle/npm/pnpm/pip/poetry), lockfile presence.
-- Frameworks and platforms (from dependencies, not docs).
-- Module layout: top-level modules/packages and their declared dependencies. Resolve module layout and inter-module dependency edges from imports, build-file declarations, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file reading.
-- Nested projects: manifests and build files below the root (`package.json`, `pom.xml`, `build.gradle*`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) and nested `.git` directories. More than one independent project puts the scan in multi-project mode: record languages, toolchain, and frameworks per project. Cross-project dependencies are read only from manifests, configs, and deployment descriptors — never inferred from a per-project code graph.
-- Tests and CI: test frameworks present, CI workflows present, architecture checks present or absent.
-
-## Style Identification
-
-Classify the dominant style with evidence: `layered`, `hexagonal/ports-adapters`, `modular monolith`, `microservices`, `event-driven`, or `big-ball-of-mud` (no discernible boundaries). Mixed styles are stated as such — dominant plus deviations.
-
-In multi-project mode, classify a style per project, plus one workspace-level composition with evidence: `monorepo` (one repo, multiple deployables/packages), `aggregator` (plain root holding independent repos), or `app-plus-tooling`. The singular `dominant` style always applies per project, never to the workspace as a whole.
-
-## Gap Analysis
-
-One table, ranked by impact:
-
-| Gap | Evidence | Why it matters | Proposed fitness function |
-|---|---|---|---|
-
-A gap without a viable fitness function states the manual check instead.
-
-## Fitness Function Proposals
-
-Propose automated guardrails matched to the detected toolchain — ArchUnit or Spring Modulith `verify()` (Java), dependency-cruiser (JS/TS), import-linter (Python). Propose `no cycles between modules` and `allowed dependencies only` first; they catch the most drift for the least setup. Per-ecosystem rule examples and verify commands live in `references/fitness-functions.md`.
-
-## Output Contract
-
-Return compact YAML plus the gap table:
+## Output
 
 ```yaml
 project_state:
   languages: [{name, version, evidence}]
   toolchain: [{tool, evidence}]
   frameworks: [{name, evidence}]
-  modules: [{name, path, depends_on}]
+  modules: [{name, path, depends_on, evidence}]
   style: {dominant, evidence, deviations}
-  tests_ci: {test_framework, ci, arch_checks}
-  workspace: {layout: single | monorepo | aggregator | app-plus-tooling, evidence}   # optional
-  projects: [{name, path, languages, toolchain, style}]           # optional, multi-project mode only
-gaps: [{id, gap, evidence, impact, fitness_function}]
+  tests_ci: {test_framework, ci, architecture_checks, evidence}
+  workspace: {layout, evidence} # multi-project only
+  projects: [{name, path, languages, toolchain, style}] # multi-project only
+unknowns: []
 ```
 
-## Verification
-
-- No claim without evidence; README-only claims marked `aspirational`.
-- Style has named evidence and counter-evidence when mixed.
-- Every gap has a fitness function or an explicit manual check.
-- In multi-project mode, every project has its own toolchain evidence and style; the workspace layout claim has evidence.
+No duplicate prose. Preserve uncertainty in `unknowns`; never guess missing versions, edges, styles.

@@ -15,7 +15,7 @@
     "analysis": {
       "description": "Read-heavy exploration and inspection",
       "variant": null,
-      "agents": ["sdd-explore", "arch-analyzer", "refactor-analyzer", "boundary-inspector"]
+      "agents": ["sdd-explore", "refactor-analyzer"]
     },
     "verification": {
       "description": "Independent verification",

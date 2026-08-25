@@ -1,64 +1,42 @@
 ---
 name: architecture-map
 description: >
-  Trigger: architecture map, C4 diagram, container diagram, flow map, visual
-  architecture docs, architecture drift refresh. Generate compact C4-lite
-  Mermaid architecture docs from code evidence and refresh them on re-run.
+  Trigger: architecture map, C4 diagram, container diagram, flow map,
+  architecture docs, architecture drift. Create compact evidence-backed C4-lite docs.
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.1"
+  version: "2.0.0"
   status: in-progress
 ---
 
 # Architecture Map
 
-## Activation Contract
+## Contract
 
-Use this skill when the user wants visual architecture documentation for a project: system context, containers, and key runtime flows.
+Create system context, containers, representative runtime flows from verified code evidence. No code-level design, user story mapping, or AI-harness analysis.
 
-Do not use it for code-level design review, user story mapping (`usm`), or AI-harness analysis (`absorb`).
+- Each node and edge cites manifest, config, import, entrypoint, deployment descriptor, or underlying `file:line` resolved through healthy graph. Mark anything else `hypothesis`.
+- Use GitHub-renderable Mermaid `flowchart` and `sequenceDiagram` only.
+- Maximum about 30 nodes per diagram and 120 lines per file. Split before exceeding either.
+- Write to `docs/architecture/` when `docs/` exists; create that child as needed. Otherwise use existing `doc/architecture/`, or create it when neither root exists.
 
-## Hard Rules
+## Shape
 
-- C4-lite: System Context (level 1) and Container (level 2) only. Component-level diagrams only on explicit request.
-- Every node and edge comes from code evidence: manifests, build files, configs, routes, entrypoints, deployment descriptors. Never from README claims. Unverifiable elements are marked `hypothesis`.
-- Derive containers, dependencies, and flows from imports, configs, deployment descriptors, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file search; a graph-resolved edge still cites the underlying `file:line`.
-- Budgets: at most ~30 nodes per diagram and ~120 lines per doc. Split flows into more diagrams before exceeding a budget.
-- Mermaid only (`flowchart`, `sequenceDiagram`), GitHub-renderable. No external image tooling.
-- Visual first: diagrams carry the weight; prose is one short paragraph per diagram.
+Default: one `index.md` containing system context, containers, 1-3 key flows. Use skeleton in `assets/architecture-doc-set.md`.
 
-## Doc Folder Rule
+Split only when the default exceeds a budget:
 
-Write under `<docfolder>/architecture/`, where `<docfolder>` is the project's existing `docs/`, else its existing `doc/`, else a newly created `doc/`.
+- Move context and containers to `overview.md`.
+- Move flows to `flows.md`.
+- For multiple deployables, keep workspace context in `index.md`; add `projects/<name>.md` only when one diagram cannot stay within budget.
 
-## Doc Set
+Cross-project edges need manifest, config, deployment, topic, URL, or shared-schema evidence. Per-project graph never proves them.
 
-Three files; concrete skeletons live in `assets/architecture-doc-set.md`:
+## Refresh
 
-- `index.md`: ~10 lines — what each doc answers, generation date, source commit.
-- `overview.md`: system context diagram + container diagram, each followed by a one-paragraph narrative.
-- `flows.md`: 1-3 `sequenceDiagram`s showing how a representative request or event flows end to end, chosen for onboarding value.
+Regenerate from current evidence; diff against recorded source commit; update changed files only; never remove manually owned files. Report added/removed containers, dependency changes, flow changes.
 
-## Multi-Deployable Workspaces
+## Output
 
-When the state scan reports multiple deployable projects, the level-2 diagram shows one container (or one subgraph) per deployable. When that would break the node budget, keep `overview.md` at workspace level (one node per project) and add `projects/<name>.md` pages under the same `architecture/` folder — one container diagram per project — linked from `index.md`. Cross-project edges carry only manifest/config evidence (URLs, topics, shared schemas); a per-project code graph never proves a cross-project edge.
-
-## Drift Refresh
-
-When the doc set already exists, re-running is a refresh, not a rewrite:
-
-1. Regenerate the doc set from current code evidence.
-2. Diff against the existing docs: added/removed containers, changed dependencies, changed flows.
-3. Update files in place and report a short drift summary against the recorded source commit; leave unchanged docs untouched.
-
-## Verification
-
-- Every diagram element has evidence or a `hypothesis` mark.
-- Budgets respected; Mermaid blocks are balanced and syntactically valid.
-- `index.md`, `overview.md`, and `flows.md` exist and cross-link.
-- Source commit is recorded in `index.md`.
-
-## Output Contract
-
-Return: the docfolder used, files written or updated, a drift summary (or "initial generation"), and any evidence gaps marked as hypotheses.
+Return docfolder, files written or updated, `initial generation` or drift summary, hypotheses. Verify balanced Mermaid blocks, cross-links when split, budgets, source commit.

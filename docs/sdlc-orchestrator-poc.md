@@ -1,6 +1,6 @@
 # Run the SDLC Orchestrator POC
 
-The opt-in project profile makes `sdlc-orchestrator` the single natural-language entrypoint. It owns routing and user questions; five domain coordinators own specialized work and may delegate only their phase agents.
+The opt-in project profile makes `sdlc-orchestrator` the single natural-language entrypoint. It owns routing and user questions; five domain coordinators own specialized work and delegate only when their operation needs a phase agent.
 
 ## Quick path
 
@@ -11,6 +11,8 @@ scripts/sdlc-orchestrator-poc.sh install --project-root /absolute/path/to/projec
 scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
 scripts/sdlc-orchestrator-poc.sh uninstall --project-root /absolute/path/to/project
 ```
+
+Project installs do not change Homebrew by default. Add `--install-brew-tools` to install missing formulas required by the selected profile, or `--no-install-brew-tools` to make the skip explicit. Homebrew tools are shared machine state and are never removed by profile uninstall.
 
 The profile installs `sdlc,plan,sdd,architecture,sdd-lite,common` into the project's `.opencode/` and applies:
 
@@ -38,7 +40,7 @@ Commands such as `/deep-plan`, `/wayfinder`, `/harden-plan`, `/arch-ideate`, `/j
 
 ## Topology decision
 
-The profile uses `primary -> domain coordinator -> phase agent`. This keeps question ownership and routing small while domain coordinators retain their sequencing, permissions, and model assignment. `subagent_depth: 2` is therefore load-bearing. A monolithic primary would mix every workflow; direct primary-to-worker routing would duplicate domain sequencing.
+The profile uses `primary -> domain coordinator`, with a phase agent only when independent work or verification adds value. This keeps question ownership and routing small while coordinators retain sequencing and permissions. `subagent_depth: 2` remains load-bearing for those delegated flows. A monolithic primary would mix every workflow; direct primary-to-worker routing would duplicate domain sequencing.
 
 Coordinators return compact A2A fragments rather than a shared wide schema:
 
@@ -66,7 +68,7 @@ Direct SDD writes the same shape under `.ai/orchestrator/changes/`. SDD Lite kee
 
 `.agents-orchestrator-manifest` owns installed components. `.sdlc-orchestrator-poc-manifest` owns the selected profile, prior scalar values, and whether the local config and target existed.
 
-Install preflights downloads and refuses broad, foreign, invalid, escaping, home, root, source-repository, or worktree targets. Status and uninstall fail closed on tampering. A clean uninstall restores missing config to absence, preserves comments and foreign keys, and prunes only an empty target created by the profile.
+Install preflights downloads and refuses broad, foreign, invalid, escaping, home, root, source-repository, or worktree targets. Status and uninstall fail closed on tampering. A clean uninstall restores missing config to absence, preserves comments and foreign keys, and prunes only an empty target created by the profile. Optional Homebrew installation runs after the OpenCode sync; missing Homebrew or formula failures warn without rolling back the profile.
 
 ## Verification
 

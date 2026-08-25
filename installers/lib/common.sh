@@ -29,6 +29,7 @@ TARGET_ARG=""
 DRY_RUN=0
 FORCE=0
 RELOAD=0
+BREW_TOOLS_MODE="auto"
 MANIFEST_ROOT=""
 OLD_MANIFEST=""
 DEST_PATH=""
@@ -38,6 +39,15 @@ INSTALL_NEW_MANIFEST=""
 
 warn() { printf 'warn: %s\n' "$*" >&2; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+set_brew_tools_mode() {
+  local requested="$1"
+  case "$BREW_TOOLS_MODE:$requested" in
+    auto:*) BREW_TOOLS_MODE="$requested" ;;
+    enabled:enabled|disabled:disabled) ;;
+    *) die "--install-brew-tools and --no-install-brew-tools cannot be combined" ;;
+  esac
+}
 
 csv_contains() {
   local csv value item old_ifs
@@ -622,6 +632,8 @@ harness_main() {
       --dry-run) DRY_RUN=1 ;;
       --force) FORCE=1 ;;
       --reload) RELOAD=1 ;;
+      --install-brew-tools) set_brew_tools_mode enabled ;;
+      --no-install-brew-tools) set_brew_tools_mode disabled ;;
       -h|--help) runtime_usage; exit 0 ;;
       *) die "unknown argument: $1" ;;
     esac
@@ -629,6 +641,9 @@ harness_main() {
   done
 
   validate_filters
+  if [ "$ACTION" != "install" ] && [ "$BREW_TOOLS_MODE" != "auto" ]; then
+    die "Brew tool options are valid only with install"
+  fi
 
   case "$ACTION" in
     install) install_action ;;

@@ -1,9 +1,9 @@
 ---
-description: "Review verified architecture state, gaps, and ranked issues."
+description: "Review architecture gaps, fitness functions, and optional dependency risk."
 agent: sdlc-orchestrator
 subtask: false
-argument-hint: "[optional subpath or focus]"
+argument-hint: "[optional subpath or focus: dependencies]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Route `architecture/review` to `architect`. Write only `.ai/architect/reports/**`; every claim needs evidence or `hypothesis`. No code, test, build, commit, or push.
+Route `architecture/review` to `architect`. Dependency commands need primary-mediated authorization. Write only `.ai/architect/reports/**`; evidence or `hypothesis` required. No source edits, commit, push.

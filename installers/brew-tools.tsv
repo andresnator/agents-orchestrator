@@ -1,0 +1,3 @@
+# component-type	component-name	command	formula
+skills	dependency-security-audit	govulncheck	govulncheck
+skills	dependency-security-audit	osv-scanner	osv-scanner

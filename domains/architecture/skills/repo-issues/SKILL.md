@@ -1,92 +1,35 @@
 ---
 name: repo-issues
 description: >
-  Trigger: repo issues, project problems, what is wrong with this repo,
-  architecture issue shortlist. Absorb-style evidence audit of a product
-  repository: verified vs aspirational, adversarial filter, ranked issue
-  shortlist.
+  Trigger: repo issues, project problems, architecture issue shortlist.
+  Rank verified architecture gaps and pair them with proportional guardrails.
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
-  status: in-progress
+  version: "2.1.0"
+  status: testing
 ---
 
 # Repo Issues
 
-## Activation Contract
+## Contract
 
-Use this skill to identify and rank real problems in a product repository: architectural drift, structural risks, broken or missing guardrails, operational hazards.
+Turn verified `architecture-state` snapshot into ranked architecture shortlist. Product repositories only; AI-harness analysis belongs to `absorb`, code-level findings to `/refactor-plan`.
 
-Do not use it for AI-harness analysis — that is the `absorb` skill's charter (this skill is its inverse: same discipline, product target). Do not use it for code-style review; that belongs to the refactor harness.
+Read-only. Each issue needs source/config/wiring evidence plus consequence. Documentation states intent, never proves behavior.
 
-## Required Input
+## Flow
 
-- The repo root or a subpath to audit.
-- The project-state summary when available (from `architecture-state`); otherwise establish language/toolchain evidence first.
-- Optional focus themes from the user.
+1. Confirm target, state snapshot, optional focus.
+2. Trace boundaries, dependency edges, CI wiring, operational hazards using imports, manifests, configs, or healthy graph.
+3. Contrast claimed versus observed architecture. Record at least one `Holding up` item.
+4. Reject preferences, unverified claims, disproportionate fixes, and code-level findings.
+5. Rank surviving `FIX` and `CONDITIONAL` items by impact descending, effort ascending.
+6. Give each issue smallest automated guardrail. Prefer no-cycles and allowed-dependencies checks; use manual check when automation costs more than value. Tool examples live in `references/fitness-functions.md`.
 
-## Hard Rules
+## Output
 
-- Verify every issue from source files, configs, or wiring; never promote README or comment claims as proven behavior.
-- Contrast the project's stated intent (docs, ADRs, module READMEs) against reality; a mismatch is a drift finding, with both sides cited.
-- Report problems, not preferences: an issue must have a consequence (risk, cost, blocked change), not just a style opinion.
-- Never auto-fix, commit, or edit the audited repo as part of the audit.
+| Status | Issue | Evidence | Consequence | Impact | Effort | Fitness function |
+|---|---|---|---|---|---|---|
 
-## Workflow
-
-### 1. Scope
-
-Confirm the audit target and focus themes. Resolve paths before deep analysis.
-
-### 2. Map issues with evidence
-
-Trace wiring and dependency evidence with references, imports, or a code-graph index (for example, Graphify MCP/CLI) when available, before file-by-file search.
-
-For every candidate issue, capture:
-
-| Field | What to record |
-| --- | --- |
-| Issue | Clear name |
-| Mechanism | File path and concrete evidence |
-| Status | Verified / partial / aspirational |
-| Impact | What it breaks, risks, or blocks |
-| Effort | Rough cost to address |
-
-### 3. Contrast with stated intent
-
-Check docs, ADRs, and module boundaries the project claims to have. Record drift findings (`claims X, does Y`) and also at least one **Holding Up** item — something the repo does well — to avoid a purely negative audit.
-
-### 4. Adversarial filter
-
-Challenge each surviving issue:
-
-- Is it truly verified, or inferred?
-- Is it a problem with a consequence, or a preference?
-- Is fixing it proportional to its impact?
-- Is it architecture-level, or should it route to `/refactor-plan`?
-
-Keep only `FIX` or `CONDITIONAL` items in the shortlist; route code-level items out explicitly.
-
-### 5. Deliver
-
-Write the ranked shortlist to the caller-supplied report path; when no path is supplied, return the same structure as a concise chat summary. Rank by impact descending, effort ascending.
-
-## Red Flags
-
-- The path does not exist or is not a product repo.
-- The user actually wants harness analysis (`absorb`) or code review (refactor harness).
-- Findings rest only on documentation claims.
-
-Surface these explicitly; do not fabricate findings.
-
-## Verification
-
-- Every shortlist item has file-level evidence and a stated consequence.
-- At least one Holding Up item recorded.
-- Preferences and code-level items were filtered out or rerouted.
-- No edits were made to the audited repo.
-
-## Output Contract
-
-Return: audited target, evidence table, drift findings, Holding Up items, ranked `FIX`/`CONDITIONAL` shortlist, rerouted items, and the report path when a file was written.
+List `Holding up`, rerouted code-level items, unknowns, and report path when written. Maximum seven shortlist items. No edits or speculative cleanup.

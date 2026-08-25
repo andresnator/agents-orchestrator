@@ -9,15 +9,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET=""
 MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
+BREW_TOOLS_CATALOG="$SCRIPT_DIR/brew-tools.tsv"
 INSTALL_TX_DIR=""
 INSTALL_TX_RECORDS=""
 EXTERNAL_STAGE_DIR=""
+SELECTED_BREW_TOOLS=""
 
 runtime_usage() {
   cat <<'EOF'
 Usage:
   opencode.sh <install|uninstall|status> [--domain d1,d2] [--status s1,s2]
               [--project] [--target DIR] [--dry-run] [--force] [--reload]
+              [--install-brew-tools|--no-install-brew-tools]
 
 Actions:
   install     Sync selected domain components into an OpenCode target. Repository
@@ -52,6 +55,8 @@ Filters:
 Defaults:
   --domain all
   --status all
+  Brew tools enabled for the default global target; disabled with --project
+  or --target. Explicit Brew tool options override that target-based default.
 
 Options:
   --dry-run   Print planned mkdir/link/download/rm/manifest actions without changing files.
@@ -62,6 +67,11 @@ Options:
               (comma/space-separated base URLs) or lsof discovery on localhost.
               Best-effort: never fails the install. Plugin code changes
               (including TUI plugins) still require an OpenCode restart.
+  --install-brew-tools
+              Install missing Homebrew formulas required by selected components.
+              Homebrew or formula failures warn and do not fail the OpenCode sync.
+  --no-install-brew-tools
+              Skip Homebrew formula installation, including for the global target.
   -h, --help  Show this help.
 
 Examples:
@@ -70,6 +80,12 @@ Examples:
 
   installers/opencode.sh install --project
       Install into ./.opencode for the current project.
+
+  installers/opencode.sh install --project --install-brew-tools
+      Install project components plus their missing Homebrew tools.
+
+  installers/opencode.sh install --no-install-brew-tools
+      Install globally without managing Homebrew tools.
 
   installers/opencode.sh install --domain plan --status done,testing
       Install only done/testing planning components.
@@ -427,9 +443,108 @@ preflight_external_source() {
   [ "$FORCE" -eq 1 ] || die "$dest exists and does not match the pinned external plugin artifact"
 }
 
+brew_tools_enabled() {
+  case "$BREW_TOOLS_MODE" in
+    enabled) return 0 ;;
+    disabled) return 1 ;;
+    auto) [ "$PROJECT_TARGET" -eq 0 ] && [ -z "$TARGET_ARG" ] ;;
+    *) die "invalid Brew tools mode: $BREW_TOOLS_MODE" ;;
+  esac
+}
+
+validate_brew_tool_token() {
+  local catalog_line="$1" field_name="$2" value="$3"
+  case "$value" in
+    ""|*[!A-Za-z0-9._+/@-]*)
+      die "$BREW_TOOLS_CATALOG:$catalog_line: invalid $field_name: $value"
+      ;;
+  esac
+}
+
+validate_brew_tools_catalog() {
+  local line_number=0 component_type component_name command_name formula extra conflict
+  [ -f "$BREW_TOOLS_CATALOG" ] || die "Brew tools catalog not found: $BREW_TOOLS_CATALOG"
+
+  while IFS=$'\t' read -r component_type component_name command_name formula extra; do
+    line_number=$((line_number + 1))
+    [ -n "$component_type" ] || continue
+    [ "${component_type:0:1}" != "#" ] || continue
+    [ -z "$extra" ] || die "$BREW_TOOLS_CATALOG:$line_number: expected four tab-separated fields"
+    validate_brew_tool_token "$line_number" "component type" "$component_type"
+    validate_brew_tool_token "$line_number" "component name" "$component_name"
+    validate_brew_tool_token "$line_number" "command" "$command_name"
+    validate_brew_tool_token "$line_number" "formula" "$formula"
+  done < "$BREW_TOOLS_CATALOG"
+
+  conflict="$(awk -F '\t' '
+    $0 !~ /^#/ && NF {
+      if (formula[$3] != "" && formula[$3] != $4) { print $3; exit }
+      formula[$3] = $4
+    }
+  ' "$BREW_TOOLS_CATALOG")"
+  [ -z "$conflict" ] || die "$BREW_TOOLS_CATALOG: command maps to multiple formulas: $conflict"
+}
+
+select_brew_tools() {
+  local selected="$1" component_type component_name command_name formula extra
+  SELECTED_BREW_TOOLS=""
+  brew_tools_enabled || return 0
+  validate_brew_tools_catalog
+
+  SELECTED_BREW_TOOLS="$(
+    while IFS=$'\t' read -r component_type component_name command_name formula extra; do
+      [ -n "$component_type" ] || continue
+      [ "${component_type:0:1}" != "#" ] || continue
+      if awk -F '\t' -v type="$component_type" -v name="$component_name" \
+        '$1 == type && $2 == name { found = 1; exit } END { exit found ? 0 : 1 }' "$selected"; then
+        printf '%s\t%s\n' "$command_name" "$formula"
+      fi
+    done < "$BREW_TOOLS_CATALOG" | sort -u
+  )"
+}
+
+install_selected_brew_tools() {
+  local command_name formula brew_binary missing_formulas=""
+  [ -n "$SELECTED_BREW_TOOLS" ] || return 0
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    while IFS=$'\t' read -r command_name formula; do
+      command -v "$command_name" >/dev/null 2>&1 || printf 'brew install %s\n' "$formula"
+    done <<EOF
+$SELECTED_BREW_TOOLS
+EOF
+    return 0
+  fi
+
+  brew_binary="$(command -v brew || true)"
+  if [ -z "$brew_binary" ]; then
+    while IFS=$'\t' read -r command_name formula; do
+      command -v "$command_name" >/dev/null 2>&1 && continue
+      missing_formulas="${missing_formulas}${missing_formulas:+, }$formula"
+    done <<EOF
+$SELECTED_BREW_TOOLS
+EOF
+    [ -z "$missing_formulas" ] || warn "Homebrew not found; skipped required formulas: $missing_formulas"
+    return 0
+  fi
+
+  while IFS=$'\t' read -r command_name formula; do
+    command -v "$command_name" >/dev/null 2>&1 && continue
+    if "$brew_binary" install "$formula"; then
+      command -v "$command_name" >/dev/null 2>&1 ||
+        warn "$formula installed but $command_name is not available on PATH"
+    else
+      warn "brew install $formula failed; $command_name remains unavailable"
+    fi
+  done <<EOF
+$SELECTED_BREW_TOOLS
+EOF
+}
+
 runtime_pre_install() {
   local selected="$1" type name domain status src dest companion support profile profile_source profiles_dest
   local has_external=0 has_tui=0
+  select_brew_tools "$selected"
   awk -F '\t' '$1 == "external-server-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_external=1
   awk -F '\t' '$1 == "tui-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_tui=1
 
@@ -843,6 +958,7 @@ runtime_install_global() {
 }
 
 runtime_post_install() {
+  install_selected_brew_tools
   [ "$RELOAD" -eq 1 ] || return 0
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'reload: skipped (dry run)\n'

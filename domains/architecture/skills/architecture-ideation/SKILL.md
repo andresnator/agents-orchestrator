@@ -6,21 +6,21 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.0.1"
   status: in-progress
 ---
 
 ## Contract
 
-Ideate architecture-level change from verified current state. Class/method refactors go to `/refactor-plan`. Planning may write only the ADR and `change.md`; never edit code, tests, build files, commit, or push.
+Design architecture-level change from verified state. Class/method refactors go to `/refactor-plan`. Write only ADR and `change.md`; never edit source, commit, push.
 
 ## Flow
 
-1. Establish current architecture with evidence.
-2. Use domain boundaries, not folder layout, to shape modules.
-3. Present 2-3 candidates with forces, trade-offs, migration cost, and first reversible step. Recommend one; microservices must justify their operational cost.
-4. Converge on target, boundaries, and incremental migration. Never propose a big-bang migration.
-5. Write the decision and rejected candidates as an ADR.
-6. Load `sdd-execution-skills`, then write one `Status: ready-for-sdd | Source: architect` `change.md` using `sdd-draft-change`. Every Work group records the selected names; group 1 establishes fitness-function guardrails and later work keeps the build green.
+1. Establish evidenced current architecture.
+2. Shape modules from domain boundaries, not folders.
+3. Compare 2-3 candidates by forces, trade-offs, migration cost, first reversible step. Recommend one; microservices must justify operational cost.
+4. Converge on boundaries, incremental migration; no big bang.
+5. Record decision and rejected candidates in one ADR.
+6. Load `sdd-execution-skills`; use `sdd-draft-change` for one `Status: ready-for-sdd | Source: architect` `change.md`. Record selected names per Work group. Group 1 creates fitness-function guardrails; later groups keep build green.
 
-Every pattern must solve an evidenced force and pass pragmatic/KISS gates. Every work item ties to an ADR decision or architecture gap and names real files. Return the chosen architecture, ADR path, `change.md` path, first reversible step, and `ejecuta el plan <change>`.
+Patterns need evidenced forces plus pragmatic/KISS gates. Each work item maps to ADR decision or architecture gap and names real files. Return chosen architecture, ADR path, `change.md` path, first reversible step, `ejecuta el plan <change>`.

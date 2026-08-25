@@ -19,6 +19,7 @@ TARGET=""
 CONFIG_FILE=""
 INSTALLER_MANIFEST=""
 PROFILE_MANIFEST=""
+BREW_TOOLS_OPTION=""
 
 JSON_STATE=""
 JSON_VALUE=""
@@ -29,9 +30,11 @@ TMP_THREE=""
 usage() {
   cat <<'EOF'
 usage: scripts/sdlc-orchestrator-poc.sh install|status|uninstall --project-root <dir>
+       [--install-brew-tools|--no-install-brew-tools]
 
 Installs or removes the opt-in SDLC orchestrator profile only in
 <dir>/.opencode. Global OpenCode configuration is never a target.
+Project installs skip Homebrew tools unless --install-brew-tools is set.
 EOF
 }
 
@@ -385,6 +388,7 @@ write_profile_manifest() {
 
 run_install() {
   local default_state default_json depth_state depth_json config_existed=0 target_existed=0
+  local installer_args=(install --domain "$PROFILE_DOMAINS" --target "$TARGET")
   if [ -f "$PROFILE_MANIFEST" ]; then
     validate_profile_manifest
     validate_managed_config
@@ -407,7 +411,8 @@ run_install() {
   fi
 
   render_managed_config
-  "$INSTALLER" install --domain "$PROFILE_DOMAINS" --target "$TARGET"
+  [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
+  "$INSTALLER" "${installer_args[@]}"
   validate_installer_contents
   mkdir -p "$TARGET"
   mv "$TMP_TWO" "$CONFIG_FILE"
@@ -470,11 +475,25 @@ main() {
         PROJECT_ROOT_ARG="$2"
         shift
         ;;
+      --install-brew-tools)
+        [ "$BREW_TOOLS_OPTION" != "--no-install-brew-tools" ] ||
+          die "--install-brew-tools and --no-install-brew-tools cannot be combined"
+        BREW_TOOLS_OPTION="$1"
+        ;;
+      --no-install-brew-tools)
+        [ "$BREW_TOOLS_OPTION" != "--install-brew-tools" ] ||
+          die "--install-brew-tools and --no-install-brew-tools cannot be combined"
+        BREW_TOOLS_OPTION="$1"
+        ;;
       -h|--help) usage; exit 0 ;;
       *) die "unknown argument: $1" ;;
     esac
     shift
   done
+
+  if [ "$ACTION" != "install" ] && [ -n "$BREW_TOOLS_OPTION" ]; then
+    die "Brew tool options are valid only with install"
+  fi
 
   command -v python3 >/dev/null 2>&1 || die "python3 is required"
   command -v jq >/dev/null 2>&1 || die "jq is required"

@@ -16,7 +16,7 @@ Project config overrides global config. Re-run the installer after a repository 
 |---|---|---|
 | Orchestration | `sdlc-orchestrator`, `deep-planner`, `architect`, `orchestraitor`, `orchestralite`, `review-coordinator` | Strongest reasoning; suggested `high` variant |
 | Implementation | `sdd-implement`, `jd-fix` | Strong code-writing model |
-| Analysis | `sdd-explore`, `arch-analyzer`, `refactor-analyzer`, `boundary-inspector` | Fast, economical read-heavy model |
+| Analysis | `sdd-explore`, `refactor-analyzer` | Fast, economical read-heavy model |
 | Verification | `sdd-verify`, `lite-verify` | Strong independent model; suggested `high` variant |
 | Judge A | `jd-judge-a` | Strong model/provider A; suggested `high` |
 | Judge B | `jd-judge-b` | Strong model/provider B, distinct from A; suggested `high` |

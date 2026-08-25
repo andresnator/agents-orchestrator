@@ -120,7 +120,7 @@ shouldInstallStatusAndRestoreExistingJsonc() {
 }
 EOF
 
-  run_profile install --project-root "$project" >/dev/null
+  run_profile install --project-root "$project" --no-install-brew-tools >/dev/null
   [ "$(scalar "$config" default_agent)" = '"sdlc-orchestrator"' ] || fail "install: wrong default_agent"
   [ "$(scalar "$config" subagent_depth)" = 2 ] || fail "install: wrong subagent_depth"
   grep -Fq '// keep profile owner context' "$config" || fail "install: top comment lost"
@@ -387,7 +387,7 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   [ ! -e "$project/.opencode/agents/mentor.md" ] || fail "selection: learning domain leaked"
   [ ! -e "$project/.opencode/commands/absorb.md" ] || fail "selection: meta domain leaked"
   aliases="$(find "$project/.opencode/commands" -maxdepth 1 -type l -exec grep -l '^agent: sdlc-orchestrator$' {} + | wc -l | tr -d ' ')"
-  [ "$aliases" -eq 12 ] || fail "selection: expected 12 aliases, found $aliases"
+  [ "$aliases" -eq 10 ] || fail "selection: expected 10 aliases, found $aliases"
   run_profile uninstall --project-root "$project" >/dev/null
 
   expect_failure 'refusing to install the POC into this repository' run_profile status --project-root "$ROOT"

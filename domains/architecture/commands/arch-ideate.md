@@ -6,4 +6,4 @@ argument-hint: "[architecture concern or target]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Route `architecture/ideate` to `architect`. Plan only: write one ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/changes/<change>/change.md`; never edit code, tests, build files, commit, or push.
+Route `architecture/ideate` to `architect`. Plan only: one ADR under `<docfolder>/architecture/adr/`, one ready `.ai/architect/changes/<change>/change.md`. No source edits, commit, push.

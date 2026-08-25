@@ -6,7 +6,7 @@ Product documentation, Jira tickets, summaries, slide decks, and transcription-o
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/decide` | Converges a decision interview into an ADR |
+| Command | `/adr` | Creates an ADR from a technical decision interview |
 | Command | `/doc` | Routes documentation work to the right skill |
 | Command | `/prd` | Selects the appropriate PRD workflow |
 | Skill | `adr` | Document decisions and architectural trade-offs |

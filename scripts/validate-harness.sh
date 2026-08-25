@@ -298,6 +298,11 @@ if [ -x scripts/test-external-plugin-install.sh ] && command -v python3 >/dev/nu
     fail scripts/test-external-plugin-install.sh "external plugin installer contracts failed"
 fi
 
+if [ -f scripts/test-opencode-brew-tools.sh ]; then
+  bash scripts/test-opencode-brew-tools.sh >/dev/null ||
+    fail scripts/test-opencode-brew-tools.sh "Brew tool installer contracts failed"
+fi
+
 # --- Deterministic sdd-automode contracts (jq-gated) ---
 if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
   scripts/test-sdd-automode.sh >/dev/null ||

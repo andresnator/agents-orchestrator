@@ -10,6 +10,8 @@ Install every component globally:
 installers/opencode.sh install
 ```
 
+Global installs also attempt to install missing Homebrew tools required by the selected components. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip Homebrew by default and accept `--install-brew-tools` as an opt-in.
+
 Or install the SDLC POC into one project only:
 
 ```bash
@@ -25,7 +27,7 @@ The project profile selects `sdlc,plan,sdd,architecture,sdd-lite,common`, sets `
 |---|---|---|
 | [sdlc](domains/sdlc/README.md) | Natural-language routing and user-question ownership | `sdlc-orchestrator` |
 | [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `/deep-plan`, `/refactor-plan` plus compatibility aliases |
-| [architecture](domains/architecture/README.md) | Maps, reviews, PRDs, audits, boundaries, and ideation | `/arch-*`, `/boundary-inspector` |
+| [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
 | [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/judgment` |
 | [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite` |
 | [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
@@ -53,6 +55,7 @@ Filtered installation is a sync: include every domain and lifecycle status you w
 ```bash
 installers/opencode.sh install --domain plan --status done,testing
 installers/opencode.sh install --project
+installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status --domain sdd
 ```
 

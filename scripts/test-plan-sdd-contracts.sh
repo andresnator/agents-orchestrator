@@ -247,7 +247,7 @@ assert_frontmatter_contains domains/architecture/agents/architect.md 'sdd-execut
 assert_frontmatter_not_contains domains/architecture/agents/architect.md 'code-conventions: allow'
 assert_contains domains/architecture/agents/architect.md 'Every Work group records the routing result'
 assert_contains domains/architecture/agents/architect.md 'never load or read implementation skill bodies'
-assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.0"'
+assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.1"'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains domains/architecture/skills/architecture-ideation/SKILL.md 'Load `sdd-execution-skills`'
 assert_frontmatter_contains domains/common/skills/grill/SKILL.md 'version: "4.0.0"'

@@ -6,4 +6,4 @@ argument-hint: "[target path, service, module, or scope]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Route `architecture/boundary` to `architect`. Inspect one exact target without source edits, shell, execution, web, commit, or push; write only its report under `.ai/architect/reports/`. Missing target returns one blocking question.
+Route `architecture/boundary` to `architect`. Inspect one exact target statically; write only its report under `.ai/architect/reports/`. No source edits, shell, web, commit, push. Missing target returns one blocking question.
