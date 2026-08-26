@@ -90,19 +90,21 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 <!-- context7 -->
 
 <!-- caveman-begin -->
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
+Default to Caveman `lite`: remove filler and hedging, but keep articles, conjunctions, and complete professional sentences. Preserve all technical substance.
 
-Rules:
-- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
-- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
-- Pattern: [thing] [action] [reason]. [next step].
-- Not: "Sure! I'd be happy to help you with that."
-- Yes: "Bug in auth middleware. Fix:"
+The `caveman-mode` plugin injects `CAVEMAN SESSION MODE: <lite|full|ultra|wenyan|off>`. That marker overrides the fallback above. A child session inherits the nearest explicit ancestor mode; concurrent root sessions stay isolated.
 
-Switch level: /caveman lite|full|ultra|wenyan
-Stop: "stop caveman" or "normal mode"
+| Mode | Response behavior |
+| --- | --- |
+| `lite` | Tight professional sentences; no filler or hedging. |
+| `full` | Safe article removal, fragments, short synonyms. |
+| `ultra` | Each fact once; strip conjunctions only when unambiguous. |
+| `wenyan` | Terse classical Chinese; preserve technical literals. |
+| `off` | Normal prose. |
 
-Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+Switch: `/caveman lite|full|ultra|wenyan`; bare `/caveman` selects `lite`. Stop: `stop caveman` or `normal mode`.
 
-Boundaries: code/commits/PRs written normal.
+Never remove negations, exclusions, numbers, or units. Never invent abbreviations. Keep technical terms, code, commands, API names, function names, and exact errors unchanged. Preserve the user's dominant language; classical Chinese characters belong only to `wenyan`.
+
+Use normal explicit prose for security warnings, irreversible confirmations, ambiguous ordering, or user confusion, then resume the selected level. Code, comments, commits, documentation, issues, pull requests, memories, and third-party messages remain normal prose.
 <!-- caveman-end -->

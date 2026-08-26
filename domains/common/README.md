@@ -5,13 +5,14 @@ Shared engineering, quality, question, and output skills used across domains. It
 ## Quick path
 
 1. Include `common` with every domain that uses its shared skills.
-2. Start with `/defend`, `/graphify-index`, or `/grill`.
+2. Start with `/caveman`, `/defend`, `/graphify-index`, or `/grill`.
 3. Review the routed result or generated Graphify state.
 
 ## Entry points
 
 | Entry | Use | Result |
 |---|---|---|
+| `/caveman` | Select response compression | Inherited session-tree level |
 | `/defend` | Challenge a decision | Socratic defense and verdict |
 | `/graphify-index` | Approve first indexing | Recorded mode and repository graph |
 | `/grill` | Stress-test an idea or artifact | Focused questions and revised outcome |
@@ -22,9 +23,11 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 
 | Type | Name | Purpose |
 |---|---|---|
+| Command | `/caveman` | Selects inherited response compression |
 | Command | `/defend` | Reviews decisions through Socratic defense |
 | Command | `/graphify-index` | Indexes Graphify after explicit consent |
 | Command | `/grill` | Routes focused interview modes |
+| Skill | `caveman` | Preserves meaning during response compression |
 | Skill | `chained-pr` | Splits oversized work into reviewable slices |
 | Skill | `code-conventions` | Applies code and test conventions |
 | Skill | `cognitive-output-refiner` | Condenses output without losing meaning |
@@ -55,4 +58,5 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 | Skill | `systematic-debugging` | Finds root causes before fixes |
 | Skill | `tcr` | Runs test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plans reviewable and cohesive commits |
+| Plugin | `caveman-mode` | Propagates mode through session trees |
 | External server plugin | `graphify-init` | Refreshes previously approved Graphify indexes |
