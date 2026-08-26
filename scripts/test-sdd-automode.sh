@@ -102,7 +102,7 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
   done < <(target_names)
 
   # Read-only agents keep their frontmatter denies.
-  for name in jd-judge-a jd-judge-b jd-solo sdd-explore sdd-verify; do
+  for name in sdd-explore sdd-verify; do
     assert_json_value "$config" ".agent[\"$name\"].permission.edit" deny \
       "on: $name lost its edit deny"
     assert_json_value "$config" ".agent[\"$name\"].permission.write" deny \
@@ -113,11 +113,12 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     assert_json_value "$config" ".agent | has(\"$name\")" false \
       "on: removed agent $name was written"
   done
-  # SDD agents never ask; the sdlc-orchestrator owns user questions outside
-  # this domain-specific toggle.
-  for name in orchestraitor sdd-explore sdd-implement sdd-verify jd-fix jd-solo; do
+  # The SDD primary asks directly; workers remain unable to ask.
+  assert_json_value "$config" '.agent.orchestraitor.permission.question' allow \
+    "on: orchestraitor lost its direct-question permission"
+  for name in sdd-explore sdd-implement sdd-verify sdd-canonical-merge; do
     assert_json_value "$config" ".agent[\"$name\"].permission.question" deny \
-      "on: $name lost its question deny"
+      "on: $name lost its worker question deny"
   done
   # The nested task allowlist is copied verbatim over the flat allow.
   assert_json_value "$config" '.agent.orchestraitor.permission.task | type' object \

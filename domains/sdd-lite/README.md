@@ -4,7 +4,7 @@ A bounded implementation flow in one coordinator context. `orchestralite` drafts
 
 ## Quick path
 
-1. Request an obviously bounded, low-risk change through `sdlc-orchestrator`.
+1. Select `orchestralite` or run `/sdd-lite`.
 2. Confirm the retained draft when interactive.
 3. Review implementation evidence and the archived `change.md`.
 
@@ -12,7 +12,7 @@ A bounded implementation flow in one coordinator context. `orchestralite` drafts
 
 | Entry | Use | Result |
 |---|---|---|
-| Natural-language request | Route a Lite-safe change | `.ai/sdd-lite/changes/<change>/change.md` |
+| `/sdd-lite <request>` | Run a Lite-safe change | `.ai/sdd-lite/changes/<change>/change.md` |
 | Existing Lite state | Resume the exact change | Continued implementation or verification |
 
 Lite is intended for roughly five files or fewer, low risk, and no sprawling capability. Scope growth redirects to full SDD before more implementation.
@@ -30,8 +30,9 @@ State stays under `.ai/sdd-lite/`, never `.ai/orchestrator/`. Missing changes, u
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (subagent coordinator) | `orchestralite` | Coordinates bounded implementation and archive |
+| Agent (primary) | `orchestralite` | Coordinates bounded implementation and archive |
 | Agent (subagent) | `lite-verify` | Cold-checks the bounded implementation |
+| Command | `/sdd-lite` | Starts bounded implementation directly |
 | Skill | `behavior-characterization` | Captures current bounded behavior |
 | Skill | `code-conventions` | Applies code and test conventions |
 | Skill | `cognitive-doc-design` | Keeps human-facing documentation clear |

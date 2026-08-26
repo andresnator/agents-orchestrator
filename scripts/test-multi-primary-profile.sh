@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Deterministic contracts for the project-local SDLC orchestrator POC profile.
+# Deterministic contracts for the project-local multi-primary profile.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PROFILE="$ROOT/scripts/sdlc-orchestrator-poc.sh"
+PROFILE="$ROOT/scripts/multi-primary-profile.sh"
 JSONC_EDITOR="$ROOT/scripts/jsonc-array.py"
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/sdlc-orchestrator-poc-test.XXXXXX")"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-profile-test.XXXXXX")"
 ARTIFACTS="$SCRATCH/artifacts"
 STUBS="$SCRATCH/stubs"
 PASSES=0
@@ -20,7 +20,7 @@ mkdir -p "$ARTIFACTS" "$STUBS"
 printf 'deterministic graphify fixture\n' > "$ARTIFACTS/graphify-init.js"
 cat > "$STUBS/opencode" <<'EOF'
 #!/usr/bin/env bash
-if [ "${1:-}" = "--version" ]; then printf '1.18.10\n'; else exit 1; fi
+if [ "${1:-}" = "--version" ]; then printf '1.18.20\n'; else exit 1; fi
 EOF
 chmod +x "$STUBS/opencode"
 
@@ -62,7 +62,7 @@ simulate_previous_component_inventory() {
   local project="$1" target installer_manifest profile_manifest manifest_sha
   target="$(cd "$project" && pwd -P)/.opencode"
   installer_manifest="$target/.agents-orchestrator-manifest"
-  profile_manifest="$target/.sdlc-orchestrator-poc-manifest"
+  profile_manifest="$target/.multi-primary-profile-manifest"
 
   rm "$target/skills/evidence-first-planning"
   awk -F '\t' -v path="$target/skills/evidence-first-planning" \
@@ -121,13 +121,15 @@ shouldInstallStatusAndRestoreExistingJsonc() {
 EOF
 
   run_profile install --project-root "$project" --no-install-brew-tools >/dev/null
-  [ "$(scalar "$config" default_agent)" = '"sdlc-orchestrator"' ] || fail "install: wrong default_agent"
-  [ "$(scalar "$config" subagent_depth)" = 2 ] || fail "install: wrong subagent_depth"
+  [ "$(scalar "$config" default_agent)" = '"mentor"' ] || fail "install: default_agent changed"
+  [ "$(scalar "$config" subagent_depth)" = 1 ] || fail "install: wrong subagent_depth"
   grep -Fq '// keep profile owner context' "$config" || fail "install: top comment lost"
   grep -Fq '// restore this value' "$config" || fail "install: inline comment lost"
   grep -Fq '"foreign": {"keep": true}' "$config" || fail "install: foreign key lost"
-  run_profile status --project-root "$project" | grep -Fq 'repo-owned primaries: 1' ||
+  run_profile status --project-root "$project" | grep -Fq 'repo-owned primaries: 5' ||
     fail "status: primary invariant missing"
+  run_profile status --project-root "$project" | grep -Fq 'question owners: 5' ||
+    fail "status: question-owner invariant missing"
 
   before_manifest="$(shasum -a 256 "$project/.opencode/.agents-orchestrator-manifest" | awk '{print $1}')"
   before_config="$(shasum -a 256 "$config" | awk '{print $1}')"
@@ -144,7 +146,7 @@ EOF
   grep -Fq '// restore this value' "$config" || fail "uninstall: inline comment lost"
   grep -Fq '"foreign": {"keep": true}' "$config" || fail "uninstall: foreign key lost"
   [ ! -e "$project/.opencode/.agents-orchestrator-manifest" ] || fail "uninstall: installer manifest remains"
-  [ ! -e "$project/.opencode/.sdlc-orchestrator-poc-manifest" ] || fail "uninstall: profile manifest remains"
+  [ ! -e "$project/.opencode/.multi-primary-profile-manifest" ] || fail "uninstall: profile manifest remains"
   pass shouldInstallStatusAndRestoreExistingJsonc
 }
 
@@ -185,7 +187,7 @@ shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent() {
   # When the profile is installed and uninstalled
   # Then both generated paths return to absence
   run_profile install --project-root "$project" >/dev/null
-  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  manifest="$project/.opencode/.multi-primary-profile-manifest"
   grep -Fq $'config-existed\t0' "$manifest" || fail "generated config: prior absence was not recorded"
   grep -Fq $'target-existed\t0' "$manifest" || fail "generated target: prior absence was not recorded"
   run_profile uninstall --project-root "$project" >/dev/null
@@ -203,7 +205,7 @@ shouldPreservePreexistingTargetWithoutConfig() {
   # When the profile is installed and uninstalled
   # Then the target remains while the generated config is removed
   run_profile install --project-root "$project" >/dev/null
-  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  manifest="$project/.opencode/.multi-primary-profile-manifest"
   grep -Fq $'config-existed\t0' "$manifest" || fail "existing target: prior config absence was not recorded"
   grep -Fq $'target-existed\t1' "$manifest" || fail "existing target: prior target presence was not recorded"
   run_profile uninstall --project-root "$project" >/dev/null
@@ -261,7 +263,7 @@ shouldAcceptLegacyManifestWithoutTargetOwnership() {
   # When status and uninstall read that manifest
   # Then they accept it and conservatively retain the target directory
   run_profile install --project-root "$project" >/dev/null
-  manifest="$project/.opencode/.sdlc-orchestrator-poc-manifest"
+  manifest="$project/.opencode/.multi-primary-profile-manifest"
   rewritten="$project/legacy-profile-manifest"
   awk -F '\t' '$1 != "target-existed"' "$manifest" > "$rewritten"
   mv "$rewritten" "$manifest"
@@ -277,11 +279,11 @@ shouldAbortUninstallWhenManagedConfigChanges() {
   project="$(make_project tampered-config)"
   run_profile install --project-root "$project" >/dev/null
   config="$project/.opencode/opencode.jsonc"
-  set_scalar "$config" default_agent '"foreign-primary"'
-  expect_failure 'managed default_agent changed' run_profile uninstall --project-root "$project"
-  [ -L "$project/.opencode/agents/sdlc-orchestrator.md" ] || fail "tamper: components were removed"
+  set_scalar "$config" subagent_depth '2'
+  expect_failure 'managed subagent_depth changed' run_profile uninstall --project-root "$project"
+  [ -L "$project/.opencode/agents/deep-planner.md" ] || fail "tamper: components were removed"
   [ -f "$project/.opencode/.agents-orchestrator-manifest" ] || fail "tamper: installer manifest was removed"
-  set_scalar "$config" default_agent '"sdlc-orchestrator"'
+  set_scalar "$config" subagent_depth '1'
   run_profile uninstall --project-root "$project" >/dev/null
   pass shouldAbortUninstallWhenManagedConfigChanges
 }
@@ -292,7 +294,7 @@ shouldRejectForeignAndBroadManifests() {
   mkdir -p "$foreign/.opencode"
   printf 'link\t%s\n' "$HOME/.config/opencode/agents/foreign.md" > "$foreign/.opencode/.agents-orchestrator-manifest"
   expect_failure 'foreign installer manifest already exists' run_profile install --project-root "$foreign"
-  [ ! -e "$foreign/.opencode/agents/sdlc-orchestrator.md" ] || fail "foreign manifest: profile mutated target"
+  [ ! -e "$foreign/.opencode/agents/deep-planner.md" ] || fail "foreign manifest: profile mutated target"
 
   broad="$(make_project broad-manifest)"
   run_profile install --project-root "$broad" >/dev/null
@@ -302,7 +304,7 @@ shouldRejectForeignAndBroadManifests() {
   printf 'link\t%s\n' "$broad/.opencode/agents/broad.md" >> "$manifest"
   expect_failure 'installer manifest changed or became broad/foreign' run_profile status --project-root "$broad"
   expect_failure 'installer manifest changed or became broad/foreign' run_profile uninstall --project-root "$broad"
-  [ -L "$broad/.opencode/agents/sdlc-orchestrator.md" ] || fail "broad manifest: failed uninstall mutated target"
+  [ -L "$broad/.opencode/agents/deep-planner.md" ] || fail "broad manifest: failed uninstall mutated target"
   cp "$backup" "$manifest"
   run_profile uninstall --project-root "$broad" >/dev/null
   pass shouldRejectForeignAndBroadManifests
@@ -312,7 +314,7 @@ shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall() {
   local foreign invalid
   foreign="$(make_project foreign-destination)"
   mkdir -p "$foreign/.opencode/agents"
-  printf 'foreign\n' > "$foreign/.opencode/agents/sdlc-orchestrator.md"
+  printf 'foreign\n' > "$foreign/.opencode/agents/deep-planner.md"
   expect_failure 'foreign profile destination exists' run_profile install --project-root "$foreign"
   [ ! -e "$foreign/.opencode/.agents-orchestrator-manifest" ] || fail "foreign destination: manifest created"
 
@@ -337,7 +339,7 @@ shouldRejectSymlinkedProjectTargetBeforeMutation() {
   done
   grep -Fq 'keep me' "$external/foreign.txt" || fail "symlinked target: foreign content changed"
   [ ! -e "$external/.agents-orchestrator-manifest" ] || fail "symlinked target: installer manifest escaped project"
-  [ ! -e "$external/.sdlc-orchestrator-poc-manifest" ] || fail "symlinked target: profile manifest escaped project"
+  [ ! -e "$external/.multi-primary-profile-manifest" ] || fail "symlinked target: profile manifest escaped project"
   [ ! -e "$external/opencode.jsonc" ] || fail "symlinked target: config escaped project"
   pass shouldRejectSymlinkedProjectTargetBeforeMutation
 }
@@ -362,7 +364,7 @@ shouldRejectSymlinkedManagedDirectoriesBeforeMutation() {
       fail "symlinked $directory: managed content escaped project"
     [ ! -e "$project/.opencode/.agents-orchestrator-manifest" ] ||
       fail "symlinked $directory: installer manifest created"
-    [ ! -e "$project/.opencode/.sdlc-orchestrator-poc-manifest" ] ||
+    [ ! -e "$project/.opencode/.multi-primary-profile-manifest" ] ||
       fail "symlinked $directory: profile manifest created"
   done
 
@@ -370,11 +372,12 @@ shouldRejectSymlinkedManagedDirectoriesBeforeMutation() {
 }
 
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
-  local project aliases
+  local project direct_commands primary
   project="$(make_project selected-domains)"
   run_profile install --project-root "$project" >/dev/null
-  [ -L "$project/.opencode/agents/sdlc-orchestrator.md" ] || fail "selection: SDLC primary missing"
-  [ -L "$project/.opencode/agents/architect.md" ] || fail "selection: architecture coordinator missing"
+  for primary in deep-planner architect orchestraitor orchestralite review-coordinator; do
+    [ -L "$project/.opencode/agents/$primary.md" ] || fail "selection: primary $primary missing"
+  done
   [ -L "$project/.opencode/skills/sdd-draft-change" ] || fail "selection: one-document SDD skill missing"
   [ -L "$project/.opencode/skills/evidence-first-planning" ] || fail "selection: evidence-first planning skill missing"
   local removed
@@ -386,12 +389,15 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   done
   [ ! -e "$project/.opencode/agents/mentor.md" ] || fail "selection: learning domain leaked"
   [ ! -e "$project/.opencode/commands/absorb.md" ] || fail "selection: meta domain leaked"
-  aliases="$(find "$project/.opencode/commands" -maxdepth 1 -type l -exec grep -l '^agent: sdlc-orchestrator$' {} + | wc -l | tr -d ' ')"
-  [ "$aliases" -eq 10 ] || fail "selection: expected 10 aliases, found $aliases"
+  direct_commands="$(find "$project/.opencode/commands" -maxdepth 1 -type l -exec grep -El '^agent: (deep-planner|architect|orchestraitor|orchestralite|review-coordinator)$' {} + | wc -l | tr -d ' ')"
+  [ "$direct_commands" -eq 12 ] || fail "selection: expected 12 direct commands, found $direct_commands"
   run_profile uninstall --project-root "$project" >/dev/null
 
-  expect_failure 'refusing to install the POC into this repository' run_profile status --project-root "$ROOT"
-  [ ! -e "$ROOT/.opencode" ] || fail "source rejection: source worktree was modified"
+  expect_failure 'refusing to install the profile into this repository' run_profile status --project-root "$ROOT"
+  [ ! -e "$ROOT/.opencode/.agents-orchestrator-manifest" ] ||
+    fail "source rejection: installer manifest was created"
+  [ ! -e "$ROOT/.opencode/.multi-primary-profile-manifest" ] ||
+    fail "source rejection: profile manifest was created"
   pass shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 }
 
@@ -435,7 +441,7 @@ shouldSyncAndUninstallWhenComponentInventoryChanges() {
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
   local domain project target skill
 
-  for domain in plan sdd sdd-lite; do
+  for domain in plan architecture sdd sdd-lite review; do
     project="$(make_project "filtered-$domain")"
     target="$project/.opencode"
 
@@ -473,4 +479,4 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 shouldSyncAndUninstallWhenComponentInventoryChanges
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain
 
-printf 'PASS: %d SDLC orchestrator profile contracts OK.\n' "$PASSES"
+printf 'PASS: %d multi-primary profile contracts OK.\n' "$PASSES"

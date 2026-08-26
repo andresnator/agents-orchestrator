@@ -5,14 +5,13 @@ Shared engineering, quality, question, and output skills used across domains. It
 ## Quick path
 
 1. Include `common` with every domain that uses its shared skills.
-2. Start with `/defend`, `/graphify-index`, or `/grill`.
+2. Start with `/graphify-index` or `/grill`.
 3. Review the routed result or generated Graphify state.
 
 ## Entry points
 
 | Entry | Use | Result |
 |---|---|---|
-| `/defend` | Challenge a decision | Socratic defense and verdict |
 | `/graphify-index` | Approve first indexing | Recorded mode and repository graph |
 | `/grill` | Stress-test an idea or artifact | Focused questions and revised outcome |
 
@@ -22,7 +21,6 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/defend` | Reviews decisions through Socratic defense |
 | Command | `/graphify-index` | Indexes Graphify after explicit consent |
 | Command | `/grill` | Routes focused interview modes |
 | Skill | `chained-pr` | Splits oversized work into reviewable slices |

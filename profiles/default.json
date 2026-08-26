@@ -1,11 +1,11 @@
 {
   "name": "default",
-  "description": "Balanced tiering for SDLC and utility agents",
+  "description": "Balanced tiering for direct primary and utility agents",
   "tiers": {
     "orchestration": {
-      "description": "Primary and domain coordinators; strongest model",
+      "description": "Direct primary coordinators; strongest model",
       "variant": "high",
-      "agents": ["sdlc-orchestrator", "deep-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
+      "agents": ["deep-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
     },
     "implementation": {
       "description": "Code-writing agents",

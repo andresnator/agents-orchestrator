@@ -446,15 +446,15 @@ if [ -f scripts/test-plan-sdd-contracts.sh ]; then
     fail scripts/test-plan-sdd-contracts.sh "plan/SDD contracts failed"
 fi
 
-# --- SDLC primary/coordinator contracts ---
-if [ -f scripts/test-sdlc-orchestrator-contracts.sh ]; then
-  bash scripts/test-sdlc-orchestrator-contracts.sh >/dev/null ||
-    fail scripts/test-sdlc-orchestrator-contracts.sh "SDLC orchestrator contracts failed"
+# --- Direct primary/coordinator contracts ---
+if [ -f scripts/test-primary-agent-contracts.sh ]; then
+  bash scripts/test-primary-agent-contracts.sh >/dev/null ||
+    fail scripts/test-primary-agent-contracts.sh "direct-primary contracts failed"
 fi
 
-if [ -f scripts/test-sdlc-orchestrator-poc.sh ]; then
-  bash scripts/test-sdlc-orchestrator-poc.sh >/dev/null ||
-    fail scripts/test-sdlc-orchestrator-poc.sh "SDLC orchestrator profile contracts failed"
+if [ -f scripts/test-multi-primary-profile.sh ]; then
+  bash scripts/test-multi-primary-profile.sh >/dev/null ||
+    fail scripts/test-multi-primary-profile.sh "multi-primary profile contracts failed"
 fi
 
 # --- Installer idempotency (python3/jq/opencode-gated) ---

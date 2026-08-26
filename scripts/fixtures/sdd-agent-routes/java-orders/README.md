@@ -2,8 +2,8 @@
 
 The throwaway project copied by both real-model runners: the component-level
 `scripts/test-sdd-flows.sh` and the profile-level
-`scripts/test-sdlc-orchestrator-e2e.sh`. The latter enters through the project-default
-`sdlc-orchestrator`, while the former can drive a coordinator directly for focused
+`scripts/test-multi-primary-e2e.sh`. The latter selects each direct primary explicitly,
+while the former can drive one coordinator directly for focused
 scenarios. Executable scenario ids refer to `docs/sdd-test-plan.md`; hypothetical Plan
 prompts and expected evidence live in `docs/plan-flow-test-scenarios.md`.
 

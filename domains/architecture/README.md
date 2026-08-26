@@ -4,8 +4,8 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 ## Quick path
 
-1. Install the SDLC profile or include `architecture,sdlc` in the selected domains.
-2. Describe the outcome to `sdlc-orchestrator` or use an entry point below.
+1. Install `architecture` or the multi-primary profile.
+2. Select `architect` or use an entry point below.
 3. Review files under `<docfolder>/architecture/` or `.ai/architect/`; send any ready `change.md` to SDD.
 
 ## Entry points
@@ -23,7 +23,7 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (subagent coordinator) | `architect` | Coordinates all architecture operations |
+| Agent (primary) | `architect` | Coordinates all architecture operations directly |
 | Command | `/arch-ideate` | Produces ADR and executable change |
 | Command | `/arch-map` | Generates or refreshes C4-lite docs |
 | Command | `/arch-review` | Ranks architecture and dependency risks |

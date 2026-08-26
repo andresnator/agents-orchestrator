@@ -4,18 +4,17 @@ Full spec-driven implementation around one human-readable `change.md`. `orchestr
 
 ## Quick path
 
-1. Request full implementation, resume, or execution of a ready change.
-2. Confirm unresolved Mode, TDD, Judgment, and Delivery choices.
+1. Install `sdd` for Judgment none, or `sdd,review` for Judgment light/full.
+2. Select `orchestraitor` or run `/sdd`, then confirm unresolved choices.
 3. Review verification evidence and the archived change.
 
 ## Entry points
 
 | Entry | Operation | Result |
 |---|---|---|
-| Direct implementation request | `direct-sdd` | Planned and executed change |
+| `/sdd <request>` | `direct-sdd` | Planned and executed change |
 | Ready producer `change.md` | `execute-handoff` | Exact-path adoption and execution |
 | Existing active state | `resume` | Artifact-driven continuation |
-| `/judgment` | Adversarial review | Findings and bounded fixes |
 
 Direct work lives at `.ai/orchestrator/changes/<change>/`. Producer handoffs remain at `.ai/<producer>/changes/<change>/`; SDD preserves their marker and adds `state.md`. Canonical behavior lives under `.ai/orchestrator/specs/`. Ambiguous active changes require an exact path.
 
@@ -26,22 +25,20 @@ Direct work lives at `.ai/orchestrator/changes/<change>/`. Producer handoffs rem
 | Judgment | `none`, `light`, or `full` |
 | Delivery | `none` or `commit-per-wave` |
 
+Standalone `--domain sdd` supports `Judgment: none`. Light and full Judgment require an explicit `--domain sdd,review` install so SDD can hand the exact scope to `review-coordinator` through `/judgment` and resume the active root afterward.
+
 Work groups declare `Files:` and up to three routed `Skills:`. Disjoint scopes may run in parallel; overlapping scopes run sequentially. Workers never stage, commit, or push. With `commit-per-wave`, only `orchestraitor` commits verified work and it never pushes. See [SDD flow verification](../../docs/sdd-test-plan.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (subagent coordinator) | `orchestraitor` | Coordinates full SDD execution |
+| Agent (primary) | `orchestraitor` | Coordinates full SDD execution directly |
 | Agent (subagent) | `sdd-explore` | Explores code read-only |
 | Agent (subagent) | `sdd-implement` | Implements one scoped work wave |
 | Agent (subagent) | `sdd-canonical-merge` | Merges verified canonical spec deltas |
 | Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
-| Agent (subagent) | `jd-judge-a` | Reviews correctness independently |
-| Agent (subagent) | `jd-judge-b` | Reviews security independently |
-| Agent (subagent) | `jd-solo` | Runs lightweight adversarial review |
-| Agent (subagent) | `jd-fix` | Applies confirmed review findings |
-| Command | `/judgment` | Routes adversarial review |
+| Command | `/sdd` | Starts or resumes full SDD |
 | Skill | `behavior-characterization` | Captures current behavior during hardening |
 | Skill | `code-conventions` | Applies code and test conventions |
 | Skill | `cognitive-doc-design` | Keeps human-facing documentation clear |
