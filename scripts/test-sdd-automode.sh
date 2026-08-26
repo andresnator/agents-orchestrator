@@ -108,8 +108,9 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     assert_json_value "$config" ".agent[\"$name\"].permission.write" deny \
       "on: $name lost its write deny"
   done
-  # Removed drafting agents must not leak stale user-config blocks.
-  for name in sdd-proposal sdd-spec sdd-design sdd-tasks; do
+  # Agents outside the SDD domain must not get new auto-mode blocks.
+  for name in sdd-proposal sdd-spec sdd-design sdd-tasks \
+    jd-fix jd-judge-a jd-judge-b jd-solo; do
     assert_json_value "$config" ".agent | has(\"$name\")" false \
       "on: removed agent $name was written"
   done
@@ -280,6 +281,42 @@ shouldRemoveGeneralEvenWithNoGeneral() {
   pass shouldRemoveGeneralEvenWithNoGeneral
 }
 
+shouldRemoveLegacyReviewAgentPermissions() {
+  local scratch target config name
+  scratch="$(make_scratch)"
+  target="$scratch/config/opencode"
+  mkdir -p "$target"
+  config="$target/opencode.json"
+  printf '%s\n' '{
+    "agent": {
+      "jd-fix": {
+        "model": "openai/gpt-5.6-sol",
+        "permission": {
+          "edit": "allow",
+          "write": "allow",
+          "external_directory": "allow",
+          "doom_loop": "allow"
+        }
+      },
+      "jd-judge-a": {"permission": {"external_directory": "allow", "doom_loop": "allow"}},
+      "jd-judge-b": {"permission": {"external_directory": "allow", "doom_loop": "allow"}},
+      "jd-solo": {"permission": {"external_directory": "allow", "doom_loop": "allow"}}
+    }
+  }' > "$config"
+
+  "$AUTOMODE" off --target "$target" >/dev/null
+
+  assert_json_value "$config" '.agent["jd-fix"] | has("permission")' false \
+    "legacy off: jd-fix permission block survived"
+  assert_json_value "$config" '.agent["jd-fix"].model' openai/gpt-5.6-sol \
+    "legacy off: jd-fix non-permission config was removed"
+  for name in jd-judge-a jd-judge-b jd-solo; do
+    assert_json_value "$config" ".agent | has(\"$name\")" false \
+      "legacy off: empty $name config survived"
+  done
+  pass shouldRemoveLegacyReviewAgentPermissions
+}
+
 shouldSkipGeneralOnWithNoGeneral() {
   local scratch target config
   scratch="$(make_scratch)"
@@ -414,6 +451,7 @@ shouldDieOnJsoncComments
 shouldPreferJsoncOverJsonWhenBothExist
 shouldDieWithoutJq
 shouldRemoveGeneralEvenWithNoGeneral
+shouldRemoveLegacyReviewAgentPermissions
 shouldSkipGeneralOnWithNoGeneral
 shouldDiscoverNewlyAddedAgents
 shouldDieOnUnknownPermissionValue

@@ -16,6 +16,12 @@ PERMISSION_KEYS=(
   todowrite webfetch websearch lsp skill question doom_loop
 )
 
+# Agents that earlier releases managed as part of SDD. Keep these out of ON
+# and SHOW, but let OFF remove permission blocks left behind after an upgrade.
+LEGACY_OFF_AGENTS=(
+  jd-fix jd-judge-a jd-judge-b jd-solo
+)
+
 ACTION=""
 DRY_RUN=0
 PROJECT_TARGET=0
@@ -189,6 +195,10 @@ target_names() {
   { cat "$AGENTS_TMP"; printf 'general\n'; } | sort -u
 }
 
+off_target_names() {
+  { target_names; printf '%s\n' "${LEGACY_OFF_AGENTS[@]}"; } | sort -u
+}
+
 write_config() {
   local root="$1" done_msg="$2"
   jq empty "$OUT_TMP" || die "internal error: merged config is not valid JSON"
@@ -250,7 +260,7 @@ run_off() {
   fi
   discover_agents
   local names
-  names="$(target_names | jq -Rn '[inputs]')"
+  names="$(off_target_names | jq -Rn '[inputs]')"
   config_json | jq --argjson names "$names" '
     .agent = ((.agent // {})
       | reduce $names[] as $n (.;
