@@ -33,7 +33,7 @@ The project profile selects `plan,sdd,architecture,sdd-lite,review,common`, pres
 | [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/absorb` |
-| [common](domains/common/README.md) | Shared engineering and quality skills | `/graphify-index`, `/grill` |
+| [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
 
 ## Repository shape
 
