@@ -224,52 +224,58 @@ write_skill_calls() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.name') AS skill,
             json_extract(p.data,'$.state.status') AS status
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='skill'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 write_direct_skill_body_reads() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.filePath') AS path,
             json_extract(p.data,'$.state.status') AS status
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='read'
        AND json_extract(p.data,'$.state.input.filePath') GLOB '*/skills/*/SKILL.md'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 write_task_briefs() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -json "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.subagent_type') AS subagent,
             json_extract(p.data,'$.state.input.prompt') AS prompt
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='task'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 assert_skill_call() {
@@ -397,7 +403,7 @@ run_plan_sdd_workflow() {
   write_task_briefs "$root_id" "$evidence/task-briefs.json"
   assert_turn_agent "$execute_events" orchestraitor || return 1
   # OpenCode updates the root session's agent on a direct primary switch, so
-  # deep-planner evidence remains in tree_before and the per-turn event stream.
+  # part-derived evidence uses each message's agent instead of the session label.
   for agent in orchestraitor sdd-canonical-merge sdd-implement sdd-verify; do
     assert_tree_has "$tree_after" "$agent" || return 1
   done
