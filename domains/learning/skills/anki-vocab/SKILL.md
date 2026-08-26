@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.1"
+  version: "1.1.2"
 ---
 
 # Anki Vocab
@@ -14,7 +14,7 @@ metadata:
 
 Use for the `vocab` mode of `/learn` on **language-learning topics** — any target language (the language named in `mission.md`), translated into the learner's native language (the `Native language:` line in `mission.md`, defaulting to Spanish when absent): generating a batch of Anki-importable vocabulary cards from words, phrases, or a situation/theme. Owns `vocabulary.md` (the learned-unit registry, from `assets/vocabulary-template.md`) and `anki/` (batch exports, format fixture for an English-topic batch in `assets/batch-format.txt`) under each `.ai/learning/<topic-slug>/`.
 
-Do not use for non-language topics: if `mission.md` shows the topic is not a language, say vocab mode only applies to language topics and ask (via `native-question-ux`) whether to pick a language topic or run another mode — never generate anyway. Do not create Leitner cards for exported units: Anki is their spaced-repetition system; `review-queue.md` stays for conceptual cues (add a vocab unit there only on explicit learner request).
+Do not use for non-language topics: if `mission.md` shows the topic is not a language, say vocab mode only applies to language topics and use the `question` tool for the closed choice between picking a language topic or running another mode — never generate anyway. Do not create Leitner cards for exported units: Anki is their spaced-repetition system; `review-queue.md` stays for conceptual cues (add a vocab unit there only on explicit learner request).
 
 ## Hard Rules
 
@@ -30,8 +30,8 @@ Do not use for non-language topics: if `mission.md` shows the topic is not a lan
 | Input after `vocab` | Behavior |
 | --- | --- |
 | words or phrases | One row per given unit, normalized into a natural chunk; sentences situation-grounded and reinforcement-built. |
-| a situation/theme (e.g. "at the airport") | Select the most useful natural phrases for that situation; default batch size 12, confirmed via `native-question-ux`. |
-| empty | Propose a batch: pick a situation from `mission.md`/`path.md` plus reinforcement of due/weak `review-queue.md` cards; confirm before generating. |
+| a situation/theme (e.g. "at the airport") | Select the most useful natural phrases for that situation; default batch size 12, confirmed through the `question` tool. |
+| empty | Propose a batch from `mission.md`/`path.md` plus reinforcement of due/weak `review-queue.md` cards; use the `question` tool to confirm before generating. |
 
 ## Output Format
 

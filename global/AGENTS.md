@@ -26,6 +26,12 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 - Respect each agent's skill allowlist; never bypass denied skill access by reading a `SKILL.md` path.
 - When persisting any memory, transcript, or summary of a skill invocation, record the user's original intent and the selected skill name — never the full expanded skill body.
 
+## Conversation Questions
+
+- Ask open-ended interview, debrief, teach-back, and other free-text questions in normal chat. Ask one direct question at a time, add `Recommendation: ...` only when it materially helps, then stop and wait.
+- Do not wrap each question in a heading, number it, explain why it matters, or estimate how many questions remain. Brief Markdown summaries are useful only when an extended flow changes phase.
+- Use the `question` tool only for closed choices: confirmations, modes, ratings, grades, or enumerated options. Put a recommended option first when there is one; never require the tool for a free-text answer.
+
 ## Hidden State Directories
 
 Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/absorb/`) — and default file search skips them:

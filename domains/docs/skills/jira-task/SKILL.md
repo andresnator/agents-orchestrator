@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.3"
+  version: "2.0.0"
 ---
 
 # Jira Task
@@ -33,8 +33,8 @@ This skill outputs Jira Markup in chat only. It does not create Jira issues thro
 - Quick Creation blocking questions must be direct interrogative questions ending with `?` or using Spanish `¿...?` when the conversation language is Spanish.
 - In Quick Creation, include Acceptance Criteria or Implementation Notes only if the user explicitly provided useful content for those sections.
 - Refinement asks one question at a time, waits for the user, and does not generate until an explicit generation request.
-- Refinement questions must include: sequential question number, why this matters, estimated remaining questions, recommended answer.
-- Refinement question headings must be actual interrogative questions, not labels like `Focused Task question`.
+- Ask open-ended Quick Creation and Refinement questions directly in normal chat. Add `Recommendation: ...` only when it helps the user respond.
+- Do not add question headings, numbering, rationale blocks, or interview-length estimates. Use the `question` tool only for a closed confirmation or enumerated choice.
 - If refining an existing ticket, preserve useful existing content and improve only missing/unclear parts.
 - When refining an existing ticket, include a brief change summary before the final ticket, outside the Jira block.
 - Codebase exploration applies only to Refinement / SDD-ready when it can answer factual questions or validate assumptions; not to Quick Creation by default unless explicitly requested.
@@ -62,17 +62,15 @@ Use Refinement only when the user explicitly asks to refine, improve, complete, 
 
 Use SDD-ready Refinement when the user explicitly asks for listo para SDD, preparalo para SDD, para usarlo en SDD, SDD-ready, ready for SDD, prepare for SDD, as SDD input, or equivalent phrasing.
 
-Load `assets/refinement-template.md` before generating. Ask one question at a time using this structure:
+Load `assets/refinement-template.md` before generating. Ask one question at a time using this minimal shape:
 
 ```markdown
-### Question N — [direct interrogative question?]
+[Direct interrogative question?]
 
-**Recommended answer:** Provide a short suggested answer.
-
-**Why this matters:** Explain why this answer affects the Task.
-
-**Estimated remaining questions:** ~M
+Recommendation: [Short suggested answer when useful.]
 ```
+
+Omit the recommendation line when it adds no value.
 
 Do not generate until the user explicitly asks to generate, create, print, or finalize the ticket.
 

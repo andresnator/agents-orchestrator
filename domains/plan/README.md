@@ -59,7 +59,6 @@ Copy-ready prompts and expected evidence remain in [Plan flow test scenarios](..
 | Skill | `kiss-yagni` | Prevents speculative refactor complexity |
 | Skill | `legacy-code-safety` | Protects untested behavior during change |
 | Skill | `logging-observability` | Evaluates operational logging and observability |
-| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `null-safety` | Detects conservative null-safety hazards |
 | Skill | `open-closed-principle` | Detects extension pressure without speculation |
 | Skill | `refactor` | Supplies cross-language refactoring techniques |

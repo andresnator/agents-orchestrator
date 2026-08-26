@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.5"
+  version: "2.0.0"
 ---
 
 # Cognitive Output Refiner
@@ -72,14 +72,12 @@ Are you satisfied with this refined version?
 If the user is not satisfied, ask one correction question at a time:
 
 ```md
-### Question N — [direct question]
+[Direct question]
 
-**Recommended answer:** [short suggested answer]
-
-**Why this matters:** [why this affects the correction]
-
-**Estimated remaining questions:** ~M
+Recommendation: [short suggested answer when useful]
 ```
+
+Ask the question in normal chat, use `Recommendation: ...` only when useful, and do not add question headings, numbering, rationale blocks, or interview-length estimates. Use the `question` tool only for a closed confirmation or enumerated choice.
 
 After resolving feedback, generate a new complete version, not a patch.
 

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "1.0.4"
+  version: "2.0.0"
 ---
 
 # Technical PRD
@@ -20,6 +20,9 @@ Always read `assets/prd-template.md` at the start of the session and use it as t
 
 - Work one phase at a time; do not dump the whole template as a questionnaire.
 - Ask one focused question at a time where possible.
+- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
+- Add `Recommendation: ...` only when it helps the user respond. Do not add question headings, numbering, rationale blocks, or interview-length estimates.
+- At a phase boundary, give a brief summary of accumulated decisions and open items before asking the next phase's first question. Do not summarize after every question.
 - Validate the current phase before advancing.
 - Challenge vague, unverifiable, or contradictory requirements with a concrete reason.
 - Do not invent unknown facts; preserve uncertainty as open questions, assumptions, or explicit `TBD` items.
@@ -29,21 +32,17 @@ Always read `assets/prd-template.md` at the start of the session and use it as t
 - Use the reference template for the final artifact.
 - Ask where to save the PRD after presenting the final draft; suggest `PRD-{product-name}-v{version}.md` if the user wants a default.
 
-## Question Format
+## Conversation Format
 
-Every interview question must use this exact structure:
+Use this minimal shape for open interview questions:
 
 ```markdown
-### Question N — [focused PRD question]
+[Direct question]
 
-**Recommended answer:** [short recommended/default answer when useful]
-
-**Why this matters:** [why this decision affects the PRD]
-
-**Estimated remaining questions in this phase:** ~M
+Recommendation: [short recommended/default answer when useful]
 ```
 
-Keep N sequential across the whole interview. Keep M adaptive within the current phase.
+Omit the recommendation line when it adds no value.
 
 ## Decision Gates
 

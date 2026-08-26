@@ -183,7 +183,12 @@ assert_exists "$planning_skill/SKILL.md"
 assert_exists "$planning_skill/assets/plan-template.md"
 assert_exists "$planning_skill/assets/roadmap-template.md"
 assert_frontmatter_contains "$planning_skill/SKILL.md" 'name: evidence-first-planning'
-assert_frontmatter_contains "$planning_skill/SKILL.md" 'version: "3.0.0"'
+assert_frontmatter_contains "$planning_skill/SKILL.md" 'version: "4.0.0"'
+assert_contains "$planning_skill/SKILL.md" 'Ask each unresolved open-ended'
+assert_contains "$planning_skill/references/question-economy.md" 'Ask each surviving open-ended question directly in normal chat'
+assert_contains "$planning_skill/references/question-economy.md" 'only when it helps'
+assert_not_contains "$planning_skill/references/question-economy.md" 'Batch every surviving question'
+assert_not_contains "$planning_skill/references/question-economy.md" 'with a one-line reason'
 assert_absent domains/plan/skills/fable-planning
 assert_absent domains/plan/skills/wayfinder
 assert_first_line "$planning_skill/assets/plan-template.md" 'Status: discovery | final | Source: deep-planner'
@@ -243,7 +248,7 @@ assert_contains domains/architecture/agents/architect.md 'never load or read imp
 assert_frontmatter_contains domains/architecture/skills/architecture-ideation/SKILL.md 'version: "3.0.2"'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains domains/architecture/skills/architecture-ideation/SKILL.md 'Load `sdd-execution-skills`'
-assert_frontmatter_contains domains/common/skills/grill/SKILL.md 'version: "4.0.0"'
+assert_frontmatter_contains domains/common/skills/grill/SKILL.md 'version: "5.0.0"'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains domains/common/skills/grill/SKILL.md 'Load `sdd-execution-skills`'
 assert_contains domains/common/skills/grill/SKILL.md 'never load or read implementation skill bodies'

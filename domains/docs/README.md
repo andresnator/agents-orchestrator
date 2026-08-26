@@ -1,10 +1,10 @@
 # Docs Domain
 
-Product documents, technical decisions, Jira artifacts, summaries, presentations, and transcription. The domain uses shared interview and question skills from `common`.
+Product documents, technical decisions, Jira artifacts, summaries, presentations, and transcription. Interviews happen in normal chat; final artifact formats remain unchanged.
 
 ## Quick path
 
-1. Include `docs,common` in the selected installer domains.
+1. Include `docs` in the selected installer domains.
 2. Start with `/doc`, `/prd`, or `/adr`.
 3. Review the selected skill's artifact before publishing it externally.
 

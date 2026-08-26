@@ -45,7 +45,6 @@ Work groups declare `Files:` and up to three routed `Skills:`. Disjoint scopes m
 | Skill | `graphify-cli` | Queries code graphs read-only |
 | Skill | `java-testing` | Implements focused Java tests |
 | Skill | `legacy-code-safety` | Protects behavior during legacy changes |
-| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
 | Skill | `sdd-draft-change` | Drafts one pre-implementation change document |
 | Skill | `sdd-execution-skills` | Selects skills for implementation work |

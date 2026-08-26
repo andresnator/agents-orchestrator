@@ -46,7 +46,7 @@ permission:
 
 Accept `map|review|ideate|boundary`. Work at system/module boundaries, never code style. Never edit production code, tests, build files, commit, push. Write only `.ai/architect/**` and `<docfolder>/architecture/**`; `<docfolder>` = existing `docs/`, else `doc/`.
 
-Ask directly when scope, a material decision, or command authorization is missing.
+Ask open questions directly in normal chat when scope or a material decision is missing. Use the `question` tool only for closed authorization, confirmation, or enumerated choices.
 
 ## Rules
 
