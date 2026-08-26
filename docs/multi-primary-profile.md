@@ -54,7 +54,7 @@ When full SDD reaches requested Judgment, complete three primary turns:
 
 ## Ownership and rollback
 
-`.agents-orchestrator-manifest` owns installed components. `.multi-primary-profile-manifest` owns profile selection, the prior `subagent_depth`, and whether target files existed.
+`.agents-orchestrator-manifest` owns installed components. `.multi-primary-profile-manifest` owns profile selection, the selected `opencode.jsonc` or `opencode.json` path, the prior `subagent_depth`, and whether target files existed.
 
 Install rejects invalid, escaping, home, root, source-repository, and worktree targets. Status and uninstall fail closed on manifest tampering. Clean uninstall restores the prior depth, preserves `default_agent`, comments, and foreign keys, and removes only empty profile-created paths.
 

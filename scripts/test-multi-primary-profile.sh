@@ -150,6 +150,39 @@ EOF
   pass shouldInstallStatusAndRestoreExistingJsonc
 }
 
+shouldInstallStatusAndRestoreExistingJson() {
+  local project config manifest
+  project="$(make_project existing-json)"
+  project="$(cd "$project" && pwd -P)"
+  mkdir -p "$project/.opencode"
+  config="$project/.opencode/opencode.json"
+  manifest="$project/.opencode/.multi-primary-profile-manifest"
+  cat > "$config" <<'EOF'
+{
+  "default_agent": "mentor",
+  "subagent_depth": 3,
+  "foreign": {"keep": true}
+}
+EOF
+
+  # Given a project whose only OpenCode config uses the JSON filename
+  # When the profile completes its install, status, and uninstall lifecycle
+  run_profile install --project-root "$project" >/dev/null
+  grep -Fq $'config-file\t'"$config" "$manifest" ||
+    fail "existing JSON: selected config path was not persisted"
+  run_profile status --project-root "$project" | grep -Fq "config-file: $config" ||
+    fail "existing JSON: status did not use the persisted config path"
+  run_profile uninstall --project-root "$project" >/dev/null
+
+  # Then that file retains all foreign settings and no shadowing JSONC appears
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "existing JSON: profile created a shadowing JSONC file"
+  [ "$(scalar "$config" default_agent)" = '"mentor"' ] || fail "existing JSON: default_agent changed"
+  [ "$(scalar "$config" subagent_depth)" = 3 ] || fail "existing JSON: subagent_depth not restored"
+  grep -Fq '"foreign": {"keep": true}' "$config" || fail "existing JSON: foreign config changed"
+  [ ! -e "$manifest" ] || fail "existing JSON: profile manifest remains"
+  pass shouldInstallStatusAndRestoreExistingJson
+}
+
 shouldRestoreAbsentValuesWithoutLosingComments() {
   local project config status
   project="$(make_project absent-values)"
@@ -464,6 +497,7 @@ command -v jq >/dev/null 2>&1 || fail "jq is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
 shouldInstallStatusAndRestoreExistingJsonc
+shouldInstallStatusAndRestoreExistingJson
 shouldRestoreAbsentValuesWithoutLosingComments
 shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent
 shouldPreservePreexistingTargetWithoutConfig

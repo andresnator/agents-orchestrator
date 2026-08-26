@@ -80,7 +80,13 @@ resolve_project_root() {
 
   TARGET="$PROJECT_ROOT/.opencode"
   [ ! -L "$TARGET" ] || die "refusing symlinked project target: $TARGET"
-  CONFIG_FILE="$TARGET/opencode.jsonc"
+  if [ -e "$TARGET/opencode.jsonc" ]; then
+    CONFIG_FILE="$TARGET/opencode.jsonc"
+  elif [ -e "$TARGET/opencode.json" ]; then
+    CONFIG_FILE="$TARGET/opencode.json"
+  else
+    CONFIG_FILE="$TARGET/opencode.jsonc"
+  fi
   INSTALLER_MANIFEST="$TARGET/.agents-orchestrator-manifest"
   PROFILE_MANIFEST="$TARGET/.multi-primary-profile-manifest"
 }
@@ -349,7 +355,13 @@ validate_profile_manifest() {
   [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign profile manifest root"
   [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign profile target"
   [ "$(manifest_value domains)" = "$PROFILE_DOMAINS" ] || die "broad profile domain selection"
-  local config_existed target_existed expected_sha actual_sha
+  local saved_config config_existed target_existed expected_sha actual_sha
+  saved_config="$(manifest_value config-file)"
+  case "$saved_config" in
+    "") ;; # Legacy v1 manifests predate explicit config-path ownership.
+    "$TARGET/opencode.json"|"$TARGET/opencode.jsonc") CONFIG_FILE="$saved_config" ;;
+    *) die "global or foreign profile config file" ;;
+  esac
   config_existed="$(manifest_value config-existed)"
   case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in profile manifest" ;; esac
   target_existed="$(manifest_value target-existed)"
@@ -370,6 +382,7 @@ write_profile_manifest() {
     printf 'project-root\t%s\n' "$PROJECT_ROOT"
     printf 'target\t%s\n' "$TARGET"
     printf 'domains\t%s\n' "$PROFILE_DOMAINS"
+    printf 'config-file\t%s\n' "$CONFIG_FILE"
     printf 'config-existed\t%s\n' "$config_existed"
     printf 'target-existed\t%s\n' "$target_existed"
     printf 'previous-subagent-depth-state\t%s\n' "$depth_state"
@@ -409,7 +422,8 @@ run_install() {
   TMP_TWO=""
   write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed"
   validate_managed_config
-  printf 'status: installed\nproject-root: %s\ndefault_agent: preserved\nsubagent_depth: 1\n' "$PROJECT_ROOT"
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\n' \
+    "$PROJECT_ROOT" "$CONFIG_FILE"
 }
 
 run_status() {
@@ -420,7 +434,8 @@ run_status() {
   fi
   validate_profile_manifest
   validate_managed_config
-  printf 'status: installed\nproject-root: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 5\nquestion owners: 5\n' "$PROJECT_ROOT"
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 5\nquestion owners: 5\n' \
+    "$PROJECT_ROOT" "$CONFIG_FILE"
 }
 
 run_uninstall() {
