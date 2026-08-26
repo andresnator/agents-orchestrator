@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "1.0.4"
+  version: "2.0.0"
 ---
 
 # ADR Creator
@@ -22,9 +22,9 @@ Default to interview mode unless the user already supplied enough information to
 
 - Ask one question at a time in interview mode.
 - State once at the start of the interview that the user may skip questions or stop the interview at any time.
-- Keep a dynamic estimated remaining-question counter; update it when dependencies appear or disappear.
-- Recommend short example answers when they help the user respond.
-- Format interview questions as readable Markdown, not plain text.
+- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
+- Add a short `Recommendation: ...` line only when it helps the user respond.
+- Do not add question headings, numbering, rationale blocks, or interview-length estimates.
 - Constructively challenge vague, contradictory, or rationale-free answers before drafting; proceed if the user explicitly says to continue anyway.
 - Do not invent alternatives, pros, cons, or rationale. Ask when alternatives are missing.
 - Use `Accepted` when the decision is already made; use `Proposed` for proposals, evaluations, or unclear status.
@@ -41,28 +41,20 @@ Gather only what is needed, dependency-first:
 5. Consequences: benefits, drawbacks, risks, and trade-offs.
 6. Follow-up only when there are useful open actions or unresolved questions.
 
-Question format:
+## Conversation Format
 
 ```markdown
-### Question N — [focused question]
+[Direct question]
 
-**Recommended answer:** [short example when useful]
-
-**Why this matters:** [brief reason]
-
-**Estimated remaining questions:** ~M
+Recommendation: [short example when useful]
 ```
 
 Mini example:
 
 ```markdown
-### Question 1 — Is this decision already made or still being proposed?
+What decision should this ADR capture?
 
-**Recommended answer:** "Accepted — we already chose PostgreSQL for billing data."
-
-**Why this matters:** The status changes whether the ADR records a final choice or a proposal under review.
-
-**Estimated remaining questions:** ~5
+Recommendation: "Adopt PostgreSQL for billing data."
 ```
 
 ## Output Contract

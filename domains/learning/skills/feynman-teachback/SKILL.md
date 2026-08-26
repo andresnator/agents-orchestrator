@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.1"
+  version: "2.0.0"
 ---
 
 # Feynman Teach-Back
@@ -24,7 +24,8 @@ Do not use as a lecture: in this skill the learner talks and the mentor listens,
 - **Gap → queue**: if a gap maps to a queued cue in `review-queue.md`, grade that card `Again` (box 1, per `spaced-recall`) with today's date. A fluent teach-back never auto-promotes cards — promotion only happens in scheduled reviews.
 - **Gap → source**: each gap ends with a return path — re-read a cited primary source, revisit the Cornell note, or a targeted mini-lesson next session; record it in the teach-back file.
 - Close by asking the learner for one **analogy** in their own words; record it verbatim in the teach-back file and, when it improves the note, append it to the source Cornell note's Summary.
-- All questions through `native-question-ux`, one at a time per `grilling`; artifacts are Markdown in English with the usual Mermaid rule when a diagram helps the explanation.
+- Ask every naive, explanatory, and analogy question directly in normal chat, one at a time per `grilling`, then wait. Add `Recommendation: ...` only when it would help without completing the learner's explanation; never use the `question` tool for free text.
+- Artifacts are Markdown in English with the usual Mermaid rule when a diagram helps the explanation.
 
 ## Session Flow
 

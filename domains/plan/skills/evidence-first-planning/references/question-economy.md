@@ -9,16 +9,16 @@ Before asking anything, classify it:
 - **The repo can answer it** (does X exist? how is Y called? what pattern do tests use? which framework version?) → explore read-only. Asking these erodes trust in every question that follows.
 - **Only the user can answer it** (scope boundaries, product trade-offs, priorities, acceptance criteria, risk appetite) → it earns a slot in the round.
 
-## One grouped round, after exploring
+## One conversational question at a time
 
 - Explore first, then ask: exploration removes questions and sharpens the ones that remain.
-- Batch every surviving question into a single round; do not drip them one turn at a time unless the runtime's interview skill (`grilling`) requires sequential flow.
-- Each question carries a recommended answer, placed first, with a one-line reason. The user should be able to accept every recommendation and get a good plan.
+- Ask each surviving open-ended question directly in normal chat, then stop and wait. Use the `question` tool only for a closed confirmation, mode, rating, or enumerated choice.
+- Add `Recommendation: ...` only when it helps the user decide or respond. Do not add a rationale block or estimate the interview length.
 - Skip anything the user already stated; restating it as a question reads as not listening.
 
-## The edge-validation mini-round
+## Edge validation
 
-Edge-case validation may surface decisions only the user can make (retention, failure policy, rollout). Accumulate them and ask at most **one** extra mini-round; anything that cannot wait for an answer becomes an explicit out-of-scope entry instead.
+Edge-case validation may surface decisions only the user can make, such as retention, failure policy, or rollout. Ask each blocking open decision conversationally. Defer it to an explicit out-of-scope or open-question entry only when the user chooses not to resolve it now.
 
 ## Record the answers
 

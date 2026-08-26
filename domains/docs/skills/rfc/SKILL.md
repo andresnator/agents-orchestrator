@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.5"
+  version: "2.0.0"
 ---
 
 # RFC Creator
@@ -23,9 +23,9 @@ Default to interview mode unless the user already supplied enough information to
 - Ask one question at a time in interview mode.
 - After asking each interview question or challenge, stop and wait for the user's answer before continuing.
 - State once at the start of the interview that the user may skip, stop, or revise answers at any time.
-- Keep a dynamic estimated remaining-question counter; update it when dependencies appear or disappear.
-- Recommend short example answers when they help the user respond.
-- Format interview questions as readable Markdown, not plain text.
+- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
+- Add a short `Recommendation: ...` line only when it helps the user respond.
+- Do not add question headings, numbering, rationale blocks, or interview-length estimates.
 - Constructively challenge vague, contradictory, or rationale-free answers before drafting; proceed if the user explicitly says to continue anyway.
 - Do not invent design details, alternatives, drawbacks, risks, unresolved questions, or rationale. Ask when important details are missing.
 - Preserve user-provided technical details, code, and examples verbatim when they are meant to appear in the RFC.
@@ -45,29 +45,20 @@ Gather only what is needed, dependency-first:
 7. Alternatives: other approaches considered, their pros/cons, the trade-offs accepted, and why they were not chosen.
 8. Unresolved questions and feedback requested.
 
-Question format:
+## Conversation Format
 
 ```markdown
-### Question N — [focused question]
+[Direct question]
 
-**Recommended answer:** [short example when useful]
-
-**Why this matters:** [brief reason]
-
-**Estimated remaining questions:** ~M
-
+Recommendation: [short example when useful]
 ```
 
 Mini example:
 
 ```markdown
-### Question 1 — What proposal should this RFC document?
+What proposal should this RFC document?
 
-**Recommended answer:** "Introduce a background job worker for asynchronous email delivery."
-
-**Why this matters:** The title and scope anchor every later design, trade-off, and review question.
-
-**Estimated remaining questions:** ~6
+Recommendation: "Introduce a background job worker for asynchronous email delivery."
 ```
 
 Optional extended sections may be included only when requested or naturally discovered: Security Considerations, Testing Strategy, Rollback Plan, Migration Plan, Timeline, or Implementation Plan.

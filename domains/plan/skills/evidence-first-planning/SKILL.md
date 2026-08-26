@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.0.0"
+  version: "4.0.0"
 ---
 
 ## Contract
@@ -15,7 +15,7 @@ Plan before implementation. Read relevant code and contracts; never edit product
 ## Method
 
 1. **Evidence first.** Verify implementations, callers, tests, tool versions, and reusable `path:symbol` elements. Cite `path:line` or mark `hypothesis`.
-2. **Ask only decisions.** Explore repository facts. Group genuine scope, product, acceptance, or risk choices and recommend an answer.
+2. **Ask only decisions.** Explore repository facts. Ask each unresolved open-ended scope, product, acceptance, or risk choice directly in normal chat and wait. Add `Recommendation: ...` only when useful; reserve the `question` tool for closed choices.
 3. **Validate edges.** Every edge is handled, out of scope, or an open question. Use `references/edge-validation.md`.
 4. **Stay proportional.** Keep only information that changes execution; record meaningful rejected alternatives briefly.
 5. **Prove the flow.** End with executable commands or an observable end-to-end check and its expected result.

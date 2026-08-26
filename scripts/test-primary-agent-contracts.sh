@@ -82,6 +82,74 @@ assert_contains "$profile_installer" 'installer_args+=("$BREW_TOOLS_OPTION")'
 assert_contains "$profile_installer" "MANAGED_SUBAGENT_DEPTH='1'"
 assert_not_contains "$profile_installer" 'MANAGED_DEFAULT_AGENT'
 
+# Open questions stay conversational; the structured tool is for closed choices.
+retired_question_skill='native-question''-ux'
+for retired_path in "skills/$retired_question_skill" "domains/common/skills/$retired_question_skill" \
+  "domains/plan/skills/$retired_question_skill" "domains/sdd/skills/$retired_question_skill"; do
+  assert_absent "$retired_path"
+done
+CHECKS=$((CHECKS + 1))
+if rg -l -F "$retired_question_skill" --hidden --glob '!.git/**' . >/dev/null 2>&1; then
+  fail "$retired_question_skill" 'retired question indirection remains referenced'
+fi
+
+assert_contains AGENTS.md 'free-text questions use normal chat'
+assert_contains global/AGENTS.md 'free-text questions in normal chat'
+assert_contains global/AGENTS.md 'tool only for closed choices'
+
+question_heading='### Que''stion'
+reason_block='Why this ''matters'
+counter_block='Estimated remaining ''questions'
+interview_contracts=(
+  skills/grilling/SKILL.md skills/adr/SKILL.md domains/common/skills/{grill,cognitive-output-refiner}/SKILL.md
+  domains/docs/skills/{rfc,prd,prd-light,usm,jira-spike,jira-task,jira-user-story}/SKILL.md
+  domains/learning/skills/{learning-loop,feynman-teachback}/SKILL.md
+)
+for file in "${interview_contracts[@]}"; do
+  assert_contains "$file" 'normal chat'
+  assert_contains "$file" 'Recommendation: ...'
+  assert_not_contains "$file" "$question_heading"
+  assert_not_contains "$file" "$reason_block"
+  assert_not_contains "$file" "$counter_block"
+  expected_version='version: "2.0.0"'
+  [ "$file" = domains/common/skills/grill/SKILL.md ] && expected_version='version: "5.0.0"'
+  assert_frontmatter_contains "$file" "$expected_version"
+done
+
+assert_frontmatter_contains domains/learning/skills/spaced-recall/SKILL.md 'version: "1.2.1"'
+assert_frontmatter_contains domains/learning/skills/anki-vocab/SKILL.md 'version: "1.1.2"'
+assert_frontmatter_contains domains/learning/skills/english-tutor/SKILL.md 'version: "2.0.1"'
+assert_frontmatter_contains domains/plan/skills/evidence-first-planning/SKILL.md 'version: "4.0.0"'
+planning_questions=domains/plan/skills/evidence-first-planning/references/question-economy.md
+assert_contains "$planning_questions" 'Ask each surviving open-ended question directly in normal chat'
+assert_not_contains "$planning_questions" 'Batch every surviving question'
+
+surface_contracts=(domains/common/skills/grill/SKILL.md domains/plan/{agents/deep-planner.md,commands/wayfinder.md} \
+  domains/{sdd/agents/orchestraitor.md,sdd-lite/agents/orchestralite.md,review/agents/review-coordinator.md} \
+  domains/learning/agents/mentor.md domains/learning/commands/learn.md)
+for file in "${surface_contracts[@]}"; do
+  assert_contains "$file" 'normal chat'
+done
+
+assert_contains skills/adr/SKILL.md 'exactly one Markdown code block'
+assert_contains domains/docs/skills/rfc/SKILL.md 'exactly one Markdown code block'
+assert_contains domains/docs/skills/prd/SKILL.md 'assets/prd-template.md'
+assert_contains domains/docs/skills/prd-light/SKILL.md 'assets/prd-light-template.md'
+assert_contains domains/docs/skills/usm/SKILL.md 'Return exactly one complete Markdown artifact'
+for file in domains/docs/skills/{jira-spike,jira-task,jira-user-story}/SKILL.md; do
+  assert_contains "$file" 'Final ticket must be a single Jira Markup code block'
+done
+assert_contains domains/docs/skills/prd/SKILL.md 'At a phase boundary'
+assert_contains domains/docs/skills/usm/SKILL.md 'At each phase boundary'
+
+assert_contains domains/sdd/agents/orchestraitor.md 'These four bounded gates may use'
+for gate in Mode TDD Judgment Delivery; do
+  assert_contains domains/sdd/agents/orchestraitor.md "$gate:"
+done
+assert_contains domains/learning/skills/spaced-recall/SKILL.md 'Again | Hard | Good | Easy'
+assert_contains domains/learning/skills/anki-vocab/SKILL.md 'tool for the closed choice'
+assert_contains domains/learning/skills/english-tutor/SKILL.md 'for that free-text answer'
+
 review=domains/review/agents/review-coordinator.md
 assert_primary_contract "$review"
 for phase_agent in jd-judge-a jd-judge-b jd-solo jd-fix; do
@@ -176,7 +244,7 @@ assert_contains domains/architecture/skills/service-boundary-analysis/SKILL.md '
 for retired_skill in \
   architecture-impact-review cognitive-doc-design cohesion-coupling dependency-inversion \
   domain-modeling god-object-detection input-validation-preconditions java-secure-coding \
-  logging-observability native-question-ux prd prd-light tooling-audit tooling-compatibility-matrix; do
+  logging-observability prd prd-light tooling-audit tooling-compatibility-matrix; do
   assert_absent "domains/architecture/skills/$retired_skill"
 done
 

@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "4.0.0"
+  version: "5.0.0"
 ---
 
 ## Modes
@@ -20,7 +20,8 @@ metadata:
 
 ## Rules
 
-- Ask one question at a time through `native-question-ux`, with a recommendation, then stop.
+- Ask each open-ended question directly in normal chat, one at a time, then stop. Add `Recommendation: ...` only when useful.
+- Use the `question` tool only for closed confirmations, modes, ratings, or enumerated choices.
 - Explore discoverable answers instead of asking. Preserve the user's language; artifacts default to English.
 - SDD mode is plan-only: no code edits, builds, installs, tests, commits, or push. The approved planning file is the only write.
 

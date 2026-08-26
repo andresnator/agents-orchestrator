@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "1.6.1"
+  version: "2.0.0"
 ---
 
 # Learning Loop
@@ -23,7 +23,8 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 - Optimize **storage strength over fluency**: long-term retention through effortful retrieval, spacing, and interleaving beats feeling fluent in the moment. Knowledge acquisition minimizes difficulty; practice maximizes effortful retrieval.
 - All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. The conversation follows the user's language.
 - **State discovery reads the directory, never a pattern search**: `.ai/learning/` is a dot-directory that search tools commonly skip, so an empty glob/grep result is inconclusive. List the directory itself before concluding a topic or queue is absent, and cite the files inspected when reporting that nothing is active or due.
-- Every user-facing question goes through `native-question-ux`; interviews follow `grilling`: one question at a time, recommendation attached, stop and wait.
+- Ask open-ended interviews, retrieval prompts, Socratic debriefs, and teach-backs directly in normal chat, one question at a time, then stop and wait. Add `Recommendation: ...` only when useful; do not add question headings, numbering, rationale blocks, or interview-length estimates.
+- Use the `question` tool only for closed choices such as topic selection, review confirmation, grades, or modes.
 - Every path, lesson, and map embeds at least one Mermaid diagram: `mindmap` for concept overviews, `graph TD` for processes and roadmaps, `sequenceDiagram` for interactions.
 - Lesson capture follows `cornell-notes`; retention scheduling follows `spaced-recall` (including its interleaving and leech rules); vocabulary export follows `anki-vocab`. Run the `spaced-recall` due-check first in **every** mode.
 - 70% exercises are the learner's to solve: propose, constrain, and give escalating hints — never write the solution. Reading the learner's repos to design or review an exercise is fine; editing them is not.

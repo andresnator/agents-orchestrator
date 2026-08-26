@@ -33,6 +33,8 @@ Do not add `name`, `prompt`, `license`, or `metadata` to agent or command frontm
 
 Keep prompts short: role, accepted operation, ownership and safety boundaries, happy path, real stop conditions, artifact paths, and compact return contract. Put fork attribution outside executable frontmatter.
 
+Open-ended interviews, debriefs, teach-backs, and other free-text questions use normal chat: ask one direct question, add `Recommendation: ...` only when useful, then wait. Do not require question headings, numbering, rationale blocks, or interview-length estimates. Reserve the `question` tool for closed choices such as confirmations, modes, ratings, and enumerated options.
+
 ## Skills
 
 Each skill has exactly one body. A skill used by one domain lives directly at `domains/<domain>/skills/<skill>/SKILL.md`. A skill used by multiple domains lives at `skills/<skill>/SKILL.md`, and every owning domain declares it with a relative `domains/<domain>/skills/<skill>` symlink. Do not copy skill bodies or keep an exclusive skill at the top level.

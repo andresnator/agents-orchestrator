@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.4"
+  version: "2.0.0"
 ---
 
 # User Story Mapping
@@ -19,6 +19,8 @@ Always read `assets/usm-template.md` at the start of the session and use it as t
 ## Hard Rules
 
 - Ask one focused question at a time, then stop and wait for the user's answer.
+- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
+- Add `Recommendation: ...` only when it helps the user respond. Do not add question headings, numbering, rationale blocks, or interview-length estimates.
 - Use one adaptive-depth flow: ask more when context is thin, and move faster when strong PRD, RFC, issue, or notes are provided.
 - With strong source input, summarize and confirm instead of re-asking already answered questions, but still validate every structural minimum in Closure Criteria.
 - Show partial summaries at phase boundaries, not after every question.
@@ -39,21 +41,17 @@ Always read `assets/usm-template.md` at the start of the session and use it as t
 - If saving is requested, suggest `docs/usm/{product-or-feature-name}-usm.md` and wait for confirmation before writing.
 - Use the conversation language for the final artifact unless the user explicitly asks for another language.
 
-## Question Format
+## Conversation Format
 
-Every interview question must use this exact structure:
+Use this minimal shape for open interview questions:
 
 ```markdown
-### Question N — [focused USM question]
+[Direct question]
 
-**Recommended answer:** [short recommended/default answer when useful]
-
-**Why this matters:** [why this decision affects the User Story Map]
-
-**Estimated remaining questions in this phase:** ~M
+Recommendation: [short recommended/default answer when useful]
 ```
 
-Keep `N` sequential across the whole interview. Keep `M` adaptive within the current phase.
+Omit the recommendation line when it adds no value.
 
 ## Decision Gates
 

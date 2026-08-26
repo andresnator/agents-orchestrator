@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "1.0.4"
+  version: "2.0.0"
 ---
 
 # PRD Light
@@ -21,6 +21,8 @@ Always read `assets/prd-light-template.md` at the start of the session and use i
 - Keep the conversation brief and practical.
 - Work one phase at a time.
 - Ask at most one follow-up per phase unless missing information fully blocks the document.
+- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
+- Add `Recommendation: ...` only when it helps the user respond. Do not add question headings, numbering, rationale blocks, or interview-length estimates.
 - Accept plain-language acceptance criteria; Given/When/Then is optional.
 - Skip non-relevant details easily; use `N/A` without heavy justification.
 - Produce a useful draft fast instead of chasing perfect completeness.
@@ -28,21 +30,17 @@ Always read `assets/prd-light-template.md` at the start of the session and use i
 - Use the reference template for the final artifact.
 - Ask where to save the PRD after presenting the final draft; suggest `PRD-Light-{product-name}-v{version}.md` if the user wants a default.
 
-## Question Format
+## Conversation Format
 
-Every interview question must use this exact structure:
+Use this minimal shape for open interview questions:
 
 ```markdown
-### Question N — [focused PRD Light question]
+[Direct question]
 
-**Recommended answer:** [short recommended/default answer when useful]
-
-**Why this matters:** [why this decision affects the PRD Light]
-
-**Estimated remaining questions in this phase:** ~M
+Recommendation: [short recommended/default answer when useful]
 ```
 
-Keep N sequential across the whole interview. Keep M adaptive within the current phase.
+Omit the recommendation line when it adds no value.
 
 ## Decision Gates
 

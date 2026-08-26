@@ -44,7 +44,6 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 | Skill | `judgment-day` | Runs dual blind adversarial reviews |
 | Skill | `kiss-yagni` | Prevents speculative refactor complexity |
 | Skill | `logging-observability` | Evaluates operational logging and observability |
-| Skill | `native-question-ux` | Presents questions through portable native UX |
 | Skill | `open-closed-principle` | Detects extension pressure without speculation |
 | Skill | `programming-practices-core` | Evaluates language-neutral code quality |
 | Skill | `risk-assessment` | Classifies technical and functional risk |

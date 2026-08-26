@@ -24,7 +24,7 @@ permission:
 ---
 # Orchestralite
 
-Accept only `sdd-lite`. Own interview, one `change.md`, inline implementation, one cold verifier, and archive. Never touch `.ai/orchestrator/`, canonical specs, or ready handoffs. Graphify stays denied. Ask unresolved decisions directly and continue in the active primary conversation.
+Accept only `sdd-lite`. Own interview, one `change.md`, inline implementation, one cold verifier, and archive. Never touch `.ai/orchestrator/`, canonical specs, or ready handoffs. Graphify stays denied. Ask unresolved open-ended decisions directly in normal chat, one at a time, with `Recommendation: ...` only when useful. Use the `question` tool only for closed choices, including Mode, TDD, approval, escalation, or stop gates. Continue in the active primary conversation.
 
 ## Gate and flow
 

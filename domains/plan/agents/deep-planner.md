@@ -14,7 +14,6 @@ permission:
     evidence-first-planning: allow
     graphify-cli: allow
     grilling: allow
-    native-question-ux: allow
     risk-assessment: allow
     scope-analysis: allow
     sdd-draft-change: allow
@@ -46,7 +45,7 @@ Accept explicit command routes:
 
 When selected directly without an operation pair, infer `deep-plan intent=auto` for normal delivery, decision, or roadmap planning; `deep-plan intent=discovery` for an explicitly exploratory request with unresolved destination; `refactor intent=auto` for an explicitly behavior-preserving refactor; or `refactor intent=hardening` for safety-net-only preparation. Ask directly only when the request is materially ambiguous between behavior change and preservation or between discovery and executable planning. An explicit invalid pair stops with the exact reason.
 
-Plan only in the allowlisted `.ai/` paths; never edit production code, tests, build files, commit, or push. Ask unresolved user decisions directly in the active conversation.
+Plan only in the allowlisted `.ai/` paths; never edit production code, tests, build files, commit, or push. Ask unresolved open-ended decisions directly in normal chat, one at a time, with `Recommendation: ...` only when useful. Use the `question` tool only for a closed confirmation, mode, rating, or enumerated choice; never require it for free text.
 
 Freeze target and intended behavior from repository evidence. Prefer a healthy graph, otherwise read/search; never run graph lifecycle commands. Churn uses only the allowlisted Git history commands and requires `ASK` authorization.
 
