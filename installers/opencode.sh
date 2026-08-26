@@ -42,7 +42,7 @@ Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
               (currently: architecture, common, docs, learning, meta, plan,
-              sdd, sdd-lite).
+              review, sdd, sdd-lite).
               Exclusive skills live in their domain; shared skills use relative
               symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
@@ -90,8 +90,8 @@ Examples:
   installers/opencode.sh install --domain plan --status done,testing
       Install only done/testing planning components.
 
-  installers/opencode.sh install --domain sdd,common --target /tmp/opencode-test --dry-run
-      Preview a scratch install for selected domains.
+  installers/opencode.sh install --domain sdd,review,common --target /tmp/opencode-test --dry-run
+      Preview full SDD with its optional Judgment handoff and shared tools.
 
   installers/opencode.sh status --domain meta
       Show meta components and link state in the default target.

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Opt-in paid proof for the project-local SDLC orchestrator POC.
+# Opt-in paid proof for the project-local multi-primary profile.
 #
 # This runner performs exactly two workflows, once each, with no retry loop:
-#   1. natural-language Deep Plan, then SDD execution in the same primary session;
-#   2. a natural-language bounded implementation routed through SDD Lite.
+#   1. direct Deep Plan, then a direct SDD primary switch using the exact handoff;
+#   2. a bounded implementation run directly through SDD Lite.
 #
 # It uses the caller's real OpenCode credentials and stores sanitized session
 # exports plus project evidence below the repository's ignored .ai/ directory.
@@ -12,9 +12,9 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FIXTURE="$ROOT/scripts/fixtures/sdd-agent-routes/java-orders"
-PROFILE="$ROOT/scripts/sdlc-orchestrator-poc.sh"
+PROFILE="$ROOT/scripts/multi-primary-profile.sh"
 OPENCODE_BIN="${OPENCODE_BIN:-}"
-TIMEOUT_SECONDS="${SDLC_POC_E2E_TIMEOUT:-2400}"
+TIMEOUT_SECONDS="${MULTI_PRIMARY_E2E_TIMEOUT:-2400}"
 POLL_SECONDS=2
 RUN_PID=""
 SCRATCH=""
@@ -22,7 +22,7 @@ CALLS=0
 FAILURES=0
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-EVIDENCE_ROOT="${SDLC_POC_E2E_EVIDENCE_DIR:-$ROOT/.ai/evidence/sdlc-orchestrator-poc/$timestamp}"
+EVIDENCE_ROOT="${MULTI_PRIMARY_E2E_EVIDENCE_DIR:-$ROOT/.ai/evidence/multi-primary/$timestamp}"
 DATA_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/opencode"
 DATABASE="$DATA_ROOT/opencode.db"
 
@@ -70,8 +70,8 @@ snapshot_project() {
     cp "$project/.opencode/opencode.jsonc" "$target/opencode.jsonc"
   [ -f "$project/.opencode/.agents-orchestrator-manifest" ] &&
     cp "$project/.opencode/.agents-orchestrator-manifest" "$target/installer-manifest.tsv"
-  [ -f "$project/.opencode/.sdlc-orchestrator-poc-manifest" ] &&
-    cp "$project/.opencode/.sdlc-orchestrator-poc-manifest" "$target/profile-manifest.tsv"
+  [ -f "$project/.opencode/.multi-primary-profile-manifest" ] &&
+    cp "$project/.opencode/.multi-primary-profile-manifest" "$target/profile-manifest.tsv"
 }
 
 cleanup() {
@@ -101,8 +101,8 @@ copy_fixture() {
     GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git init -q -b main
     GIT_CONFIG_GLOBAL=/dev/null git add -A
     GIT_CONFIG_GLOBAL=/dev/null \
-      GIT_AUTHOR_NAME=sdlc-poc-e2e GIT_AUTHOR_EMAIL=sdlc-poc-e2e@example.invalid \
-      GIT_COMMITTER_NAME=sdlc-poc-e2e GIT_COMMITTER_EMAIL=sdlc-poc-e2e@example.invalid \
+      GIT_AUTHOR_NAME=multi-primary-e2e GIT_AUTHOR_EMAIL=multi-primary-e2e@example.invalid \
+      GIT_COMMITTER_NAME=multi-primary-e2e GIT_COMMITTER_EMAIL=multi-primary-e2e@example.invalid \
       git commit -qm 'fixture baseline'
   ) || die "could not initialise fixture project at $project"
 }
@@ -120,23 +120,23 @@ install_profile() {
     OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" --pure debug config
   ) > "$evidence/resolved-config.json" 2> "$evidence/resolved-config.stderr" ||
     die "$label resolved-config check failed"
-  jq -e '.default_agent == "sdlc-orchestrator" and .subagent_depth == 2' \
+  jq -e '.subagent_depth == 1' \
     "$evidence/resolved-config.json" >/dev/null ||
-    die "$label did not resolve the POC primary and depth"
+    die "$label did not resolve the multi-primary delegation depth"
 }
 
 run_turn() {
   local project="$1" events="$2" stderr_log="$3" title="$4" prompt="$5"
-  local session_id="${6:-}" started elapsed status
+  local agent="$6" session_id="${7:-}" started elapsed status
   [ ! -e "$events" ] || die "refusing to overwrite paid-run evidence: $events"
   CALLS=$((CALLS + 1))
   if [ -n "$session_id" ]; then
     OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" run \
-      --dir "$project" --session "$session_id" --format json --auto \
+      --dir "$project" --session "$session_id" --agent "$agent" --format json --auto \
       "$prompt" > "$events" 2> "$stderr_log" &
   else
     OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" run \
-      --dir "$project" --format json --auto --title "$title" \
+      --dir "$project" --agent "$agent" --format json --auto --title "$title" \
       "$prompt" > "$events" 2> "$stderr_log" &
   fi
   RUN_PID=$!
@@ -188,6 +188,12 @@ assert_tree_has() {
   tree_has_agent "$1" "$2" || fail "session tree is missing agent $2"
 }
 
+assert_turn_agent() {
+  local events="$1" agent="$2"
+  jq -e --arg agent "$agent" '.. | objects | select(.agent? == $agent)' "$events" >/dev/null ||
+    fail "turn did not run as direct primary $agent"
+}
+
 assert_tree_lacks() {
   ! tree_has_agent "$1" "$2" || fail "session tree unexpectedly contains agent $2"
 }
@@ -218,52 +224,58 @@ write_skill_calls() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.name') AS skill,
             json_extract(p.data,'$.state.status') AS status
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='skill'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 write_direct_skill_body_reads() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.filePath') AS path,
             json_extract(p.data,'$.state.status') AS status
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='read'
        AND json_extract(p.data,'$.state.input.filePath') GLOB '*/skills/*/SKILL.md'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 write_task_briefs() {
   local root_id="$1" target="$2"
   assert_session_id "$root_id"
   sqlite3 -json "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent) AS (
-       SELECT id,parent_id,agent FROM session WHERE id='$root_id'
+    "WITH RECURSIVE tree(id,parent_id) AS (
+       SELECT id,parent_id FROM session WHERE id='$root_id'
        UNION ALL
-       SELECT s.id,s.parent_id,s.agent FROM session s JOIN tree t ON s.parent_id=t.id
+       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
      )
-     SELECT t.agent,
+     SELECT json_extract(m.data,'$.agent') AS agent,
             json_extract(p.data,'$.state.input.subagent_type') AS subagent,
             json_extract(p.data,'$.state.input.prompt') AS prompt
-     FROM part p JOIN tree t ON p.session_id=t.id
+     FROM part p
+     JOIN tree t ON p.session_id=t.id
+     JOIN message m ON p.message_id=m.id
      WHERE json_extract(p.data,'$.tool')='task'
-     ORDER BY p.time_created;" > "$target"
+     ORDER BY p.time_created,p.id;" > "$target"
 }
 
 assert_skill_call() {
@@ -326,15 +338,16 @@ run_plan_sdd_workflow() {
   assert_maven_green "$project" "$evidence/maven-baseline.log" || return 1
 
   run_turn "$project" "$plan_events" "$evidence/01-plan.stderr" \
-    "SDLC POC E2E plan and execute" \
-    "Quiero planificar a fondo, sin implementar todavía, un cambio acotado: agrega a Order un método público lineCount() que devuelva exactamente el número de líneas de la orden y una prueba automatizada. Produce un único change.md ejecutable, no un roadmap ni una investigación. Conserva las convenciones Java y JUnit existentes; no hay decisiones de producto abiertas, no cambies precios ni cantidades y usa la recomendación segura para cualquier detalle menor." || return 1
+    "multi-primary E2E plan and execute" \
+    "Quiero planificar a fondo, sin implementar todavía, un cambio acotado: agrega a Order un método público lineCount() que devuelva exactamente el número de líneas de la orden y una prueba automatizada. Produce un único change.md ejecutable, no un roadmap ni una investigación. Conserva las convenciones Java y JUnit existentes; no hay decisiones de producto abiertas, no cambies precios ni cantidades y usa la recomendación segura para cualquier detalle menor." \
+    deep-planner || return 1
 
   root_id="$(session_id_from_events "$plan_events")"
   assert_session_id "$root_id"
   printf '%s\n' "$root_id" > "$evidence/root-session-id.txt"
   write_session_tree "$root_id" "$tree_before"
-  assert_tree_has "$tree_before" sdlc-orchestrator || return 1
   assert_tree_has "$tree_before" deep-planner || return 1
+  assert_turn_agent "$plan_events" deep-planner || return 1
   assert_tree_lacks "$tree_before" orchestraitor || return 1
   for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
     assert_tree_lacks "$tree_before" "$agent" || return 1
@@ -363,7 +376,6 @@ run_plan_sdd_workflow() {
   assert_skill_call "$evidence/skill-calls-before.tsv" deep-planner sdd-execution-skills || return 1
   assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner code-conventions || return 1
   assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner java-testing || return 1
-  assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-before.tsv" sdlc-orchestrator || return 1
   assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-before.tsv" deep-planner || return 1
   (cd "$project" && find "$change_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
     > "$evidence/change-before.sha256"
@@ -376,8 +388,9 @@ run_plan_sdd_workflow() {
     { fail "Deep Plan changed files outside planning/profile state"; return 1; }
 
   run_turn "$project" "$execute_events" "$evidence/02-execute.stderr" \
-    "SDLC POC E2E plan and execute" \
-    "Implementa ahora mediante SDD exactamente el change.md ready-for-sdd que acabas de producir. Reutiliza ese handoff y no vuelvas a redactarlo. Usa Mode automatic, TDD alongside, Judgment none y Delivery none." \
+    "multi-primary E2E plan and execute" \
+    "operation=execute-handoff. Implementa mediante SDD exactamente $change_rel. Reutiliza ese handoff y no vuelvas a redactarlo. Usa Mode automatic, TDD alongside, Judgment none y Delivery none." \
+    orchestraitor \
     "$root_id" || return 1
 
   [ "$(session_id_from_events "$execute_events")" = "$root_id" ] ||
@@ -388,7 +401,10 @@ run_plan_sdd_workflow() {
   write_skill_calls "$root_id" "$evidence/skill-calls-after.tsv"
   write_direct_skill_body_reads "$root_id" "$evidence/direct-skill-body-reads-after.tsv"
   write_task_briefs "$root_id" "$evidence/task-briefs.json"
-  for agent in sdlc-orchestrator deep-planner orchestraitor sdd-canonical-merge sdd-implement sdd-verify; do
+  assert_turn_agent "$execute_events" orchestraitor || return 1
+  # OpenCode updates the root session's agent on a direct primary switch, so
+  # part-derived evidence uses each message's agent instead of the session label.
+  for agent in orchestraitor sdd-canonical-merge sdd-implement sdd-verify; do
     assert_tree_has "$tree_after" "$agent" || return 1
   done
 
@@ -400,7 +416,7 @@ run_plan_sdd_workflow() {
   assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement code-conventions || return 1
   assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement java-testing || return 1
   assert_skill_call "$evidence/skill-calls-after.tsv" sdd-verify sdd-cold-verification || return 1
-  for agent in sdlc-orchestrator deep-planner orchestraitor; do
+  for agent in deep-planner orchestraitor; do
     assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-after.tsv" "$agent" || return 1
   done
   jq -e 'any(.[]; .subagent == "sdd-implement" and (.prompt | contains("skills=") and contains("code-conventions") and contains("java-testing")))' \
@@ -434,8 +450,9 @@ run_lite_workflow() {
   assert_maven_green "$project" "$evidence/maven-baseline.log" || return 1
 
   run_turn "$project" "$events" "$evidence/01-lite.stderr" \
-    "SDLC POC E2E bounded implementation" \
-    "Implementa este cambio pequeño y de bajo riesgo: agrega a Order un método público totalQuantity() que sume las cantidades de todas sus líneas y una prueba automatizada. El alcance está limitado a Order.java y OrderPricingTest.java, usa TDD alongside, conserva las convenciones existentes y no cambies el comportamiento de precios. Apruebo de antemano el borrador recomendado de change.md; no hay decisiones abiertas." || return 1
+    "multi-primary E2E bounded implementation" \
+    "operation=sdd-lite. Implementa este cambio pequeño y de bajo riesgo: agrega a Order un método público totalQuantity() que sume las cantidades de todas sus líneas y una prueba automatizada. El alcance está limitado a Order.java y OrderPricingTest.java, usa TDD alongside, conserva las convenciones existentes y no cambies el comportamiento de precios. Apruebo de antemano el borrador recomendado de change.md; no hay decisiones abiertas." \
+    orchestralite || return 1
 
   root_id="$(session_id_from_events "$events")"
   assert_session_id "$root_id"
@@ -443,7 +460,8 @@ run_lite_workflow() {
   write_session_tree "$root_id" "$tree"
   export_tree "$tree" "$evidence/sessions"
   write_usage "$tree" "$evidence/usage.tsv"
-  for agent in sdlc-orchestrator orchestralite lite-verify; do
+  assert_turn_agent "$events" orchestralite || return 1
+  for agent in orchestralite lite-verify; do
     assert_tree_has "$tree" "$agent" || return 1
   done
   for agent in deep-planner architect orchestraitor review-coordinator \
@@ -460,8 +478,8 @@ run_lite_workflow() {
   log "PASS E2E 2/2: session $root_id, change ${archived#"$project/"}"
 }
 
-[ "${SDLC_POC_E2E_CONFIRM:-}" = "run-exactly-two-paid-workflows" ] ||
-  die "set SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows to authorize the paid E2E run"
+[ "${MULTI_PRIMARY_E2E_CONFIRM:-}" = "run-exactly-two-paid-workflows" ] ||
+  die "set MULTI_PRIMARY_E2E_CONFIRM=run-exactly-two-paid-workflows to authorize the paid E2E run"
 [ -n "$OPENCODE_BIN" ] || die "OPENCODE_BIN is required"
 [ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
 [ -f "$FIXTURE/pom.xml" ] || die "fixture is missing at $FIXTURE"
@@ -472,7 +490,7 @@ done
 [ ! -e "$EVIDENCE_ROOT" ] || die "evidence destination already exists: $EVIDENCE_ROOT"
 
 mkdir -p "$EVIDENCE_ROOT"
-SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/sdlc-orchestrator-e2e.XXXXXX")"
+SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-e2e.XXXXXX")"
 {
   printf 'started_utc\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf 'repository_head\t%s\n' "$(git -C "$ROOT" rev-parse HEAD)"
@@ -482,9 +500,9 @@ SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/sdlc-orchestrator-e2e.XXXXXX")"
   printf 'retry_policy\tnone\n'
 } > "$EVIDENCE_ROOT/run-metadata.tsv"
 
-bash "$ROOT/scripts/test-sdlc-orchestrator-contracts.sh" > "$EVIDENCE_ROOT/contracts.log" 2>&1 ||
-  die "deterministic SDLC contracts failed"
-bash "$ROOT/scripts/test-sdlc-orchestrator-poc.sh" > "$EVIDENCE_ROOT/profile-contracts.log" 2>&1 ||
+bash "$ROOT/scripts/test-primary-agent-contracts.sh" > "$EVIDENCE_ROOT/contracts.log" 2>&1 ||
+  die "deterministic primary contracts failed"
+bash "$ROOT/scripts/test-multi-primary-profile.sh" > "$EVIDENCE_ROOT/profile-contracts.log" 2>&1 ||
   die "deterministic profile contracts failed"
 
 run_plan_sdd_workflow || true
@@ -498,5 +516,5 @@ if [ "$FAILURES" -gt 0 ]; then
   exit 1
 fi
 
-printf 'PASS: exactly 2 paid SDLC workflows, 3 turns, 0 retries.\n'
+printf 'PASS: exactly 2 paid multi-primary workflows, 3 turns, 0 retries.\n'
 printf 'Evidence: %s\n' "$EVIDENCE_ROOT"

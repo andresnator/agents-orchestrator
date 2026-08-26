@@ -201,8 +201,8 @@ done
 for file in \
   domains/plan/agents/deep-planner.md \
   domains/architecture/agents/architect.md; do
-  assert_frontmatter_contains "$file" 'mode: subagent'
-  assert_frontmatter_contains "$file" 'question: deny'
+  assert_frontmatter_contains "$file" 'mode: primary'
+  assert_frontmatter_contains "$file" 'question: allow'
   assert_contains "$file" 'change.md'
   assert_contains "$file" 'Status: ready-for-sdd'
   assert_not_contains "$file" 'sdlc-coordinator-receipt/v1'
@@ -228,7 +228,7 @@ assert_contains domains/plan/agents/deep-planner.md 'continúa el roadmap <goal>
 assert_contains domains/plan/agents/deep-planner.md '.ai/roadmaps/<goal>.md'
 assert_contains domains/plan/agents/deep-planner.md 'planned|adopted'
 assert_contains domains/plan/agents/deep-planner.md 'first unblocked'
-assert_contains domains/plan/agents/deep-planner.md 'OK plan/<deep-plan|refactor>'
+assert_contains domains/plan/agents/deep-planner.md 'On completion, lead with the planning outcome'
 assert_frontmatter_contains domains/plan/agents/deep-planner.md 'refactor-analyzer: allow'
 assert_exists domains/plan/agents/refactor-analyzer.md
 assert_absent domains/refactor
@@ -249,8 +249,8 @@ assert_contains domains/common/skills/grill/SKILL.md 'Load `sdd-execution-skills
 assert_contains domains/common/skills/grill/SKILL.md 'never load or read implementation skill bodies'
 
 orchestrator=domains/sdd/agents/orchestraitor.md
-assert_frontmatter_contains "$orchestrator" 'mode: subagent'
-assert_frontmatter_contains "$orchestrator" 'question: deny'
+assert_frontmatter_contains "$orchestrator" 'mode: primary'
+assert_frontmatter_contains "$orchestrator" 'question: allow'
 for operation in direct-sdd execute-handoff resume; do
   assert_contains "$orchestrator" "$operation"
 done
@@ -355,7 +355,7 @@ done
 
 for command in deep-plan harden-plan refactor-plan wayfinder; do
   file="domains/plan/commands/$command.md"
-  assert_frontmatter_contains "$file" 'agent: sdlc-orchestrator'
+  assert_frontmatter_contains "$file" 'agent: deep-planner'
   assert_frontmatter_contains "$file" 'subtask: false'
   assert_contains "$file" "$RUNTIME_ARGUMENTS"
 done
@@ -388,9 +388,14 @@ for scenario in \
   PLAN-REFACTOR-01 PLAN-HARDEN-AUTO-01 PLAN-HARDEN-ALIAS-01 PLAN-REFACTOR-GUARD-01; do
   assert_contains "$scenario_doc" "$scenario"
 done
-for heading in '**Prompt:**' '**Expected artifacts/A2A:**' '**Forbidden behavior:**'; do
+for heading in '**Prompt:**' '**Expected artifacts/outcome:**' '**Forbidden behavior:**'; do
   assert_contains "$scenario_doc" "$heading"
 done
+assert_not_contains "$scenario_doc" 'OK plan/'
+assert_not_contains "$scenario_doc" 'ASK plan/'
+assert_not_contains "$scenario_doc" 'next='
+assert_not_contains "$scenario_doc" 'planner child'
+assert_not_contains "$scenario_doc" 'A2A'
 
 if [ "$FAILS" -gt 0 ]; then
   printf 'FAIL: %d plan/SDD contract violation(s) across %d checks.\n' "$FAILS" "$CHECKS" >&2

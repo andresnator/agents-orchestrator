@@ -9,9 +9,10 @@
 #   OPENCODE_BIN=... scripts/test-sdd-flows.sh lite      # sdd-lite POC scenarios
 #
 # The LITE-* scenarios drive `orchestralite` (sdd-lite domain) instead of the
-# orchestraitor; both agents must be installed in the caller's real OpenCode
-# config for their ids to resolve. PASS lines print output tokens, so running
-# SDD-LIGHT-01 and LITE-01 back to back is the light-vs-lite token comparison.
+# orchestraitor. SDD-JDG-04 also switches to `review-coordinator`; all selected
+# primaries must be installed in the caller's real OpenCode config. PASS lines
+# print output tokens, so running SDD-LIGHT-01 and LITE-01 back to back is the
+# light-vs-lite token comparison.
 #
 # This suite calls a real model and spends real credits, so it is opt-in and is
 # NOT wired into scripts/validate-harness.sh. Runs use the caller's real HOME and
@@ -518,26 +519,59 @@ scenario_SDD_ARCH_01() {
 scenario_SDD_JDG_04() {
   CURRENT=SDD-JDG-04
   setup_scenario none
-  run_agent "usa SDD en modo automático, TDD alongside, judgment light, delivery none: agregá a OrderPricing un método discountShare(Order, BigDecimal) que reemplace a discountPerLine y devuelva el descuento repartido por línea, con su test." ||
-    { verdict_fail "the run exited non-zero or timed out"; return; }
+  local sdd_events="$SCRATCH/sdd.events.jsonl"
+  local review_events="$SCRATCH/review.events.jsonl"
+  local resume_events="$SCRATCH/resume.events.jsonl"
+  local active_root active_rel change_name ledger archived fix_rounds
+
+  EVENTS="$sdd_events"
+  STDERR_LOG="$SCRATCH/sdd.stderr.log"
+  run_agent "usa SDD en modo automático, TDD alongside, judgment light, delivery none: el dominio Review está instalado y /judgment está disponible. Agregá a OrderPricing un método discountShare(Order, BigDecimal) que reemplace a discountPerLine y devuelva el descuento repartido por línea, con su test." ||
+    { verdict_fail "the SDD turn exited non-zero or timed out"; return; }
+
+  active_root="$(find_change_dir)"
+  [ -n "$active_root" ] || { verdict_fail "SDD produced no active change before Judgment"; return; }
+  active_rel="${active_root#"$PROJECT/"}"
+  change_name="$(basename "$active_root")"
+  assert_file "$active_root/state.md" || return
+  assert_grep "$active_root/state.md" 'Phase: judgment' || return
+  assert_not_launched jd-solo || return
+
+  EVENTS="$review_events"
+  STDERR_LOG="$SCRATCH/review.stderr.log"
+  RUN_AGENT=review-coordinator
+  run_agent "operation=judgment. Run preset light Judgment on the current working-tree diff under src/main and src/test for the active SDD change at $active_rel. Persist the verdict, including a clean result, at $active_rel/judgment.md for SDD reconciliation. Do not commit or push." ||
+    { verdict_fail "the review-coordinator turn exited non-zero or timed out"; return; }
 
   assert_launched jd-solo || return
   assert_not_launched jd-judge-a || return
   assert_not_launched jd-judge-b || return
 
-  local ledger
-  ledger="$(find "$PROJECT/.ai/orchestrator/changes" -name judgment.md -print -quit 2>/dev/null)"
-  if [ -z "$ledger" ]; then
-    printf 'INFO %s — no judgment.md was written; light mode may have found nothing to record\n' "$CURRENT"
-  else
-    grep -q 'JS-[0-9]' "$ledger" ||
-      { verdict_fail "judgment.md carries no JS-nnn finding ids"; return; }
-  fi
+  ledger="$active_root/judgment.md"
+  assert_file "$ledger" || return
+  grep -Eq 'JS-[0-9]|CLEAN' "$ledger" ||
+    { verdict_fail "judgment.md carries neither findings nor a clean verdict"; return; }
 
-  local fix_rounds
   fix_rounds="$(launched_subagents_all | grep -cx jd-fix || true)"
   [ "$fix_rounds" -le 1 ] ||
     { verdict_fail "light mode ran $fix_rounds jd-fix rounds, the budget is one"; return; }
+
+  EVENTS="$resume_events"
+  STDERR_LOG="$SCRATCH/resume.stderr.log"
+  RUN_AGENT=orchestraitor
+  run_agent "operation=resume. Resume the exact active root $active_rel after completed light Judgment. Reconcile $active_rel/judgment.md, re-verify every changed file, merge canonical behavior, and archive. Keep any non-critical open review rows in the record; no further Judgment round is requested." ||
+    { verdict_fail "the SDD resume turn exited non-zero or timed out"; return; }
+
+  archived="$(find_change_dir "$change_name")"
+  [ -n "$archived" ] || { verdict_fail "$change_name was not retained after SDD resume"; return; }
+  case "$archived" in
+    */archive/*) ;;
+    *) verdict_fail "$change_name was not archived after review reconciliation"; return ;;
+  esac
+  assert_file "$archived/state.md" || return
+  assert_grep "$archived/state.md" 'Phase: archive' || return
+  assert_launched sdd-verify || return
+  assert_launched sdd-canonical-merge || return
   verdict_pass
 }
 

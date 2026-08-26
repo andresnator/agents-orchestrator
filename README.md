@@ -1,6 +1,6 @@
 # Agents Orchestrator
 
-Reusable OpenCode agents, commands, skills, and plugins organized by domain. The opt-in SDLC profile provides one natural-language entrypoint while preserving specialized coordinators.
+Reusable OpenCode agents, commands, skills, and plugins organized by domain. Core workflows use direct primary agents with one delegation level for specialized workers.
 
 ## Quick path
 
@@ -12,28 +12,28 @@ installers/opencode.sh install
 
 Global installs also attempt to install missing Homebrew tools required by the selected components. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip Homebrew by default and accept `--install-brew-tools` as an opt-in.
 
-Or install the SDLC POC into one project only:
+Or install the multi-primary profile into one project only:
 
 ```bash
-scripts/sdlc-orchestrator-poc.sh install --project-root /absolute/path/to/project
-scripts/sdlc-orchestrator-poc.sh status --project-root /absolute/path/to/project
+scripts/multi-primary-profile.sh install --project-root /absolute/path/to/project
+scripts/multi-primary-profile.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `sdlc,plan,sdd,architecture,sdd-lite,common`, sets `sdlc-orchestrator` as the default, and allows two delegation levels. See the [POC runbook](docs/sdlc-orchestrator-poc.md).
+The project profile selects `plan,sdd,architecture,sdd-lite,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md).
 
 ## Domains
 
 | Domain | Purpose | Entry points |
 |---|---|---|
-| [sdlc](domains/sdlc/README.md) | Natural-language routing and user-question ownership | `sdlc-orchestrator` |
-| [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `/deep-plan`, `/refactor-plan` plus compatibility aliases |
+| [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `deep-planner`, `/deep-plan`, `/refactor-plan` |
 | [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
-| [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/judgment` |
-| [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite` |
+| [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/sdd` |
+| [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite`, `/sdd-lite` |
+| [review](domains/review/README.md) | Adversarial review and Socratic design defense | `review-coordinator`, `/judgment`, `/defend` |
 | [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/absorb` |
-| [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/defend`, `/graphify-index`, `/grill` |
+| [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
 
 ## Repository shape
 
@@ -54,16 +54,19 @@ Filtered installation is a sync: include every domain and lifecycle status you w
 
 ```bash
 installers/opencode.sh install --domain plan --status done,testing
+installers/opencode.sh install --domain sdd,review
 installers/opencode.sh install --project
 installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status --domain sdd
 ```
 
+Filtered `sdd` installs support `Judgment: none`; include `review` when light or full Judgment is required.
+
 ## Documentation
 
 | Guide | Purpose |
 |---|---|
-| [SDLC POC](docs/sdlc-orchestrator-poc.md) | Install, route, validate, and roll back the project profile |
+| [Multi-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back direct primaries |
 | [SDD test plan](docs/sdd-test-plan.md) | Choose deterministic or model-backed flow checks |
 | [Plan flow scenarios](docs/plan-flow-test-scenarios.md) | Copy-ready hypothetical prompts and expected Plan evidence |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |

@@ -4,7 +4,7 @@
 
 ## Quick path
 
-1. Describe the outcome through `sdlc-orchestrator` or a planning command.
+1. Select `deep-planner` or run a planning command.
 2. Answer only unresolved product, acceptance, or risk questions.
 3. Review the returned plan, roadmap slice, or ready `change.md`.
 
@@ -27,7 +27,7 @@ Copy-ready prompts and expected evidence remain in [Plan flow test scenarios](..
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (subagent coordinator) | `deep-planner` | Produces plans and ready changes |
+| Agent (primary) | `deep-planner` | Produces plans and ready changes directly |
 | Agent (subagent) | `refactor-analyzer` | Applies one read-only analysis lens |
 | Command | `/deep-plan` | Routes normal planning work |
 | Command alias | `/wayfinder` | Routes durable discovery planning |

@@ -206,9 +206,9 @@ shouldPreserveJsoncScalarProperties() {
 }
 EOF
 
-  python3 "$ROOT/scripts/jsonc-array.py" set "$original" default_agent '"sdlc-orchestrator"' > "$managed"
+  python3 "$ROOT/scripts/jsonc-array.py" set "$original" default_agent '"custom-primary"' > "$managed"
   python3 "$ROOT/scripts/jsonc-array.py" set "$managed" subagent_depth 2 > "$depth"
-  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" default_agent)" = '"sdlc-orchestrator"' ] ||
+  [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" default_agent)" = '"custom-primary"' ] ||
     fail "JSONC scalar set/get lost default_agent"
   [ "$(python3 "$ROOT/scripts/jsonc-array.py" get "$depth" subagent_depth)" = 2 ] ||
     fail "JSONC scalar set/get lost subagent_depth"

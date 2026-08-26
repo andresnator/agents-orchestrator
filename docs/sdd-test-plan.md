@@ -6,7 +6,7 @@ Run deterministic contracts for every change. Run model-backed scenarios only wi
 
 ```bash
 scripts/test-plan-sdd-contracts.sh
-scripts/test-sdlc-orchestrator-contracts.sh
+scripts/test-primary-agent-contracts.sh
 scripts/test-sdd-automode.sh
 scripts/validate-harness.sh
 ```
@@ -23,14 +23,14 @@ Then run `smoke`, `plan`, `lite`, or one scenario id. The harness copies `script
 
 | Coverage | Scenario or suite | Pass evidence |
 |---|---|---|
-| Natural route | SDLC POC E2E | Expected coordinator; only primary asks questions |
+| Direct primary route | Multi-primary E2E | Selected primary asks questions directly |
 | One-document handoff | `PLAN-HANDOFF-01` | Producer writes one change; SDD adopts exact path |
 | Direct full SDD | `SDD-LIGHT-01`, `SDD-FULL-02` | Change and state reach verification and archive |
 | Ready-change adoption | `SDD-ADOPT-01` | Valid marker; first unchecked work starts |
 | Bounded Lite | `LITE-01` | Scope holds; only `lite-verify` delegates |
 | Resume | `smoke` resume path | Unique active root resumes recorded phase |
 | Verification and merge | `SDD-ARCH-01`, `SDD-ARCH-02` | Tests pass before canonical merge |
-| Judgment | `SDD-JDG-04` | Requested judges run; fixes stay bounded |
+| Judgment handoff | `SDD-JDG-04` | SDD pauses; Review judges; SDD resumes and archives |
 | Failures | Contract suites and negative fixtures | Invalid or ambiguous state blocks |
 
 Scenario ids are stable handles; scripts own exact fixtures and assertions.
@@ -53,12 +53,12 @@ Paths outside a declared brief are not verifier gaps. Workers never stage, commi
 The paid runner performs one Plan-to-SDD workflow and one bounded Lite workflow, without retries:
 
 ```bash
-SDLC_POC_E2E_CONFIRM=run-exactly-two-paid-workflows \
+MULTI_PRIMARY_E2E_CONFIRM=run-exactly-two-paid-workflows \
   OPENCODE_BIN=/absolute/path/to/opencode \
-  scripts/test-sdlc-orchestrator-e2e.sh
+  scripts/test-multi-primary-e2e.sh
 ```
 
-Evidence goes under ignored `.ai/evidence/sdlc-orchestrator-poc/<timestamp>/`. Keep failures; retries would hide nondeterminism.
+Evidence goes under ignored `.ai/evidence/multi-primary/<timestamp>/`. Keep failures; retries would hide nondeterminism.
 
 ## Reporting
 

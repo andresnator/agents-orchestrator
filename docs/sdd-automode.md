@@ -1,6 +1,6 @@
 # Toggle SDD Auto Mode
 
-Auto mode removes OpenCode tool-permission prompts for SDD agents. Workflow decisions still return to `sdlc-orchestrator`; repository prompts and frontmatter never change.
+Auto mode removes OpenCode tool-permission prompts for SDD agents. Workflow decisions are asked directly by `orchestraitor`; repository prompts and frontmatter never change.
 
 ## Quick path
 
@@ -19,7 +19,7 @@ The script discovers agents under `domains/sdd/agents/` and writes complete `age
 
 | Agent group | Preserved boundary |
 |---|---|
-| `orchestraitor` | Keeps `question: deny` and narrow Task and skill maps |
+| `orchestraitor` | Keeps direct questions and narrow Task and skill maps |
 | Read-only workers | Keep file-write denies |
 | Implementation workers | Keep frontmatter ownership boundaries |
 | Built-in `general` | Included unless `--no-general` is set |
@@ -34,7 +34,7 @@ Other known permission keys become `allow`. New SDD agents are discovered automa
 - `doom_loop: allow` disables the repeated-action circuit breaker.
 - `general` is global and affects other workflows.
 - Existing custom blocks are replaced after warning; recover them from the timestamped backup.
-- SDD questions remain denied to workers and return as compact `ASK` lines to the primary.
+- SDD workers cannot ask questions; `orchestraitor` asks them directly.
 
 Inspect `--dry-run` output before enabling. Verify behavior with:
 

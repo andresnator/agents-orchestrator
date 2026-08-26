@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the opt-in SDLC orchestrator profile into one project's .opencode/.
+# Install the opt-in multi-primary profile into one project's .opencode/.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -7,10 +7,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 INSTALLER="$REPO_ROOT/installers/opencode.sh"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 
-PROFILE_CONTRACT="sdlc-orchestrator-poc-profile/v1"
-PROFILE_DOMAINS="sdlc,plan,sdd,architecture,sdd-lite,common"
-MANAGED_DEFAULT_AGENT='"sdlc-orchestrator"'
-MANAGED_SUBAGENT_DEPTH='2'
+PROFILE_CONTRACT="multi-primary-profile/v1"
+PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
+PRIMARY_AGENTS="deep-planner architect orchestraitor orchestralite review-coordinator"
+MANAGED_SUBAGENT_DEPTH='1'
 
 ACTION=""
 PROJECT_ROOT_ARG=""
@@ -29,12 +29,13 @@ TMP_THREE=""
 
 usage() {
   cat <<'EOF'
-usage: scripts/sdlc-orchestrator-poc.sh install|status|uninstall --project-root <dir>
+usage: scripts/multi-primary-profile.sh install|status|uninstall --project-root <dir>
        [--install-brew-tools|--no-install-brew-tools]
 
-Installs or removes the opt-in SDLC orchestrator profile only in
+Installs or removes the opt-in multi-primary profile only in
 <dir>/.opencode. Global OpenCode configuration is never a target.
 Project installs skip Homebrew tools unless --install-brew-tools is set.
+The profile preserves default_agent and manages only subagent_depth.
 EOF
 }
 
@@ -74,14 +75,20 @@ resolve_project_root() {
   source_common="$(resolve_git_common_dir "$REPO_ROOT" 2>/dev/null || true)"
   target_common="$(resolve_git_common_dir "$PROJECT_ROOT" 2>/dev/null || true)"
   if [ -n "$source_common" ] && [ "$source_common" = "$target_common" ]; then
-    die "refusing to install the POC into this repository or one of its worktrees"
+    die "refusing to install the profile into this repository or one of its worktrees"
   fi
 
   TARGET="$PROJECT_ROOT/.opencode"
   [ ! -L "$TARGET" ] || die "refusing symlinked project target: $TARGET"
-  CONFIG_FILE="$TARGET/opencode.jsonc"
+  if [ -e "$TARGET/opencode.jsonc" ]; then
+    CONFIG_FILE="$TARGET/opencode.jsonc"
+  elif [ -e "$TARGET/opencode.json" ]; then
+    CONFIG_FILE="$TARGET/opencode.json"
+  else
+    CONFIG_FILE="$TARGET/opencode.jsonc"
+  fi
   INSTALLER_MANIFEST="$TARGET/.agents-orchestrator-manifest"
-  PROFILE_MANIFEST="$TARGET/.sdlc-orchestrator-poc-manifest"
+  PROFILE_MANIFEST="$TARGET/.multi-primary-profile-manifest"
 }
 
 reject_symlinked_managed_directories() {
@@ -125,28 +132,20 @@ render_jsonc_action() {
   esac
 }
 
-new_tmp() { mktemp "${TMPDIR:-/tmp}/sdlc-orchestrator-poc.XXXXXX"; }
+new_tmp() { mktemp "${TMPDIR:-/tmp}/multi-primary-profile.XXXXXX"; }
 
 render_managed_config() {
-  TMP_ONE="$(new_tmp)"
   TMP_TWO="$(new_tmp)"
-  render_jsonc_action set "$CONFIG_FILE" default_agent "$MANAGED_DEFAULT_AGENT" "$TMP_ONE"
-  render_jsonc_action set "$TMP_ONE" subagent_depth "$MANAGED_SUBAGENT_DEPTH" "$TMP_TWO"
+  render_jsonc_action set "$CONFIG_FILE" subagent_depth "$MANAGED_SUBAGENT_DEPTH" "$TMP_TWO"
 }
 
 render_restored_config() {
-  local default_state="$1" default_json="$2" depth_state="$3" depth_json="$4"
-  TMP_ONE="$(new_tmp)"
+  local depth_state="$1" depth_json="$2"
   TMP_TWO="$(new_tmp)"
-  if [ "$default_state" = value ]; then
-    render_jsonc_action set "$CONFIG_FILE" default_agent "$default_json" "$TMP_ONE"
-  else
-    render_jsonc_action remove-property "$CONFIG_FILE" default_agent "" "$TMP_ONE"
-  fi
   if [ "$depth_state" = value ]; then
-    render_jsonc_action set "$TMP_ONE" subagent_depth "$depth_json" "$TMP_TWO"
+    render_jsonc_action set "$CONFIG_FILE" subagent_depth "$depth_json" "$TMP_TWO"
   else
-    render_jsonc_action remove-property "$TMP_ONE" subagent_depth "" "$TMP_TWO"
+    render_jsonc_action remove-property "$CONFIG_FILE" subagent_depth "" "$TMP_TWO"
   fi
 }
 
@@ -209,7 +208,7 @@ emit_expected_files() {
         printf '%s\t%s\t%s\n' "$TARGET/plugins/$name.js" "$name" "$file"
       done
     if find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f -name '*.tui.json' | grep -q .; then
-      die "the POC profile does not support TUI descriptors in its selected domains"
+      die "the profile does not support TUI descriptors in its selected domains"
     fi
   done
   IFS="$old_ifs"
@@ -275,10 +274,13 @@ validate_installer_manifest_ownership() {
     esac
   done < "$INSTALLER_MANIFEST"
 
-  manifest_has_row link "$TARGET/agents/sdlc-orchestrator.md" ||
-    die "sdlc-orchestrator is missing from the saved profile manifest"
-  [ -L "$TARGET/agents/sdlc-orchestrator.md" ] ||
-    die "sdlc-orchestrator is missing from the installed profile"
+  local primary
+  for primary in $PRIMARY_AGENTS; do
+    manifest_has_row link "$TARGET/agents/$primary.md" ||
+      die "$primary is missing from the saved profile manifest"
+    [ -L "$TARGET/agents/$primary.md" ] ||
+      die "$primary is missing from the installed profile"
+  done
 }
 
 validate_installer_contents() {
@@ -332,32 +334,38 @@ validate_installer_contents() {
     [ "$question" != allow ] || question_owner_count=$((question_owner_count + 1))
     [ -n "$question" ] || die "profile agent omits its question permission: $path"
   done < "$TMP_THREE"
-  [ "$primary_count" -eq 1 ] || die "expected exactly one repo-owned primary, found $primary_count"
-  [ "$question_owner_count" -eq 1 ] || die "expected exactly one profile question owner, found $question_owner_count"
-  grep -Fq "$TARGET/agents/sdlc-orchestrator.md" "$TMP_THREE" ||
-    die "sdlc-orchestrator is missing from the profile"
+  [ "$primary_count" -eq 5 ] || die "expected exactly five repo-owned primaries, found $primary_count"
+  [ "$question_owner_count" -eq 5 ] || die "expected exactly five direct question owners, found $question_owner_count"
+  local primary
+  for primary in $PRIMARY_AGENTS; do
+    grep -Fq "$TARGET/agents/$primary.md" "$TMP_THREE" ||
+      die "$primary is missing from the profile"
+  done
 }
 
 validate_managed_config() {
-  read_scalar "$CONFIG_FILE" default_agent
-  [ "$JSON_STATE" = value ] && [ "$JSON_VALUE" = "$MANAGED_DEFAULT_AGENT" ] ||
-    die "managed default_agent changed in $CONFIG_FILE"
   read_scalar "$CONFIG_FILE" subagent_depth
   [ "$JSON_STATE" = value ] && [ "$JSON_VALUE" = "$MANAGED_SUBAGENT_DEPTH" ] ||
     die "managed subagent_depth changed in $CONFIG_FILE"
 }
 
 validate_profile_manifest() {
-  [ -f "$PROFILE_MANIFEST" ] || die "POC profile manifest is missing: $PROFILE_MANIFEST"
-  [ "$(manifest_value contract)" = "$PROFILE_CONTRACT" ] || die "foreign POC profile manifest contract"
-  [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign POC profile manifest root"
-  [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign POC profile target"
-  [ "$(manifest_value domains)" = "$PROFILE_DOMAINS" ] || die "broad POC profile domain selection"
-  local config_existed target_existed expected_sha actual_sha
+  [ -f "$PROFILE_MANIFEST" ] || die "profile manifest is missing: $PROFILE_MANIFEST"
+  [ "$(manifest_value contract)" = "$PROFILE_CONTRACT" ] || die "foreign profile manifest contract"
+  [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign profile manifest root"
+  [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign profile target"
+  [ "$(manifest_value domains)" = "$PROFILE_DOMAINS" ] || die "broad profile domain selection"
+  local saved_config config_existed target_existed expected_sha actual_sha
+  saved_config="$(manifest_value config-file)"
+  case "$saved_config" in
+    "") ;; # Legacy v1 manifests predate explicit config-path ownership.
+    "$TARGET/opencode.json"|"$TARGET/opencode.jsonc") CONFIG_FILE="$saved_config" ;;
+    *) die "global or foreign profile config file" ;;
+  esac
   config_existed="$(manifest_value config-existed)"
-  case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in POC profile manifest" ;; esac
+  case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in profile manifest" ;; esac
   target_existed="$(manifest_value target-existed)"
-  case "$target_existed" in ""|0|1) ;; *) die "invalid target-existed value in POC profile manifest" ;; esac
+  case "$target_existed" in ""|0|1) ;; *) die "invalid target-existed value in profile manifest" ;; esac
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing"
   expected_sha="$(manifest_value installer-manifest-sha256)"
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
@@ -367,17 +375,16 @@ validate_profile_manifest() {
 }
 
 write_profile_manifest() {
-  local default_state="$1" default_json="$2" depth_state="$3" depth_json="$4" config_existed="$5" target_existed="$6"
-  TMP_THREE="$(mktemp "$TARGET/.sdlc-orchestrator-poc-manifest.tmp.XXXXXX")"
+  local depth_state="$1" depth_json="$2" config_existed="$3" target_existed="$4"
+  TMP_THREE="$(mktemp "$TARGET/.multi-primary-profile-manifest.tmp.XXXXXX")"
   {
     printf 'contract\t%s\n' "$PROFILE_CONTRACT"
     printf 'project-root\t%s\n' "$PROJECT_ROOT"
     printf 'target\t%s\n' "$TARGET"
     printf 'domains\t%s\n' "$PROFILE_DOMAINS"
+    printf 'config-file\t%s\n' "$CONFIG_FILE"
     printf 'config-existed\t%s\n' "$config_existed"
     printf 'target-existed\t%s\n' "$target_existed"
-    printf 'previous-default-agent-state\t%s\n' "$default_state"
-    printf 'previous-default-agent-json\t%s\n' "$default_json"
     printf 'previous-subagent-depth-state\t%s\n' "$depth_state"
     printf 'previous-subagent-depth-json\t%s\n' "$depth_json"
     printf 'installer-manifest-sha256\t%s\n' "$(sha256_file "$INSTALLER_MANIFEST")"
@@ -387,13 +394,11 @@ write_profile_manifest() {
 }
 
 run_install() {
-  local default_state default_json depth_state depth_json config_existed=0 target_existed=0
+  local depth_state depth_json config_existed=0 target_existed=0
   local installer_args=(install --domain "$PROFILE_DOMAINS" --target "$TARGET")
   if [ -f "$PROFILE_MANIFEST" ]; then
     validate_profile_manifest
     validate_managed_config
-    default_state="$(manifest_value previous-default-agent-state)"
-    default_json="$(manifest_value previous-default-agent-json)"
     depth_state="$(manifest_value previous-subagent-depth-state)"
     depth_json="$(manifest_value previous-subagent-depth-json)"
     config_existed="$(manifest_value config-existed)"
@@ -404,8 +409,6 @@ run_install() {
     preflight_fresh_destinations
     if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then target_existed=1; fi
     [ ! -e "$CONFIG_FILE" ] || config_existed=1
-    read_scalar "$CONFIG_FILE" default_agent
-    default_state="$JSON_STATE"; default_json="$JSON_VALUE"
     read_scalar "$CONFIG_FILE" subagent_depth
     depth_state="$JSON_STATE"; depth_json="$JSON_VALUE"
   fi
@@ -417,36 +420,36 @@ run_install() {
   mkdir -p "$TARGET"
   mv "$TMP_TWO" "$CONFIG_FILE"
   TMP_TWO=""
-  write_profile_manifest "$default_state" "$default_json" "$depth_state" "$depth_json" "$config_existed" "$target_existed"
+  write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed"
   validate_managed_config
-  printf 'status: installed\nproject-root: %s\ndefault_agent: sdlc-orchestrator\nsubagent_depth: 2\n' "$PROJECT_ROOT"
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\n' \
+    "$PROJECT_ROOT" "$CONFIG_FILE"
 }
 
 run_status() {
   if [ ! -f "$PROFILE_MANIFEST" ]; then
-    [ ! -e "$INSTALLER_MANIFEST" ] || die "foreign installer manifest exists without the POC profile"
+    [ ! -e "$INSTALLER_MANIFEST" ] || die "foreign installer manifest exists without the profile"
     printf 'status: not installed\nproject-root: %s\n' "$PROJECT_ROOT"
     return 1
   fi
   validate_profile_manifest
   validate_managed_config
-  printf 'status: installed\nproject-root: %s\ndefault_agent: sdlc-orchestrator\nsubagent_depth: 2\nrepo-owned primaries: 1\nquestion owners: 1\n' "$PROJECT_ROOT"
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 5\nquestion owners: 5\n' \
+    "$PROJECT_ROOT" "$CONFIG_FILE"
 }
 
 run_uninstall() {
-  [ -f "$PROFILE_MANIFEST" ] || die "POC profile is not installed for $PROJECT_ROOT"
+  [ -f "$PROFILE_MANIFEST" ] || die "profile is not installed for $PROJECT_ROOT"
   validate_profile_manifest
   validate_managed_config
 
-  local default_state default_json depth_state depth_json config_existed target_existed
-  default_state="$(manifest_value previous-default-agent-state)"
-  default_json="$(manifest_value previous-default-agent-json)"
+  local depth_state depth_json config_existed target_existed
   depth_state="$(manifest_value previous-subagent-depth-state)"
   depth_json="$(manifest_value previous-subagent-depth-json)"
   config_existed="$(manifest_value config-existed)"
   target_existed="$(manifest_value target-existed)"
   [ -n "$target_existed" ] || target_existed=1
-  render_restored_config "$default_state" "$default_json" "$depth_state" "$depth_json"
+  render_restored_config "$depth_state" "$depth_json"
 
   "$INSTALLER" uninstall --target "$TARGET"
   if [ "$config_existed" = 0 ] && is_empty_jsonc_object "$TMP_TWO"; then

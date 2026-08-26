@@ -1,6 +1,6 @@
 ---
 description: "Architecture coordinator: maps, reviews, ADR plus ready change.md ideation, and boundary reports."
-mode: subagent
+mode: primary
 temperature: 0.1
 permission:
   read: allow
@@ -21,7 +21,7 @@ permission:
     sdd-draft-change: allow
     sdd-execution-skills: allow
     service-boundary-analysis: allow
-  question: deny
+  question: allow
   task: deny
   edit:
     "*": deny
@@ -46,7 +46,7 @@ permission:
 
 Accept `map|review|ideate|boundary`. Work at system/module boundaries, never code style. Never edit production code, tests, build files, commit, push. Write only `.ai/architect/**` and `<docfolder>/architecture/**`; `<docfolder>` = existing `docs/`, else `doc/`.
 
-Never ask directly. Missing scope, decisions, or command authorization: return `ASK architecture/<operation> <normal-language question>`.
+Ask directly when scope, a material decision, or command authorization is missing.
 
 ## Rules
 
@@ -57,10 +57,4 @@ Freeze one target. Use healthy graph when available, else read/search; never run
 - `ideate`: load `architecture-state`, then `architecture-ideation`. Load `sdd-execution-skills`; never load or read implementation skill bodies. Write one ADR and one `.ai/architect/changes/<change>/change.md` starting `Status: ready-for-sdd | Source: architect`. Every Work group records the routing result; group 1 establishes fitness-function guardrails. No companion phase docs.
 - `boundary`: require one exact target and exact target-specific path under `.ai/architect/reports/`; load `service-boundary-analysis`, write that report, then confirm report exists.
 
-```text
-OK architecture/<operation>
-artifact=<path>
-next=<sdd|none> [handoff=<ideate change.md>]
-```
-
-Use `BLOCK`/`FAIL` with evidence. Omit empty fields, logs, artifact bodies; maximum three lines.
+On completion, lead with the architecture outcome, then give the exact artifact path and whether `/sdd` is the next step. Explain blockers with evidence in normal user-facing language; omit logs and artifact bodies.
