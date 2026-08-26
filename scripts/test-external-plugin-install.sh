@@ -263,7 +263,7 @@ shouldInstallRepairStatusAndUninstallExternalPlugins() {
 
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" status --domain meta,common --target "$target" > "$status_output"
-  assert_contains "$status_output" $'meta\texternal-tui-plugins\tmodel-configurator\t-\tinstalled+registered@0.1.0' "status missed model configurator"
+  assert_contains "$status_output" $'meta\texternal-tui-plugins\tmodel-configurator\t-\tinstalled+registered@0.3.0' "status missed model configurator"
   assert_contains "$status_output" $'meta\texternal-server-plugins\tskill-registry\t-\tinstalled@0.1.0' "status missed skill registry"
   assert_contains "$status_output" $'common\texternal-server-plugins\tgraphify-init\t-\tinstalled@0.1.0' "status missed Graphify"
 
