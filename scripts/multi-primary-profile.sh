@@ -207,7 +207,7 @@ emit_expected_files() {
         name="$(basename "$file" .server.json)"
         printf '%s\t%s\t%s\n' "$TARGET/plugins/$name.js" "$name" "$file"
       done
-    if find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f -name '*.tui.json' | grep -q .; then
+    if find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f \( -name '*.tui.json' -o -name '*.npm-tui.json' \) | grep -q .; then
       die "the profile does not support TUI descriptors in its selected domains"
     fi
   done

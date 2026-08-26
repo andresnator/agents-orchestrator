@@ -124,40 +124,62 @@ for f in domains/*/tui-plugins/*.tsx; do
 done
 check_unique tui-plugins domains/*/tui-plugins/*.tsx
 
-# --- Commit-pinned external OpenCode plugins ---
+# --- External OpenCode plugins ---
 if command -v jq >/dev/null 2>&1; then
   for f in domains/*/external-plugins/*.json; do
     [ -e "$f" ] || continue
     EXTERNAL_PLUGINS=$((EXTERNAL_PLUGINS + 1))
     base="$(basename "$f")"
     case "$base" in
+      *.npm-tui.json)
+        expected_name="${base%.npm-tui.json}"
+        expected_kind="tui"
+        expected_source="npm"
+        TUI_PLUGINS=$((TUI_PLUGINS + 1))
+        ;;
       *.server.json)
         expected_name="${base%.server.json}"
         expected_kind="server"
+        expected_source="github"
         ;;
       *.tui.json)
         expected_name="${base%.tui.json}"
         expected_kind="tui"
+        expected_source="github"
         TUI_PLUGINS=$((TUI_PLUGINS + 1))
         ;;
       *)
-        fail "$f" "external plugin filename must end in .server.json or .tui.json"
+        fail "$f" "external plugin filename must end in .server.json, .tui.json, or .npm-tui.json"
         continue
         ;;
     esac
-    jq -e --arg name "$expected_name" --arg kind "$expected_kind" '
-      .schemaVersion == 1 and
-      .name == $name and
-      .kind == $kind and
-      (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
-      (.repository | type == "string" and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")) and
-      (.commit | type == "string" and test("^[0-9a-f]{40}$")) and
-      (.artifact | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != ".."))) and
-      (.sha256 | type == "string" and test("^[0-9a-f]{64}$")) and
-      ((.profileSource // null) as $profile |
-        $profile == null or
-        ($kind == "tui" and ($profile | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != "..")))))
-    ' "$f" >/dev/null 2>&1 || fail "$f" "invalid external plugin descriptor"
+    if [ "$expected_source" = "npm" ]; then
+      jq -e --arg name "$expected_name" '
+        .schemaVersion == 1 and
+        .name == $name and
+        .kind == "tui" and
+        .source == "npm" and
+        (.package | type == "string" and test("^(@[A-Za-z0-9_.-]+/)?[A-Za-z0-9_.-]+$")) and
+        (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+        (.profileSource | type == "string" and length > 0 and
+          (startswith("/") | not) and (split("/") | all(. != ".."))) and
+        ([keys[]] - ["kind", "name", "package", "profileSource", "schemaVersion", "source", "version"] | length == 0)
+      ' "$f" >/dev/null 2>&1 || fail "$f" "invalid npm TUI plugin descriptor"
+    else
+      jq -e --arg name "$expected_name" --arg kind "$expected_kind" '
+        .schemaVersion == 1 and
+        .name == $name and
+        .kind == $kind and
+        (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+        (.repository | type == "string" and test("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")) and
+        (.commit | type == "string" and test("^[0-9a-f]{40}$")) and
+        (.artifact | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != ".."))) and
+        (.sha256 | type == "string" and test("^[0-9a-f]{64}$")) and
+        ((.profileSource // null) as $profile |
+          $profile == null or
+          ($kind == "tui" and ($profile | type == "string" and length > 0 and (startswith("/") | not) and (split("/") | all(. != "..")))))
+      ' "$f" >/dev/null 2>&1 || fail "$f" "invalid external plugin descriptor"
+    fi
     profile_source="$(jq -r '.profileSource // empty' "$f" 2>/dev/null)"
     [ -z "$profile_source" ] || [ -d "$ROOT/$profile_source" ] ||
       fail "$f" "profileSource '$profile_source' does not exist"
@@ -287,6 +309,7 @@ domain_component_names() {
     base="$(basename "$entry")"
     base="${base%.server.json}"
     base="${base%.tui.json}"
+    base="${base%.npm-tui.json}"
     printf '%s\n' "$base"
   done
 }
@@ -491,7 +514,6 @@ if command -v python3 >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 &&
   idem_artifacts="$idem_dir/external-artifacts"
   idem_step=""
   mkdir -p "$idem_artifacts"
-  printf '%s\n' 'export default { id: "fixture.model", tui: async () => {} }' > "$idem_artifacts/model-configurator.js"
   printf '%s\n' 'export default { id: "fixture.registry", server: async () => ({}) }' > "$idem_artifacts/skill-registry.js"
   printf '%s\n' 'export default { id: "fixture.graphify", server: async () => ({}) }' > "$idem_artifacts/graphify-init.js"
 

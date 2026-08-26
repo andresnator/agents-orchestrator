@@ -5,10 +5,10 @@ Repository agents never hardcode `model:`. Users assign providers, models, and v
 ## Quick path
 
 1. Install the `meta` domain.
-2. Open `/model-configurator` in OpenCode.
+2. Open `/models-profiles` in OpenCode.
 3. Choose a scope, review the diff, and save.
 
-Project config overrides global config. Reinstall after changing repository profiles because the installer copies them beside the pinned TUI plugin.
+Project config overrides global config. Reinstall after changing repository profiles because the installer copies them into the selected OpenCode target.
 
 ## Tier guidance
 
@@ -55,11 +55,13 @@ Model syntax is `provider_id/model_id`; `variant` is a separate key. Removing bo
 
 ## Configurator behavior
 
-The pinned `model-configurator` reads agents and connected models from the live OpenCode server. It edits one agent, a coordinator group, an abstract profile, or a saved preset, and shows `agent: before -> after` before writing.
+The installer registers the exact npm package `opencode-models-presets@0.3.1`. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, an abstract profile, or a saved preset, and shows `agent: before -> after` before writing.
 
 Writes preserve JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections abort. Supported changes hot-apply to the connected server; other OpenCode processes may need a restart. See [hot reload](hot-reload.md).
 
-Abstract profiles live under `profiles/` and contain no concrete model ids. Concrete presets are user state at `~/.config/opencode/model-configurator-presets.json`.
+Abstract profiles live under repository `profiles/`, contain no concrete model ids, and are copied to `<target>/model-profiles`. Concrete presets are user state at `~/.config/opencode/model-configurator-presets.json`.
+
+Uninstall removes only the manifest-owned npm registration and profile snapshots. It preserves OpenCode's package cache, concrete presets, agent assignments, and foreign `tui.json` entries.
 
 ## Troubleshooting
 

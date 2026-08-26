@@ -4,7 +4,7 @@ Validated on OpenCode 1.17.15. Model assignments and installed Markdown artifact
 
 ## Quick path
 
-- Save model or variant changes through `/model-configurator`; it hot-applies when supported.
+- Save model or variant changes through `/models-profiles`; it hot-applies when supported.
 - Reinstall agents, commands, or skills with `installers/opencode.sh install --reload`.
 - Restart after plugin or `tui.json` changes, or when the tool reports fallback.
 
@@ -30,8 +30,8 @@ A disposed TUI instance refreshes agents, config, and providers on its next boot
 
 ## Repository behavior
 
-The pinned `model-configurator` keeps transactional JSONC writes. Project changes dispose the target instance. Global removals are written locally, then a changed set leaf triggers `PATCH /global/config`; removal-only changes request a restart. Failure leaves the config saved and reports that restart is required.
+The pinned `opencode-models-presets` package keeps transactional JSONC writes. Project changes dispose the target instance. Global removals are written locally, then a changed set leaf triggers `PATCH /global/config`; removal-only changes request a restart. Failure leaves the config saved and reports that restart is required.
 
 `installers/opencode.sh install --reload` discovers healthy local servers or uses `OPENCODE_RELOAD_URLS`, then calls global disposal after a successful install. Reload is best-effort and never rolls back installation.
 
-Only the connected server receives model-configurator hot apply. Restart any other running OpenCode process that needs the change.
+Only the connected server receives Models Presets hot apply. Restart any other running OpenCode process that needs the change.
