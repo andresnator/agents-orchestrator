@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROFILE="$ROOT/scripts/multi-primary-profile.sh"
 JSONC_EDITOR="$ROOT/scripts/jsonc-array.py"
-GRAPHIFY_SPEC="opencode-graphify-init@0.1.4"
+GRAPHIFY_SPEC="opencode-graphify-init@0.1.5"
 PREVIOUS_GRAPHIFY_SPEC="opencode-graphify-init@0.1.3"
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-profile-test.XXXXXX")"
 ARTIFACTS="$SCRATCH/artifacts"
