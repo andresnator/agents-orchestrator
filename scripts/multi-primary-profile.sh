@@ -149,8 +149,10 @@ render_restored_config() {
   fi
 }
 
-is_empty_jsonc_object() {
-  [ "$(tr -d '[:space:]' < "$1")" = "{}" ]
+is_removable_generated_config() {
+  local compact
+  compact="$(tr -d '[:space:]' < "$1")"
+  [ "$compact" = "{}" ] || [ "$compact" = '{"plugin":[]}' ]
 }
 
 manifest_value() {
@@ -214,6 +216,44 @@ emit_expected_files() {
   IFS="$old_ifs"
 }
 
+emit_expected_managed_arrays() {
+  local domain descriptor package version old_ifs
+  old_ifs="$IFS"
+  IFS=,
+  for domain in $PROFILE_DOMAINS; do
+    [ -d "$REPO_ROOT/domains/$domain/external-plugins" ] || continue
+    find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f -name '*.npm-server.json' | sort |
+      while IFS= read -r descriptor; do
+        package="$(jq -er .package "$descriptor")"
+        version="$(jq -er .version "$descriptor")"
+        printf '%s\tplugin\t%s@%s\n' "$CONFIG_FILE" "$package" "$version"
+      done
+  done
+  IFS="$old_ifs"
+}
+
+is_expected_managed_array() {
+  local path="$1" field="$2" value="$3" package expected_path expected_field expected_value expected_package
+  package="$(npm_package_from_spec "$value")" || return 1
+  while IFS=$'\t' read -r expected_path expected_field expected_value; do
+    expected_package="$(npm_package_from_spec "$expected_value")" || continue
+    if [ "$path" = "$expected_path" ] && [ "$field" = "$expected_field" ] && [ "$package" = "$expected_package" ]; then
+      return 0
+    fi
+  done < <(emit_expected_managed_arrays)
+  return 1
+}
+
+npm_package_from_spec() {
+  local spec="$1" package
+  case "$spec" in
+    @*/*@*|*@*) package="${spec%@*}" ;;
+    *) return 1 ;;
+  esac
+  [ -n "$package" ] && [ "$package" != "$spec" ] || return 1
+  printf '%s\n' "$package"
+}
+
 preflight_fresh_destinations() {
   local dest source name descriptor
   while IFS=$'\t' read -r dest source; do
@@ -236,8 +276,8 @@ resolve_link_source() {
 validate_installer_manifest_ownership() {
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing: $INSTALLER_MANIFEST"
 
-  local kind path actual
-  while IFS=$'\t' read -r kind path _; do
+  local kind path field value actual
+  while IFS=$'\t' read -r kind path field value; do
     [ -n "$kind" ] || continue
     case "$kind" in
       link|file|dir)
@@ -249,7 +289,13 @@ validate_installer_manifest_ownership() {
           */../*|*/./*) die "non-canonical profile manifest destination: $path" ;;
         esac
         ;;
-      managed-array|managed-object) die "broad profile manifest contains managed runtime config: $path" ;;
+      managed-array)
+        is_expected_managed_array "$path" "$field" "$value" ||
+          die "broad profile manifest contains managed runtime config: $path"
+        python3 "$JSONC_EDITOR" has "$path" "$field" "$value" >/dev/null ||
+          die "profile-owned runtime config is missing or changed: $path"
+        ;;
+      managed-array-json|managed-object) die "broad profile manifest contains managed runtime config: $path" ;;
       *) die "foreign installer manifest row: $kind" ;;
     esac
 
@@ -413,9 +459,9 @@ run_install() {
     depth_state="$JSON_STATE"; depth_json="$JSON_VALUE"
   fi
 
-  render_managed_config
   [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
   "$INSTALLER" "${installer_args[@]}"
+  render_managed_config
   validate_installer_contents
   mkdir -p "$TARGET"
   mv "$TMP_TWO" "$CONFIG_FILE"
@@ -449,11 +495,11 @@ run_uninstall() {
   config_existed="$(manifest_value config-existed)"
   target_existed="$(manifest_value target-existed)"
   [ -n "$target_existed" ] || target_existed=1
-  render_restored_config "$depth_state" "$depth_json"
-
   "$INSTALLER" uninstall --target "$TARGET"
-  if [ "$config_existed" = 0 ] && is_empty_jsonc_object "$TMP_TWO"; then
+  render_restored_config "$depth_state" "$depth_json"
+  if [ "$config_existed" = 0 ] && is_removable_generated_config "$TMP_TWO"; then
     rm -f "$CONFIG_FILE"
+    rm -f "$CONFIG_FILE.bak"
   else
     mkdir -p "$TARGET"
     mv "$TMP_TWO" "$CONFIG_FILE"

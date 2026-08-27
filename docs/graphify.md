@@ -2,7 +2,7 @@
 
 Graphify is optional. This repository owns first-run consent, integration locks, and agent boundaries; [`opencode-graphify-init`](https://github.com/andresnator/opencode-graphify-init) owns refresher code, tests, and releases.
 
-The supported baseline is OpenCode >= 1.17.15 and [`graphifyy` 0.9.32](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.32). The installer fetches the exact locked plugin commit and verifies its SHA-256 before changing a target.
+The supported baseline is OpenCode >= 1.17.15 and [`graphifyy` 0.9.32](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.32). The installer registers the exact package version from the npm descriptor; OpenCode resolves it at startup without a global npm installation.
 
 ## Quick path
 

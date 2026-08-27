@@ -16,7 +16,7 @@ Shared engineering, quality, question, and output skills used across domains. It
 | `/graphify-index` | Approve first indexing | Recorded mode and repository graph |
 | `/grill` | Stress-test an idea or artifact | Focused questions and revised outcome |
 
-Shared skills have one body under top-level `skills/`; each consuming domain declares it with a relative symlink. `/graphify-index` owns first-run consent, while the pinned `graphify-init` plugin only refreshes previously approved indexes. See the [Graphify guide](../../docs/graphify.md).
+Shared skills have one body under top-level `skills/`; each consuming domain declares it with a relative symlink. `/graphify-index` owns first-run consent, while the pinned `opencode-graphify-init` package only refreshes previously approved indexes. See the [Graphify guide](../../docs/graphify.md).
 
 ## Components
 
@@ -56,4 +56,4 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 | Skill | `tcr` | Runs test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plans reviewable and cohesive commits |
 | Plugin | `caveman-mode` | Propagates mode through session trees |
-| External server plugin | `graphify-init` | Refreshes previously approved Graphify indexes |
+| External npm server plugin | `opencode-graphify-init` | Refreshes approved Graphify indexes |

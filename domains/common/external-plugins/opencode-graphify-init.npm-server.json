@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "opencode-graphify-init",
+  "kind": "server",
+  "source": "npm",
+  "package": "opencode-graphify-init",
+  "version": "0.1.4"
+}

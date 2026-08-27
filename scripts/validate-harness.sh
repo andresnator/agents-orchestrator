@@ -131,6 +131,11 @@ if command -v jq >/dev/null 2>&1; then
     EXTERNAL_PLUGINS=$((EXTERNAL_PLUGINS + 1))
     base="$(basename "$f")"
     case "$base" in
+      *.npm-server.json)
+        expected_name="${base%.npm-server.json}"
+        expected_kind="server"
+        expected_source="npm"
+        ;;
       *.npm-tui.json)
         expected_name="${base%.npm-tui.json}"
         expected_kind="tui"
@@ -149,22 +154,26 @@ if command -v jq >/dev/null 2>&1; then
         TUI_PLUGINS=$((TUI_PLUGINS + 1))
         ;;
       *)
-        fail "$f" "external plugin filename must end in .server.json, .tui.json, or .npm-tui.json"
+        fail "$f" "external plugin filename must end in .server.json, .tui.json, .npm-server.json, or .npm-tui.json"
         continue
         ;;
     esac
     if [ "$expected_source" = "npm" ]; then
-      jq -e --arg name "$expected_name" '
+      jq -e --arg name "$expected_name" --arg kind "$expected_kind" '
         .schemaVersion == 1 and
         .name == $name and
-        .kind == "tui" and
+        .kind == $kind and
         .source == "npm" and
         (.package | type == "string" and test("^(@[A-Za-z0-9_.-]+/)?[A-Za-z0-9_.-]+$")) and
         (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
-        (.profileSource | type == "string" and length > 0 and
-          (startswith("/") | not) and (split("/") | all(. != ".."))) and
-        ([keys[]] - ["kind", "name", "package", "profileSource", "schemaVersion", "source", "version"] | length == 0)
-      ' "$f" >/dev/null 2>&1 || fail "$f" "invalid npm TUI plugin descriptor"
+        (if $kind == "tui" then
+          (.profileSource | type == "string" and length > 0 and
+            (startswith("/") | not) and (split("/") | all(. != ".."))) and
+          ([keys[]] - ["kind", "name", "package", "profileSource", "schemaVersion", "source", "version"] | length == 0)
+        else
+          ([keys[]] - ["kind", "name", "package", "schemaVersion", "source", "version"] | length == 0)
+        end)
+      ' "$f" >/dev/null 2>&1 || fail "$f" "invalid npm plugin descriptor"
     else
       jq -e --arg name "$expected_name" --arg kind "$expected_kind" '
         .schemaVersion == 1 and
@@ -309,6 +318,7 @@ domain_component_names() {
     base="$(basename "$entry")"
     base="${base%.server.json}"
     base="${base%.tui.json}"
+    base="${base%.npm-server.json}"
     base="${base%.npm-tui.json}"
     printf '%s\n' "$base"
   done

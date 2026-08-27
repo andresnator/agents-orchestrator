@@ -16,7 +16,7 @@ Prompt, skill, registry, and agent-model configuration utilities for this artifa
 | `/models-profiles` | Assign agent models and variants | Targeted OpenCode configuration |
 | OpenCode startup | Refresh the skill registry | `.ai/atl/skill-registry.md` |
 
-External plugin descriptors pin either GitHub bundles by commit and SHA-256 or npm TUI packages by exact version. This repository owns those locks and abstract `profiles/`; each external repository owns its plugin implementation and tests. See [agent models](../../docs/agent-models.md) and [Graphify](../../docs/graphify.md).
+External plugin descriptors pin either GitHub bundles by commit and SHA-256 or npm packages by exact version and runtime target. This repository owns those locks and abstract `profiles/`; each external repository owns its plugin implementation and tests. See [agent models](../../docs/agent-models.md) and [Graphify](../../docs/graphify.md).
 
 ## Components
 
@@ -27,5 +27,5 @@ External plugin descriptors pin either GitHub bundles by commit and SHA-256 or n
 | Skill | `prompt-structure-writer` | Turns ideas into executable prompts |
 | Skill | `skill-creator` | Creates Agent Skills-compliant skills |
 | Skill | `skill-registry` | Generates the project skill registry |
-| External server plugin | `skill-registry` | Refreshes the runtime skill index |
+| External npm server plugin | `opencode-skill-registry` | Refreshes the runtime skill index |
 | External npm TUI plugin | `opencode-models-presets` | Assigns agent models and variants |

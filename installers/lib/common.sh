@@ -187,10 +187,14 @@ discover_components() {
 
     dir="$domain/external-plugins"
     if [ -d "$dir" ]; then
-      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-tui.json' \) | sort |
+      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
         while IFS= read -r file; do
           name="$(basename "$file")"
           case "$name" in
+            *.npm-server.json)
+              name="${name%.npm-server.json}"
+              type="npm-server-plugins"
+              ;;
             *.npm-tui.json)
               name="${name%.npm-tui.json}"
               type="npm-tui-plugins"
@@ -227,7 +231,7 @@ check_collisions() {
     {
       type = $1
       name = $2
-      if (type == "plugins" || type == "external-server-plugins") {
+      if (type == "plugins" || type == "external-server-plugins" || type == "npm-server-plugins") {
         type = "server-plugins"
         sub(/\.(ts|js)$/, "", name)
       } else if (type == "tui-plugins" || type == "external-tui-plugins" || type == "npm-tui-plugins") {

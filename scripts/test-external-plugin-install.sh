@@ -4,9 +4,20 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FIXTURES="$ROOT/scripts/fixtures/external-plugins"
 INSTALLER="$ROOT/installers/opencode.sh"
-PLUGIN_PACKAGE="opencode-models-presets"
-PLUGIN_VERSION="0.3.1"
-PLUGIN_SPEC="$PLUGIN_PACKAGE@$PLUGIN_VERSION"
+TUI_COMPONENT="opencode-models-presets"
+TUI_PACKAGE="$TUI_COMPONENT"
+TUI_VERSION="0.3.2"
+TUI_SPEC="$TUI_PACKAGE@$TUI_VERSION"
+OLD_TUI_SPEC="$TUI_PACKAGE@0.3.1"
+SKILL_PACKAGE="opencode-skill-registry"
+SKILL_VERSION="0.1.3"
+SKILL_SPEC="$SKILL_PACKAGE@$SKILL_VERSION"
+OLD_SKILL_SPEC="$SKILL_PACKAGE@0.1.2"
+GRAPHIFY_PACKAGE="opencode-graphify-init"
+GRAPHIFY_VERSION="0.1.4"
+GRAPHIFY_SPEC="$GRAPHIFY_PACKAGE@$GRAPHIFY_VERSION"
+OLD_GRAPHIFY_SPEC="$GRAPHIFY_PACKAGE@0.1.3"
+MODEL_PROFILES_DIR="model-profiles"
 OLD_EXTERNAL_PLUGIN_SPEC="./plugins/model-configurator/tui.js"
 MIN_OPENCODE_VERSION="1.17.15"
 PASSES=0
@@ -43,7 +54,12 @@ assert_json_value() {
 
 plugin_entry() {
   local profiles_dir="$1"
-  jq -cn --arg spec "$PLUGIN_SPEC" --arg profilesDir "$profiles_dir" '[$spec, {profilesDir: $profilesDir}]'
+  npm_tui_entry "$TUI_SPEC" "$profiles_dir"
+}
+
+npm_tui_entry() {
+  local spec="$1" profiles_dir="$2"
+  jq -cn --arg spec "$spec" --arg profilesDir "$profiles_dir" '[$spec, {profilesDir: $profilesDir}]'
 }
 
 sha256_file() {
@@ -149,7 +165,7 @@ shouldPreserveStructuredJsoncManagedEntry() {
   rendered="$scratch/rendered.jsonc"
   removed="$scratch/removed.jsonc"
   package_removed="$scratch/package-removed.jsonc"
-  entry="$(plugin_entry "/tmp/model-profiles")"
+  entry="$(plugin_entry "/tmp/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
 
   cat > "$original" <<'EOF'
 {
@@ -166,15 +182,15 @@ EOF
   python3 "$ROOT/scripts/jsonc-array.py" add-json "$original" plugin "$entry" > "$rendered"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$rendered" plugin "$entry" >/dev/null ||
     fail "structured JSONC add did not register the exact entry"
-  python3 "$ROOT/scripts/jsonc-array.py" has-npm "$rendered" plugin "$PLUGIN_PACKAGE" >/dev/null ||
+  python3 "$ROOT/scripts/jsonc-array.py" has-npm "$rendered" plugin "$TUI_PACKAGE" >/dev/null ||
     fail "structured JSONC entry was not recognized by npm package"
   python3 "$ROOT/scripts/jsonc-array.py" remove-json "$rendered" plugin "$entry" > "$removed"
   assert_file_equals "$removed" "$original" "structured JSONC remove changed foreign content"
 
   printf '{"plugin":["%s",["%s",{"profilesDir":"/tmp/other"}],"./foreign.tsx"]}\n' \
-    "$PLUGIN_PACKAGE" "$PLUGIN_SPEC" > "$rendered"
-  python3 "$ROOT/scripts/jsonc-array.py" remove-npm "$rendered" plugin "$PLUGIN_PACKAGE" > "$package_removed"
-  python3 "$ROOT/scripts/jsonc-array.py" has-npm "$package_removed" plugin "$PLUGIN_PACKAGE" >/dev/null 2>&1 &&
+    "$TUI_PACKAGE" "$TUI_SPEC" > "$rendered"
+  python3 "$ROOT/scripts/jsonc-array.py" remove-npm "$rendered" plugin "$TUI_PACKAGE" > "$package_removed"
+  python3 "$ROOT/scripts/jsonc-array.py" has-npm "$package_removed" plugin "$TUI_PACKAGE" >/dev/null 2>&1 &&
     fail "npm package removal retained a string or tuple entry"
   assert_contains "$package_removed" '"./foreign.tsx"' "npm package removal changed a foreign entry"
   rm -rf "$scratch"
@@ -271,8 +287,8 @@ EOF
   pass "shouldPreserveJsoncScalarProperties"
 }
 
-shouldInstallRepairStatusAndUninstallExternalPlugins() {
-  local scratch target artifacts binary status_output before_package entry preset_store
+shouldInstallStatusAndUninstallNpmPlugins() {
+  local scratch target artifacts binary status_output before_package entry preset_store config registry_state graph_state
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-install.XXXXXX")"
   target="$scratch/target"
   artifacts="$scratch/artifacts"
@@ -281,59 +297,87 @@ shouldInstallRepairStatusAndUninstallExternalPlugins() {
   make_external_artifacts "$artifacts"
   binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
   cp "$FIXTURES/tui-comments-before.jsonc" "$target/tui.json"
+  config="$target/opencode.jsonc"
+  cat > "$config" <<'EOF'
+{
+  // Keep this server plugin and comment.
+  "plugin": ["foreign-server-plugin"],
+  "agent": {"mentor": {"model": "provider/model"}}
+}
+EOF
   printf '{"name":"foreign-package","foreign":true}\n' > "$target/package.json"
   cp "$target/package.json" "$scratch/package-before.json"
   before_package="$scratch/package-before.json"
-  entry="$(plugin_entry "$target/model-profiles")"
+  entry="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
   preset_store="$target/model-configurator-presets.json"
+  registry_state="$target/.ai/atl/skill-registry.md"
+  graph_state="$target/.ai/graphify-out/graph.json"
+  mkdir -p "$(dirname "$registry_state")" "$(dirname "$graph_state")"
+  printf 'keep registry state\n' > "$registry_state"
+  printf 'keep graph state\n' > "$graph_state"
   printf '{"presets":{"keep":true}}\n' > "$preset_store"
 
   # Given a compatible runtime, foreign config, and deterministic external artifacts
-  # When install, repair, status, reinstall, and uninstall run
-  # Then only pinned server bundles, profile snapshots, and the exact npm tuple are owned
+  # When install, status, reinstall, and uninstall run
+  # Then only profile snapshots and exact npm registrations are owned
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta,common --target "$target" >/dev/null
   [ ! -e "$target/plugins/model-configurator" ] || fail "npm install retained a copied model configurator bundle"
-  [ -f "$target/model-profiles/default.json" ] || fail "model profile snapshot missing"
-  [ -f "$target/plugins/skill-registry.js" ] || fail "skill registry bundle missing"
-  [ -f "$target/plugins/graphify-init.js" ] || fail "Graphify bundle missing"
+  [ ! -e "$target/plugins/skill-registry.js" ] || fail "npm install retained a copied skill registry bundle"
+  [ ! -e "$target/plugins/graphify-init.js" ] || fail "npm install retained a copied Graphify bundle"
+  [ -f "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json" ] || fail "model profile snapshot missing"
   assert_file_equals "$target/package.json" "$before_package" "fresh install changed package.json"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null ||
     fail "install missed the pinned npm tuple"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$SKILL_SPEC" >/dev/null ||
+    fail "install missed the pinned skill registry package"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "install missed the pinned Graphify package"
+  [ -f "$target/tui.json.bak" ] || fail "install did not back up the existing TUI config"
+  [ -f "$config.bak" ] || fail "install did not back up the existing server config"
+  assert_contains "$target/tui.json.bak" '"./foreign.tsx"' "TUI backup lost a foreign plugin"
+  assert_contains "$config.bak" '"foreign-server-plugin"' "server backup lost a foreign plugin"
+  assert_contains "$config" '"foreign-server-plugin"' "install removed a foreign server plugin"
+  assert_contains "$config" '// Keep this server plugin and comment.' "install removed a server config comment"
   assert_count "$target/.agents-orchestrator-manifest" 'managed-array-json' 1 "manifest did not narrowly own the npm tuple"
-  assert_count "$target/.agents-orchestrator-manifest" $'managed-array\t' 0 "manifest retained a legacy string TUI entry"
+  assert_count "$target/.agents-orchestrator-manifest" $'managed-array\t' 2 "manifest did not narrowly own both npm server entries"
   assert_count "$target/.agents-orchestrator-manifest" 'managed-object' 0 "fresh manifest still owns an npm dependency"
 
-  printf 'corrupt\n' > "$target/plugins/skill-registry.js"
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta,common --target "$target" >/dev/null
-  assert_file_equals "$target/plugins/skill-registry.js" "$artifacts/skill-registry.js" "reinstall did not repair a stale bundle"
 
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" status --domain meta,common --target "$target" > "$status_output"
-  assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tregistered@0.3.1' "status missed Models Presets"
-  assert_contains "$status_output" $'meta\texternal-server-plugins\tskill-registry\t-\tinstalled@0.1.0' "status missed skill registry"
-  assert_contains "$status_output" $'common\texternal-server-plugins\tgraphify-init\t-\tinstalled@0.1.0' "status missed Graphify"
+  assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tregistered@0.3.2' "status missed Models Presets"
+  assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.1.3' "status missed skill registry"
+  assert_contains "$status_output" $'common\tnpm-server-plugins\topencode-graphify-init\t-\tregistered@0.1.4' "status missed Graphify"
 
-  printf 'corrupt\n' > "$target/model-profiles/default.json"
+  printf 'corrupt\n' > "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json"
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" status --domain meta --target "$target" > "$status_output"
   assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tstale' "status hid a stale npm TUI profile"
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta,common --target "$target" >/dev/null
-  assert_file_equals "$target/model-profiles/default.json" "$ROOT/profiles/default.json" "reinstall did not repair the model profile"
+  assert_file_equals "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json" "$ROOT/profiles/default.json" "reinstall did not repair the model profile"
 
   "$INSTALLER" uninstall --target "$target" >/dev/null
-  [ ! -e "$target/model-profiles" ] || fail "uninstall retained model profiles"
-  [ ! -e "$target/plugins/skill-registry.js" ] || fail "uninstall retained skill registry"
-  [ ! -e "$target/plugins/graphify-init.js" ] || fail "uninstall retained Graphify"
+  [ ! -e "$target/$MODEL_PROFILES_DIR" ] || fail "uninstall retained model profiles"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null 2>&1 &&
     fail "uninstall retained the owned npm tuple"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$SKILL_SPEC" >/dev/null 2>&1 &&
+    fail "uninstall retained the owned skill registry package"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "uninstall retained the owned Graphify package"
+  assert_contains "$config" '"foreign-server-plugin"' "uninstall removed a foreign server plugin"
   assert_contains "$target/tui.json" '"./foreign.tsx"' "uninstall removed a foreign TUI plugin"
+  [ -f "$target/tui.json.bak" ] || fail "uninstall removed the TUI backup"
+  [ -f "$config.bak" ] || fail "uninstall removed the server config backup"
   assert_file_equals "$target/package.json" "$before_package" "uninstall changed foreign package.json"
   [ -f "$preset_store" ] || fail "uninstall removed the user preset store"
+  [ -f "$registry_state" ] || fail "uninstall removed generated skill registry state"
+  [ -f "$graph_state" ] || fail "uninstall removed Graphify state"
   rm -rf "$scratch"
-  pass "shouldInstallRepairStatusAndUninstallExternalPlugins"
+  pass "shouldInstallStatusAndUninstallNpmPlugins"
 }
 
 shouldStageSameNamedArtifactsByKind() {
@@ -374,28 +418,79 @@ EOF
   pass "shouldStageSameNamedArtifactsByKind"
 }
 
-shouldPreservePreexistingTuiRegistration() {
-  local scratch target artifacts binary entry
+shouldIsolateNpmTuiProfilesByComponent() {
+  local scratch repo target binary alpha_profiles beta_profiles alpha_entry beta_entry
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/npm-tui-profile-isolation.XXXXXX")"
+  repo="$scratch/repo"
+  target="$scratch/target"
+  alpha_profiles="$target/$MODEL_PROFILES_DIR/fixture-alpha"
+  beta_profiles="$target/$MODEL_PROFILES_DIR/fixture-beta"
+  mkdir -p "$repo/installers/lib" "$repo/scripts" "$repo/global"
+  mkdir -p "$repo/domains/alpha/external-plugins" "$repo/domains/beta/external-plugins"
+  mkdir -p "$repo/fixtures/alpha" "$repo/fixtures/beta"
+  cp "$ROOT/installers/opencode.sh" "$repo/installers/opencode.sh"
+  cp "$ROOT/installers/lib/common.sh" "$repo/installers/lib/common.sh"
+  cp "$ROOT/scripts/jsonc-array.py" "$repo/scripts/jsonc-array.py"
+  cp "$ROOT/global/AGENTS.md" "$repo/global/AGENTS.md"
+  printf 'alpha default\n' > "$repo/fixtures/alpha/default.json"
+  printf 'beta default\n' > "$repo/fixtures/beta/default.json"
+  cat > "$repo/domains/alpha/external-plugins/fixture-alpha.npm-tui.json" <<'EOF'
+{"schemaVersion":1,"name":"fixture-alpha","kind":"tui","source":"npm","package":"fixture-alpha","version":"1.0.0","profileSource":"fixtures/alpha"}
+EOF
+  cat > "$repo/domains/beta/external-plugins/fixture-beta.npm-tui.json" <<'EOF'
+{"schemaVersion":1,"name":"fixture-beta","kind":"tui","source":"npm","package":"fixture-beta","version":"2.0.0","profileSource":"fixtures/beta"}
+EOF
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  alpha_entry="$(npm_tui_entry "fixture-alpha@1.0.0" "$alpha_profiles")"
+  beta_entry="$(npm_tui_entry "fixture-beta@2.0.0" "$beta_profiles")"
+
+  # Given two npm TUI plugins with different same-named profile files
+  # When both components are discovered and installed together
+  # Then each tuple points to an isolated component directory with its own bytes
+  OPENCODE_BIN="$binary" "$repo/installers/opencode.sh" install --target "$target" >/dev/null
+  assert_file_equals "$alpha_profiles/default.json" "$repo/fixtures/alpha/default.json" "alpha profile collided with beta"
+  assert_file_equals "$beta_profiles/default.json" "$repo/fixtures/beta/default.json" "beta profile collided with alpha"
+  python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$alpha_entry" >/dev/null ||
+    fail "alpha tuple missed its component profile directory"
+  python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$beta_entry" >/dev/null ||
+    fail "beta tuple missed its component profile directory"
+  assert_count "$target/.agents-orchestrator-manifest" 'managed-array-json' 2 "manifest missed isolated TUI tuple ownership"
+
+  OPENCODE_BIN="$binary" "$repo/installers/opencode.sh" uninstall --target "$target" >/dev/null
+  [ ! -e "$target/$MODEL_PROFILES_DIR" ] || fail "uninstall retained isolated npm TUI profiles"
+  rm -rf "$scratch"
+  pass "shouldIsolateNpmTuiProfilesByComponent"
+}
+
+shouldPreservePreexistingNpmRegistrations() {
+  local scratch target artifacts binary entry config
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-preowned.XXXXXX")"
   target="$scratch/target"
   artifacts="$scratch/artifacts"
   mkdir -p "$target"
   make_external_artifacts "$artifacts"
   binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
-  entry="$(plugin_entry "$target/model-profiles")"
+  entry="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
   printf '{"plugin":[%s]}\n' "$entry" > "$target/tui.json"
+  config="$target/opencode.jsonc"
+  printf '{"plugin":["%s","%s"]}\n' "$SKILL_SPEC" "$GRAPHIFY_SPEC" > "$config"
 
-  # Given the exact TUI registration predates installer ownership
-  # When meta is installed and uninstalled
-  # Then the manifest never claims or removes that user value
+  # Given every exact npm registration predates installer ownership
+  # When the owning domains are installed and uninstalled
+  # Then the manifest never claims or removes those user values
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
-    "$INSTALLER" install --domain meta --target "$target" >/dev/null
+    "$INSTALLER" install --domain meta,common --target "$target" >/dev/null
   assert_count "$target/.agents-orchestrator-manifest" 'managed-array-json' 0 "installer claimed a preexisting npm tuple"
+  assert_count "$target/.agents-orchestrator-manifest" $'managed-array\t' 0 "installer claimed a preexisting npm server entry"
   "$INSTALLER" uninstall --target "$target" >/dev/null
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null 2>&1 ||
     fail "uninstall removed a preexisting npm tuple"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$SKILL_SPEC" >/dev/null 2>&1 ||
+    fail "uninstall removed a preexisting skill registry entry"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 ||
+    fail "uninstall removed a preexisting Graphify entry"
   rm -rf "$scratch"
-  pass "shouldPreservePreexistingTuiRegistration"
+  pass "shouldPreservePreexistingNpmRegistrations"
 }
 
 shouldRejectChangedOwnedNpmTupleWithoutForce() {
@@ -410,7 +505,7 @@ shouldRejectChangedOwnedNpmTupleWithoutForce() {
 
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta --target "$target" >/dev/null
-  expected="$(plugin_entry "$target/model-profiles")"
+  expected="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
   changed="$(plugin_entry "$target/custom-profiles")"
   python3 "$ROOT/scripts/jsonc-array.py" remove-json "$target/tui.json" plugin "$expected" > "$intermediate"
   python3 "$ROOT/scripts/jsonc-array.py" add-json "$intermediate" plugin "$changed" > "$target/tui.json"
@@ -460,33 +555,40 @@ shouldAbortBeforeMutationOnInvalidPreconditions() {
   diff -qr "$before" "$target" >/dev/null || fail "JSONC rejection mutated the target"
 
   printf '{"plugin":[]}\n' > "$target/tui.json"
-  mkdir -p "$target/plugins"
-  printf 'foreign\n' > "$target/plugins/skill-registry.js"
+  printf '{ invalid\n' > "$target/opencode.jsonc"
   rm -rf "$before"
   cp -R "$target" "$before"
   if AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$current_binary" \
     "$INSTALLER" install --domain meta --target "$target" >/dev/null 2>&1; then
-    fail "installer replaced a foreign external plugin without --force"
+    fail "installer accepted invalid opencode.jsonc"
   fi
-  diff -qr "$before" "$target" >/dev/null || fail "foreign destination rejection mutated the target"
+  diff -qr "$before" "$target" >/dev/null || fail "server JSONC rejection mutated the target"
 
-  rm "$target/plugins/skill-registry.js"
-  printf '{"plugin":["%s"]}\n' "$PLUGIN_PACKAGE" > "$target/tui.json"
+  printf '{"plugin":["%s"]}\n' "$OLD_TUI_SPEC" > "$target/tui.json"
+  printf '{"plugin":["%s","%s"]}\n' "$OLD_SKILL_SPEC" "$OLD_GRAPHIFY_SPEC" > "$target/opencode.jsonc"
   rm -rf "$before"
   cp -R "$target" "$before"
   if AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$current_binary" \
-    "$INSTALLER" install --domain meta --target "$target" >/dev/null 2>&1; then
+    "$INSTALLER" install --domain meta,common --target "$target" >/dev/null 2>&1; then
     fail "installer replaced a foreign npm plugin entry without --force"
   fi
   diff -qr "$before" "$target" >/dev/null || fail "npm conflict rejection mutated the target"
 
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$current_binary" \
-    "$INSTALLER" install --domain meta --target "$target" --force >/dev/null
-  entry="$(plugin_entry "$target/model-profiles")"
+    "$INSTALLER" install --domain meta,common --target "$target" --force >/dev/null
+  entry="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null ||
     fail "--force did not replace the foreign npm plugin entry"
-  python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$PLUGIN_PACKAGE" >/dev/null 2>&1 &&
-    fail "--force retained the unpinned npm plugin entry"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$OLD_TUI_SPEC" >/dev/null 2>&1 &&
+    fail "--force retained the conflicting Models Presets version"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$SKILL_SPEC" >/dev/null ||
+    fail "--force did not pin the skill registry entry"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "--force did not pin the Graphify entry"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$OLD_SKILL_SPEC" >/dev/null 2>&1 &&
+    fail "--force retained the conflicting skill registry version"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$OLD_GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "--force retained the conflicting Graphify version"
   rm -rf "$scratch"
   pass "shouldAbortBeforeMutationOnInvalidPreconditions"
 }
@@ -503,14 +605,14 @@ shouldRollbackExternalPluginTransaction() {
   cp "$FIXTURES/tui-comments-before.jsonc" "$target/tui.json"
 
   # Given injected failures at each commit boundary
-  # When a meta install aborts
-  # Then bundles, profiles, config, backups, and manifest return to the exact prior state
+  # When an install of all three npm plugins aborts
+  # Then profiles, both configs, backups, and manifest return to the exact prior state
   for step in after-links after-managed-array before-manifest after-manifest; do
     rm -rf "$before"
     cp -R "$target" "$before"
     if AGENTS_ORCHESTRATOR_TEST_FAIL_STEP="$step" \
       AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
-      "$INSTALLER" install --domain meta --target "$target" >/dev/null 2>&1; then
+      "$INSTALLER" install --domain meta,common --target "$target" >/dev/null 2>&1; then
       fail "installer did not inject failure at $step"
     fi
     diff -qr "$before" "$target" >/dev/null || fail "installer did not roll back $step"
@@ -526,29 +628,33 @@ shouldSyncAwayDeselectedExternalPlugins() {
   artifacts="$scratch/artifacts"
   make_external_artifacts "$artifacts"
   binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
-  entry="$(plugin_entry "$target/model-profiles")"
+  entry="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
 
   # Given the meta external plugins are installed
   # When a later sync selects only common
-  # Then model/registry artifacts and TUI config leave while Graphify is installed
+  # Then model/registry registrations leave while Graphify is registered
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta --target "$target" >/dev/null
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain common --target "$target" >/dev/null
-  [ ! -e "$target/model-profiles" ] || fail "sync retained deselected model profiles"
-  [ ! -e "$target/plugins/skill-registry.js" ] || fail "sync retained deselected skill registry"
-  [ -f "$target/plugins/graphify-init.js" ] || fail "sync did not install Graphify"
+  [ ! -e "$target/$MODEL_PROFILES_DIR" ] || fail "sync retained deselected model profiles"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$SKILL_SPEC" >/dev/null 2>&1 &&
+    fail "sync retained the skill registry registration"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$target/opencode.jsonc" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "sync did not register Graphify"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null 2>&1 &&
     fail "sync retained the npm TUI registration"
   rm -rf "$scratch"
   pass "shouldSyncAwayDeselectedExternalPlugins"
 }
 
-seed_external_model_bundle_layout() {
+seed_external_bundle_layout() {
   local target="$1"
   local manifest="$target/.agents-orchestrator-manifest"
   mkdir -p "$target/plugins/model-configurator/profiles"
   printf 'old bundled tui\n' > "$target/plugins/model-configurator/tui.js"
+  printf 'old skill registry bundle\n' > "$target/plugins/skill-registry.js"
+  printf 'old Graphify bundle\n' > "$target/plugins/graphify-init.js"
   cp "$ROOT/profiles/default.json" "$target/plugins/model-configurator/profiles/default.json"
   printf '{"plugin":["%s"],"theme":"system"}\n' "$OLD_EXTERNAL_PLUGIN_SPEC" > "$target/tui.json"
   printf '{"name":"foreign-package","foreign":true}\n' > "$target/package.json"
@@ -557,11 +663,13 @@ seed_external_model_bundle_layout() {
     printf 'dir\t%s\n' "$target/plugins/model-configurator/profiles"
     printf 'file\t%s\n' "$target/plugins/model-configurator/tui.js"
     printf 'file\t%s\n' "$target/plugins/model-configurator/profiles/default.json"
+    printf 'file\t%s\n' "$target/plugins/skill-registry.js"
+    printf 'file\t%s\n' "$target/plugins/graphify-init.js"
     printf 'managed-array\t%s\tplugin\t%s\n' "$target/tui.json" "$OLD_EXTERNAL_PLUGIN_SPEC"
   } > "$manifest"
 }
 
-shouldMigrateManagedModelBundleToNpmPackage() {
+shouldMigrateManagedBundlesToNpmPackages() {
   local scratch target artifacts binary user_config entry
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-migration.XXXXXX")"
   target="$scratch/target"
@@ -569,30 +677,107 @@ shouldMigrateManagedModelBundleToNpmPackage() {
   mkdir -p "$target/plugins"
   make_external_artifacts "$artifacts"
   binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
-  seed_external_model_bundle_layout "$target"
-  entry="$(plugin_entry "$target/model-profiles")"
+  seed_external_bundle_layout "$target"
+  entry="$(plugin_entry "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
   user_config="$target/opencode.jsonc"
   printf '{"agent":{"orchestraitor":{"model":"provider/model"}}}\n' > "$user_config"
-  cp "$user_config" "$scratch/config-before"
 
-  # Given a manifest-owned copy of the former GitHub TUI bundle
+  # Given manifest-owned copies of the former GitHub bundles
   # When all domains are synchronized through the npm descriptor
-  # Then the bundle becomes a pinned npm tuple and user assignments remain byte-identical
+  # Then every bundle becomes a pinned npm registration and user assignments remain
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --target "$target" >/dev/null
   [ ! -e "$target/plugins/model-configurator" ] || fail "migration retained the old model bundle"
-  [ -f "$target/model-profiles/default.json" ] || fail "migration missed the managed model profile"
-  [ -f "$target/plugins/skill-registry.js" ] || fail "migration missed external skill bundle"
-  [ -f "$target/plugins/graphify-init.js" ] || fail "migration missed external Graphify bundle"
+  [ ! -e "$target/plugins/skill-registry.js" ] || fail "migration retained the old skill registry bundle"
+  [ ! -e "$target/plugins/graphify-init.js" ] || fail "migration retained the old Graphify bundle"
+  [ -f "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json" ] || fail "migration missed the managed model profile"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$entry" >/dev/null ||
     fail "migration did not register the npm tuple"
   python3 "$ROOT/scripts/jsonc-array.py" has "$target/tui.json" plugin "$OLD_EXTERNAL_PLUGIN_SPEC" >/dev/null 2>&1 &&
     fail "migration retained the bundled TUI registration"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$user_config" plugin "$SKILL_SPEC" >/dev/null ||
+    fail "migration did not register the skill registry package"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$user_config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "migration did not register the Graphify package"
   assert_json_value "$target/package.json" '.foreign' "true" "migration changed foreign package data"
-  assert_file_equals "$user_config" "$scratch/config-before" "migration changed user agent assignments"
+  assert_json_value "$user_config" '.agent.orchestraitor.model' "provider/model" "migration changed user agent assignments"
   assert_count "$target/.agents-orchestrator-manifest" 'managed-array-json' 1 "new manifest missed npm tuple ownership"
+  assert_count "$target/.agents-orchestrator-manifest" $'managed-array\t' 2 "new manifest missed npm server ownership"
   rm -rf "$scratch"
-  pass "shouldMigrateManagedModelBundleToNpmPackage"
+  pass "shouldMigrateManagedBundlesToNpmPackages"
+}
+
+shouldMigrateOwnedFlatProfilesWithoutRemovingForeignFiles() {
+  local scratch target binary flat_profiles component_profiles old_entry new_entry manifest
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/npm-tui-flat-profile-migration.XXXXXX")"
+  target="$scratch/target"
+  flat_profiles="$target/$MODEL_PROFILES_DIR"
+  component_profiles="$flat_profiles/$TUI_COMPONENT"
+  manifest="$target/.agents-orchestrator-manifest"
+  mkdir -p "$flat_profiles"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  old_entry="$(npm_tui_entry "$OLD_TUI_SPEC" "$flat_profiles")"
+  new_entry="$(plugin_entry "$component_profiles")"
+  cp "$ROOT/profiles/default.json" "$flat_profiles/default.json"
+  printf 'keep foreign profile\n' > "$flat_profiles/foreign.json"
+  printf '{"plugin":[%s]}\n' "$old_entry" > "$target/tui.json"
+  {
+    printf 'dir\t%s\n' "$flat_profiles"
+    printf 'file\t%s\n' "$flat_profiles/default.json"
+    printf 'managed-array-json\t%s\tplugin\t%s\n' "$target/tui.json" "$old_entry"
+  } > "$manifest"
+
+  # Given the former manifest-owned flat profile and a foreign neighbor file
+  # When the npm TUI component migrates to its component-specific directory
+  # Then only owned flat state moves and the foreign file survives uninstall
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+  [ ! -e "$flat_profiles/default.json" ] || fail "migration retained the owned flat profile"
+  [ -f "$flat_profiles/foreign.json" ] || fail "migration removed a foreign flat profile"
+  assert_file_equals "$component_profiles/default.json" "$ROOT/profiles/default.json" "migration missed the component profile"
+  python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$old_entry" >/dev/null 2>&1 &&
+    fail "migration retained the old flat npm tuple"
+  python3 "$ROOT/scripts/jsonc-array.py" has-json "$target/tui.json" plugin "$new_entry" >/dev/null ||
+    fail "migration missed the component-specific npm tuple"
+
+  "$INSTALLER" uninstall --target "$target" >/dev/null
+  [ -f "$flat_profiles/foreign.json" ] || fail "uninstall removed a foreign flat profile"
+  [ ! -e "$component_profiles" ] || fail "uninstall retained the managed component profile directory"
+  rm -rf "$scratch"
+  pass "shouldMigrateOwnedFlatProfilesWithoutRemovingForeignFiles"
+}
+
+shouldUsePrecedenceResolvedServerConfig() {
+  local scratch target artifacts binary legacy_config preferred_config
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-config-precedence.XXXXXX")"
+  target="$scratch/target"
+  artifacts="$scratch/artifacts"
+  legacy_config="$target/opencode.json"
+  preferred_config="$target/opencode.jsonc"
+  mkdir -p "$target"
+  make_external_artifacts "$artifacts"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  printf '{"plugin":["foreign-server-plugin"],"theme":"system"}\n' > "$legacy_config"
+
+  # Given only opencode.json exists, followed by a new higher-precedence opencode.jsonc
+  # When the common domain is installed before and after that change
+  # Then ownership moves without creating a shadow config or losing foreign values
+  AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" >/dev/null
+  [ ! -e "$preferred_config" ] || fail "installer shadowed an existing opencode.json"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$legacy_config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "installer did not use the existing opencode.json"
+
+  printf '{"plugin":["preferred-foreign-plugin"],"agent":{"mentor":{}}}\n' > "$preferred_config"
+  AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
+    "$INSTALLER" install --domain common --target "$target" >/dev/null
+  python3 "$ROOT/scripts/jsonc-array.py" has "$preferred_config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "installer did not move registration to opencode.jsonc"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$legacy_config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "installer retained a shadowed owned registration"
+  assert_contains "$legacy_config" '"foreign-server-plugin"' "config move changed legacy foreign data"
+  assert_contains "$preferred_config" '"preferred-foreign-plugin"' "config move changed preferred foreign data"
+  rm -rf "$scratch"
+  pass "shouldUsePrecedenceResolvedServerConfig"
 }
 
 shouldInstallOnlyInsideProjectTarget() {
@@ -604,25 +789,29 @@ shouldInstallOnlyInsideProjectTarget() {
   make_external_artifacts "$artifacts"
   binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
   project_target="$(cd "$project" && pwd -L)/.opencode"
-  entry="$(plugin_entry "$project_target/model-profiles")"
+  entry="$(plugin_entry "$project_target/$MODEL_PROFILES_DIR/$TUI_COMPONENT")"
 
   # Given project mode in an isolated working directory
   # When meta is installed
-  # Then the server bundle, profile, and npm TUI config stay under .opencode
+  # Then the profile and npm registrations stay under .opencode
   (cd "$project" && AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" install --domain meta --project >/dev/null)
-  [ -f "$project/.opencode/model-profiles/default.json" ] || fail "project model profile missing"
-  [ -f "$project/.opencode/plugins/skill-registry.js" ] || fail "project server bundle missing"
+  [ -f "$project/.opencode/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json" ] || fail "project model profile missing"
+  [ ! -e "$project/.opencode/plugins/skill-registry.js" ] || fail "project install retained a copied skill registry bundle"
+  [ -f "$project/.opencode/opencode.jsonc" ] || fail "project server config missing"
   [ -f "$project/.opencode/tui.json" ] || fail "project tui.json missing"
   python3 "$ROOT/scripts/jsonc-array.py" has-json "$project/.opencode/tui.json" plugin "$entry" >/dev/null ||
     fail "project install missed the npm TUI tuple"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$project/.opencode/opencode.jsonc" plugin "$SKILL_SPEC" >/dev/null ||
+    fail "project install missed the npm server package"
   [ ! -e "$project/tui.json" ] || fail "project install escaped .opencode"
+  [ ! -e "$project/opencode.jsonc" ] || fail "project server config escaped .opencode"
   rm -rf "$scratch"
   pass "shouldInstallOnlyInsideProjectTarget"
 }
 
 shouldMatchPinnedRemoteArtifacts() {
-  local descriptor repository commit artifact expected scratch downloaded actual package version metadata
+  local descriptor repository commit artifact expected scratch downloaded actual package version metadata kind entrypoint
   scratch="$(mktemp -d "${TMPDIR:-/tmp}/external-plugin-remote.XXXXXX")"
 
   # Given every production descriptor
@@ -633,12 +822,16 @@ shouldMatchPinnedRemoteArtifacts() {
     if [ "$(jq -r '.source // "github"' "$descriptor")" = "npm" ]; then
       package="$(jq -er .package "$descriptor")"
       version="$(jq -er .version "$descriptor")"
+      kind="$(jq -er .kind "$descriptor")"
       metadata="$scratch/$(basename "$descriptor").npm.json"
       npm view "$package@$version" --json > "$metadata"
       [ "$(jq -r .name "$metadata")" = "$package" ] || fail "$descriptor npm package name mismatch"
       [ "$(jq -r .version "$metadata")" = "$version" ] || fail "$descriptor npm package version mismatch"
-      jq -e '.exports["./tui"].import | type == "string" and length > 0' "$metadata" >/dev/null ||
-        fail "$descriptor npm package has no TUI entrypoint"
+      jq -e '.exports["."].import | type == "string" and length > 0' "$metadata" >/dev/null ||
+        fail "$descriptor npm package has no root entrypoint for opencode plugin"
+      entrypoint="./$kind"
+      jq -e --arg entrypoint "$entrypoint" '.exports[$entrypoint].import | type == "string" and length > 0' "$metadata" >/dev/null ||
+        fail "$descriptor npm package has no $kind entrypoint"
       continue
     fi
     repository="$(jq -er .repository "$descriptor")"
@@ -661,14 +854,17 @@ run_contracts() {
   shouldHandleMissingPropertyAndTrailingComment
   shouldIgnoreCommentCommasWhenRemovingJsoncSeparators
   shouldPreserveJsoncScalarProperties
-  shouldInstallRepairStatusAndUninstallExternalPlugins
+  shouldInstallStatusAndUninstallNpmPlugins
   shouldStageSameNamedArtifactsByKind
-  shouldPreservePreexistingTuiRegistration
+  shouldIsolateNpmTuiProfilesByComponent
+  shouldPreservePreexistingNpmRegistrations
   shouldRejectChangedOwnedNpmTupleWithoutForce
   shouldAbortBeforeMutationOnInvalidPreconditions
   shouldRollbackExternalPluginTransaction
   shouldSyncAwayDeselectedExternalPlugins
-  shouldMigrateManagedModelBundleToNpmPackage
+  shouldMigrateManagedBundlesToNpmPackages
+  shouldMigrateOwnedFlatProfilesWithoutRemovingForeignFiles
+  shouldUsePrecedenceResolvedServerConfig
   shouldInstallOnlyInsideProjectTarget
 }
 

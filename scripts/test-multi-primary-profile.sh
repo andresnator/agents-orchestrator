@@ -5,6 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROFILE="$ROOT/scripts/multi-primary-profile.sh"
 JSONC_EDITOR="$ROOT/scripts/jsonc-array.py"
+GRAPHIFY_SPEC="opencode-graphify-init@0.1.4"
+PREVIOUS_GRAPHIFY_SPEC="opencode-graphify-init@0.1.3"
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-profile-test.XXXXXX")"
 ARTIFACTS="$SCRATCH/artifacts"
 STUBS="$SCRATCH/stubs"
@@ -123,6 +125,8 @@ EOF
   run_profile install --project-root "$project" --no-install-brew-tools >/dev/null
   [ "$(scalar "$config" default_agent)" = '"mentor"' ] || fail "install: default_agent changed"
   [ "$(scalar "$config" subagent_depth)" = 1 ] || fail "install: wrong subagent_depth"
+  python3 "$JSONC_EDITOR" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "install: Graphify registration did not coexist with profile settings"
   grep -Fq '// keep profile owner context' "$config" || fail "install: top comment lost"
   grep -Fq '// restore this value' "$config" || fail "install: inline comment lost"
   grep -Fq '"foreign": {"keep": true}' "$config" || fail "install: foreign key lost"
@@ -142,6 +146,8 @@ EOF
   run_profile uninstall --project-root "$project" >/dev/null
   [ "$(scalar "$config" default_agent)" = '"mentor"' ] || fail "uninstall: default_agent not restored"
   [ "$(scalar "$config" subagent_depth)" = 4 ] || fail "uninstall: subagent_depth not restored"
+  python3 "$JSONC_EDITOR" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "uninstall: Graphify registration remains"
   grep -Fq '// keep profile owner context' "$config" || fail "uninstall: top comment lost"
   grep -Fq '// restore this value' "$config" || fail "uninstall: inline comment lost"
   grep -Fq '"foreign": {"keep": true}' "$config" || fail "uninstall: foreign key lost"
@@ -181,6 +187,38 @@ EOF
   grep -Fq '"foreign": {"keep": true}' "$config" || fail "existing JSON: foreign config changed"
   [ ! -e "$manifest" ] || fail "existing JSON: profile manifest remains"
   pass shouldInstallStatusAndRestoreExistingJson
+}
+
+shouldMigrateManagedNpmServerVersion() {
+  local project config installer_manifest profile_manifest rewritten manifest_sha
+  project="$(make_project npm-server-version-migration)"
+  run_profile install --project-root "$project" >/dev/null
+  config="$project/.opencode/opencode.jsonc"
+  installer_manifest="$project/.opencode/.agents-orchestrator-manifest"
+  profile_manifest="$project/.opencode/.multi-primary-profile-manifest"
+  rewritten="$project/rewritten.jsonc"
+
+  python3 "$JSONC_EDITOR" remove "$config" plugin "$GRAPHIFY_SPEC" > "$rewritten"
+  python3 "$JSONC_EDITOR" add "$rewritten" plugin "$PREVIOUS_GRAPHIFY_SPEC" > "$config"
+  awk -F '\t' -v current="$GRAPHIFY_SPEC" -v previous="$PREVIOUS_GRAPHIFY_SPEC" '
+    BEGIN { OFS = "\t" }
+    $1 == "managed-array" && $4 == current { $4 = previous }
+    { print }
+  ' "$installer_manifest" > "$installer_manifest.tmp"
+  mv "$installer_manifest.tmp" "$installer_manifest"
+  manifest_sha="$(shasum -a 256 "$installer_manifest" | awk '{print $1}')"
+  replace_manifest_value "$profile_manifest" installer-manifest-sha256 "$manifest_sha"
+
+  # Given a valid profile manifest from the preceding pinned server version
+  # When the profile is reinstalled from the current checkout
+  # Then the installer migrates the owned package entry without force
+  run_profile install --project-root "$project" >/dev/null
+  python3 "$JSONC_EDITOR" has "$config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "npm server migration: current Graphify version is missing"
+  python3 "$JSONC_EDITOR" has "$config" plugin "$PREVIOUS_GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "npm server migration: previous Graphify version remains"
+  run_profile uninstall --project-root "$project" >/dev/null
+  pass shouldMigrateManagedNpmServerVersion
 }
 
 shouldRestoreAbsentValuesWithoutLosingComments() {
@@ -498,6 +536,7 @@ command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
 shouldInstallStatusAndRestoreExistingJsonc
 shouldInstallStatusAndRestoreExistingJson
+shouldMigrateManagedNpmServerVersion
 shouldRestoreAbsentValuesWithoutLosingComments
 shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent
 shouldPreservePreexistingTargetWithoutConfig
