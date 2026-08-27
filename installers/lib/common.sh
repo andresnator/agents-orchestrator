@@ -187,10 +187,18 @@ discover_components() {
 
     dir="$domain/external-plugins"
     if [ -d "$dir" ]; then
-      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' \) | sort |
+      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
         while IFS= read -r file; do
           name="$(basename "$file")"
           case "$name" in
+            *.npm-server.json)
+              name="${name%.npm-server.json}"
+              type="npm-server-plugins"
+              ;;
+            *.npm-tui.json)
+              name="${name%.npm-tui.json}"
+              type="npm-tui-plugins"
+              ;;
             *.server.json)
               name="${name%.server.json}"
               type="external-server-plugins"
@@ -223,10 +231,10 @@ check_collisions() {
     {
       type = $1
       name = $2
-      if (type == "plugins" || type == "external-server-plugins") {
+      if (type == "plugins" || type == "external-server-plugins" || type == "npm-server-plugins") {
         type = "server-plugins"
         sub(/\.(ts|js)$/, "", name)
-      } else if (type == "tui-plugins" || type == "external-tui-plugins") {
+      } else if (type == "tui-plugins" || type == "external-tui-plugins" || type == "npm-tui-plugins") {
         type = "tui-plugins"
         sub(/\.tsx$/, "", name)
       }
@@ -418,8 +426,8 @@ remove_stale() {
 
   old_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-old.XXXXXX")"
   new_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-new.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$old_manifest" | sort -u > "$old_entries"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$new_manifest" | sort -u > "$new_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$old_manifest" | sort -u > "$old_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$new_manifest" | sort -u > "$new_entries"
 
   comm -23 "$old_entries" "$new_entries" | while IFS=$'\t' read -r kind dest field value; do
     [ -n "$dest" ] || continue
@@ -434,7 +442,7 @@ remove_stale() {
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
         ;;
-      managed-array|managed-object)
+      managed-array|managed-array-json|managed-object)
         runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac
@@ -524,7 +532,7 @@ uninstall_action() {
 
   entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-links.XXXXXX")"
   dirs="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-dirs.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-object"' "$manifest" > "$entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$manifest" > "$entries"
   awk -F '\t' '$1 == "dir" { print $NF }' "$manifest" > "$dirs"
 
   while IFS=$'\t' read -r kind dest field value; do
@@ -540,7 +548,7 @@ uninstall_action() {
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
         ;;
-      managed-array|managed-object)
+      managed-array|managed-array-json|managed-object)
         runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac

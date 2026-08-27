@@ -47,7 +47,7 @@ Bump the version whenever a skill changes: patch for wording or internal fixes, 
 
 Every domain README uses this H2 sequence: `## Quick path`, `## Entry points`, then `## Components`. Keep the introduction to at most two sentences, the quick path to two or three steps, entry points compact, and component purposes to 3-8 words. `## Components` is the final authoritative section; do not add Mermaid diagrams to domain READMEs.
 
-When adding, removing, or moving a component, update the owning domain README's single `## Components` table. Update the root domain table only when entry points or domain purpose change. For external plugins, update the version, commit, artifact, and SHA-256 lock together.
+When adding, removing, or moving a component, update the owning domain README's single `## Components` table. Update the root domain table only when entry points or domain purpose change. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
 
 ## Validation
 

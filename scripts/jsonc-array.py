@@ -7,6 +7,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -188,13 +189,28 @@ def scan_string(text: str, start: int) -> int:
     raise JsoncError(f"unterminated string at offset {start}")
 
 
-def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, bool]:
+def array_property(text: str, property_name: str) -> tuple[Node, Node | None]:
     root = Parser(text).parse()
     if root.kind != "object" or root.properties is None:
         raise JsoncError("JSONC root must be an object")
     array = root.properties.get(property_name)
     if array is not None and (array.kind != "array" or array.items is None):
         raise JsoncError(f"property '{property_name}' must be an array")
+    return root, array
+
+
+def node_value(node: Node) -> object:
+    if node.kind == "object":
+        assert node.properties is not None
+        return {key: node_value(value) for key, value in node.properties.items()}
+    if node.kind == "array":
+        assert node.items is not None
+        return [node_value(item) for item in node.items]
+    return node.value
+
+
+def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, bool]:
+    root, array = array_property(text, property_name)
 
     matching = [] if array is None else [item for item in array.items if item.kind == "string" and item.value == value]
     if action == "has":
@@ -208,6 +224,68 @@ def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, b
             return text, False
         return remove_value(text, array, matching[0]), True
     raise JsoncError(f"unsupported action '{action}'")
+
+
+def edit_json(text: str, property_name: str, encoded_value: str, action: str) -> tuple[str, bool]:
+    try:
+        value = json.loads(encoded_value)
+    except json.JSONDecodeError as error:
+        raise JsoncError(f"invalid managed JSON value: {error.msg}") from error
+
+    root, array = array_property(text, property_name)
+    matching = [] if array is None else [item for item in array.items if node_value(item) == value]
+    if action == "has-json":
+        return text, bool(matching)
+    if action == "add-json":
+        if matching:
+            return text, False
+        encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        return add_encoded_value(text, root, array, property_name, encoded), True
+    if action == "remove-json":
+        if not matching or array is None:
+            return text, False
+        return remove_value(text, array, matching[0]), True
+    raise JsoncError(f"unsupported action '{action}'")
+
+
+def npm_package_name(spec: str) -> Optional[str]:
+    if spec.startswith(("./", "../", "/", "file:", "http:", "https:")):
+        return None
+    if spec.startswith("@"):
+        slash = spec.find("/")
+        if slash < 2:
+            return None
+        version = spec.find("@", slash)
+        return spec if version == -1 else spec[:version]
+    return spec.split("@", 1)[0]
+
+
+def npm_item_package(item: Node) -> Optional[str]:
+    value = node_value(item)
+    if isinstance(value, str):
+        return npm_package_name(value)
+    if isinstance(value, list) and value and isinstance(value[0], str):
+        return npm_package_name(value[0])
+    return None
+
+
+def edit_npm(text: str, property_name: str, package: str, action: str) -> tuple[str, bool]:
+    _, array = array_property(text, property_name)
+    matching = [] if array is None else [item for item in array.items if npm_item_package(item) == package]
+    if action == "has-npm":
+        return text, bool(matching)
+    if action != "remove-npm":
+        raise JsoncError(f"unsupported action '{action}'")
+
+    rendered = text
+    changed = False
+    while matching:
+        assert array is not None
+        rendered = remove_value(rendered, array, matching[0])
+        changed = True
+        _, array = array_property(rendered, property_name)
+        matching = [] if array is None else [item for item in array.items if npm_item_package(item) == package]
+    return rendered, changed
 
 
 def scalar_property(text: str, property_name: str) -> tuple[Node, Node | None]:
@@ -308,6 +386,10 @@ def trim_before(text: str, close: int, floor: int) -> int:
 
 def add_value(text: str, root: Node, array: Node | None, property_name: str, value: str) -> str:
     encoded = json.dumps(value, ensure_ascii=False)
+    return add_encoded_value(text, root, array, property_name, encoded)
+
+
+def add_encoded_value(text: str, root: Node, array: Node | None, property_name: str, encoded: str) -> str:
     if array is None:
         close = root.end - 1
         if root.properties and not has_trailing_comma(text, root):
@@ -397,6 +479,8 @@ def main() -> int:
     if len(sys.argv) < 4:
         print(
             "usage: jsonc-array.py <has|add|remove> <file> <property> <value>\n"
+            "       jsonc-array.py <has-json|add-json|remove-json> <file> <property> <json-value>\n"
+            "       jsonc-array.py <has-npm|remove-npm> <file> <property> <package>\n"
             "       jsonc-array.py <get|remove-property> <file> <property>\n"
             "       jsonc-array.py set <file> <property> <json-scalar>",
             file=sys.stderr,
@@ -404,13 +488,23 @@ def main() -> int:
         return 2
     action, file_name, property_name = sys.argv[1:4]
     value = sys.argv[4] if len(sys.argv) == 5 else None
-    if action in {"has", "add", "remove", "set"} and value is None:
+    array_actions = {
+        "has",
+        "add",
+        "remove",
+        "has-json",
+        "add-json",
+        "remove-json",
+        "has-npm",
+        "remove-npm",
+    }
+    if action in array_actions | {"set"} and value is None:
         print(f"error: action '{action}' requires a value", file=sys.stderr)
         return 2
     if action in {"get", "remove-property"} and len(sys.argv) != 4:
         print(f"error: action '{action}' takes no value", file=sys.stderr)
         return 2
-    if action not in {"has", "add", "remove", "get", "set", "remove-property"}:
+    if action not in array_actions | {"get", "set", "remove-property"}:
         print(f"error: unsupported action '{action}'", file=sys.stderr)
         return 2
     file = Path(file_name)
@@ -419,6 +513,12 @@ def main() -> int:
         if action in {"has", "add", "remove"}:
             assert value is not None
             rendered, changed = edit(text, property_name, value, action)
+        elif action in {"has-json", "add-json", "remove-json"}:
+            assert value is not None
+            rendered, changed = edit_json(text, property_name, value, action)
+        elif action in {"has-npm", "remove-npm"}:
+            assert value is not None
+            rendered, changed = edit_npm(text, property_name, value, action)
         elif action == "get":
             rendered, changed = get_scalar(text, property_name)
         elif action == "set":
@@ -429,7 +529,7 @@ def main() -> int:
     except (OSError, JsoncError) as error:
         print(f"error: {file}: {error}", file=sys.stderr)
         return 2
-    if action in {"has", "get"}:
+    if action in {"has", "has-json", "has-npm", "get"}:
         if action == "get" and changed:
             print(rendered)
         return 0 if changed else 1
