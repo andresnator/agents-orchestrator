@@ -17,7 +17,7 @@ Before a paid flow, probe the real binary:
 OPENCODE_BIN=/absolute/path/to/opencode scripts/test-sdd-flows.sh probe
 ```
 
-Then run `smoke`, `plan`, `lite`, or one scenario id. The harness copies `scripts/fixtures/sdd-agent-routes/java-orders/` into scratch state.
+Then run `smoke`, `plan`, or one scenario id. The harness copies `scripts/fixtures/sdd-agent-routes/java-orders/` into scratch state.
 
 ## Scenario map
 
@@ -27,7 +27,6 @@ Then run `smoke`, `plan`, `lite`, or one scenario id. The harness copies `script
 | One-document handoff | `PLAN-HANDOFF-01` | Producer writes one change; SDD adopts exact path |
 | Direct full SDD | `SDD-LIGHT-01`, `SDD-FULL-02` | Change and state reach verification and archive |
 | Ready-change adoption | `SDD-ADOPT-01` | Valid marker; first unchecked work starts |
-| Bounded Lite | `LITE-01` | Scope holds; only `lite-verify` delegates |
 | Resume | `smoke` resume path | Unique active root resumes recorded phase |
 | Verification and merge | `SDD-ARCH-01`, `SDD-ARCH-02` | Tests pass before canonical merge |
 | Judgment handoff | `SDD-JDG-04` | SDD pauses; Review judges; SDD resumes and archives |
@@ -50,10 +49,10 @@ Paths outside a declared brief are not verifier gaps. Workers never stage, commi
 
 ## Full project-profile proof
 
-The paid runner performs one Plan-to-SDD workflow and one bounded Lite workflow, without retries:
+The paid runner performs one Plan-to-SDD workflow without retries:
 
 ```bash
-MULTI_PRIMARY_E2E_CONFIRM=run-exactly-two-paid-workflows \
+MULTI_PRIMARY_E2E_CONFIRM=run-exactly-one-paid-workflow \
   OPENCODE_BIN=/absolute/path/to/opencode \
   scripts/test-multi-primary-e2e.sh
 ```

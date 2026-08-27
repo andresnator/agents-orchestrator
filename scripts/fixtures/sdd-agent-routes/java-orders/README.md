@@ -2,7 +2,7 @@
 
 The throwaway project copied by both real-model runners: the component-level
 `scripts/test-sdd-flows.sh` and the profile-level
-`scripts/test-multi-primary-e2e.sh`. The latter selects each direct primary explicitly,
+`scripts/test-multi-primary-e2e.sh`. The latter switches between its selected primaries explicitly,
 while the former can drive one coordinator directly for focused
 scenarios. Executable scenario ids refer to `docs/sdd-test-plan.md`; hypothetical Plan
 prompts and expected evidence live in `docs/plan-flow-test-scenarios.md`.

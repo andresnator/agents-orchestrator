@@ -82,14 +82,13 @@ assert_frontmatter_not_contains() {
 # One drafting contract replaces the retired phase fan-out.
 assert_exists skills/sdd-draft-change/SKILL.md
 assert_exists skills/sdd-draft-change/assets/change-template.md
-assert_exists skills/sdd-cold-verification/SKILL.md
+assert_exists domains/sdd/skills/sdd-cold-verification/SKILL.md
 assert_exists skills/sdd-execution-skills/SKILL.md
 assert_exists skills/sdd-execution-skills/assets/routing-cases.tsv
 for owner in plan architecture common sdd; do
   assert_relative_symlink "domains/$owner/skills/sdd-draft-change" '../../../skills/sdd-draft-change'
   assert_relative_symlink "domains/$owner/skills/sdd-execution-skills" '../../../skills/sdd-execution-skills'
 done
-assert_relative_symlink domains/sdd-lite/skills/sdd-execution-skills '../../../skills/sdd-execution-skills'
 for skill in behavior-characterization java-testing legacy-code-safety; do
   for owner in plan sdd; do
     assert_relative_symlink "domains/$owner/skills/$skill" "../../../skills/$skill"
@@ -100,12 +99,6 @@ for owner in common sdd; do
 done
 assert_absent domains/plan/skills/systematic-debugging
 assert_relative_symlink domains/sdd/skills/cognitive-doc-design '../../../skills/cognitive-doc-design'
-for skill in behavior-characterization code-conventions cognitive-doc-design java-testing legacy-code-safety systematic-debugging; do
-  assert_relative_symlink "domains/sdd-lite/skills/$skill" "../../../skills/$skill"
-done
-for owner in sdd sdd-lite; do
-  assert_relative_symlink "domains/$owner/skills/sdd-cold-verification" '../../../skills/sdd-cold-verification'
-done
 for retired in \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
   assert_absent "skills/$retired"
@@ -131,21 +124,22 @@ assert_contains skills/sdd-draft-change/SKILL.md 'at most 900 words'
 assert_contains skills/sdd-draft-change/SKILL.md 'never edit production code, commit, or push'
 assert_contains skills/sdd-draft-change/SKILL.md 'omits execution choices'
 assert_contains skills/sdd-draft-change/SKILL.md 'preserves marker lines'
-assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "2.0.1"'
+assert_frontmatter_contains skills/sdd-draft-change/SKILL.md 'version: "2.0.2"'
+assert_not_contains skills/sdd-draft-change/SKILL.md 'SDD Lite'
 assert_contains skills/sdd-draft-change/SKILL.md 'Roadmap: <goal> | Slice: <n>/<total>'
 assert_contains skills/sdd-draft-change/SKILL.md 'canonical merge never guesses a capability'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains skills/sdd-draft-change/SKILL.md 'Missing fields are invalid'
 assert_not_contains skills/sdd-draft-change/SKILL.md 'legacy fields'
-assert_frontmatter_contains skills/sdd-cold-verification/SKILL.md 'version: "1.0.0"'
-assert_contains skills/sdd-cold-verification/SKILL.md 'A green but tautological test is a failure'
-assert_contains skills/sdd-cold-verification/SKILL.md "Judgment owns broader correctness"
+assert_frontmatter_contains domains/sdd/skills/sdd-cold-verification/SKILL.md 'version: "1.0.0"'
+assert_contains domains/sdd/skills/sdd-cold-verification/SKILL.md 'A green but tautological test is a failure'
+assert_contains domains/sdd/skills/sdd-cold-verification/SKILL.md "Judgment owns broader correctness"
 assert_contains domains/common/skills/grill/SKILL.md 'Mode, TDD, Judgment, and Delivery'
 
 # One routing contract selects implementation skills without loading them in producers.
 routing_skill=skills/sdd-execution-skills/SKILL.md
 routing_cases=skills/sdd-execution-skills/assets/routing-cases.tsv
-assert_frontmatter_contains "$routing_skill" 'version: "1.0.1"'
+assert_frontmatter_contains "$routing_skill" 'version: "1.0.2"'
 for skill in code-conventions java-testing behavior-characterization legacy-code-safety systematic-debugging cognitive-doc-design; do
   assert_contains "$routing_skill" "\`$skill\`"
 done
@@ -161,9 +155,10 @@ assert_not_contains global/AGENTS.md 'When writing or planning code or tests'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains global/AGENTS.md 'never bypass denied skill access by reading a `SKILL.md` path'
 assert_first_line "$routing_cases" $'case\tproducer\twork signal\texpected Skills'
-for producer in deep-planner architect orchestraitor grill-sdd orchestralite; do
+for producer in deep-planner architect orchestraitor grill-sdd; do
   assert_contains "$routing_cases" $'\t'"$producer"$'\t'
 done
+assert_not_contains "$routing_cases" 'orchestralite'
 CHECKS=$((CHECKS + 1))
 awk -F '\t' '
   NR == 1 { next }
@@ -325,12 +320,9 @@ assert_contains "$verify" 'explicit diff range'
 assert_frontmatter_contains "$verify" 'sdd-cold-verification: allow'
 # shellcheck disable=SC2016 # Markdown backticks are literal contract text.
 assert_contains "$verify" 'Load `sdd-cold-verification`'
-assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'sdd-cold-verification: allow'
-# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains domains/sdd-lite/agents/lite-verify.md 'Load `sdd-cold-verification`'
 
 # No runtime/profile/fixture contract may retain the deleted drafting inventory.
-inventory_roots=(domains/plan domains/architecture domains/sdd domains/sdd-lite profiles scripts/fixtures/sdd-agent-routes/java-orders)
+inventory_roots=(domains/plan domains/architecture domains/sdd profiles scripts/fixtures/sdd-agent-routes/java-orders)
 for retired in \
   sdd-proposal sdd-spec sdd-design sdd-tasks \
   sdd-draft-proposal sdd-draft-spec sdd-draft-design sdd-draft-tasks sdd-draft-light; do
@@ -339,6 +331,8 @@ for retired in \
     fail "$retired" 'retired name remains in runtime, profile, or fixture inventory'
   fi
 done
+
+assert_absent domains/sdd-lite
 
 assert_absent docs/plan-handoff.md
 assert_absent docs/delegation-receipts.md

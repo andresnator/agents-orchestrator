@@ -1,6 +1,6 @@
 # Run the Multi-Primary Profile
 
-This opt-in project profile installs five direct workflow primaries while preserving the user's selected default agent.
+This opt-in project profile installs four direct workflow primaries while preserving the user's selected default agent.
 
 ## Quick path
 
@@ -16,7 +16,7 @@ Project installs skip Homebrew by default. Add `--install-brew-tools` to install
 
 ## Profile and entry points
 
-The profile installs `plan,sdd,architecture,sdd-lite,review,common` into `.opencode/` and applies only:
+The profile installs `plan,sdd,architecture,review,common` into `.opencode/` and applies only:
 
 ```jsonc
 {
@@ -29,8 +29,8 @@ It never adds, replaces, or removes `default_agent`. Select a primary with Tab o
 | Work | Primary | Commands |
 |---|---|---|
 | Planning, discovery, or protected refactor | `deep-planner` | `/deep-plan`, `/wayfinder`, `/refactor-plan`, `/harden-plan` |
+| Bounded low-risk implementation | OpenCode `build` | Switch from Plan to Build; optionally run `/judgment light` |
 | Full implementation, handoff, or resume | `orchestraitor` | `/sdd` |
-| Bounded low-risk implementation | `orchestralite` | `/sdd-lite` |
 | Architecture maps, reviews, or decisions | `architect` | `/arch-map`, `/arch-review`, `/arch-ideate`, `/boundary-inspector` |
 | Adversarial or Socratic review | `review-coordinator` | `/judgment`, `/defend` |
 
@@ -44,7 +44,7 @@ Plan and Architecture Ideate write:
 .ai/<producer>/changes/<change>/change.md
 ```
 
-The first line is `Status: ready-for-sdd | Source: <producer>`. Run `/sdd <exact-change.md-path>` to adopt and execute it in place. Direct SDD uses `.ai/orchestrator/changes/`; Lite uses `.ai/sdd-lite/` and does not merge canonical specs.
+The first line is `Status: ready-for-sdd | Source: <producer>`. Run `/sdd <exact-change.md-path>` to adopt and execute it in place. Direct SDD uses `.ai/orchestrator/changes/`.
 
 When full SDD reaches requested Judgment, complete three primary turns:
 
@@ -55,6 +55,8 @@ When full SDD reaches requested Judgment, complete three primary turns:
 ## Ownership and rollback
 
 `.agents-orchestrator-manifest` owns installed components. `.multi-primary-profile-manifest` owns profile selection, the selected `opencode.jsonc` or `opencode.json` path, the prior `subagent_depth`, and whether target files existed.
+
+Reinstalling a profile created from an older component inventory removes retired manifest-owned links. It preserves ignored runtime state, foreign files, and user configuration.
 
 Install rejects invalid, escaping, home, root, source-repository, and worktree targets. Status and uninstall fail closed on manifest tampering. Clean uninstall restores the prior depth, preserves `default_agent`, comments, and foreign keys, and removes only empty profile-created paths.
 
@@ -72,10 +74,10 @@ scripts/test-external-plugin-install.sh contracts
 scripts/validate-harness.sh
 ```
 
-Paid model-backed proof runs direct Plan-to-SDD and Lite workflows without retries:
+Paid model-backed proof runs one direct Plan-to-SDD workflow without retries:
 
 ```bash
-MULTI_PRIMARY_E2E_CONFIRM=run-exactly-two-paid-workflows \
+MULTI_PRIMARY_E2E_CONFIRM=run-exactly-one-paid-workflow \
   OPENCODE_BIN=/absolute/path/to/opencode \
   scripts/test-multi-primary-e2e.sh
 ```
