@@ -189,6 +189,73 @@ EOF
   pass shouldInstallStatusAndRestoreExistingJson
 }
 
+shouldMigrateToHigherPrecedenceJsonc() {
+  local project json_config jsonc_config manifest before_manifest before_json before_jsonc
+  project="$(make_project config-precedence-migration)"
+  project="$(cd "$project" && pwd -P)"
+  mkdir -p "$project/.opencode"
+  json_config="$project/.opencode/opencode.json"
+  jsonc_config="$project/.opencode/opencode.jsonc"
+  manifest="$project/.opencode/.multi-primary-profile-manifest"
+  cat > "$json_config" <<'EOF'
+{
+  "default_agent": "mentor",
+  "subagent_depth": 3,
+  "json_owner": true
+}
+EOF
+
+  # Given a profile installed into JSON before a higher-precedence JSONC appears
+  run_profile install --project-root "$project" >/dev/null
+  cat > "$jsonc_config" <<'EOF'
+{
+  // this file now wins OpenCode precedence
+  "subagent_depth": 7,
+  "jsonc_owner": true,
+}
+EOF
+
+  # When the profile is reinstalled and exercises its remaining lifecycle
+  expect_failure 'OpenCode config precedence changed' run_profile status --project-root "$project"
+  run_profile install --project-root "$project" >/dev/null
+  grep -Fq $'config-file\t'"$jsonc_config" "$manifest" ||
+    fail "config precedence: selected JSONC path was not migrated"
+  [ "$(scalar "$json_config" subagent_depth)" = 3 ] ||
+    fail "config precedence: previous JSON depth was not restored"
+  python3 "$JSONC_EDITOR" has "$json_config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "config precedence: Graphify registration remains in JSON"
+  [ "$(scalar "$jsonc_config" subagent_depth)" = 1 ] ||
+    fail "config precedence: managed depth was not written to JSONC"
+  python3 "$JSONC_EDITOR" has "$jsonc_config" plugin "$GRAPHIFY_SPEC" >/dev/null ||
+    fail "config precedence: Graphify registration was not migrated to JSONC"
+  run_profile status --project-root "$project" >/dev/null
+  before_manifest="$(shasum -a 256 "$project/.opencode/.agents-orchestrator-manifest" | awk '{print $1}')"
+  before_json="$(shasum -a 256 "$json_config" | awk '{print $1}')"
+  before_jsonc="$(shasum -a 256 "$jsonc_config" | awk '{print $1}')"
+  run_profile install --project-root "$project" >/dev/null
+  [ "$before_manifest" = "$(shasum -a 256 "$project/.opencode/.agents-orchestrator-manifest" | awk '{print $1}')" ] ||
+    fail "config precedence: reinstall changed installer manifest"
+  [ "$before_json" = "$(shasum -a 256 "$json_config" | awk '{print $1}')" ] ||
+    fail "config precedence: reinstall changed JSON"
+  [ "$before_jsonc" = "$(shasum -a 256 "$jsonc_config" | awk '{print $1}')" ] ||
+    fail "config precedence: reinstall changed JSONC"
+  run_profile uninstall --project-root "$project" >/dev/null
+
+  # Then both files recover their own prior values and foreign content
+  [ "$(scalar "$json_config" subagent_depth)" = 3 ] ||
+    fail "config precedence: uninstall changed the JSON depth"
+  [ "$(scalar "$jsonc_config" subagent_depth)" = 7 ] ||
+    fail "config precedence: uninstall did not restore the JSONC depth"
+  grep -Fq '"json_owner": true' "$json_config" || fail "config precedence: JSON foreign data changed"
+  grep -Fq '// this file now wins OpenCode precedence' "$jsonc_config" ||
+    fail "config precedence: JSONC comment changed"
+  grep -Fq '"jsonc_owner": true' "$jsonc_config" || fail "config precedence: JSONC foreign data changed"
+  python3 "$JSONC_EDITOR" has "$jsonc_config" plugin "$GRAPHIFY_SPEC" >/dev/null 2>&1 &&
+    fail "config precedence: uninstall retained Graphify registration"
+  [ ! -e "$manifest" ] || fail "config precedence: profile manifest remains"
+  pass shouldMigrateToHigherPrecedenceJsonc
+}
+
 shouldMigrateManagedNpmServerVersion() {
   local project config installer_manifest profile_manifest rewritten manifest_sha
   project="$(make_project npm-server-version-migration)"
@@ -536,6 +603,7 @@ command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
 shouldInstallStatusAndRestoreExistingJsonc
 shouldInstallStatusAndRestoreExistingJson
+shouldMigrateToHigherPrecedenceJsonc
 shouldMigrateManagedNpmServerVersion
 shouldRestoreAbsentValuesWithoutLosingComments
 shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent

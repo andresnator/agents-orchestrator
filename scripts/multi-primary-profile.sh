@@ -17,6 +17,7 @@ PROJECT_ROOT_ARG=""
 PROJECT_ROOT=""
 TARGET=""
 CONFIG_FILE=""
+PROFILE_CONFIG_FILE=""
 INSTALLER_MANIFEST=""
 PROFILE_MANIFEST=""
 BREW_TOOLS_OPTION=""
@@ -139,14 +140,18 @@ render_managed_config() {
   render_jsonc_action set "$CONFIG_FILE" subagent_depth "$MANAGED_SUBAGENT_DEPTH" "$TMP_TWO"
 }
 
-render_restored_config() {
-  local depth_state="$1" depth_json="$2"
-  TMP_TWO="$(new_tmp)"
+render_restored_config_file() {
+  local file="$1" depth_state="$2" depth_json="$3" output="$4"
   if [ "$depth_state" = value ]; then
-    render_jsonc_action set "$CONFIG_FILE" subagent_depth "$depth_json" "$TMP_TWO"
+    render_jsonc_action set "$file" subagent_depth "$depth_json" "$output"
   else
-    render_jsonc_action remove-property "$CONFIG_FILE" subagent_depth "" "$TMP_TWO"
+    render_jsonc_action remove-property "$file" subagent_depth "" "$output"
   fi
+}
+
+render_restored_config() {
+  TMP_TWO="$(new_tmp)"
+  render_restored_config_file "$CONFIG_FILE" "$1" "$2" "$TMP_TWO"
 }
 
 is_removable_generated_config() {
@@ -217,7 +222,7 @@ emit_expected_files() {
 }
 
 emit_expected_managed_arrays() {
-  local domain descriptor package version old_ifs
+  local config_file="${1:-$CONFIG_FILE}" domain descriptor package version old_ifs
   old_ifs="$IFS"
   IFS=,
   for domain in $PROFILE_DOMAINS; do
@@ -226,21 +231,22 @@ emit_expected_managed_arrays() {
       while IFS= read -r descriptor; do
         package="$(jq -er .package "$descriptor")"
         version="$(jq -er .version "$descriptor")"
-        printf '%s\tplugin\t%s@%s\n' "$CONFIG_FILE" "$package" "$version"
+        printf '%s\tplugin\t%s@%s\n' "$config_file" "$package" "$version"
       done
   done
   IFS="$old_ifs"
 }
 
 is_expected_managed_array() {
-  local path="$1" field="$2" value="$3" package expected_path expected_field expected_value expected_package
+  local path="$1" field="$2" value="$3" config_file="${4:-$CONFIG_FILE}"
+  local package expected_path expected_field expected_value expected_package
   package="$(npm_package_from_spec "$value")" || return 1
   while IFS=$'\t' read -r expected_path expected_field expected_value; do
     expected_package="$(npm_package_from_spec "$expected_value")" || continue
     if [ "$path" = "$expected_path" ] && [ "$field" = "$expected_field" ] && [ "$package" = "$expected_package" ]; then
       return 0
     fi
-  done < <(emit_expected_managed_arrays)
+  done < <(emit_expected_managed_arrays "$config_file")
   return 1
 }
 
@@ -276,7 +282,7 @@ resolve_link_source() {
 validate_installer_manifest_ownership() {
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing: $INSTALLER_MANIFEST"
 
-  local kind path field value actual
+  local config_file="${1:-$CONFIG_FILE}" kind path field value actual
   while IFS=$'\t' read -r kind path field value; do
     [ -n "$kind" ] || continue
     case "$kind" in
@@ -290,7 +296,7 @@ validate_installer_manifest_ownership() {
         esac
         ;;
       managed-array)
-        is_expected_managed_array "$path" "$field" "$value" ||
+        is_expected_managed_array "$path" "$field" "$value" "$config_file" ||
           die "broad profile manifest contains managed runtime config: $path"
         python3 "$JSONC_EDITOR" has "$path" "$field" "$value" >/dev/null ||
           die "profile-owned runtime config is missing or changed: $path"
@@ -390,9 +396,10 @@ validate_installer_contents() {
 }
 
 validate_managed_config() {
-  read_scalar "$CONFIG_FILE" subagent_depth
+  local config_file="${1:-$CONFIG_FILE}"
+  read_scalar "$config_file" subagent_depth
   [ "$JSON_STATE" = value ] && [ "$JSON_VALUE" = "$MANAGED_SUBAGENT_DEPTH" ] ||
-    die "managed subagent_depth changed in $CONFIG_FILE"
+    die "managed subagent_depth changed in $config_file"
 }
 
 validate_profile_manifest() {
@@ -404,8 +411,8 @@ validate_profile_manifest() {
   local saved_config config_existed target_existed expected_sha actual_sha
   saved_config="$(manifest_value config-file)"
   case "$saved_config" in
-    "") ;; # Legacy v1 manifests predate explicit config-path ownership.
-    "$TARGET/opencode.json"|"$TARGET/opencode.jsonc") CONFIG_FILE="$saved_config" ;;
+    "") PROFILE_CONFIG_FILE="$CONFIG_FILE" ;; # Legacy v1 manifests predate explicit config-path ownership.
+    "$TARGET/opencode.json"|"$TARGET/opencode.jsonc") PROFILE_CONFIG_FILE="$saved_config" ;;
     *) die "global or foreign profile config file" ;;
   esac
   config_existed="$(manifest_value config-existed)"
@@ -417,7 +424,7 @@ validate_profile_manifest() {
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
   [ -n "$expected_sha" ] && [ "$expected_sha" = "$actual_sha" ] ||
     die "installer manifest changed or became broad/foreign"
-  validate_installer_manifest_ownership
+  validate_installer_manifest_ownership "$PROFILE_CONFIG_FILE"
 }
 
 write_profile_manifest() {
@@ -441,15 +448,26 @@ write_profile_manifest() {
 
 run_install() {
   local depth_state depth_json config_existed=0 target_existed=0
+  local previous_config_file="" previous_depth_state="" previous_depth_json="" migrate_config=0
   local installer_args=(install --domain "$PROFILE_DOMAINS" --target "$TARGET")
   if [ -f "$PROFILE_MANIFEST" ]; then
     validate_profile_manifest
-    validate_managed_config
+    validate_managed_config "$PROFILE_CONFIG_FILE"
     depth_state="$(manifest_value previous-subagent-depth-state)"
     depth_json="$(manifest_value previous-subagent-depth-json)"
     config_existed="$(manifest_value config-existed)"
     target_existed="$(manifest_value target-existed)"
     [ -n "$target_existed" ] || target_existed=1
+    if [ "$CONFIG_FILE" != "$PROFILE_CONFIG_FILE" ]; then
+      previous_config_file="$PROFILE_CONFIG_FILE"
+      previous_depth_state="$depth_state"
+      previous_depth_json="$depth_json"
+      read_scalar "$CONFIG_FILE" subagent_depth
+      depth_state="$JSON_STATE"
+      depth_json="$JSON_VALUE"
+      config_existed=1
+      migrate_config=1
+    fi
   else
     [ ! -e "$INSTALLER_MANIFEST" ] || die "foreign installer manifest already exists: $INSTALLER_MANIFEST"
     preflight_fresh_destinations
@@ -461,11 +479,21 @@ run_install() {
 
   [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
   "$INSTALLER" "${installer_args[@]}"
-  render_managed_config
   validate_installer_contents
-  mkdir -p "$TARGET"
-  mv "$TMP_TWO" "$CONFIG_FILE"
-  TMP_TWO=""
+  if [ "$migrate_config" -eq 1 ]; then
+    TMP_ONE="$(new_tmp)"
+    render_restored_config_file "$previous_config_file" "$previous_depth_state" "$previous_depth_json" "$TMP_ONE"
+    render_managed_config
+    mv "$TMP_ONE" "$previous_config_file"
+    TMP_ONE=""
+    mv "$TMP_TWO" "$CONFIG_FILE"
+    TMP_TWO=""
+  else
+    render_managed_config
+    mkdir -p "$TARGET"
+    mv "$TMP_TWO" "$CONFIG_FILE"
+    TMP_TWO=""
+  fi
   write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed"
   validate_managed_config
   printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\n' \
@@ -479,15 +507,17 @@ run_status() {
     return 1
   fi
   validate_profile_manifest
-  validate_managed_config
+  validate_managed_config "$PROFILE_CONFIG_FILE"
+  [ "$CONFIG_FILE" = "$PROFILE_CONFIG_FILE" ] ||
+    die "OpenCode config precedence changed to $CONFIG_FILE; run install to migrate the profile"
   printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 5\nquestion owners: 5\n' \
-    "$PROJECT_ROOT" "$CONFIG_FILE"
+    "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
 }
 
 run_uninstall() {
   [ -f "$PROFILE_MANIFEST" ] || die "profile is not installed for $PROJECT_ROOT"
   validate_profile_manifest
-  validate_managed_config
+  validate_managed_config "$PROFILE_CONFIG_FILE"
 
   local depth_state depth_json config_existed target_existed
   depth_state="$(manifest_value previous-subagent-depth-state)"
@@ -496,6 +526,7 @@ run_uninstall() {
   target_existed="$(manifest_value target-existed)"
   [ -n "$target_existed" ] || target_existed=1
   "$INSTALLER" uninstall --target "$TARGET"
+  CONFIG_FILE="$PROFILE_CONFIG_FILE"
   render_restored_config "$depth_state" "$depth_json"
   if [ "$config_existed" = 0 ] && is_removable_generated_config "$TMP_TWO"; then
     rm -f "$CONFIG_FILE"
