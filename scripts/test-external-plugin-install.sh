@@ -14,7 +14,7 @@ SKILL_VERSION="0.1.3"
 SKILL_SPEC="$SKILL_PACKAGE@$SKILL_VERSION"
 OLD_SKILL_SPEC="$SKILL_PACKAGE@0.1.2"
 GRAPHIFY_PACKAGE="opencode-graphify-init"
-GRAPHIFY_VERSION="0.1.4"
+GRAPHIFY_VERSION="0.1.5"
 GRAPHIFY_SPEC="$GRAPHIFY_PACKAGE@$GRAPHIFY_VERSION"
 OLD_GRAPHIFY_SPEC="$GRAPHIFY_PACKAGE@0.1.3"
 MODEL_PROFILES_DIR="model-profiles"
@@ -350,7 +350,7 @@ EOF
     "$INSTALLER" status --domain meta,common --target "$target" > "$status_output"
   assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tregistered@0.3.2' "status missed Models Presets"
   assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.1.3' "status missed skill registry"
-  assert_contains "$status_output" $'common\tnpm-server-plugins\topencode-graphify-init\t-\tregistered@0.1.4' "status missed Graphify"
+  assert_contains "$status_output" $'common\tnpm-server-plugins\topencode-graphify-init\t-\tregistered@0.1.5' "status missed Graphify"
 
   printf 'corrupt\n' > "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json"
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
