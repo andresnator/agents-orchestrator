@@ -7,4 +7,3 @@ bug-fix	orchestraitor	reproducible production defect	code-conventions, systemati
 architecture-fitness	architect	Java fitness-function test	code-conventions, java-testing
 human-docs	grill-sdd	human-facing guide	cognitive-doc-design
 canonical-merge	orchestraitor	canonical-spec merge	none
-bounded-lite	orchestralite	bounded Java code and test	code-conventions, java-testing

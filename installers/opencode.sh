@@ -47,7 +47,7 @@ Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
               (currently: architecture, common, docs, learning, meta, plan,
-              review, sdd, sdd-lite).
+              review, sdd).
               Exclusive skills live in their domain; shared skills use relative
               symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.

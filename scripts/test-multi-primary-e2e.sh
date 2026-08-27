@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Opt-in paid proof for the project-local multi-primary profile.
 #
-# This runner performs exactly two workflows, once each, with no retry loop:
-#   1. direct Deep Plan, then a direct SDD primary switch using the exact handoff;
-#   2. a bounded implementation run directly through SDD Lite.
+# This runner performs exactly one workflow with no retry loop: direct Deep
+# Plan, then a direct SDD primary switch using the exact handoff.
 #
 # It uses the caller's real OpenCode credentials and stores sanitized session
 # exports plus project evidence below the repository's ignored .ai/ directory.
@@ -78,13 +77,12 @@ cleanup() {
   [ -n "$RUN_PID" ] && terminate_run "$RUN_PID"
   if [ -n "$SCRATCH" ] && [ -d "$SCRATCH" ]; then
     [ -d "$SCRATCH/plan-project" ] && snapshot_project plan-sdd "$SCRATCH/plan-project" || true
-    [ -d "$SCRATCH/lite-project" ] && snapshot_project sdd-lite "$SCRATCH/lite-project" || true
     rm -rf "$SCRATCH"
   fi
   {
     printf 'finished_utc\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     printf 'opencode_calls\t%s\n' "$CALLS"
-    printf 'workflow_attempts\t2\n'
+    printf 'workflow_attempts\t1\n'
     printf 'retries\t0\n'
     printf 'failures\t%s\n' "$FAILURES"
   } >> "$EVIDENCE_ROOT/run-metadata.tsv" 2>/dev/null || true
@@ -332,7 +330,7 @@ run_plan_sdd_workflow() {
   local root_id change_dir change_rel change archived tree_before="$evidence/session-tree-before.tsv"
   local tree_after="$evidence/session-tree-after.tsv" agent
 
-  log "E2E 1/2: natural Deep Plan -> same-session SDD"
+  log "E2E: natural Deep Plan -> same-session SDD"
   copy_fixture "$project"
   install_profile plan-sdd "$project"
   assert_maven_green "$project" "$evidence/maven-baseline.log" || return 1
@@ -436,50 +434,11 @@ run_plan_sdd_workflow() {
   assert_maven_green "$project" "$evidence/maven-test.log" || return 1
 
   printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
-  log "PASS E2E 1/2: session $root_id, change ${archived#"$project/"}"
+  log "PASS E2E: session $root_id, change ${archived#"$project/"}"
 }
 
-run_lite_workflow() {
-  local project="$SCRATCH/lite-project" evidence="$EVIDENCE_ROOT/sdd-lite"
-  local events="$evidence/01-lite.events.jsonl" root_id tree="$evidence/session-tree.tsv"
-  local archived agent
-
-  log "E2E 2/2: natural bounded request -> SDD Lite"
-  copy_fixture "$project"
-  install_profile sdd-lite "$project"
-  assert_maven_green "$project" "$evidence/maven-baseline.log" || return 1
-
-  run_turn "$project" "$events" "$evidence/01-lite.stderr" \
-    "multi-primary E2E bounded implementation" \
-    "operation=sdd-lite. Implementa este cambio pequeño y de bajo riesgo: agrega a Order un método público totalQuantity() que sume las cantidades de todas sus líneas y una prueba automatizada. El alcance está limitado a Order.java y OrderPricingTest.java, usa TDD alongside, conserva las convenciones existentes y no cambies el comportamiento de precios. Apruebo de antemano el borrador recomendado de change.md; no hay decisiones abiertas." \
-    orchestralite || return 1
-
-  root_id="$(session_id_from_events "$events")"
-  assert_session_id "$root_id"
-  printf '%s\n' "$root_id" > "$evidence/root-session-id.txt"
-  write_session_tree "$root_id" "$tree"
-  export_tree "$tree" "$evidence/sessions"
-  write_usage "$tree" "$evidence/usage.tsv"
-  assert_turn_agent "$events" orchestralite || return 1
-  for agent in orchestralite lite-verify; do
-    assert_tree_has "$tree" "$agent" || return 1
-  done
-  for agent in deep-planner architect orchestraitor review-coordinator \
-    sdd-canonical-merge sdd-implement sdd-verify; do
-    assert_tree_lacks "$tree" "$agent" || return 1
-  done
-  grep -Rq 'totalQuantity' "$project/src/main" || { fail "totalQuantity was not implemented"; return 1; }
-  grep -Rq 'totalQuantity' "$project/src/test" || { fail "totalQuantity has no test"; return 1; }
-  assert_maven_green "$project" "$evidence/maven-test.log" || return 1
-  archived="$(find "$project/.ai/sdd-lite/changes/archive" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
-  [ -n "$archived" ] || { fail "SDD Lite change was not archived"; return 1; }
-  [ ! -e "$project/.ai/orchestrator" ] || { fail "SDD Lite touched full-SDD state"; return 1; }
-  printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
-  log "PASS E2E 2/2: session $root_id, change ${archived#"$project/"}"
-}
-
-[ "${MULTI_PRIMARY_E2E_CONFIRM:-}" = "run-exactly-two-paid-workflows" ] ||
-  die "set MULTI_PRIMARY_E2E_CONFIRM=run-exactly-two-paid-workflows to authorize the paid E2E run"
+[ "${MULTI_PRIMARY_E2E_CONFIRM:-}" = "run-exactly-one-paid-workflow" ] ||
+  die "set MULTI_PRIMARY_E2E_CONFIRM=run-exactly-one-paid-workflow to authorize the paid E2E run"
 [ -n "$OPENCODE_BIN" ] || die "OPENCODE_BIN is required"
 [ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
 [ -f "$FIXTURE/pom.xml" ] || die "fixture is missing at $FIXTURE"
@@ -496,7 +455,7 @@ SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-e2e.XXXXXX")"
   printf 'repository_head\t%s\n' "$(git -C "$ROOT" rev-parse HEAD)"
   printf 'opencode_version\t%s\n' "$($OPENCODE_BIN --version)"
   printf 'evidence_root\t%s\n' "$EVIDENCE_ROOT"
-  printf 'paid_workflows\t2\n'
+  printf 'paid_workflows\t1\n'
   printf 'retry_policy\tnone\n'
 } > "$EVIDENCE_ROOT/run-metadata.tsv"
 
@@ -506,15 +465,14 @@ bash "$ROOT/scripts/test-multi-primary-profile.sh" > "$EVIDENCE_ROOT/profile-con
   die "deterministic profile contracts failed"
 
 run_plan_sdd_workflow || true
-run_lite_workflow || true
 
-if [ "$CALLS" -ne 3 ]; then
-  fail "expected three OpenCode turns across two workflows, observed $CALLS"
+if [ "$CALLS" -ne 2 ]; then
+  fail "expected two OpenCode turns in one workflow, observed $CALLS"
 fi
 if [ "$FAILURES" -gt 0 ]; then
   printf 'FAIL: %d finding(s); evidence preserved at %s\n' "$FAILURES" "$EVIDENCE_ROOT" >&2
   exit 1
 fi
 
-printf 'PASS: exactly 2 paid multi-primary workflows, 3 turns, 0 retries.\n'
+printf 'PASS: exactly 1 paid multi-primary workflow, 2 turns, 0 retries.\n'
 printf 'Evidence: %s\n' "$EVIDENCE_ROOT"

@@ -8,8 +8,9 @@ INSTALLER="$REPO_ROOT/installers/opencode.sh"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 
 PROFILE_CONTRACT="multi-primary-profile/v1"
-PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
-PRIMARY_AGENTS="deep-planner architect orchestraitor orchestralite review-coordinator"
+PROFILE_DOMAINS="plan,sdd,architecture,review,common"
+LEGACY_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
+PRIMARY_AGENTS="deep-planner architect orchestraitor review-coordinator"
 MANAGED_SUBAGENT_DEPTH='1'
 
 ACTION=""
@@ -163,6 +164,10 @@ is_removable_generated_config() {
 manifest_value() {
   local key="$1"
   awk -F '\t' -v key="$key" '$1 == key { print substr($0, length($1) + 2); exit }' "$PROFILE_MANIFEST"
+}
+
+profile_inventory_is_legacy() {
+  [ "$(manifest_value domains)" = "$LEGACY_PROFILE_DOMAINS" ]
 }
 
 manifest_has_row() {
@@ -386,8 +391,8 @@ validate_installer_contents() {
     [ "$question" != allow ] || question_owner_count=$((question_owner_count + 1))
     [ -n "$question" ] || die "profile agent omits its question permission: $path"
   done < "$TMP_THREE"
-  [ "$primary_count" -eq 5 ] || die "expected exactly five repo-owned primaries, found $primary_count"
-  [ "$question_owner_count" -eq 5 ] || die "expected exactly five direct question owners, found $question_owner_count"
+  [ "$primary_count" -eq 4 ] || die "expected exactly four repo-owned primaries, found $primary_count"
+  [ "$question_owner_count" -eq 4 ] || die "expected exactly four direct question owners, found $question_owner_count"
   local primary
   for primary in $PRIMARY_AGENTS; do
     grep -Fq "$TARGET/agents/$primary.md" "$TMP_THREE" ||
@@ -403,11 +408,16 @@ validate_managed_config() {
 }
 
 validate_profile_manifest() {
+  local saved_domains
   [ -f "$PROFILE_MANIFEST" ] || die "profile manifest is missing: $PROFILE_MANIFEST"
   [ "$(manifest_value contract)" = "$PROFILE_CONTRACT" ] || die "foreign profile manifest contract"
   [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign profile manifest root"
   [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign profile target"
-  [ "$(manifest_value domains)" = "$PROFILE_DOMAINS" ] || die "broad profile domain selection"
+  saved_domains="$(manifest_value domains)"
+  case "$saved_domains" in
+    "$PROFILE_DOMAINS"|"$LEGACY_PROFILE_DOMAINS") ;;
+    *) die "broad profile domain selection" ;;
+  esac
   local saved_config config_existed target_existed expected_sha actual_sha
   saved_config="$(manifest_value config-file)"
   case "$saved_config" in
@@ -507,10 +517,11 @@ run_status() {
     return 1
   fi
   validate_profile_manifest
+  profile_inventory_is_legacy && die "profile component inventory is legacy; run install to migrate"
   validate_managed_config "$PROFILE_CONFIG_FILE"
   [ "$CONFIG_FILE" = "$PROFILE_CONFIG_FILE" ] ||
     die "OpenCode config precedence changed to $CONFIG_FILE; run install to migrate the profile"
-  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 5\nquestion owners: 5\n' \
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 4\nquestion owners: 4\n' \
     "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
 }
 

@@ -5,7 +5,7 @@
     "orchestration": {
       "description": "Direct primary coordinators; strongest model",
       "variant": "high",
-      "agents": ["deep-planner", "architect", "orchestraitor", "orchestralite", "review-coordinator"]
+      "agents": ["deep-planner", "architect", "orchestraitor", "review-coordinator"]
     },
     "implementation": {
       "description": "Code-writing agents",
@@ -20,7 +20,7 @@
     "verification": {
       "description": "Independent verification",
       "variant": "high",
-      "agents": ["sdd-verify", "lite-verify"]
+      "agents": ["sdd-verify"]
     },
     "judge-a": {
       "description": "Blind judge A; keep provider distinct from judge-b",

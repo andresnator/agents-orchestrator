@@ -4,7 +4,7 @@ description: "Trigger: draft change, ready-for-sdd change, SDD planning. Draft o
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.1"
+  version: "2.0.2"
   status: testing
 ---
 
@@ -20,7 +20,7 @@ Create one `change.md` per bounded change or roadmap slice. It replaces proposal
 - Qualify every behavior as `<capability>/<requirement>`. `RENAME` uses `<old-capability>/<old-requirement> -> <new-capability>/<new-requirement>`. Preserve `ADD | MODIFY | REMOVE | RENAME` intent and observable `WHEN`/`THEN` scenarios; canonical merge never guesses a capability.
 - `Work` groups use small ordered checkboxes and real paths. Add `Files:` when scope is known; parallelize only disjoint scopes, otherwise serialize.
 - Every `Work` group requires `Skills: <comma-separated names | none>` selected with `sdd-execution-skills`. Missing fields are invalid; use names, never paths.
-- The status marker is always line one. A planner writes `Status: ready-for-sdd` and omits execution choices. A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. Direct SDD and SDD Lite write `Status: active` with their choices. SDD preserves marker lines and adds choices immediately after them without redrafting the body.
+- The status marker is always line one. A planner writes `Status: ready-for-sdd` and omits execution choices. A roadmap slice adds `Roadmap: <goal> | Slice: <n>/<total>` on line two. Direct SDD writes `Status: active` with its choices. SDD preserves marker lines and adds choices immediately after them without redrafting the body.
 - Artifacts default to English. Planning is read-only except for the approved `change.md`; never edit production code, commit, or push.
 
 ## Self-check

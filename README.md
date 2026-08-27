@@ -19,7 +19,7 @@ scripts/multi-primary-profile.sh install --project-root /absolute/path/to/projec
 scripts/multi-primary-profile.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `plan,sdd,architecture,sdd-lite,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md).
+The project profile selects `plan,sdd,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md). For bounded changes, use OpenCode Plan then Build and run `/judgment light` when independent review is useful.
 
 ## Domains
 
@@ -28,7 +28,6 @@ The project profile selects `plan,sdd,architecture,sdd-lite,review,common`, pres
 | [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `deep-planner`, `/deep-plan`, `/refactor-plan` |
 | [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
 | [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/sdd` |
-| [sdd-lite](domains/sdd-lite/README.md) | Bounded implementation in one coordinator context | `orchestralite`, `/sdd-lite` |
 | [review](domains/review/README.md) | Adversarial review and Socratic design defense | `review-coordinator`, `/judgment`, `/defend` |
 | [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |

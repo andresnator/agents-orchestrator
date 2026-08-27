@@ -125,7 +125,7 @@ assert_contains "$planning_questions" 'Ask each surviving open-ended question di
 assert_not_contains "$planning_questions" 'Batch every surviving question'
 
 surface_contracts=(domains/common/skills/grill/SKILL.md domains/plan/{agents/deep-planner.md,commands/wayfinder.md} \
-  domains/{sdd/agents/orchestraitor.md,sdd-lite/agents/orchestralite.md,review/agents/review-coordinator.md} \
+  domains/{sdd/agents/orchestraitor.md,review/agents/review-coordinator.md} \
   domains/learning/agents/mentor.md domains/learning/commands/learn.md)
 for file in "${surface_contracts[@]}"; do
   assert_contains "$file" 'normal chat'
@@ -260,29 +260,6 @@ assert_contains domains/sdd/README.md 'Light and full Judgment require an explic
 assert_contains "$review" 'even for a clean verdict'
 assert_contains installers/opencode.sh 'install --domain sdd,review,common'
 
-lite=domains/sdd-lite/agents/orchestralite.md
-assert_primary_contract "$lite"
-assert_frontmatter_contains "$lite" 'lite-verify: allow'
-for skill in behavior-characterization code-conventions cognitive-doc-design java-testing legacy-code-safety sdd-execution-skills systematic-debugging; do
-  assert_frontmatter_contains "$lite" "$skill: allow"
-done
-assert_contains "$lite" 'sdd-lite'
-assert_contains "$lite" 'change.md'
-assert_contains "$lite" 'lite-verify'
-assert_contains "$lite" 'Judgment: none | Delivery: none'
-assert_contains "$lite" '<capability>/<requirement>'
-# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains "$lite" 'Load `sdd-execution-skills`'
-# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains "$lite" 'code/test work requires `code-conventions`'
-assert_not_contains "$lite" "$RUNTIME_ARGUMENTS"
-
-assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'mode: subagent'
-assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'question: deny'
-assert_frontmatter_contains domains/sdd-lite/agents/lite-verify.md 'sdd-cold-verification: allow'
-# shellcheck disable=SC2016 # Markdown backticks are literal contract text.
-assert_contains domains/sdd-lite/agents/lite-verify.md 'Load `sdd-cold-verification`'
-assert_contains domains/sdd-lite/agents/lite-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 assert_contains domains/sdd/agents/sdd-implement.md 'OK wave=<id> files=<csv> check=<one-line result>'
 assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'mode: subagent'
 assert_frontmatter_contains domains/sdd/agents/sdd-canonical-merge.md 'question: deny'
@@ -291,10 +268,10 @@ assert_contains domains/sdd/agents/sdd-canonical-merge.md 'Never block an ADD on
 assert_contains domains/sdd/agents/sdd-canonical-merge.md 'capability-qualified identifier'
 assert_contains domains/sdd/agents/sdd-verify.md 'PASS <passed>/<total> evidence=<path:line or one-line test>'
 
-# Exactly five question owners and five primaries in the multi-primary profile.
+# Exactly four question owners and four primaries in the multi-primary profile.
 profile_primary_count=0
 profile_question_owner_count=0
-for domain in plan sdd architecture sdd-lite review common; do
+for domain in plan sdd architecture review common; do
   for file in "domains/$domain/agents/"*.md; do
     [ -f "$file" ] || continue
     CHECKS=$((CHECKS + 1))
@@ -309,9 +286,9 @@ for domain in plan sdd architecture sdd-lite review common; do
   done
 done
 CHECKS=$((CHECKS + 1))
-[ "$profile_primary_count" -eq 5 ] || fail domains "expected five profile primaries, found $profile_primary_count"
+[ "$profile_primary_count" -eq 4 ] || fail domains "expected four profile primaries, found $profile_primary_count"
 CHECKS=$((CHECKS + 1))
-[ "$profile_question_owner_count" -eq 5 ] || fail domains "expected five question owners, found $profile_question_owner_count"
+[ "$profile_question_owner_count" -eq 4 ] || fail domains "expected four question owners, found $profile_question_owner_count"
 
 # No subagent may delegate again; the profile has one delegation level.
 for file in domains/*/agents/*.md; do
@@ -347,9 +324,7 @@ done
 assert_frontmatter_contains domains/sdd/commands/sdd.md 'agent: orchestraitor'
 assert_frontmatter_contains domains/sdd/commands/sdd.md 'subtask: false'
 assert_contains domains/sdd/commands/sdd.md "$RUNTIME_ARGUMENTS"
-assert_frontmatter_contains domains/sdd-lite/commands/sdd-lite.md 'agent: orchestralite'
-assert_frontmatter_contains domains/sdd-lite/commands/sdd-lite.md 'subtask: false'
-assert_contains domains/sdd-lite/commands/sdd-lite.md "$RUNTIME_ARGUMENTS"
+assert_absent domains/sdd-lite
 
 if [ "$FAILS" -gt 0 ]; then
   printf 'FAIL: %d direct-primary contract violation(s) across %d checks.\n' "$FAILS" "$CHECKS" >&2
