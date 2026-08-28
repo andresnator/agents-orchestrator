@@ -17,11 +17,23 @@
 | `continúa <run>` | Resume | Continue the exact SDD run |
 | Ambiguous request | Closed choice | Change, plan, or resume route |
 
+```mermaid
+flowchart LR
+    change[Clear change] --> direct[Direct execution]
+    plan[Exact plan] --> route{SDD needed?}
+    route -->|No| direct
+    route -->|Yes| confirm[Confirm SDD]
+    explicit[Explicit SDD] --> run[Create run]
+    confirm --> run
+    resume[Resume exact run] --> run
+    direct --> verify[Fresh verification]
+    run --> cold[Cold verification]
+    cold --> archive[Archive run]
+```
+
 Direct execution is the default for localized, reversible work that one session can verify. It includes protected local refactors and renames. It creates no plan, run, canonical spec, or SDD worker.
 
-SDD is reserved for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. State starts only after explicit SDD intent or confirmation under `.ai/orchestration/runs/<slug>/`. It executes and verifies work without Git delivery.
-
-The original plan remains immutable. SDD records its path and hash, executes internal waves, runs cold verification, merges canonical specs when required, and archives the run. See [Orchestration verification](../../docs/orchestration-test-plan.md).
+Use SDD only for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. After explicit intent or confirmation, it records immutable plan evidence under `.ai/orchestration/runs/<slug>/`, executes internal waves, cold-verifies, optionally merges canonical specs, and archives the run. Git delivery stays outside this primary. See [Orchestration verification](../../docs/orchestration-test-plan.md).
 
 Review is independent. After Orchestration completes, select `review-coordinator` for a separate evaluation; Orchestration never waits for or reconciles review state.
 

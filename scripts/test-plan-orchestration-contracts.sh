@@ -218,7 +218,14 @@ for scenario in ROUTE-CLEAR-01 ROUTE-AMBIGUOUS-01 WAYFINDER-01 DISCOVERY-TO-PLAN
   LARGE-PLAN-01 DIRECT-RENAME-01 DIRECT-REFACTOR-01 SDD-CONFIRM-01 SDD-COMPLETE-01; do
   assert_contains "$scenario_doc" "$scenario"
 done
-assert_contains docs/architecture/adr/0001-adaptive-planning-and-orchestration.md 'Accepted'
+assert_absent docs/architecture/adr/0001-adaptive-planning-and-orchestration.md
+assert_contains domains/orchestration/README.md '```mermaid'
+assert_contains domains/orchestration/README.md 'change[Clear change] --> direct[Direct execution]'
+assert_contains domains/orchestration/README.md 'route -->|No| direct'
+assert_contains domains/orchestration/README.md 'route -->|Yes| confirm[Confirm SDD]'
+assert_contains domains/orchestration/README.md 'resume[Resume exact run] --> run'
+assert_contains domains/orchestration/README.md 'direct --> verify[Fresh verification]'
+assert_contains domains/orchestration/README.md 'cold --> archive[Archive run]'
 
 flow_runner=scripts/test-orchestration-flows.sh
 assert_contains "$flow_runner" 'install_current_profile'
