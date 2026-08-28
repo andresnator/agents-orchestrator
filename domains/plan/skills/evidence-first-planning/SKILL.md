@@ -1,11 +1,11 @@
 ---
 name: evidence-first-planning
-description: "Trigger: deep plan, evidence-first plan, planificar a fondo, planificacion basada en evidencia, discovery plan. Plan executable changes, decisions, discovery, and roadmap slices from repository evidence."
+description: "Trigger: deep plan, evidence-first plan, planificar a fondo, planificacion basada en evidencia, discovery plan. Discover decisions and plan executable work from repository evidence."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "4.0.0"
+  version: "5.0.0"
 ---
 
 ## Contract
@@ -20,25 +20,23 @@ Plan before implementation. Read relevant code and contracts; never edit product
 4. **Stay proportional.** Keep only information that changes execution; record meaningful rejected alternatives briefly.
 5. **Prove the flow.** End with executable commands or an observable end-to-end check and its expected result.
 
-## Durable plans
+## Wayfinder discovery
 
-Use `assets/plan-template.md` for decisions and multi-session discovery. `Status: discovery` permits unresolved user decisions; `Status: final` does not. Create a new slug only when absent. Update a plan only when its exact path comes from the same resumed task or the user; otherwise return `ASK` instead of guessing or overwriting.
+Use `assets/discovery-template.md`. Write one `.ai/deep-planner/discoveries/<slug>.md`. Do not add status, phase, or readiness markers. Keep evidence, decisions, and unresolved questions current. When the destination is clear, suggest converting the discovery into a plan.
 
-## Roadmaps
+## Deep Plan
 
-Use `assets/roadmap-template.md` when one bounded `change.md` cannot deliver the goal. Plan only the next unblocked slice. Its change starts with the normal ready-for-SDD marker and then `Roadmap: <goal> | Slice: <n>/<total>` on line two. Slice states are `pending`, `planned`, `adopted`, `done`, or user-approved `dropped`. `"continúa el roadmap <goal>"` maps only to `.ai/roadmaps/<goal>.md`; advance the first `pending` row whose dependencies are `done` only when no row is already `planned|adopted`, create its one change, and stop. Never guess through missing, malformed, or blocked state; a completed roadmap has no next slice.
+Load `execution-plan` and write one `.ai/deep-planner/plans/<slug>.md`. Large efforts remain one plan with work groups and explicit dependencies. Do not create roadmaps, slices, readiness markers, or companion phase documents.
 
 ## Outputs
 
-- Decision or discovery: one `.ai/deep-planner/plans/<slug>.md`.
-- Bounded executable change: one ready `change.md` using `sdd-draft-change`.
-- Oversized executable change: one roadmap plus one ready `change.md` for the next slice.
+- Wayfinder: one discovery file and no plan.
+- Deep Plan: one plan file and no discovery, roadmap, or change file.
 
 Before returning, check evidence, edges, proportionality, exact paths, and end-to-end verification. Report only the artifact path and next route.
 
 ## Resources
 
-- `assets/plan-template.md`
-- `assets/roadmap-template.md`
+- `assets/discovery-template.md`
 - `references/edge-validation.md`
 - `references/question-economy.md`

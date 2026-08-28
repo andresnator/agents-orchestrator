@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.1.0"
+  version: "1.1.1"
   status: testing
 ---
 

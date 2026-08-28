@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.1.0"
+  version: "1.1.1"
   status: testing
 ---
 
@@ -39,4 +39,4 @@ Lean on the compiler: in statically typed code, deliberately changing a signatur
 
 ## Sprout and Wrap (routing note)
 
-Sprout Method/Class (grow new, tested code called from the untested flow) and Wrap Method/Class (add behavior before or after the untested code) are mitigation routes for delivering NEW logic when putting the class under test is not affordable yet. They add behavior, so they never appear as tasks in a behavior-preserving refactor bundle: in refactor plans they are recorded only as follow-up/Scope Out routing hints toward `/deep-plan` or sdd execution. Decision rule where they do apply: sprout for new logic inside the flow, wrap for behavior before/after it; escalate to the class variant when the original cannot be instantiated.
+Sprout Method/Class (grow new, tested code called from the untested flow) and Wrap Method/Class (add behavior before or after the untested code) are mitigation routes for delivering NEW logic when putting the class under test is not affordable yet. They add behavior, so they never appear as tasks in a behavior-preserving refactor group. Record them as separate behavior-changing work for Orchestraitor. Use sprout for new logic inside the flow and wrap for behavior before or after it; escalate to the class variant when the original cannot be instantiated.

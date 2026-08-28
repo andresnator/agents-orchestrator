@@ -5,14 +5,14 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # Code Conventions
 
 ## Activation Contract
 
-Load this skill when writing production code or tests. Executable-change producers select its name through `sdd-execution-skills`; they do not load this body.
+Load this skill when writing production code or tests. Planners select its name through `implementation-skill-routing`; they do not load this body.
 
 Do not use for documentation, prose artifacts, or infrastructure config with no code.
 

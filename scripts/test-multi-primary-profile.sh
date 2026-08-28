@@ -7,7 +7,9 @@ PROFILE="$ROOT/scripts/multi-primary-profile.sh"
 JSONC_EDITOR="$ROOT/scripts/jsonc-array.py"
 GRAPHIFY_SPEC="opencode-graphify-init@0.1.5"
 PREVIOUS_GRAPHIFY_SPEC="opencode-graphify-init@0.1.3"
-LEGACY_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
+CURRENT_PROFILE_DOMAINS="plan,orchestration,architecture,review,common"
+PREVIOUS_PROFILE_DOMAINS="plan,sdd,architecture,review,common"
+EARLIER_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-profile-test.XXXXXX")"
 ARTIFACTS="$SCRATCH/artifacts"
 STUBS="$SCRATCH/stubs"
@@ -61,26 +63,27 @@ replace_manifest_value() {
   mv "$tmp" "$file"
 }
 
+remove_manifest_value() {
+  local file="$1" key="$2" tmp
+  tmp="$file.tmp"
+  awk -F '\t' -v key="$key" '$1 != key' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
 simulate_previous_component_inventory() {
-  local project="$1" target installer_manifest profile_manifest manifest_sha
+  local project="$1" domains="$2" target installer_manifest profile_manifest manifest_sha
   target="$(cd "$project" && pwd -P)/.opencode"
   installer_manifest="$target/.agents-orchestrator-manifest"
   profile_manifest="$target/.multi-primary-profile-manifest"
 
-  rm "$target/skills/evidence-first-planning"
-  awk -F '\t' -v path="$target/skills/evidence-first-planning" \
-    '!($1 == "link" && $2 == path)' "$installer_manifest" > "$installer_manifest.tmp"
-  mv "$installer_manifest.tmp" "$installer_manifest"
-  ln -s "$ROOT/domains/plan/skills/wayfinder" "$target/skills/wayfinder"
-  printf 'link\t%s\n' "$target/skills/wayfinder" >> "$installer_manifest"
-  ln -s "$ROOT/domains/sdd-lite/agents/orchestralite.md" "$target/agents/orchestralite.md"
-  ln -s "$ROOT/domains/sdd-lite/agents/lite-verify.md" "$target/agents/lite-verify.md"
-  ln -s "$ROOT/domains/sdd-lite/commands/sdd-lite.md" "$target/commands/sdd-lite.md"
-  printf 'link\t%s\n' \
-    "$target/agents/orchestralite.md" \
-    "$target/agents/lite-verify.md" \
-    "$target/commands/sdd-lite.md" >> "$installer_manifest"
-  replace_manifest_value "$profile_manifest" domains "$LEGACY_PROFILE_DOMAINS"
+  ln -sfn "$ROOT/domains/sdd/agents/orchestraitor.md" "$target/agents/orchestraitor.md"
+  ln -s "$ROOT/domains/sdd/commands/sdd.md" "$target/commands/sdd.md"
+  printf 'link\t%s\n' "$target/commands/sdd.md" >> "$installer_manifest"
+  if [ "$domains" = "$EARLIER_PROFILE_DOMAINS" ]; then
+    ln -s "$ROOT/domains/sdd-lite/commands/sdd-lite.md" "$target/commands/sdd-lite.md"
+    printf 'link\t%s\n' "$target/commands/sdd-lite.md" >> "$installer_manifest"
+  fi
+  replace_manifest_value "$profile_manifest" domains "$domains"
   manifest_sha="$(shasum -a 256 "$installer_manifest" | awk '{print $1}')"
   replace_manifest_value "$profile_manifest" installer-manifest-sha256 "$manifest_sha"
 }
@@ -402,23 +405,21 @@ shouldPreserveForeignTargetContentAddedAfterInstall() {
   pass shouldPreserveForeignTargetContentAddedAfterInstall
 }
 
-shouldAcceptLegacyManifestWithoutTargetOwnership() {
-  local project manifest rewritten
-  project="$(make_project legacy-profile-manifest)"
+shouldAcceptV1ManifestFieldFallbacks() {
+  local project manifest
+  project="$(make_project v1-profile-manifest)"
 
-  # Given a v1 profile manifest created before target ownership was recorded
-  # When status and uninstall read that manifest
-  # Then they accept it and conservatively retain the target directory
+  # A valid v1 manifest can predate explicit config-path and target ownership.
   run_profile install --project-root "$project" >/dev/null
   manifest="$project/.opencode/.multi-primary-profile-manifest"
-  rewritten="$project/legacy-profile-manifest"
-  awk -F '\t' '$1 != "target-existed"' "$manifest" > "$rewritten"
-  mv "$rewritten" "$manifest"
+  remove_manifest_value "$manifest" config-file
+  remove_manifest_value "$manifest" target-existed
+
   run_profile status --project-root "$project" >/dev/null
   run_profile uninstall --project-root "$project" >/dev/null
-  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "legacy manifest: generated config remains"
-  [ -d "$project/.opencode" ] || fail "legacy manifest: unknown target ownership was pruned"
-  pass shouldAcceptLegacyManifestWithoutTargetOwnership
+  [ ! -e "$project/.opencode/opencode.jsonc" ] || fail "v1 fallback: generated config remains"
+  [ -d "$project/.opencode" ] || fail "v1 fallback: unknown target ownership was pruned"
+  pass shouldAcceptV1ManifestFieldFallbacks
 }
 
 shouldAbortUninstallWhenManagedConfigChanges() {
@@ -519,13 +520,13 @@ shouldRejectSymlinkedManagedDirectoriesBeforeMutation() {
 }
 
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
-  local project direct_commands primary removed retired
+  local project direct_commands primary removed
   project="$(make_project selected-domains)"
   run_profile install --project-root "$project" >/dev/null
   for primary in deep-planner architect orchestraitor review-coordinator; do
     [ -L "$project/.opencode/agents/$primary.md" ] || fail "selection: primary $primary missing"
   done
-  [ -L "$project/.opencode/skills/sdd-draft-change" ] || fail "selection: one-document SDD skill missing"
+  [ -L "$project/.opencode/skills/execution-plan" ] || fail "selection: neutral execution-plan skill missing"
   [ -L "$project/.opencode/skills/evidence-first-planning" ] || fail "selection: evidence-first planning skill missing"
   for removed in sdd-proposal sdd-spec sdd-design sdd-tasks; do
     [ ! -e "$project/.opencode/agents/$removed.md" ] || fail "selection: removed agent $removed leaked"
@@ -535,12 +536,8 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   done
   [ ! -e "$project/.opencode/agents/mentor.md" ] || fail "selection: learning domain leaked"
   [ ! -e "$project/.opencode/commands/absorb.md" ] || fail "selection: meta domain leaked"
-  for retired in agents/orchestralite.md agents/lite-verify.md commands/sdd-lite.md; do
-    [ ! -e "$project/.opencode/$retired" ] && [ ! -L "$project/.opencode/$retired" ] ||
-      fail "selection: retired component $retired leaked"
-  done
   direct_commands="$(find "$project/.opencode/commands" -maxdepth 1 -type l -exec grep -El '^agent: (deep-planner|architect|orchestraitor|review-coordinator)$' {} + | wc -l | tr -d ' ')"
-  [ "$direct_commands" -eq 11 ] || fail "selection: expected 11 direct commands, found $direct_commands"
+  [ "$direct_commands" -eq 6 ] || fail "selection: expected 6 direct commands, found $direct_commands"
   run_profile uninstall --project-root "$project" >/dev/null
 
   expect_failure 'refusing to install the profile into this repository' run_profile status --project-root "$ROOT"
@@ -551,62 +548,44 @@ shouldInstallOnlySelectedDomainsAndRejectSourceWorktree() {
   pass shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 }
 
-shouldSyncAndUninstallWhenComponentInventoryChanges() {
-  local sync_project uninstall_project target old_skill_source skill retired
-  sync_project="$(make_project changed-inventory-sync)"
+shouldMigratePreviousProfileInventories() {
+  local project target domains status_output retired
 
-  # Given a valid profile created by a checkout with a different component set
-  run_profile install --project-root "$sync_project" >/dev/null
-  simulate_previous_component_inventory "$sync_project"
-  mkdir -p "$sync_project/.ai/sdd-lite"
-  printf 'preserve user state\n' > "$sync_project/.ai/sdd-lite/foreign.txt"
-  target="$sync_project/.opencode"
-  old_skill_source="$ROOT/domains/plan/skills/java-testing"
-  ln -sfn "$old_skill_source" "$target/skills/java-testing"
+  for domains in "$PREVIOUS_PROFILE_DOMAINS" "$EARLIER_PROFILE_DOMAINS"; do
+    project="$(make_project "previous-inventory-${domains//,/-}")"
+    run_profile install --project-root "$project" >/dev/null
+    simulate_previous_component_inventory "$project" "$domains"
+    target="$project/.opencode"
 
-  # When status and reinstall run from the current checkout
-  expect_failure 'profile component inventory is legacy; run install to migrate' \
-    run_profile status --project-root "$sync_project"
-  run_profile install --project-root "$sync_project" >/dev/null
+    status_output="$(run_profile status --project-root "$project")"
+    grep -Fq 'status: migration required' <<<"$status_output" ||
+      fail "previous inventory: status did not request migration"
+    run_profile install --project-root "$project" >/dev/null
 
-  # Then the installer syncs the new set and the profile remains removable
-  [ -L "$target/skills/evidence-first-planning" ] || fail "changed inventory: new skill was not installed"
-  [ "$(readlink "$target/skills/java-testing")" = "$ROOT/skills/java-testing" ] ||
-    fail "changed inventory: manifest-owned skill was not relinked to its current source"
-  [ ! -e "$target/skills/wayfinder" ] && [ ! -L "$target/skills/wayfinder" ] ||
-    fail "changed inventory: retired skill remains"
-  for retired in agents/orchestralite.md agents/lite-verify.md commands/sdd-lite.md; do
-    [ ! -e "$target/$retired" ] && [ ! -L "$target/$retired" ] ||
-      fail "changed inventory: retired component $retired remains"
+    [ "$(awk -F '\t' '$1 == "domains" { print $2 }' "$target/.multi-primary-profile-manifest")" = \
+      "$CURRENT_PROFILE_DOMAINS" ] || fail "previous inventory: profile domains were not migrated"
+    [ "$(readlink "$target/agents/orchestraitor.md")" = \
+      "$ROOT/domains/orchestration/agents/orchestraitor.md" ] ||
+      fail "previous inventory: orchestraitor link was not migrated"
+    for retired in commands/sdd.md commands/sdd-lite.md; do
+      [ ! -e "$target/$retired" ] && [ ! -L "$target/$retired" ] ||
+        fail "previous inventory: retired component remains: $retired"
+    done
+    run_profile uninstall --project-root "$project" >/dev/null
   done
-  [ "$(awk -F '\t' '$1 == "domains" { print $2 }' "$target/.multi-primary-profile-manifest")" = \
-    'plan,sdd,architecture,review,common' ] || fail "changed inventory: profile domains were not migrated"
-  run_profile uninstall --project-root "$sync_project" >/dev/null
-  grep -Fq 'preserve user state' "$sync_project/.ai/sdd-lite/foreign.txt" ||
-    fail "changed inventory: user-owned SDD Lite state changed"
 
-  uninstall_project="$(make_project changed-inventory-uninstall)"
-  run_profile install --project-root "$uninstall_project" >/dev/null
-  simulate_previous_component_inventory "$uninstall_project"
-  mkdir -p "$uninstall_project/.ai/sdd-lite"
-  printf 'preserve user state\n' > "$uninstall_project/.ai/sdd-lite/foreign.txt"
-  run_profile uninstall --project-root "$uninstall_project" >/dev/null
-  [ ! -e "$uninstall_project/.opencode" ] || fail "changed inventory: stale profile target remains"
-  grep -Fq 'preserve user state' "$uninstall_project/.ai/sdd-lite/foreign.txt" ||
-    fail "changed inventory: legacy uninstall changed user-owned SDD Lite state"
-
-  for skill in evidence-first-planning wayfinder; do
-    [ ! -e "$uninstall_project/.opencode/skills/$skill" ] &&
-      [ ! -L "$uninstall_project/.opencode/skills/$skill" ] ||
-      fail "changed inventory: uninstall retained $skill"
-  done
-  pass shouldSyncAndUninstallWhenComponentInventoryChanges
+  project="$(make_project previous-inventory-uninstall)"
+  run_profile install --project-root "$project" >/dev/null
+  simulate_previous_component_inventory "$project" "$EARLIER_PROFILE_DOMAINS"
+  run_profile uninstall --project-root "$project" >/dev/null
+  [ ! -e "$project/.opencode" ] || fail "previous inventory: uninstall retained generated target"
+  pass shouldMigratePreviousProfileInventories
 }
 
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
   local domain project target skill
 
-  for domain in plan architecture sdd review; do
+  for domain in plan architecture orchestration review; do
     project="$(make_project "filtered-$domain")"
     target="$project/.opencode"
 
@@ -637,14 +616,14 @@ shouldRemoveGeneratedConfigAndTargetWhenPreviouslyAbsent
 shouldPreservePreexistingTargetWithoutConfig
 shouldPreserveForeignConfigAddedAfterInstall
 shouldPreserveForeignTargetContentAddedAfterInstall
-shouldAcceptLegacyManifestWithoutTargetOwnership
+shouldAcceptV1ManifestFieldFallbacks
 shouldAbortUninstallWhenManagedConfigChanges
 shouldRejectForeignAndBroadManifests
 shouldRejectForeignDestinationAndInvalidJsoncBeforeInstall
 shouldRejectSymlinkedProjectTargetBeforeMutation
 shouldRejectSymlinkedManagedDirectoriesBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
-shouldSyncAndUninstallWhenComponentInventoryChanges
+shouldMigratePreviousProfileInventories
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain
 
 printf 'PASS: %d multi-primary profile contracts OK.\n' "$PASSES"

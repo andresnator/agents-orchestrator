@@ -58,6 +58,6 @@ installers/opencode.sh install --dry-run
 scripts/validate-harness.sh
 ```
 
-Use the touched script's syntax/test command for executable changes. External-plugin changes use `scripts/test-external-plugin-install.sh contracts`; remote lock verification is opt-in. Model-backed SDD flows spend credits and run only when explicitly authorized; see [docs/sdd-test-plan.md](docs/sdd-test-plan.md).
+Use the touched script's syntax/test command for executable changes. External-plugin changes use `scripts/test-external-plugin-install.sh contracts`; remote lock verification is opt-in. Model-backed orchestration flows spend credits and run only when explicitly authorized; see [docs/orchestration-test-plan.md](docs/orchestration-test-plan.md).
 
 Do not commit unless explicitly asked.

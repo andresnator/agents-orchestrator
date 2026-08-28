@@ -10,7 +10,7 @@ TARGET=""
 OPENCODE_CONFIG_FILE=""
 MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
 MODEL_PROFILES_DIR="model-profiles"
-LEGACY_MODEL_TUI_SPECS="./plugins/model-configurator/tui.js ./plugins/model-configurator.tsx"
+RETIRED_MODEL_TUI_SPECS="./plugins/model-configurator/tui.js ./plugins/model-configurator.tsx"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 BREW_TOOLS_CATALOG="$SCRIPT_DIR/brew-tools.tsv"
 INSTALL_TX_DIR=""
@@ -47,7 +47,7 @@ Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
               (currently: architecture, common, docs, learning, meta, plan,
-              review, sdd).
+              orchestration, review).
               Exclusive skills live in their domain; shared skills use relative
               symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
@@ -95,7 +95,7 @@ Examples:
   installers/opencode.sh install --domain plan --status done,testing
       Install only done/testing planning components.
 
-  installers/opencode.sh install --domain sdd,review,common --target /tmp/opencode-test --dry-run
+  installers/opencode.sh install --domain orchestration,review,common --target /tmp/opencode-test --dry-run
       Preview full SDD with its optional Judgment handoff and shared tools.
 
   installers/opencode.sh status --domain meta
@@ -416,7 +416,7 @@ runtime_install_component() {
         managed_array_npm_has "$TARGET/tui.json" plugin "$package"; then
         remove_managed_npm_entries "$TARGET/tui.json" plugin "$package"
       fi
-      for legacy_spec in $LEGACY_MODEL_TUI_SPECS; do
+      for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
         if managed_array_has "$TARGET/tui.json" plugin "$legacy_spec" &&
           { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$legacy_spec"; }; then
           remove_managed_array_entry "$TARGET/tui.json" plugin "$legacy_spec"
@@ -809,7 +809,7 @@ runtime_pre_install() {
           ! manifest_owns_npm_package "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$package"; then
           die "$TARGET/tui.json already configures npm package $package; use --force to replace it"
         fi
-        for legacy_spec in $LEGACY_MODEL_TUI_SPECS; do
+        for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
           if managed_array_has "$TARGET/tui.json" plugin "$legacy_spec" &&
             [ "$FORCE" -ne 1 ] &&
             ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$legacy_spec"; then

@@ -6,7 +6,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1.0"
+  version: "2.1.1"
   status: testing
 ---
 
@@ -14,7 +14,7 @@ metadata:
 
 ## Contract
 
-Turn verified `architecture-state` snapshot into ranked architecture shortlist. Product repositories only; AI-harness analysis belongs to `absorb`, code-level findings to `/refactor-plan`.
+Turn a verified `architecture-state` snapshot into a ranked architecture shortlist. Product repositories only; AI-harness analysis belongs to `absorb`, and code-level findings belong to Deep Plan.
 
 Read-only. Each issue needs source/config/wiring evidence plus consequence. Documentation states intent, never proves behavior.
 

@@ -467,16 +467,16 @@ if [ -f scripts/test-opencode-brew-tools.sh ]; then
     fail scripts/test-opencode-brew-tools.sh "Brew tool installer contracts failed"
 fi
 
-# --- Deterministic sdd-automode contracts (jq-gated) ---
-if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
-  scripts/test-sdd-automode.sh >/dev/null ||
-    fail scripts/test-sdd-automode.sh "sdd-automode contracts failed"
+# --- Deterministic orchestration permission contracts (jq-gated) ---
+if [ -x scripts/test-orchestration-permissions.sh ] && command -v jq >/dev/null 2>&1; then
+  scripts/test-orchestration-permissions.sh >/dev/null ||
+    fail scripts/test-orchestration-permissions.sh "orchestration permission contracts failed"
 fi
 
-# --- Plan -> SDD handoff and state-machine contracts ---
-if [ -f scripts/test-plan-sdd-contracts.sh ]; then
-  bash scripts/test-plan-sdd-contracts.sh >/dev/null ||
-    fail scripts/test-plan-sdd-contracts.sh "plan/SDD contracts failed"
+# --- Plan and adaptive orchestration contracts ---
+if [ -f scripts/test-plan-orchestration-contracts.sh ]; then
+  bash scripts/test-plan-orchestration-contracts.sh >/dev/null ||
+    fail scripts/test-plan-orchestration-contracts.sh "plan/orchestration contracts failed"
 fi
 
 # --- Direct primary/coordinator contracts ---

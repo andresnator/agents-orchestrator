@@ -1,9 +1,9 @@
 ---
-description: "Choose a target architecture and produce an ADR plus one ready change.md."
+description: "Choose a target architecture and produce an ADR plus one neutral execution plan."
 agent: architect
 subtask: false
 argument-hint: "[architecture concern or target]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Run `operation=ideate`. Plan only: one ADR under `<docfolder>/architecture/adr/`, one ready `.ai/architect/changes/<change>/change.md`. No source edits, commit, push.
+Run `operation=ideate`. Plan only: one ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/plans/<slug>.md`. No source edits, commit, or push.

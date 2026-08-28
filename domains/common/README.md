@@ -47,8 +47,8 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 | Skill | `open-closed-principle` | Detects extension pressure without speculation |
 | Skill | `programming-practices-core` | Evaluates language-neutral code quality |
 | Skill | `risk-assessment` | Classifies technical and functional risk |
-| Skill | `sdd-draft-change` | Drafts one pre-implementation change document |
-| Skill | `sdd-execution-skills` | Selects skills for implementation work |
+| Skill | `execution-plan` | Drafts one neutral execution plan |
+| Skill | `implementation-skill-routing` | Selects skills for implementation work |
 | Skill | `single-responsibility` | Detects multiple reasons to change |
 | Skill | `small-functions` | Detects oversized and extractable functions |
 | Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |

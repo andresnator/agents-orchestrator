@@ -19,15 +19,15 @@ scripts/multi-primary-profile.sh install --project-root /absolute/path/to/projec
 scripts/multi-primary-profile.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `plan,sdd,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md). For bounded changes, use OpenCode Plan then Build and run `/judgment light` when independent review is useful.
+The project profile selects `plan,orchestration,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md). Select a primary directly: Wayfinder discovers, Deep Plan plans, and Orchestraitor executes.
 
 ## Domains
 
 | Domain | Purpose | Entry points |
 |---|---|---|
-| [plan](domains/plan/README.md) | Evidence-first delivery, decision, roadmap, and protected plans | `deep-planner`, `/deep-plan`, `/refactor-plan` |
+| [plan](domains/plan/README.md) | Evidence-first discovery and neutral execution plans | `deep-planner` |
 | [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
-| [sdd](domains/sdd/README.md) | Full spec-driven implementation and durable canonical specs | `orchestraitor`, `/sdd` |
+| [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` |
 | [review](domains/review/README.md) | Adversarial review and Socratic design defense | `review-coordinator`, `/judgment`, `/defend` |
 | [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
@@ -53,23 +53,23 @@ Filtered installation is a sync: include every domain and lifecycle status you w
 
 ```bash
 installers/opencode.sh install --domain plan --status done,testing
-installers/opencode.sh install --domain sdd,review
+installers/opencode.sh install --domain orchestration,review
 installers/opencode.sh install --project
 installers/opencode.sh install --project --install-brew-tools
-installers/opencode.sh status --domain sdd
+installers/opencode.sh status --domain orchestration
 ```
 
-Filtered `sdd` installs support `Judgment: none`; include `review` when light or full Judgment is required.
+Filtered `orchestration` installs support the default `Judgment: none`; include `review` when light or full Judgment is required.
 
 ## Documentation
 
 | Guide | Purpose |
 |---|---|
 | [Multi-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back direct primaries |
-| [SDD test plan](docs/sdd-test-plan.md) | Choose deterministic or model-backed flow checks |
+| [Orchestration test plan](docs/orchestration-test-plan.md) | Choose deterministic or model-backed flow checks |
 | [Plan flow scenarios](docs/plan-flow-test-scenarios.md) | Copy-ready hypothetical prompts and expected Plan evidence |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |
-| [SDD auto mode](docs/sdd-automode.md) | Toggle coordinator and worker permissions |
+| [Orchestration permissions](docs/orchestration-permissions.md) | Toggle coordinator and worker permissions |
 | [Learning](docs/learning-domain.md) | Run durable learning topics |
 | [Graphify](docs/graphify.md) | Index and query structural graphs |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |

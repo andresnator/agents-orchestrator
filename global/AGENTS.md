@@ -34,7 +34,7 @@ Installed by the agents-orchestrator installers. Applies to every agent in every
 
 ## Hidden State Directories
 
-Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/roadmaps/`, `.ai/absorb/`) — and default file search skips them:
+Project-local tool state lives in hidden dot-directories — `.ai/` above all (`.ai/graphify-out/`, `.ai/atl/skill-registry.md`, `.ai/deep-planner/`, `.ai/orchestration/`, `.ai/absorb/`) — and default file search skips them:
 
 - Wildcard globs and file-finding tools do not descend into dot-directories by default. An empty result for a `.ai/...` pattern is inconclusive, never proof the state is absent.
 - To check state under `.ai/` (or any dot-directory), read the literal path directly (`.ai/<subpath>`), list it explicitly (`ls -la .ai/`), or search with hidden files enabled (`rg --hidden`, a glob with the dot option on).
@@ -43,7 +43,7 @@ Project-local tool state lives in hidden dot-directories — `.ai/` above all (`
 ## Code Conventions
 
 - When writing code or tests, load the `code-conventions` skill: Andres's personal contract (constants over literals, Should/When test names with `// Given // When // Then` sections, unified and whole-object asserts, separate characterization classes, top-level DTOs, SRP/OCP first).
-- An executable-change producer loads `sdd-execution-skills` and records selected names; routing-only parents load neither skill body.
+- A planner loads `implementation-skill-routing` and records selected names without loading their bodies. An executor loads only the selected bodies within scope.
 - An established consistent convention in the target repo wins; note the deviation instead of fighting it.
 
 ## Graphify
@@ -55,7 +55,7 @@ Project-local tool state lives in hidden dot-directories — `.ai/` above all (`
 - Documentation coverage depends on the recorded mode in `.ai/graphify-out/.opencode-index-mode` (one JSON line): `docs` means documents are indexed as document and concept nodes, so docs questions are graph-first too; `code-only` or a missing file means docs questions go to filesystem tools.
 - A question naming another repository or project goes through the `graphify-global` MCP tools (same tool set over `~/.graphify/global-graph.json`), when configured. Read `~/.graphify/global-manifest.json` before Context7, web search, or a clarifying question: an indexed tag means it is a local-repo question, which also settles the local-repo-versus-public-library tie-break. For content questions, the entry's `source_path` locates that repo (root is two directories up) — read the real files. Keep symbol-addressed queries on the owning repository's graph.
 - An absent, stale, or unavailable graph is not friction: continue with normal read, LSP, grep, and glob tools. The `graphify-cli` skill, when installed, is the detailed contract.
-- More restrictive domain rules win. In particular, SDD agents keep their own read-only and authorization boundaries.
+- More restrictive domain rules win. In particular, orchestration workers keep their own read-only and authorization boundaries.
 
 ## Evidence Before Completion
 
