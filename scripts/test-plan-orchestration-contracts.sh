@@ -127,6 +127,7 @@ assert_contains "$orchestraitor" 'Review is a separate primary, not an SDD phase
 assert_contains "$orchestraitor" '.ai/orchestration/runs/<slug>/run.md'
 assert_contains "$orchestraitor" 'never copy, rewrite, or mark it'
 assert_contains "$orchestraitor" 'Verify the original plan hash before and after every wave.'
+assert_contains "$orchestraitor" 'plan path and recorded SHA-256 when present, every source scenario, the complete `Files:` scope, every source `Verify` item, and the explicit diff baseline'
 assert_contains "$orchestraitor" 'Complete and archive SDD after its own verification.'
 assert_contains "$orchestraitor" 'tell them to select `review-coordinator`'
 assert_contains "$orchestraitor" '.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/'
@@ -155,7 +156,13 @@ assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'judgm
 assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'work-unit-commits: deny'
 assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": allow' 'judgment-day: deny'
 assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": allow' 'work-unit-commits: deny'
-assert_contains domains/orchestration/agents/sdd-verify.md 'immutable plan path'
+assert_contains domains/orchestration/agents/sdd-verify.md 'immutable plan path and recorded SHA-256 when present'
+assert_contains domains/orchestration/agents/sdd-verify.md 'every source scenario with its id and `WHEN`/`THEN`'
+assert_contains domains/orchestration/agents/sdd-verify.md 'the complete `Files:` scope, every source `Verify` item'
+assert_contains domains/orchestration/agents/sdd-verify.md 'Omitted, duplicated, added, or changed scenarios or checks block verification.'
+assert_contains domains/orchestration/agents/sdd-verify.md 'PASS scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>'
+assert_contains domains/orchestration/agents/sdd-verify.md 'FAIL scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>'
+assert_not_contains domains/orchestration/agents/sdd-verify.md 'PASS <passed>/<total>'
 assert_contains domains/orchestration/agents/sdd-canonical-merge.md '.ai/orchestration/specs/'
 
 review_coordinator=domains/review/agents/review-coordinator.md
@@ -173,9 +180,20 @@ assert_contains installers/opencode.sh 'install --domain orchestration --target 
 assert_contains installers/opencode.sh 'install --domain review --target /tmp/opencode-review --dry-run'
 
 cold_verification=domains/orchestration/skills/sdd-cold-verification/SKILL.md
-assert_frontmatter_contains "$cold_verification" 'version: "1.0.1"'
+assert_frontmatter_contains "$cold_verification" 'version: "2.0.0"'
 assert_contains "$cold_verification" 'Exact `.ai/orchestration/runs/<slug>/` root and its `run.md`.'
-assert_contains "$cold_verification" 'Immutable plan path when `run.md` references one.'
+assert_contains "$cold_verification" 'Exact immutable plan path and the SHA-256 recorded in `run.md` when it references one.'
+assert_contains "$cold_verification" 'Complete source scenario list, including every id and `WHEN`/`THEN` pair.'
+assert_contains "$cold_verification" 'Complete source `Files:` scope.'
+assert_contains "$cold_verification" 'Complete source `Verify` checklist.'
+assert_contains "$cold_verification" '`working-tree` or an explicit diff range as the baseline.'
+assert_contains "$cold_verification" 'Every source scenario and `Verify` item must appear exactly once, with no additions.'
+assert_contains "$cold_verification" 'Any omitted, duplicated, added, or changed item is `BLOCK sdd/verify <reason>`.'
+assert_contains "$cold_verification" 'Run every applicable read-only `Verify` item fresh.'
+assert_contains "$cold_verification" 'Count every scenario and every `Verify` item separately.'
+assert_contains "$cold_verification" 'PASS scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>'
+assert_contains "$cold_verification" 'FAIL scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>'
+assert_not_contains "$cold_verification" 'Judgment'
 assert_not_contains "$cold_verification" 'change.md'
 
 architect=domains/architecture/agents/architect.md

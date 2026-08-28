@@ -40,6 +40,6 @@ Review is independent. After Orchestration completes, select `review-coordinator
 | Skill | `graphify-cli` | Queries code graphs read-only |
 | Skill | `java-testing` | Implements focused Java tests |
 | Skill | `legacy-code-safety` | Protects behavior during legacy changes |
-| Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
+| Skill | `sdd-cold-verification` | Verifies scenarios and required checks |
 | Skill | `implementation-skill-routing` | Selects skills for implementation work |
 | Skill | `systematic-debugging` | Finds root causes before fixes |

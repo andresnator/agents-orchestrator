@@ -57,7 +57,7 @@ Resolve skill names from `.ai/atl/skill-registry.md` when present, then fall bac
 
 1. Group pending work by dependencies and `Files:`. Parallelize only disjoint scopes. Brief `sdd-implement` with the immutable plan or run contract, run path, work ids, behavior, scope, tests mode, skills, and scoped check.
 2. Accept only matching worker results. Run each group check before recording completion. Verify the original plan hash before and after every wave.
-3. Send all behavior, scope, checks, and the explicit diff range to `sdd-verify`. Failures become scoped fix waves. After two failed fix attempts, ask whether to continue, reduce scope, or stop.
+3. Send `sdd-verify` the exact run root and `run.md`, plan path and recorded SHA-256 when present, every source scenario, the complete `Files:` scope, every source `Verify` item, and the explicit diff baseline. Failures become scoped fix waves. After two failed fix attempts, ask whether to continue, reduce scope, or stop.
 4. Delegate `sdd-canonical-merge` only when canonical behavior is required. Require one merge result per delta and no stale rows.
 5. Move the completed run to `.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/`. Preserve the plan path and final SHA-256 in the archived run.
 

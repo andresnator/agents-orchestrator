@@ -1,10 +1,10 @@
 ---
 name: sdd-cold-verification
-description: "Trigger: cold verification, verify run.md, SDD verification, behavior acceptance. Verify scoped implementation independently against assigned behavior scenarios."
+description: "Trigger: cold verification, verify run.md, SDD verification, behavior acceptance. Verify scoped implementation independently against every source scenario and required check."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "2.0.0"
   status: testing
 ---
 
@@ -12,27 +12,28 @@ metadata:
 
 ## Activation Contract
 
-Load for independent, read-only acceptance of exact SDD run scenarios. Not for implementation or open-ended review; Judgment owns broader correctness, security, performance, and maintainability.
+Load for independent, read-only acceptance of exact SDD run scenarios and required checks. Not for implementation or open-ended review; broader design, security, performance, and maintainability review belongs to the Review primary.
 
 ## Required Brief
 
 - Exact `.ai/orchestration/runs/<slug>/` root and its `run.md`.
-- Immutable plan path when `run.md` references one.
-- Exact scenario ids from the run contract.
-- Declared implementation scope.
-- Fresh validation command or observable check.
-- `working-tree` or an explicit diff range.
+- Exact immutable plan path and the SHA-256 recorded in `run.md` when it references one.
+- Complete source scenario list, including every id and `WHEN`/`THEN` pair.
+- Complete source `Files:` scope.
+- Complete source `Verify` checklist.
+- `working-tree` or an explicit diff range as the baseline.
 
-Missing or contradictory input blocks verification. Never infer a run root, plan, scope, scenario, or baseline.
+Missing or contradictory input blocks verification. Never infer a run root, plan, hash, scope, scenario, check, or baseline.
 
 ## Method
 
-1. Build a checklist containing every assigned scenario exactly once.
-2. Inspect only the declared diff and scoped files, independently of the implementer's summary.
-3. Trace each `WHEN` through its stimulus to the observable `THEN`; cite scoped `path:line` evidence or a focused check.
-4. Run the named read-only validation fresh. Additional read-only probes may narrow a failure but never replace the required check.
-5. For hardening or characterization, setup, stimulus, and assertion must independently detect the named regression. A green but tautological test is a failure. Run mutation or coverage only when the change names an available command.
-6. Count every scenario. One unsupported or contradicted scenario makes the result fail.
+1. Read `run.md`. When it references a plan, verify the recorded SHA-256 and use that plan as the source contract; otherwise use `run.md`.
+2. Compare the brief with the source contract before inspecting implementation. Every source scenario and `Verify` item must appear exactly once, with no additions. The `Files:` scope must match exactly. Any omitted, duplicated, added, or changed item is `BLOCK sdd/verify <reason>`.
+3. Build separate scenario and check ledgers. Inspect only the declared baseline and `Files:` scope, independently of the implementer's summary.
+4. Trace each `WHEN` through its stimulus to the observable `THEN`; cite scoped `path:line` evidence or a focused check.
+5. Run every applicable read-only `Verify` item fresh. A check is read-only when it does not edit tracked files, the plan, run state, or Git. Count unavailable, unauthorized, or non-read-only items as failed checks; never omit them. Additional probes may narrow a failure but never replace a required check.
+6. For hardening or characterization, setup, stimulus, and assertion must independently detect the named regression. A green but tautological test is a failed scenario. Run mutation or coverage only when the source contract names an available command.
+7. Recheck the plan hash when present. Count every scenario and every `Verify` item separately. One unsupported, contradicted, or failed item makes the result fail.
 
 ## Boundaries
 
@@ -42,4 +43,11 @@ Missing or contradictory input blocks verification. Never infer a run root, plan
 
 ## Output Contract
 
-The caller's output contract wins. Return each failed scenario with evidence and final passed/total counts; clean results still cite exact evidence. Never return logs, code, diffs, or praise.
+Return each failed scenario or check with evidence, then exactly one final line:
+
+```text
+PASS scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>
+FAIL scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>
+```
+
+Use `PASS` only when both ledgers pass completely. Never return logs, code, diffs, or praise.

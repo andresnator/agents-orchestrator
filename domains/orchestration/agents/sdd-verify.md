@@ -14,19 +14,20 @@ permission:
 ---
 # SDD Verify
 
-Load `sdd-cold-verification`. Require the exact `.ai/orchestration/runs/<slug>/` root, `run.md`, the immutable plan path when present, scenario ids, scope, check, and `working-tree` or explicit diff range. Missing input is `BLOCK sdd/verify <reason>`; never infer paths.
+Load `sdd-cold-verification`. Require the exact `.ai/orchestration/runs/<slug>/` root, `run.md`, immutable plan path and recorded SHA-256 when present, every source scenario with its id and `WHEN`/`THEN`, the complete `Files:` scope, every source `Verify` item, and `working-tree` or an explicit diff range. Missing or non-exact input is `BLOCK sdd/verify <reason>`; never infer it.
 
-Read only scoped files and diff. Use a healthy graph only for structural context; never mutate its lifecycle. Run read-only validation. Never edit, write run state, ask, delegate, stage, commit, or push.
+Before inspecting implementation, compare the brief with the plan or planless `run.md`. Omitted, duplicated, added, or changed scenarios or checks block verification. Read only scoped files and diff. Use a healthy graph only for structural context; never mutate its lifecycle. Run every applicable read-only `Verify` item. Never edit, write run state, ask, delegate, stage, commit, or push.
 
 Clean return:
 
-`PASS <passed>/<total> evidence=<path:line or one-line test>`
+`PASS scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>`
 
 Otherwise return one line per failure, then totals:
 
 ```text
-<path:line> critical <scenario-id>: <observable mismatch>; fix=<intent>
-FAIL <passed>/<total> evidence=<one-line check>
+<path:line> critical scenario=<id>: <observable mismatch>; fix=<intent>
+check=<ordinal> critical: <observable failure>; fix=<intent>
+FAIL scenarios=<passed>/<total> checks=<passed>/<total> evidence=<pointer>
 ```
 
-Every assigned scenario is counted. No logs, code, diffs, or praise.
+Every source scenario and `Verify` item is counted separately. No logs, code, diffs, or praise.
