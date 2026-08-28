@@ -8,15 +8,10 @@ permission:
   write: allow
   bash: allow
   skill:
-    "*": deny
-    behavior-characterization: allow
-    code-conventions: allow
-    cognitive-doc-design: allow
+    "*": allow
     implementation-skill-routing: allow
-    java-testing: allow
-    legacy-code-safety: allow
-    systematic-debugging: allow
-    work-unit-commits: allow
+    judgment-day: deny
+    work-unit-commits: deny
   task:
     "*": deny
     sdd-explore: allow

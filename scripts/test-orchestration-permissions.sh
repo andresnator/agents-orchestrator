@@ -132,6 +132,15 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     "on: orchestraitor task allowlist lost sdd-implement"
   assert_json_value "$config" '.agent.orchestraitor.permission.task["sdd-verify"]' allow \
     "on: orchestraitor task allowlist lost sdd-verify"
+  # Dynamic implementation skills stay open, with later review and Git-skill denies.
+  for name in orchestraitor sdd-implement; do
+    assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"*\"]" allow \
+      "on: $name lost dynamic skill loading"
+    assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"judgment-day\"]" deny \
+      "on: $name can load the review skill"
+    assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"work-unit-commits\"]" deny \
+      "on: $name can load the Git delivery skill"
+  done
   # Unrelated config is untouched.
   assert_json_value "$config" '.agent.mentor.model' openai/gpt-5.6-sol \
     "on: clobbered an unrelated agent's model"

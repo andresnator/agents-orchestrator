@@ -4,7 +4,7 @@ description: "Trigger: execution plan, executable plan, deep plan. Draft one neu
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 
@@ -16,6 +16,7 @@ Create exactly one plan for the requested outcome. The plan may be small or larg
 
 - Use short complete sentences. Keep paths, symbols, commands, URLs, technical terms, numbers, and Markdown exact.
 - Omit empty sections and filler. Keep the artifact clear to a human; do not use cryptic A2A fragments inside it.
+- Before writing, check the exact destination. Update an existing plan only when the user supplied its exact path or the active conversation already created or selected it. On any other slug collision, ask one closed choice: reuse the existing plan or generate a new slug. Never overwrite implicitly.
 - Qualify behavior identifiers as `<capability>/<requirement>` when canonical specs matter. Use observable `WHEN` and `THEN` scenarios.
 - Use ordered work groups with explicit dependencies. Keep one file even when groups span sessions.
 - Every work group requires `Files:` and `Skills:`. Select names with `implementation-skill-routing`; use names, never paths.

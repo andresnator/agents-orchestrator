@@ -33,6 +33,17 @@ assert_frontmatter_contains() {
   frontmatter "$1" | grep -Fq -- "$2" || fail "$1" "frontmatter missing: $2"
 }
 
+assert_frontmatter_order() {
+  local content before after
+  CHECKS=$((CHECKS + 1))
+  content="$(frontmatter "$1")"
+  before="$(printf '%s\n' "$content" | grep -nF -- "$2" | head -1 | cut -d: -f1)"
+  after="$(printf '%s\n' "$content" | grep -nF -- "$3" | head -1 | cut -d: -f1)"
+  if [ -z "$before" ] || [ -z "$after" ] || [ "$before" -ge "$after" ]; then
+    fail "$1" "frontmatter must place '$2' before '$3'"
+  fi
+}
+
 assert_absent() {
   CHECKS=$((CHECKS + 1))
   [ ! -e "$1" ] && [ ! -L "$1" ] || fail "$1" 'retired path remains'
@@ -55,8 +66,20 @@ assert_absent domains/orchestration/skills/execution-plan
 execution_skill=skills/execution-plan/SKILL.md
 execution_template=skills/execution-plan/assets/plan-template.md
 routing_skill=skills/implementation-skill-routing/SKILL.md
-assert_frontmatter_contains "$execution_skill" 'version: "1.0.0"'
-assert_frontmatter_contains "$routing_skill" 'version: "1.0.0"'
+assert_frontmatter_contains "$execution_skill" 'version: "1.0.1"'
+assert_frontmatter_contains "$routing_skill" 'version: "2.0.0"'
+assert_contains "$execution_skill" 'Update an existing plan only when the user supplied its exact path or the active conversation already created or selected it.'
+assert_contains "$execution_skill" 'reuse the existing plan or generate a new slug'
+assert_contains "$execution_skill" 'Never overwrite implicitly.'
+assert_contains "$routing_skill" 'Read `.ai/atl/skill-registry.md` by its literal path'
+assert_contains "$routing_skill" 'the `Trigger` and `Skill` columns from the `## Skills` table'
+assert_contains "$routing_skill" 'Use the runtime skill catalog when the registry is absent'
+assert_contains "$routing_skill" 'planning, discovery, review, delivery, or Git'
+assert_contains "$routing_skill" 'Return at most three names.'
+assert_contains "$routing_skill" 'Return names, never paths.'
+assert_contains "$routing_skill" 'an unavailable name or a trigger that contradicts the assigned work is `BLOCK skill-routing <reason>`'
+assert_not_contains "$routing_skill" '| Work signal | Skill name |'
+assert_absent skills/implementation-skill-routing/assets/routing-cases.tsv
 for heading in '## Outcome' '## Scope' '## Evidence' '## Behavior' '## Approach' \
   '## Work groups' '## Dependencies' '## Files' '## Skills' '## Verify' \
   '## Risks and open questions' '## Execution guidance'; do
@@ -103,11 +126,22 @@ assert_contains "$orchestraitor" 'require `<run-root>/judgment.md`'
 assert_contains "$orchestraitor" '.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/'
 assert_contains "$orchestraitor" 'Report progress in natural language.'
 assert_frontmatter_contains "$orchestraitor" 'implementation-skill-routing: allow'
+assert_frontmatter_contains "$orchestraitor" '"*": allow'
+assert_frontmatter_contains "$orchestraitor" 'judgment-day: deny'
+assert_frontmatter_contains "$orchestraitor" 'work-unit-commits: deny'
+assert_frontmatter_order "$orchestraitor" '"*": allow' 'judgment-day: deny'
+assert_frontmatter_order "$orchestraitor" '"*": allow' 'work-unit-commits: deny'
 
 for worker in sdd-implement sdd-verify sdd-canonical-merge; do
   assert_contains "domains/orchestration/agents/$worker.md" '.ai/orchestration/'
 done
 assert_contains domains/orchestration/agents/sdd-implement.md 'Never edit the plan, `run.md`, or canonical specs'
+assert_contains domains/orchestration/agents/sdd-implement.md 'every named registered skill assigned by `implementation-skill-routing`'
+assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md '"*": allow'
+assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'judgment-day: deny'
+assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'work-unit-commits: deny'
+assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": allow' 'judgment-day: deny'
+assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": allow' 'work-unit-commits: deny'
 assert_contains domains/orchestration/agents/sdd-verify.md 'immutable plan path'
 assert_contains domains/orchestration/agents/sdd-canonical-merge.md '.ai/orchestration/specs/'
 
