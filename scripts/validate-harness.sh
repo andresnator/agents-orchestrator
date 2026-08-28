@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validates repo harness artifacts against the contracts in AGENTS.md:
+# Validates repo harness artifacts against the contracts in CONTRIBUTING.md:
 # agent/command frontmatter shape and key order, skill frontmatter with
 # strict SemVer and lifecycle status, domain skill ownership integrity, and
 # global name uniqueness across flat OpenCode targets.
@@ -349,10 +349,6 @@ for readme in domains/*/README.md; do
   expected_headings="$(printf '%s\n' '## Quick path' '## Entry points' '## Components')"
   [ "$headings" = "$expected_headings" ] ||
     fail "$readme" "H2 sequence must be Quick path, Entry points, Components"
-
-  if grep -Eiq '^```[[:space:]]*mermaid' "$readme"; then
-    fail "$readme" "domain README must not contain Mermaid"
-  fi
 
   while IFS=$'\t' read -r table_line table_width expected_width; do
     [ -n "$table_line" ] || continue

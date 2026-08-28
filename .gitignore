@@ -1,5 +1,9 @@
 .DS_Store
 
+# Local agent entrypoints
+/AGENTS.md
+/CLAUDE.md
+
 # Local AI/agent tool state and generated files
 .ai/
 .claude/

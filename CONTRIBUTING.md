@@ -1,4 +1,4 @@
-# AGENTS.md
+# Contributing
 
 This repository stores reusable OpenCode agent artifacts, not application code. Keep changes compact, contract-focused, and organized by domain. Start with [README.md](README.md), then read the README for the domain you change.
 
@@ -8,10 +8,10 @@ This repository stores reusable OpenCode agent artifacts, not application code. 
 - Preserve literal runtime triggers such as `"ejecuta el plan <change>"` and Spanish skill triggers. They are activation contracts, not prose to translate.
 - `domains/` owns agents, commands, repository plugins, external-plugin locks, and skills used by one domain.
 - `skills/` owns only skill bodies shared by multiple domains.
-- `global/AGENTS.md` is the installable runtime rules file. Root `AGENTS.md` is maintainer guidance; do not merge their roles.
+- `global/AGENTS.md` is the installable runtime rules file. `CONTRIBUTING.md` is maintainer guidance; do not merge their roles.
 - `installers/opencode.sh` discovers and installs components. Adding a component must not require installer edits.
 - `.ai/` and other runtime-state directories are ignored state, not repository artifacts.
-- `CLAUDE.md` must remain a symlink to this file.
+- Root `/AGENTS.md` and `/CLAUDE.md` are ignored local runtime entrypoints; do not track them.
 
 ## Agents and commands
 
@@ -45,7 +45,7 @@ Bump the version whenever a skill changes: patch for wording or internal fixes, 
 
 ## Keeping the catalog accurate
 
-Every domain README uses this H2 sequence: `## Quick path`, `## Entry points`, then `## Components`. Keep the introduction to at most two sentences, the quick path to two or three steps, entry points compact, and component purposes to 3-8 words. `## Components` is the final authoritative section; do not add Mermaid diagrams to domain READMEs.
+Every domain README uses this H2 sequence: `## Quick path`, `## Entry points`, then `## Components`. Keep the introduction to at most two sentences, the quick path to two or three steps, entry points compact, and component purposes to 3-8 words. `## Components` is the final authoritative section. Use only small diagrams that clarify a material relationship.
 
 When adding, removing, or moving a component, update the owning domain README's single `## Components` table. Update the root domain table only when entry points or domain purpose change. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
 

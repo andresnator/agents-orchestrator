@@ -83,4 +83,4 @@ installers/opencode.sh install --dry-run
 scripts/validate-harness.sh
 ```
 
-Use component-specific checks documented in [AGENTS.md](AGENTS.md). Model-backed tests are opt-in because they spend credits.
+Use component-specific checks documented in [CONTRIBUTING.md](CONTRIBUTING.md). Model-backed tests are opt-in because they spend credits.
