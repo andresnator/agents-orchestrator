@@ -62,6 +62,9 @@ for owner in plan architecture common orchestration; do
   assert_relative_symlink "domains/$owner/skills/implementation-skill-routing" '../../../skills/implementation-skill-routing'
 done
 assert_absent domains/orchestration/skills/execution-plan
+assert_absent domains/orchestration/skills/work-unit-commits
+assert_absent skills/work-unit-commits
+assert_contains domains/common/skills/work-unit-commits/SKILL.md 'name: work-unit-commits'
 
 execution_skill=skills/execution-plan/SKILL.md
 execution_template=skills/execution-plan/assets/plan-template.md
@@ -117,14 +120,21 @@ assert_contains "$orchestraitor" '`ejecuta el plan <path>` executes that exact p
 assert_contains "$orchestraitor" '`continúa <run>` resumes that exact SDD run.'
 assert_contains "$orchestraitor" 'Do not create `.ai/` state, a plan, canonical specs, or SDD workers.'
 assert_contains "$orchestraitor" 'ask one closed confirmation before creating state'
-assert_contains "$orchestraitor" 'automatic execution, tests alongside the change, no Judgment, and no commits'
+assert_contains "$orchestraitor" 'Git delivery is outside this primary and every worker.'
+assert_contains "$orchestraitor" 'Never stage, commit, or push.'
+assert_contains "$orchestraitor" 'finish the verified changes and explain that Git delivery must happen outside Orchestraitor'
+assert_contains "$orchestraitor" 'Review is a separate primary, not an SDD phase or completion gate.'
 assert_contains "$orchestraitor" '.ai/orchestration/runs/<slug>/run.md'
 assert_contains "$orchestraitor" 'never copy, rewrite, or mark it'
 assert_contains "$orchestraitor" 'Verify the original plan hash before and after every wave.'
-assert_contains "$orchestraitor" 'return `/judgment <run-root>`, and stop'
-assert_contains "$orchestraitor" 'require `<run-root>/judgment.md`'
+assert_contains "$orchestraitor" 'Complete and archive SDD after its own verification.'
+assert_contains "$orchestraitor" 'tell them to select `review-coordinator`'
 assert_contains "$orchestraitor" '.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/'
 assert_contains "$orchestraitor" 'Report progress in natural language.'
+assert_not_contains "$orchestraitor" 'Judgment'
+assert_not_contains "$orchestraitor" '/judgment'
+assert_not_contains "$orchestraitor" 'judgment.md'
+assert_not_contains "$orchestraitor" 'work-unit-commits: allow'
 assert_frontmatter_contains "$orchestraitor" 'implementation-skill-routing: allow'
 assert_frontmatter_contains "$orchestraitor" '"*": allow'
 assert_frontmatter_contains "$orchestraitor" 'judgment-day: deny'
@@ -134,7 +144,10 @@ assert_frontmatter_order "$orchestraitor" '"*": allow' 'work-unit-commits: deny'
 
 for worker in sdd-implement sdd-verify sdd-canonical-merge; do
   assert_contains "domains/orchestration/agents/$worker.md" '.ai/orchestration/'
+  assert_contains "domains/orchestration/agents/$worker.md" 'stage, commit, or push'
 done
+assert_contains domains/orchestration/agents/sdd-explore.md 'stage, commit, or push'
+assert_contains "$orchestraitor" 'Never ask it to mutate Git.'
 assert_contains domains/orchestration/agents/sdd-implement.md 'Never edit the plan, `run.md`, or canonical specs'
 assert_contains domains/orchestration/agents/sdd-implement.md 'every named registered skill assigned by `implementation-skill-routing`'
 assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md '"*": allow'
@@ -144,6 +157,20 @@ assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": all
 assert_frontmatter_order domains/orchestration/agents/sdd-implement.md '"*": allow' 'work-unit-commits: deny'
 assert_contains domains/orchestration/agents/sdd-verify.md 'immutable plan path'
 assert_contains domains/orchestration/agents/sdd-canonical-merge.md '.ai/orchestration/specs/'
+
+review_coordinator=domains/review/agents/review-coordinator.md
+assert_contains "$review_coordinator" 'For `judgment`, load `judgment-day`.'
+assert_not_contains "$review_coordinator" 'active SDD root'
+assert_not_contains "$review_coordinator" 'judgment.md'
+assert_not_contains "$review_coordinator" 'SDD reconciliation'
+assert_not_contains "$review_coordinator" 'SDD primary'
+
+assert_contains README.md 'Install `orchestration` and `review` independently.'
+assert_contains domains/orchestration/README.md 'Review is independent.'
+assert_not_contains domains/orchestration/README.md 'Judgment'
+assert_not_contains domains/orchestration/README.md 'work-unit-commits'
+assert_contains installers/opencode.sh 'install --domain orchestration --target /tmp/opencode-test --dry-run'
+assert_contains installers/opencode.sh 'install --domain review --target /tmp/opencode-review --dry-run'
 
 cold_verification=domains/orchestration/skills/sdd-cold-verification/SKILL.md
 assert_frontmatter_contains "$cold_verification" 'version: "1.0.1"'
@@ -179,6 +206,7 @@ flow_runner=scripts/test-orchestration-flows.sh
 assert_contains "$flow_runner" 'install_current_profile'
 assert_contains "$flow_runner" 'BigDecimal orderSubtotal = order.subtotal();'
 assert_contains "$flow_runner" 'select(.part?.tool == "question")'
+assert_not_contains "$flow_runner" 'no Judgment'
 assert_contains scripts/test-multi-primary-e2e.sh '"$PROFILE" install --project-root "$PROJECT" --no-install-brew-tools'
 assert_contains docs/orchestration-test-plan.md 'ORCHESTRATION_FLOW_CONFIRM=run-paid-flow'
 

@@ -59,6 +59,9 @@ assert_contains "$planner" 'normal chat, one at a time'
 assert_contains "$orchestraitor" 'A change request uses direct execution.'
 assert_contains "$orchestraitor" '`Make a change`, `Execute a plan`, or `Resume work`'
 assert_contains "$orchestraitor" 'Do not create `.ai/` state'
+assert_contains "$orchestraitor" 'Review is a separate primary'
+assert_contains "$review" 'For `judgment`, load `judgment-day`.'
+assert_not_contains "$review" 'SDD reconciliation'
 assert_contains "$architect" 'one `.ai/architect/plans/<slug>.md`'
 
 for worker in sdd-explore sdd-implement sdd-canonical-merge sdd-verify; do

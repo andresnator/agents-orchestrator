@@ -59,7 +59,7 @@ installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status --domain orchestration
 ```
 
-Filtered `orchestration` installs support the default `Judgment: none`; include `review` when light or full Judgment is required.
+Install `orchestration` and `review` independently. Select `review-coordinator` only when a separate evaluation is wanted.
 
 ## Documentation
 

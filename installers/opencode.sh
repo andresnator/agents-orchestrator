@@ -95,8 +95,11 @@ Examples:
   installers/opencode.sh install --domain plan --status done,testing
       Install only done/testing planning components.
 
-  installers/opencode.sh install --domain orchestration,review,common --target /tmp/opencode-test --dry-run
-      Preview full SDD with its optional Judgment handoff and shared tools.
+  installers/opencode.sh install --domain orchestration --target /tmp/opencode-test --dry-run
+      Preview direct and SDD execution without Review.
+
+  installers/opencode.sh install --domain review --target /tmp/opencode-review --dry-run
+      Preview Judgment and Defend without Orchestration.
 
   installers/opencode.sh status --domain meta
       Show meta components and link state in the default target.

@@ -6,7 +6,7 @@
 
 1. Select `orchestraitor` and request a change or exact plan.
 2. Confirm SDD only when risk or coordination requires it.
-3. Review fresh verification and any archived run.
+3. Inspect fresh verification and any archived run.
 
 ## Entry points
 
@@ -19,11 +19,11 @@
 
 Direct execution is the default for localized, reversible work that one session can verify. It includes protected local refactors and renames. It creates no plan, run, canonical spec, or SDD worker.
 
-SDD is reserved for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. State starts only after explicit SDD intent or confirmation under `.ai/orchestration/runs/<slug>/`. Defaults are automatic execution, tests alongside the change, no Judgment, and no commits.
+SDD is reserved for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. State starts only after explicit SDD intent or confirmation under `.ai/orchestration/runs/<slug>/`. It executes and verifies work without Git delivery.
 
 The original plan remains immutable. SDD records its path and hash, executes internal waves, runs cold verification, merges canonical specs when required, and archives the run. See [Orchestration verification](../../docs/orchestration-test-plan.md).
 
-Judgment is a cross-primary handoff. Orchestraitor persists the verified scope and stops with `/judgment <run-root>`. After Review writes `judgment.md`, resume with `continúa <run-root>`.
+Review is independent. After Orchestration completes, select `review-coordinator` for a separate evaluation; Orchestration never waits for or reconciles review state.
 
 ## Components
 
@@ -43,4 +43,3 @@ Judgment is a cross-primary handoff. Orchestraitor persists the verified scope a
 | Skill | `sdd-cold-verification` | Verifies scoped scenarios independently |
 | Skill | `implementation-skill-routing` | Selects skills for implementation work |
 | Skill | `systematic-debugging` | Finds root causes before fixes |
-| Skill | `work-unit-commits` | Plans reviewable and cohesive commits |

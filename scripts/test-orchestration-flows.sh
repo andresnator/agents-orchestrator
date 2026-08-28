@@ -147,7 +147,7 @@ case "$SCENARIO" in
     install_current_profile
     PLAN="$PROJECT/.ai/deep-planner/plans/adjust-order-pricing.md"
     BEFORE="$(shasum -a 256 "$PLAN" | awk '{print $1}')"
-    run_agent orchestraitor 'Use SDD explicitly. Ejecuta el plan .ai/deep-planner/plans/adjust-order-pricing.md with automatic execution, tests alongside, no Judgment, and no commits.'
+    run_agent orchestraitor 'Use SDD explicitly. Ejecuta el plan .ai/deep-planner/plans/adjust-order-pricing.md. Verify and archive the run; do not stage, commit, or push.'
     AFTER="$(shasum -a 256 "$PLAN" | awk '{print $1}')"
     [ "$BEFORE" = "$AFTER" ] || die 'source plan changed'
     find "$PROJECT/.ai/orchestration/runs/archive" -mindepth 1 -maxdepth 1 -type d -print -quit | grep -q . ||

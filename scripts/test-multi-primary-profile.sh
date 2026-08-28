@@ -604,6 +604,36 @@ shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
   pass shouldInstallEveryAllowedSkillWhenFilteringOneDomain
 }
 
+shouldInstallOrchestrationAndReviewIndependently() {
+  local project target
+
+  # Given a target for each independent primary domain
+  project="$(make_project independent-orchestration)"
+  target="$project/.opencode"
+
+  # When only Orchestration is installed
+  "$ROOT/installers/opencode.sh" install --domain orchestration --target "$target" >/dev/null
+
+  # Then Review does not leak into its inventory
+  [ -L "$target/agents/orchestraitor.md" ] || fail "independent orchestration: primary missing"
+  [ ! -e "$target/agents/review-coordinator.md" ] || fail "independent orchestration: review primary leaked"
+  "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
+
+  # Given a fresh Review-only target
+  project="$(make_project independent-review)"
+  target="$project/.opencode"
+
+  # When only Review is installed
+  "$ROOT/installers/opencode.sh" install --domain review --target "$target" >/dev/null
+
+  # Then Orchestration does not leak into its inventory
+  [ -L "$target/agents/review-coordinator.md" ] || fail "independent review: primary missing"
+  [ ! -e "$target/agents/orchestraitor.md" ] || fail "independent review: orchestration primary leaked"
+  "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
+
+  pass shouldInstallOrchestrationAndReviewIndependently
+}
+
 command -v jq >/dev/null 2>&1 || fail "jq is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 
@@ -625,5 +655,6 @@ shouldRejectSymlinkedManagedDirectoriesBeforeMutation
 shouldInstallOnlySelectedDomainsAndRejectSourceWorktree
 shouldMigratePreviousProfileInventories
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain
+shouldInstallOrchestrationAndReviewIndependently
 
 printf 'PASS: %d multi-primary profile contracts OK.\n' "$PASSES"

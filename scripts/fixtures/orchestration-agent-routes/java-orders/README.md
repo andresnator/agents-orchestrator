@@ -2,6 +2,8 @@
 
 This throwaway project supports the model-backed orchestration runners. `scripts/test-orchestration-flows.sh` drives focused scenarios, while `scripts/test-multi-primary-e2e.sh` switches between selected primaries.
 
+Execution scenarios end with Orchestraitor verification. Review scenarios select `review-coordinator` independently.
+
 Scenario contracts live in `docs/plan-flow-test-scenarios.md` and `docs/orchestration-test-plan.md`.
 
 This is a real Maven project because direct execution and SDD workers run the build. The fixture is intentionally small, so `mvn -o test` finishes quickly with a warm `~/.m2`.
