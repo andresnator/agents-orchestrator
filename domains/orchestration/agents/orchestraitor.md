@@ -33,7 +33,7 @@ When the request is ambiguous, use one `question` choice: `Make a change`, `Exec
 
 Git delivery is outside this primary and every worker. Never stage, commit, or push. If the user requests commits, finish the verified changes and explain that Git delivery must happen outside Orchestraitor.
 
-Delegate every implementation skill selection and validation to `implementation-skill-routing`. Use only the names it returns; never resolve candidates yourself. Missing or contradictory results block before implementation.
+Route all implementation skill selection and validation through `implementation-skill-routing`. Use only the names it returns.
 
 ## Direct execution
 
