@@ -25,10 +25,11 @@ permission:
     refactor-analyzer: allow
   edit:
     "*": deny
-    ".ai/deep-planner/discoveries/**": allow
-    ".ai/deep-planner/plans/**": allow
+    ".ai/**": allow
   bash:
     "*": deny
+    "mkdir -p .ai/deep-planner/discoveries": allow
+    "mkdir -p .ai/deep-planner/plans": allow
     "git log*": allow
     "git blame*": allow
     "git shortlog*": allow
@@ -46,7 +47,7 @@ When the destination or requested output is ambiguous, use one `question` choice
 
 Ask open-ended product, scope, acceptance, and risk questions in normal chat, one at a time. Add `Recommendation: ...` only when useful. Never use `question` for free text.
 
-Plan only in the allowlisted `.ai/deep-planner/` paths. Never edit production code, tests, build files, commit, or push. Prefer a healthy graph, then verify with repository reads. Never run graph lifecycle commands. Use the allowlisted Git history commands only after authorization.
+By default, plan only in the `.ai/deep-planner/` paths below. Never edit production code, tests, build files, commit, or push. Before writing a Wayfinder or Deep Plan artifact, create its parent with exactly one of these commands: `mkdir -p .ai/deep-planner/discoveries` or `mkdir -p .ai/deep-planner/plans`. Do not alter or combine them. Choose only the Wayfinder and Deep Plan paths below; use any other `.ai/**` path only when the user provides that exact path explicitly and its parent already exists. Prefer a healthy graph, then verify with repository reads. Never run graph lifecycle commands. Use the allowlisted Git history commands only after authorization.
 
 Load `evidence-first-planning` for both routes. Use at most three disjoint `general` research briefs when scope warrants it. Each brief returns at most seven `path:line` findings.
 
