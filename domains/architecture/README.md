@@ -6,7 +6,7 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 1. Install `architecture` or the multi-primary profile.
 2. Select `architect` or use an entry point below.
-3. Review files under `<docfolder>/architecture/` or `.ai/architect/`; send any ready `change.md` to SDD.
+3. Review files under `<docfolder>/architecture/` or `.ai/architect/`; execute any plan through `orchestraitor`.
 
 ## Entry points
 
@@ -14,8 +14,18 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 |---|---|---|
 | `/arch-map` | Document current architecture | Adaptive C4-lite documentation |
 | `/arch-review` | Rank architecture risks | Issues and fitness functions |
-| `/arch-ideate` | Choose a target architecture | ADR and ready `change.md` |
+| `/arch-ideate` | Choose a target architecture | ADR and neutral execution plan |
 | `/boundary-inspector` | Inspect one service | Evidence-backed boundary map |
+
+```mermaid
+flowchart LR
+    request[Architecture request] --> architect{Architect operation}
+    architect -->|Map| map[C4-lite documentation]
+    architect -->|Review| review[Ranked risks and fitness functions]
+    architect -->|Ideate| ideate[ADR and execution plan]
+    architect -->|Boundary| boundary[Service boundary report]
+    ideate --> execute[Execute through Orchestraitor]
+```
 
 `architect` executes each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
 
@@ -33,10 +43,11 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 | Skill | `architecture-map` | Creates evidence-backed C4-lite docs |
 | Skill | `architecture-state` | Records verified current architecture |
 | Skill (handoff-only) | `code-conventions` | Names implementation conventions for SDD |
+| Skill (handoff-only) | `java-testing` | Names Java testing guidance for implementation |
 | Skill | `dependency-security-audit` | Audits current dependency evidence |
 | Skill | `design-patterns-pragmatic` | Applies patterns to evidenced forces |
 | Skill | `kiss-yagni` | Rejects speculative architecture complexity |
 | Skill | `repo-issues` | Ranks gaps and fitness functions |
-| Skill | `sdd-draft-change` | Drafts the pre-implementation change |
-| Skill | `sdd-execution-skills` | Selects skills for implementation work |
+| Skill | `execution-plan` | Drafts one neutral execution plan |
+| Skill | `implementation-skill-routing` | Selects skills for implementation work |
 | Skill | `service-boundary-analysis` | Maps service contracts |

@@ -1,38 +1,33 @@
 # Plan Domain
 
-`deep-planner` turns repository evidence into a durable plan or one executable `change.md`. SDD owns implementation.
+`deep-planner` separates discovery from executable planning. It never implements changes.
 
 ## Quick path
 
-1. Select `deep-planner` or run a planning command.
+1. Select `deep-planner` and describe the outcome or idea.
 2. Answer only unresolved product, acceptance, or risk questions.
-3. Review the returned plan, roadmap slice, or ready `change.md`.
+3. Review one discovery or one execution plan.
 
 ## Entry points
 
-| Entry | Internal route | Result |
+| Request | Route | Result |
 |---|---|---|
-| `/deep-plan` | `deep-plan`, `intent=auto` | Ready change, final plan, or roadmap slice |
-| `/wayfinder` | `deep-plan`, `intent=discovery` | One durable discovery plan |
-| `/refactor-plan` | `refactor`, `intent=auto` | Safe refactor or prerequisite hardening |
-| `/harden-plan` | `refactor`, `intent=hardening` | Hardening-only ready change |
+| Clear executable outcome | Deep Plan | `.ai/deep-planner/plans/<slug>.md` |
+| Open destination or decisions | Wayfinder | `.ai/deep-planner/discoveries/<slug>.md` |
+| Ambiguous planning intent | Closed choice | `Create a plan` or `Explore an idea` |
 
-`/wayfinder` and `/harden-plan` are compatibility aliases; machine returns use only `plan/deep-plan` or `plan/refactor`. Bounded work writes `.ai/deep-planner/changes/<change>/change.md`; decisions and discovery use `.ai/deep-planner/plans/<slug>.md`; oversized work adds `.ai/roadmaps/<goal>.md` and plans one unblocked slice at a time.
+Wayfinder records evidence, decisions, and open questions without status markers. When discovery finishes, ask `deep-planner` to convert it into a plan.
 
-A ready change begins with `Status: ready-for-sdd | Source: deep-planner`. Roadmap slices add `Roadmap: <goal> | Slice: <n>/<total>`. Each Work group records `Files:` and at most three `Skills:` selected through `sdd-execution-skills`. The planner never edits production files; SDD executes the exact handoff path. Continue an existing roadmap with the literal trigger `"continúa el roadmap <goal>"`.
+Deep Plan always writes one file. Large plans use work groups and dependencies, not roadmaps or slices. Refactor and hardening are internal rules: missing protection places tooling, seams, tests, and revalidation before restructuring.
 
-Copy-ready prompts and expected evidence remain in [Plan flow test scenarios](../../docs/plan-flow-test-scenarios.md).
+Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el plan <path>`. See [Plan flow test scenarios](../../docs/plan-flow-test-scenarios.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `deep-planner` | Produces plans and ready changes directly |
+| Agent (primary) | `deep-planner` | Runs Wayfinder and Deep Plan |
 | Agent (subagent) | `refactor-analyzer` | Applies one read-only analysis lens |
-| Command | `/deep-plan` | Routes normal planning work |
-| Command alias | `/wayfinder` | Routes durable discovery planning |
-| Command | `/refactor-plan` | Routes protected refactor planning |
-| Command alias | `/harden-plan` | Forces hardening-only planning |
 | Skill | `architecture-impact-review` | Classifies local versus architectural risk |
 | Skill | `behavior-characterization` | Records observable legacy behavior |
 | Skill | `characterization-test-scoping` | Scopes tests, seams, and rollback |
@@ -64,8 +59,8 @@ Copy-ready prompts and expected evidence remain in [Plan flow test scenarios](..
 | Skill | `refactor` | Supplies cross-language refactoring techniques |
 | Skill | `risk-assessment` | Classifies technical and functional risk |
 | Skill | `scope-analysis` | Delimits the target boundary |
-| Skill | `sdd-draft-change` | Drafts one pre-implementation change document |
-| Skill | `sdd-execution-skills` | Selects skills for implementation work |
+| Skill | `execution-plan` | Drafts one neutral execution plan |
+| Skill | `implementation-skill-routing` | Selects skills for implementation work |
 | Skill | `single-responsibility` | Detects multiple reasons to change |
 | Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
 | Skill | `tooling-audit` | Detects test-tooling gaps |

@@ -8,8 +8,9 @@ INSTALLER="$REPO_ROOT/installers/opencode.sh"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 
 PROFILE_CONTRACT="multi-primary-profile/v1"
-PROFILE_DOMAINS="plan,sdd,architecture,review,common"
-LEGACY_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
+PROFILE_DOMAINS="plan,orchestration,architecture,review,common"
+PREVIOUS_PROFILE_DOMAINS="plan,sdd,architecture,review,common"
+EARLIER_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
 PRIMARY_AGENTS="deep-planner architect orchestraitor review-coordinator"
 MANAGED_SUBAGENT_DEPTH='1'
 
@@ -166,8 +167,11 @@ manifest_value() {
   awk -F '\t' -v key="$key" '$1 == key { print substr($0, length($1) + 2); exit }' "$PROFILE_MANIFEST"
 }
 
-profile_inventory_is_legacy() {
-  [ "$(manifest_value domains)" = "$LEGACY_PROFILE_DOMAINS" ]
+profile_inventory_needs_migration() {
+  case "$(manifest_value domains)" in
+    "$PREVIOUS_PROFILE_DOMAINS"|"$EARLIER_PROFILE_DOMAINS") return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 manifest_has_row() {
@@ -415,13 +419,13 @@ validate_profile_manifest() {
   [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign profile target"
   saved_domains="$(manifest_value domains)"
   case "$saved_domains" in
-    "$PROFILE_DOMAINS"|"$LEGACY_PROFILE_DOMAINS") ;;
+    "$PROFILE_DOMAINS"|"$PREVIOUS_PROFILE_DOMAINS"|"$EARLIER_PROFILE_DOMAINS") ;;
     *) die "broad profile domain selection" ;;
   esac
   local saved_config config_existed target_existed expected_sha actual_sha
   saved_config="$(manifest_value config-file)"
   case "$saved_config" in
-    "") PROFILE_CONFIG_FILE="$CONFIG_FILE" ;; # Legacy v1 manifests predate explicit config-path ownership.
+    "") PROFILE_CONFIG_FILE="$CONFIG_FILE" ;;
     "$TARGET/opencode.json"|"$TARGET/opencode.jsonc") PROFILE_CONFIG_FILE="$saved_config" ;;
     *) die "global or foreign profile config file" ;;
   esac
@@ -517,10 +521,14 @@ run_status() {
     return 1
   fi
   validate_profile_manifest
-  profile_inventory_is_legacy && die "profile component inventory is legacy; run install to migrate"
   validate_managed_config "$PROFILE_CONFIG_FILE"
   [ "$CONFIG_FILE" = "$PROFILE_CONFIG_FILE" ] ||
     die "OpenCode config precedence changed to $CONFIG_FILE; run install to migrate the profile"
+  if profile_inventory_needs_migration; then
+    printf 'status: migration required\nproject-root: %s\nconfig-file: %s\naction: run install to migrate the profile\n' \
+      "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
+    return 0
+  fi
   printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 4\nquestion owners: 4\n' \
     "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
 }

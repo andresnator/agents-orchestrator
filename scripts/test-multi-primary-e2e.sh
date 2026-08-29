@@ -1,478 +1,109 @@
 #!/usr/bin/env bash
-# Opt-in paid proof for the project-local multi-primary profile.
-#
-# This runner performs exactly one workflow with no retry loop: direct Deep
-# Plan, then a direct SDD primary switch using the exact handoff.
-#
-# It uses the caller's real OpenCode credentials and stores sanitized session
-# exports plus project evidence below the repository's ignored .ai/ directory.
-# It is deliberately not called by scripts/validate-harness.sh.
-set -uo pipefail
+# Opt-in paid flow: Deep Plan creates one plan, then Orchestraitor executes it directly.
+set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FIXTURE="$ROOT/scripts/fixtures/sdd-agent-routes/java-orders"
+FIXTURE="$ROOT/scripts/fixtures/orchestration-agent-routes/java-orders"
 PROFILE="$ROOT/scripts/multi-primary-profile.sh"
-OPENCODE_BIN="${OPENCODE_BIN:-}"
 TIMEOUT_SECONDS="${MULTI_PRIMARY_E2E_TIMEOUT:-2400}"
-POLL_SECONDS=2
+TERMINATION_GRACE_SECONDS=5
+POLL_INTERVAL_SECONDS=2
 RUN_PID=""
 SCRATCH=""
-CALLS=0
-FAILURES=0
 
-timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-EVIDENCE_ROOT="${MULTI_PRIMARY_E2E_EVIDENCE_DIR:-$ROOT/.ai/evidence/multi-primary/$timestamp}"
-DATA_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/opencode"
-DATABASE="$DATA_ROOT/opencode.db"
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
-log() { printf '%s\n' "$*"; }
-
-fail() {
-  printf 'FAIL %s\n' "$1" >&2
-  FAILURES=$((FAILURES + 1))
-  return 1
-}
-
-die() {
-  printf 'ERROR: %s\n' "$1" >&2
-  exit 2
-}
-
-terminate_run() {
-  local pid="$1" attempt
-  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
-  kill -0 "$pid" 2>/dev/null || return 0
-  kill -TERM "$pid" 2>/dev/null || true
-  for ((attempt = 0; attempt < 50; attempt++)); do
-    kill -0 "$pid" 2>/dev/null || return 0
-    sleep 0.1
-  done
-  kill -KILL "$pid" 2>/dev/null || true
-}
-
-snapshot_project() {
-  local label="$1" project="$2"
-  local target="$EVIDENCE_ROOT/$label/project"
-  mkdir -p "$target"
-  (
-    cd "$project" || exit 1
-    git status --short --branch > "$target/git-status.txt"
-    git diff --stat > "$target/git-diff-stat.txt"
-    git diff > "$target/git-diff.patch"
-  )
-  [ -d "$project/.ai" ] && cp -R "$project/.ai" "$target/ai-state"
-  [ -d "$project/src" ] && cp -R "$project/src" "$target/src"
-  [ -f "$project/pom.xml" ] && cp "$project/pom.xml" "$target/pom.xml"
-  [ -d "$project/target/surefire-reports" ] &&
-    cp -R "$project/target/surefire-reports" "$target/surefire-reports"
-  [ -f "$project/.opencode/opencode.jsonc" ] &&
-    cp "$project/.opencode/opencode.jsonc" "$target/opencode.jsonc"
-  [ -f "$project/.opencode/.agents-orchestrator-manifest" ] &&
-    cp "$project/.opencode/.agents-orchestrator-manifest" "$target/installer-manifest.tsv"
-  [ -f "$project/.opencode/.multi-primary-profile-manifest" ] &&
-    cp "$project/.opencode/.multi-primary-profile-manifest" "$target/profile-manifest.tsv"
+terminate_active_run() {
+  local terminated_at
+  [ -n "$RUN_PID" ] || return 0
+  if kill -0 "$RUN_PID" 2>/dev/null; then
+    kill -TERM "$RUN_PID" 2>/dev/null || true
+    terminated_at=$SECONDS
+    while kill -0 "$RUN_PID" 2>/dev/null &&
+      ((SECONDS - terminated_at < TERMINATION_GRACE_SECONDS)); do
+      sleep "$POLL_INTERVAL_SECONDS"
+    done
+    if kill -0 "$RUN_PID" 2>/dev/null; then
+      kill -KILL "$RUN_PID" 2>/dev/null || true
+    fi
+  fi
+  wait "$RUN_PID" 2>/dev/null || true
+  RUN_PID=""
 }
 
 cleanup() {
-  [ -n "$RUN_PID" ] && terminate_run "$RUN_PID"
-  if [ -n "$SCRATCH" ] && [ -d "$SCRATCH" ]; then
-    [ -d "$SCRATCH/plan-project" ] && snapshot_project plan-sdd "$SCRATCH/plan-project" || true
-    rm -rf "$SCRATCH"
-  fi
-  {
-    printf 'finished_utc\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    printf 'opencode_calls\t%s\n' "$CALLS"
-    printf 'workflow_attempts\t1\n'
-    printf 'retries\t0\n'
-    printf 'failures\t%s\n' "$FAILURES"
-  } >> "$EVIDENCE_ROOT/run-metadata.tsv" 2>/dev/null || true
+  terminate_active_run
+  if [ -n "$SCRATCH" ] && [ -d "$SCRATCH" ]; then rm -rf "$SCRATCH"; fi
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-copy_fixture() {
-  local project="$1"
-  mkdir -p "$project"
-  cp "$FIXTURE/pom.xml" "$FIXTURE/.gitignore" "$project/"
-  cp -R "$FIXTURE/src" "$project/src"
-  (
-    cd "$project" || exit 1
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git init -q -b main
-    GIT_CONFIG_GLOBAL=/dev/null git add -A
-    GIT_CONFIG_GLOBAL=/dev/null \
-      GIT_AUTHOR_NAME=multi-primary-e2e GIT_AUTHOR_EMAIL=multi-primary-e2e@example.invalid \
-      GIT_COMMITTER_NAME=multi-primary-e2e GIT_COMMITTER_EMAIL=multi-primary-e2e@example.invalid \
-      git commit -qm 'fixture baseline'
-  ) || die "could not initialise fixture project at $project"
-}
-
-install_profile() {
-  local label="$1" project="$2"
-  local evidence="$EVIDENCE_ROOT/$label"
-  mkdir -p "$evidence"
-  OPENCODE_BIN="$OPENCODE_BIN" "$PROFILE" install --project-root "$project" \
-    > "$evidence/profile-install.txt" 2>&1 || die "$label profile install failed"
-  OPENCODE_BIN="$OPENCODE_BIN" "$PROFILE" status --project-root "$project" \
-    > "$evidence/profile-status.txt" 2>&1 || die "$label profile status failed"
-  (
-    cd "$project" || exit 1
-    OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" --pure debug config
-  ) > "$evidence/resolved-config.json" 2> "$evidence/resolved-config.stderr" ||
-    die "$label resolved-config check failed"
-  jq -e '.subagent_depth == 1' \
-    "$evidence/resolved-config.json" >/dev/null ||
-    die "$label did not resolve the multi-primary delegation depth"
-}
-
-run_turn() {
-  local project="$1" events="$2" stderr_log="$3" title="$4" prompt="$5"
-  local agent="$6" session_id="${7:-}" started elapsed status
-  [ ! -e "$events" ] || die "refusing to overwrite paid-run evidence: $events"
-  CALLS=$((CALLS + 1))
-  if [ -n "$session_id" ]; then
-    OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" run \
-      --dir "$project" --session "$session_id" --agent "$agent" --format json --auto \
-      "$prompt" > "$events" 2> "$stderr_log" &
-  else
-    OPENCODE_GRAPHIFY_AUTOINIT=0 "$OPENCODE_BIN" run \
-      --dir "$project" --agent "$agent" --format json --auto --title "$title" \
-      "$prompt" > "$events" 2> "$stderr_log" &
-  fi
+run_model_call() {
+  local agent="$1" events="$2" prompt="$3" started status
+  : > "$events"
+  "$OPENCODE_BIN" run --dir "$PROJECT" --agent "$agent" --format json --auto "$prompt" > "$events" &
   RUN_PID=$!
-  started="$SECONDS"
+  started=$SECONDS
+
   while kill -0 "$RUN_PID" 2>/dev/null; do
-    elapsed=$((SECONDS - started))
-    if [ "$elapsed" -ge "$TIMEOUT_SECONDS" ]; then
-      terminate_run "$RUN_PID"
-      RUN_PID=""
-      fail "$title timed out after ${TIMEOUT_SECONDS}s"
-      return 1
+    if ((SECONDS - started >= TIMEOUT_SECONDS)); then
+      terminate_active_run
+      fail "$agent model call timed out after ${TIMEOUT_SECONDS}s"
     fi
-    sleep "$POLL_SECONDS"
+    sleep "$POLL_INTERVAL_SECONDS"
   done
-  wait "$RUN_PID"
-  status=$?
+
+  if wait "$RUN_PID"; then status=0; else status=$?; fi
   RUN_PID=""
-  [ "$status" -eq 0 ] || { fail "$title exited with status $status"; return 1; }
-  return 0
+  [ "$status" -eq 0 ] || fail "$agent model call exited with status $status"
+  [ -s "$events" ] || fail "$agent model call returned no events: $events"
 }
 
-session_id_from_events() {
-  jq -rs '[.[] | .sessionID // .part.sessionID // empty] | map(select(length > 0)) | first // empty' "$1"
+[ "${MULTI_PRIMARY_E2E_CONFIRM:-}" = run-exactly-one-paid-workflow ] || {
+  printf 'ERROR: set MULTI_PRIMARY_E2E_CONFIRM=run-exactly-one-paid-workflow\n' >&2
+  exit 2
 }
+[ -x "${OPENCODE_BIN:-}" ] || { printf 'ERROR: OPENCODE_BIN is required\n' >&2; exit 2; }
 
-assert_session_id() {
-  [[ "$1" =~ ^ses_[A-Za-z0-9]+$ ]] || die "could not extract a safe OpenCode session id"
-}
-
-write_session_tree() {
-  local root_id="$1" target="$2"
-  assert_session_id "$root_id"
-  sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id,agent,title,time_created,time_updated,tokens_input,tokens_output,tokens_reasoning,tokens_cache_read,cost) AS (
-       SELECT id,parent_id,agent,title,time_created,time_updated,tokens_input,tokens_output,tokens_reasoning,tokens_cache_read,cost
-       FROM session WHERE id='$root_id'
-       UNION ALL
-       SELECT s.id,s.parent_id,s.agent,s.title,s.time_created,s.time_updated,s.tokens_input,s.tokens_output,s.tokens_reasoning,s.tokens_cache_read,s.cost
-       FROM session s JOIN tree t ON s.parent_id=t.id
-     )
-     SELECT * FROM tree ORDER BY time_created,id;" > "$target"
-}
-
-tree_has_agent() {
-  awk -F '\t' -v agent="$2" 'NR > 1 && $3 == agent { found=1 } END { exit found ? 0 : 1 }' "$1"
-}
-
-assert_tree_has() {
-  tree_has_agent "$1" "$2" || fail "session tree is missing agent $2"
-}
-
-assert_turn_agent() {
-  local events="$1" agent="$2"
-  jq -e --arg agent "$agent" '.. | objects | select(.agent? == $agent)' "$events" >/dev/null ||
-    fail "turn did not run as direct primary $agent"
-}
-
-assert_tree_lacks() {
-  ! tree_has_agent "$1" "$2" || fail "session tree unexpectedly contains agent $2"
-}
-
-export_tree() {
-  local tree="$1" target="$2" id
-  mkdir -p "$target"
-  tail -n +2 "$tree" | while IFS=$'\t' read -r id _; do
-    [ -n "$id" ] || continue
-    "$OPENCODE_BIN" export --sanitize "$id" > "$target/$id.json" 2> "$target/$id.stderr" ||
-      fail "could not export session $id"
-  done
-}
-
-write_usage() {
-  local tree="$1" target="$2"
-  awk -F '\t' '
-    NR > 1 {
-      input += $7; output += $8; reasoning += $9; cache += $10; cost += $11
-    }
-    END {
-      printf "sessions\t%d\ninput_tokens\t%d\noutput_tokens\t%d\nreasoning_tokens\t%d\ncache_read_tokens\t%d\ncost\t%.8f\n", NR-1, input, output, reasoning, cache, cost
-    }
-  ' "$tree" > "$target"
-}
-
-write_skill_calls() {
-  local root_id="$1" target="$2"
-  assert_session_id "$root_id"
-  sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id) AS (
-       SELECT id,parent_id FROM session WHERE id='$root_id'
-       UNION ALL
-       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
-     )
-     SELECT json_extract(m.data,'$.agent') AS agent,
-            json_extract(p.data,'$.state.input.name') AS skill,
-            json_extract(p.data,'$.state.status') AS status
-     FROM part p
-     JOIN tree t ON p.session_id=t.id
-     JOIN message m ON p.message_id=m.id
-     WHERE json_extract(p.data,'$.tool')='skill'
-     ORDER BY p.time_created,p.id;" > "$target"
-}
-
-write_direct_skill_body_reads() {
-  local root_id="$1" target="$2"
-  assert_session_id "$root_id"
-  sqlite3 -header -separator $'\t' "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id) AS (
-       SELECT id,parent_id FROM session WHERE id='$root_id'
-       UNION ALL
-       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
-     )
-     SELECT json_extract(m.data,'$.agent') AS agent,
-            json_extract(p.data,'$.state.input.filePath') AS path,
-            json_extract(p.data,'$.state.status') AS status
-     FROM part p
-     JOIN tree t ON p.session_id=t.id
-     JOIN message m ON p.message_id=m.id
-     WHERE json_extract(p.data,'$.tool')='read'
-       AND json_extract(p.data,'$.state.input.filePath') GLOB '*/skills/*/SKILL.md'
-     ORDER BY p.time_created,p.id;" > "$target"
-}
-
-write_task_briefs() {
-  local root_id="$1" target="$2"
-  assert_session_id "$root_id"
-  sqlite3 -json "$DATABASE" \
-    "WITH RECURSIVE tree(id,parent_id) AS (
-       SELECT id,parent_id FROM session WHERE id='$root_id'
-       UNION ALL
-       SELECT s.id,s.parent_id FROM session s JOIN tree t ON s.parent_id=t.id
-     )
-     SELECT json_extract(m.data,'$.agent') AS agent,
-            json_extract(p.data,'$.state.input.subagent_type') AS subagent,
-            json_extract(p.data,'$.state.input.prompt') AS prompt
-     FROM part p
-     JOIN tree t ON p.session_id=t.id
-     JOIN message m ON p.message_id=m.id
-     WHERE json_extract(p.data,'$.tool')='task'
-     ORDER BY p.time_created,p.id;" > "$target"
-}
-
-assert_skill_call() {
-  local calls="$1" agent="$2" skill="$3"
-  awk -F '\t' -v agent="$agent" -v skill="$skill" \
-    'NR > 1 && $1 == agent && $2 == skill && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$calls" ||
-    fail "$agent did not load $skill"
-}
-
-assert_no_skill_call() {
-  local calls="$1" agent="$2" skill="$3"
-  ! awk -F '\t' -v agent="$agent" -v skill="$skill" \
-    'NR > 1 && $1 == agent && $2 == skill && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$calls" ||
-    fail "$agent unexpectedly loaded implementation skill $skill"
-}
-
-assert_no_direct_skill_body_read() {
-  local reads="$1" agent="$2"
-  ! awk -F '\t' -v agent="$agent" \
-    'NR > 1 && $1 == agent && $3 == "completed" { found=1 } END { exit found ? 0 : 1 }' "$reads" ||
-    fail "$agent bypassed its skill allowlist with a direct SKILL.md read"
-}
-
-assert_every_work_group_has_skills() {
-  local change="$1"
-  awk '
-    /^## Work[[:space:]]*$/ { work=1; next }
-    work && /^## / { work=0 }
-    work && /^### / { groups++ }
-    work && /^Skills: / {
-      skills++
-      value=$0
-      sub(/^Skills: /, "", value)
-      if (value == "none") next
-      count=split(value, names, /,[[:space:]]*/)
-      if (count > 3) invalid=1
-      for (i=1; i<=count; i++) {
-        if (names[i] !~ /^(code-conventions|java-testing|behavior-characterization|legacy-code-safety|systematic-debugging|cognitive-doc-design)$/) invalid=1
-      }
-    }
-    END { exit groups > 0 && groups == skills && !invalid ? 0 : 1 }
-  ' "$change" || fail "$change does not declare Skills for every Work group"
-}
-
-assert_maven_green() {
-  local project="$1" target="$2"
-  (cd "$project" && mvn -q test) > "$target" 2>&1 || fail "Maven verification failed for $project"
-}
-
-run_plan_sdd_workflow() {
-  local project="$SCRATCH/plan-project" evidence="$EVIDENCE_ROOT/plan-sdd"
-  local plan_events="$evidence/01-plan.events.jsonl"
-  local execute_events="$evidence/02-execute.events.jsonl"
-  local root_id change_dir change_rel change archived tree_before="$evidence/session-tree-before.tsv"
-  local tree_after="$evidence/session-tree-after.tsv" agent
-
-  log "E2E: natural Deep Plan -> same-session SDD"
-  copy_fixture "$project"
-  install_profile plan-sdd "$project"
-  assert_maven_green "$project" "$evidence/maven-baseline.log" || return 1
-
-  run_turn "$project" "$plan_events" "$evidence/01-plan.stderr" \
-    "multi-primary E2E plan and execute" \
-    "Quiero planificar a fondo, sin implementar todavía, un cambio acotado: agrega a Order un método público lineCount() que devuelva exactamente el número de líneas de la orden y una prueba automatizada. Produce un único change.md ejecutable, no un roadmap ni una investigación. Conserva las convenciones Java y JUnit existentes; no hay decisiones de producto abiertas, no cambies precios ni cantidades y usa la recomendación segura para cualquier detalle menor." \
-    deep-planner || return 1
-
-  root_id="$(session_id_from_events "$plan_events")"
-  assert_session_id "$root_id"
-  printf '%s\n' "$root_id" > "$evidence/root-session-id.txt"
-  write_session_tree "$root_id" "$tree_before"
-  assert_tree_has "$tree_before" deep-planner || return 1
-  assert_turn_agent "$plan_events" deep-planner || return 1
-  assert_tree_lacks "$tree_before" orchestraitor || return 1
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_tree_lacks "$tree_before" "$agent" || return 1
-  done
-
-  change_dir="$(find "$project/.ai/deep-planner/changes" -mindepth 1 -maxdepth 1 -type d ! -name archive -print -quit 2>/dev/null)"
-  [ -n "$change_dir" ] || { fail "Deep Plan produced no active producer change"; return 1; }
-  change_rel="${change_dir#"$project/"}"
-  change="$(basename "$change_dir")"
-  printf '%s\n' "$change_rel" > "$evidence/change-before-path.txt"
-  [ -f "$change_dir/change.md" ] || { fail "producer change is missing change.md"; return 1; }
-  for path in proposal.md design.md tasks.md specs; do
-    [ ! -e "$change_dir/$path" ] || { fail "producer change retains retired $path"; return 1; }
-  done
-  head -n 1 "$change_dir/change.md" | grep -Fxq 'Status: ready-for-sdd | Source: deep-planner' ||
-    { fail "producer marker is invalid"; return 1; }
-  grep -Fq '## Behavior' "$change_dir/change.md" || { fail "change.md has no Behavior section"; return 1; }
-  grep -Fq '## Work' "$change_dir/change.md" || { fail "change.md has no Work section"; return 1; }
-  assert_every_work_group_has_skills "$change_dir/change.md" || return 1
-  grep -Fq 'Skills: code-conventions' "$change_dir/change.md" ||
-    { fail "change.md has no code-conventions selection"; return 1; }
-  grep -Fq 'java-testing' "$change_dir/change.md" ||
-    { fail "change.md has no java-testing selection"; return 1; }
-  write_skill_calls "$root_id" "$evidence/skill-calls-before.tsv"
-  write_direct_skill_body_reads "$root_id" "$evidence/direct-skill-body-reads-before.tsv"
-  assert_skill_call "$evidence/skill-calls-before.tsv" deep-planner sdd-execution-skills || return 1
-  assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner code-conventions || return 1
-  assert_no_skill_call "$evidence/skill-calls-before.tsv" deep-planner java-testing || return 1
-  assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-before.tsv" deep-planner || return 1
-  (cd "$project" && find "$change_rel" -type f -print0 | sort -z | xargs -0 shasum -a 256) \
-    > "$evidence/change-before.sha256"
-  (
-    cd "$project" || exit 1
-    git status --porcelain --untracked-files=all |
-      awk '$2 !~ /^\.ai\// && $2 !~ /^\.opencode\//'
-  ) > "$evidence/non-planning-status-before-execute.txt"
-  [ ! -s "$evidence/non-planning-status-before-execute.txt" ] ||
-    { fail "Deep Plan changed files outside planning/profile state"; return 1; }
-
-  run_turn "$project" "$execute_events" "$evidence/02-execute.stderr" \
-    "multi-primary E2E plan and execute" \
-    "operation=execute-handoff. Implementa mediante SDD exactamente $change_rel. Reutiliza ese handoff y no vuelvas a redactarlo. Usa Mode automatic, TDD alongside, Judgment none y Delivery none." \
-    orchestraitor \
-    "$root_id" || return 1
-
-  [ "$(session_id_from_events "$execute_events")" = "$root_id" ] ||
-    { fail "the SDD turn did not continue the same primary session"; return 1; }
-  write_session_tree "$root_id" "$tree_after"
-  export_tree "$tree_after" "$evidence/sessions"
-  write_usage "$tree_after" "$evidence/usage.tsv"
-  write_skill_calls "$root_id" "$evidence/skill-calls-after.tsv"
-  write_direct_skill_body_reads "$root_id" "$evidence/direct-skill-body-reads-after.tsv"
-  write_task_briefs "$root_id" "$evidence/task-briefs.json"
-  assert_turn_agent "$execute_events" orchestraitor || return 1
-  # OpenCode updates the root session's agent on a direct primary switch, so
-  # part-derived evidence uses each message's agent instead of the session label.
-  for agent in orchestraitor sdd-canonical-merge sdd-implement sdd-verify; do
-    assert_tree_has "$tree_after" "$agent" || return 1
-  done
-
-  for agent in sdd-proposal sdd-spec sdd-design sdd-tasks; do
-    assert_tree_lacks "$tree_after" "$agent" || return 1
-  done
-
-  assert_skill_call "$evidence/skill-calls-after.tsv" orchestraitor sdd-execution-skills || return 1
-  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement code-conventions || return 1
-  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-implement java-testing || return 1
-  assert_skill_call "$evidence/skill-calls-after.tsv" sdd-verify sdd-cold-verification || return 1
-  for agent in deep-planner orchestraitor; do
-    assert_no_direct_skill_body_read "$evidence/direct-skill-body-reads-after.tsv" "$agent" || return 1
-  done
-  jq -e 'any(.[]; .subagent == "sdd-implement" and (.prompt | contains("skills=") and contains("code-conventions") and contains("java-testing")))' \
-    "$evidence/task-briefs.json" >/dev/null ||
-    { fail "no implementation brief passed routed code/test skills"; return 1; }
-  jq -e 'any(.[]; .subagent == "sdd-canonical-merge" and (.prompt | contains("skills=none")))' \
-    "$evidence/task-briefs.json" >/dev/null ||
-    { fail "canonical merge brief did not pass skills=none"; return 1; }
-
-  archived="$(find "$project/.ai/deep-planner/changes/archive" -mindepth 1 -maxdepth 1 -type d -name "*-$change" -print -quit 2>/dev/null)"
-  [ -n "$archived" ] || { fail "executed change was not archived under its producer root"; return 1; }
-  [ ! -e "$project/.ai/orchestrator/changes/$change" ] ||
-    { fail "producer change was copied into the direct-SDD root"; return 1; }
-  grep -Rq 'lineCount' "$project/src/main" || { fail "lineCount was not implemented"; return 1; }
-  grep -Rq 'lineCount' "$project/src/test" || { fail "lineCount has no test"; return 1; }
-  grep -Rq 'lineCount' "$project/.ai/orchestrator/specs" || { fail "lineCount was not merged into canonical specs"; return 1; }
-  assert_maven_green "$project" "$evidence/maven-test.log" || return 1
-
-  printf '%s\n' "${archived#"$project/"}" > "$evidence/change-after-path.txt"
-  log "PASS E2E: session $root_id, change ${archived#"$project/"}"
-}
-
-[ "${MULTI_PRIMARY_E2E_CONFIRM:-}" = "run-exactly-one-paid-workflow" ] ||
-  die "set MULTI_PRIMARY_E2E_CONFIRM=run-exactly-one-paid-workflow to authorize the paid E2E run"
-[ -n "$OPENCODE_BIN" ] || die "OPENCODE_BIN is required"
-[ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
-[ -f "$FIXTURE/pom.xml" ] || die "fixture is missing at $FIXTURE"
-[ -f "$DATABASE" ] || die "OpenCode database is missing at $DATABASE"
-for command in git jq mvn python3 shasum sqlite3; do
-  command -v "$command" >/dev/null 2>&1 || die "$command is required"
-done
-[ ! -e "$EVIDENCE_ROOT" ] || die "evidence destination already exists: $EVIDENCE_ROOT"
-
-mkdir -p "$EVIDENCE_ROOT"
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/multi-primary-e2e.XXXXXX")"
-{
-  printf 'started_utc\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  printf 'repository_head\t%s\n' "$(git -C "$ROOT" rev-parse HEAD)"
-  printf 'opencode_version\t%s\n' "$($OPENCODE_BIN --version)"
-  printf 'evidence_root\t%s\n' "$EVIDENCE_ROOT"
-  printf 'paid_workflows\t1\n'
-  printf 'retry_policy\tnone\n'
-} > "$EVIDENCE_ROOT/run-metadata.tsv"
+PROJECT="$SCRATCH/project"
+mkdir -p "$PROJECT"
+cp "$FIXTURE/pom.xml" "$FIXTURE/.gitignore" "$PROJECT/"
+cp -R "$FIXTURE/src" "$PROJECT/src"
 
-bash "$ROOT/scripts/test-primary-agent-contracts.sh" > "$EVIDENCE_ROOT/contracts.log" 2>&1 ||
-  die "deterministic primary contracts failed"
-bash "$ROOT/scripts/test-multi-primary-profile.sh" > "$EVIDENCE_ROOT/profile-contracts.log" 2>&1 ||
-  die "deterministic profile contracts failed"
+(
+  cd "$PROJECT"
+  git init -q -b main
+  git add -A
+  GIT_AUTHOR_NAME=multi-primary GIT_AUTHOR_EMAIL=e2e@example.invalid \
+    GIT_COMMITTER_NAME=multi-primary GIT_COMMITTER_EMAIL=e2e@example.invalid \
+    git commit -qm 'fixture baseline'
+)
 
-run_plan_sdd_workflow || true
+OPENCODE_BIN="$OPENCODE_BIN" \
+  "$PROFILE" install --project-root "$PROJECT" --no-install-brew-tools \
+  > "$SCRATCH/profile-install.log" 2>&1 || {
+    printf 'FAIL: current checkout profile install failed; see %s\n' "$SCRATCH/profile-install.log" >&2
+    exit 1
+  }
 
-if [ "$CALLS" -ne 2 ]; then
-  fail "expected two OpenCode turns in one workflow, observed $CALLS"
-fi
-if [ "$FAILURES" -gt 0 ]; then
-  printf 'FAIL: %d finding(s); evidence preserved at %s\n' "$FAILURES" "$EVIDENCE_ROOT" >&2
-  exit 1
-fi
+run_model_call deep-planner "$SCRATCH/plan.events.jsonl" \
+  'Create one execution plan for adding Order.lineCount() with focused coverage. This is localized and has no open product decisions.'
 
-printf 'PASS: exactly 1 paid multi-primary workflow, 2 turns, 0 retries.\n'
-printf 'Evidence: %s\n' "$EVIDENCE_ROOT"
+PLAN="$(find "$PROJECT/.ai/deep-planner/plans" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print -quit)"
+[ -n "$PLAN" ] || { printf 'FAIL: Deep Plan produced no plan\n' >&2; exit 1; }
+BEFORE="$(shasum -a 256 "$PLAN" | awk '{print $1}')"
+RELATIVE_PLAN="${PLAN#"$PROJECT/"}"
+
+run_model_call orchestraitor "$SCRATCH/execute.events.jsonl" \
+  "ejecuta el plan $RELATIVE_PLAN"
+
+AFTER="$(shasum -a 256 "$PLAN" | awk '{print $1}')"
+[ "$BEFORE" = "$AFTER" ] || { printf 'FAIL: source plan changed\n' >&2; exit 1; }
+[ ! -e "$PROJECT/.ai/orchestration/runs" ] || { printf 'FAIL: localized plan created SDD state\n' >&2; exit 1; }
+grep -Rq 'lineCount' "$PROJECT/src/main" || { printf 'FAIL: lineCount was not implemented\n' >&2; exit 1; }
+grep -Rq 'lineCount' "$PROJECT/src/test" || { printf 'FAIL: lineCount has no test\n' >&2; exit 1; }
+(cd "$PROJECT" && mvn -q -o test)
+
+printf 'PASS: Deep Plan and direct Orchestraitor E2E\n'

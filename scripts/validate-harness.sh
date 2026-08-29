@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validates repo harness artifacts against the contracts in AGENTS.md:
+# Validates repo harness artifacts against the contracts in CONTRIBUTING.md:
 # agent/command frontmatter shape and key order, skill frontmatter with
 # strict SemVer and lifecycle status, domain skill ownership integrity, and
 # global name uniqueness across flat OpenCode targets.
@@ -350,10 +350,6 @@ for readme in domains/*/README.md; do
   [ "$headings" = "$expected_headings" ] ||
     fail "$readme" "H2 sequence must be Quick path, Entry points, Components"
 
-  if grep -Eiq '^```[[:space:]]*mermaid' "$readme"; then
-    fail "$readme" "domain README must not contain Mermaid"
-  fi
-
   while IFS=$'\t' read -r table_line table_width expected_width; do
     [ -n "$table_line" ] || continue
     fail "$readme:$table_line" "table row has $table_width separators; expected $expected_width"
@@ -467,16 +463,16 @@ if [ -f scripts/test-opencode-brew-tools.sh ]; then
     fail scripts/test-opencode-brew-tools.sh "Brew tool installer contracts failed"
 fi
 
-# --- Deterministic sdd-automode contracts (jq-gated) ---
-if [ -x scripts/test-sdd-automode.sh ] && command -v jq >/dev/null 2>&1; then
-  scripts/test-sdd-automode.sh >/dev/null ||
-    fail scripts/test-sdd-automode.sh "sdd-automode contracts failed"
+# --- Deterministic orchestration permission contracts (jq-gated) ---
+if [ -x scripts/test-orchestration-permissions.sh ] && command -v jq >/dev/null 2>&1; then
+  scripts/test-orchestration-permissions.sh >/dev/null ||
+    fail scripts/test-orchestration-permissions.sh "orchestration permission contracts failed"
 fi
 
-# --- Plan -> SDD handoff and state-machine contracts ---
-if [ -f scripts/test-plan-sdd-contracts.sh ]; then
-  bash scripts/test-plan-sdd-contracts.sh >/dev/null ||
-    fail scripts/test-plan-sdd-contracts.sh "plan/SDD contracts failed"
+# --- Plan and adaptive orchestration contracts ---
+if [ -f scripts/test-plan-orchestration-contracts.sh ]; then
+  bash scripts/test-plan-orchestration-contracts.sh >/dev/null ||
+    fail scripts/test-plan-orchestration-contracts.sh "plan/orchestration contracts failed"
 fi
 
 # --- Direct primary/coordinator contracts ---

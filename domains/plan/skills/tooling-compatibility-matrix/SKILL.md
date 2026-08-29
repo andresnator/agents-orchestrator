@@ -6,12 +6,12 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.1.0"
+  version: "1.1.1"
   status: testing
 ---
 
 # Tooling Compatibility Matrix
-Offline baseline for `/harden-plan` and high/critical `/refactor-plan` tooling recommendations. This skill never fetches versions. Every emitted version must include `verify-latest-at-execution: true` and an executor task to verify the chosen version is current and CVE-free before installation.
+Offline baseline for hardening and high or critical refactor tooling recommendations. This skill never fetches versions. Every emitted version must include `verify-latest-at-execution: true` and an executor task to verify that the chosen version is current and CVE-free before installation.
 
 ## Standing rules
 

@@ -1,6 +1,6 @@
 # Dependency-Breaking Catalog (WELC)
 
-Techniques from *Working Effectively with Legacy Code* (Feathers, ch. 9, 19, 25) for getting untested code into a test harness. These are testability moves, not design refactorings: they may leave scars that later `/refactor-plan` work cleans up. Always pick the least invasive technique that lets a test run.
+Techniques from *Working Effectively with Legacy Code* (Feathers, ch. 9, 19, 25) for getting untested code into a test harness. These are testability moves, not design refactorings: they may leave scars that later Deep Plan work cleans up. Always pick the least invasive technique that lets a test run.
 
 ## Four strategies
 
@@ -38,4 +38,4 @@ When the class cannot even be constructed in a test harness (WELC ch. 9):
 
 ## Relationship to the design catalog
 
-The `refactor` skill's Fowler/Shvets catalog covers design-improving refactorings performed *with* tests; this catalog covers dependency-breaking performed *to get* tests. In a hardening plan, techniques here appear in the minimal-seams task group; the design refactorings come later, in a separate `/refactor-plan` on the hardened code.
+The `refactor` skill's Fowler/Shvets catalog covers design-improving refactorings performed *with* tests; this catalog covers dependency-breaking performed *to get* tests. In one execution plan, these techniques appear in a prerequisite minimal-seams group before design refactoring begins.
