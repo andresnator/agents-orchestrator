@@ -84,7 +84,8 @@ review=domains/review/agents/review-coordinator.md
 planner_edit_scope='    "*": deny
     ".ai/**": allow'
 planner_bash_scope='    "*": deny
-    "mkdir -p .ai/*": allow
+    "mkdir -p .ai/deep-planner/discoveries": allow
+    "mkdir -p .ai/deep-planner/plans": allow
     "git log*": allow
     "git blame*": allow
     "git shortlog*": allow'
@@ -100,9 +101,9 @@ assert_contains "$planner" 'normal chat, one at a time'
 assert_permission_rule_block "$planner" edit "$planner_edit_scope"
 assert_permission_rule_block "$planner" bash "$planner_bash_scope"
 assert_frontmatter_not_contains "$planner" '  write:'
-assert_contains "$planner" 'Before writing, create its parent directory with `mkdir -p` and exactly one normalized relative path under `.ai/`.'
-assert_contains "$planner" 'Never use `..`, an absolute path, multiple destinations, shell expansions, redirections, or chained commands.'
-assert_contains "$planner" 'Choose only the Wayfinder and Deep Plan paths below; use any other `.ai/**` path only when the user provides that exact path explicitly.'
+assert_contains "$planner" 'Before writing a Wayfinder or Deep Plan artifact, create its parent with exactly one of these commands: `mkdir -p .ai/deep-planner/discoveries` or `mkdir -p .ai/deep-planner/plans`.'
+assert_contains "$planner" 'Do not alter or combine them.'
+assert_contains "$planner" 'Choose only the Wayfinder and Deep Plan paths below; use any other `.ai/**` path only when the user provides that exact path explicitly and its parent already exists.'
 assert_contains "$planner" 'one `.ai/deep-planner/discoveries/<slug>.md`'
 assert_contains "$planner" 'one `.ai/deep-planner/plans/<slug>.md`'
 assert_contains "$orchestraitor" 'A change request uses direct execution.'
