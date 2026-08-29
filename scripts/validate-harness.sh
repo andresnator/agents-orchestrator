@@ -166,13 +166,7 @@ if command -v jq >/dev/null 2>&1; then
         .source == "npm" and
         (.package | type == "string" and test("^(@[A-Za-z0-9_.-]+/)?[A-Za-z0-9_.-]+$")) and
         (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
-        (if $kind == "tui" then
-          (.profileSource | type == "string" and length > 0 and
-            (startswith("/") | not) and (split("/") | all(. != ".."))) and
-          ([keys[]] - ["kind", "name", "package", "profileSource", "schemaVersion", "source", "version"] | length == 0)
-        else
-          ([keys[]] - ["kind", "name", "package", "schemaVersion", "source", "version"] | length == 0)
-        end)
+        ([keys[]] - ["kind", "name", "package", "schemaVersion", "source", "version"] | length == 0)
       ' "$f" >/dev/null 2>&1 || fail "$f" "invalid npm plugin descriptor"
     else
       jq -e --arg name "$expected_name" --arg kind "$expected_kind" '

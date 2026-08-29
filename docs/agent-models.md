@@ -8,7 +8,7 @@ Repository agents never hardcode `model:`. Users assign providers, models, and v
 2. Open `/models-profiles` in OpenCode.
 3. Choose a scope, review the diff, and save.
 
-Project config overrides global config. Reinstall after changing repository profiles because the installer copies them into the selected OpenCode target.
+Project config overrides global config. The tier table below is manual guidance; the repository does not install it as a selectable profile.
 
 ## Tier guidance
 
@@ -55,17 +55,17 @@ Model syntax is `provider_id/model_id`; `variant` is a separate key. Removing bo
 
 ## Configurator behavior
 
-The installer registers the exact package version from the npm descriptor. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, an abstract profile, or a saved preset, and shows `agent: before -> after` before writing.
+The installer registers the exact package version from the npm descriptor. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before writing. Because no profile directory is supplied, the configurator does not show a Profiles section.
 
 Writes preserve JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections abort. Supported changes hot-apply to the connected server; other OpenCode processes may need a restart. See [hot reload](hot-reload.md).
 
-Abstract profiles live under repository `profiles/`, contain no concrete model ids, and are copied to `<target>/model-profiles/opencode-models-presets`. Concrete presets are user state at `~/.config/opencode/model-configurator-presets.json`.
+Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`; the repository does not ship or copy model profiles.
 
-Uninstall removes only the manifest-owned npm registration and profile snapshots. It preserves OpenCode's package cache, concrete presets, agent assignments, and foreign `tui.json` entries.
+Uninstall removes only the manifest-owned npm registration. It preserves OpenCode's package cache, saved presets, agent assignments, and foreign `tui.json` entries.
 
 ## Troubleshooting
 
 - Missing agent: install its domain and reopen the configurator.
 - Missing model: authenticate its provider and refresh the live catalog.
 - Assignment unchanged: check project overrides and restart other OpenCode processes.
-- Updated plugin or profile missing: run the installer again.
+- Updated plugin missing: run the installer again.

@@ -152,7 +152,6 @@ assert_contains "$recorder" 'BLOCK reason=<short>'
 assert_contains "$recorder" 'FAIL changed=<csv> reason=<short>'
 
 assert_contains domains/learning/README.md '| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |'
-assert_contains profiles/default.json '"agents": ["english-tutor", "learning-recorder"]'
 assert_contains docs/agent-models.md 'Assign `learning-recorder` individually with `/models-profiles`'
 assert_frontmatter_contains domains/learning/commands/english.md 'agent: english-tutor'
 assert_frontmatter_contains domains/learning/commands/english.md 'subtask: true'

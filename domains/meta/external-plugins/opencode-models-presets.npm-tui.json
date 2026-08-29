@@ -4,6 +4,5 @@
   "kind": "tui",
   "source": "npm",
   "package": "opencode-models-presets",
-  "version": "0.3.2",
-  "profileSource": "profiles"
+  "version": "0.3.2"
 }

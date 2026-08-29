@@ -9,7 +9,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET=""
 OPENCODE_CONFIG_FILE=""
 MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
-MODEL_PROFILES_DIR="model-profiles"
 RETIRED_MODEL_TUI_SPECS="./plugins/model-configurator/tui.js ./plugins/model-configurator.tsx"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 BREW_TOOLS_CATALOG="$SCRIPT_DIR/brew-tools.tsv"
@@ -30,8 +29,7 @@ Actions:
               components are symlinked; external plugin bundles are downloaded
               from commit-pinned GitHub sources and SHA-256 verified. npm server
               and TUI plugins are registered by exact package version in the
-              matching OpenCode config. TUI plugins may also install managed
-              profile snapshots.
+              matching OpenCode config.
               Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
               regardless of --domain/--status filters. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
@@ -139,15 +137,14 @@ runtime_ensure_dirs() {
   ensure_dir "$TARGET/plugins" "$1"
 }
 
-# File plugin types install into OpenCode's plugin folder. npm server plugins
-# register in the precedence-resolved OpenCode config, while npm TUI plugins
-# keep repository-owned profile snapshots in a stable target-relative directory.
+# File plugin types install into OpenCode's plugin folder. npm plugins register
+# in the matching OpenCode config.
 runtime_dest() {
   case "$1" in
     external-server-plugins) DEST_PATH="$TARGET/plugins/$2.js" ;;
     external-tui-plugins) DEST_PATH="$TARGET/plugins/$2/tui.js" ;;
     npm-server-plugins) DEST_PATH="$OPENCODE_CONFIG_FILE" ;;
-    npm-tui-plugins) DEST_PATH="$TARGET/$MODEL_PROFILES_DIR/$2" ;;
+    npm-tui-plugins) DEST_PATH="$TARGET/tui.json" ;;
     tui-plugins) DEST_PATH="$TARGET/plugins/$2" ;;
     *) DEST_PATH="$TARGET/$1/$2" ;;
   esac
@@ -198,9 +195,7 @@ validate_npm_tui_descriptor() {
     .source == "npm" and
     (.package | type == "string" and test("^(@[A-Za-z0-9_.-]+/)?[A-Za-z0-9_.-]+$")) and
     (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
-    (.profileSource | type == "string" and length > 0 and
-      (startswith("/") | not) and (split("/") | all(. != ".."))) and
-    ([keys[]] - ["kind", "name", "package", "profileSource", "schemaVersion", "source", "version"] | length == 0)
+    ([keys[]] - ["kind", "name", "package", "schemaVersion", "source", "version"] | length == 0)
   ' "$descriptor" >/dev/null 2>&1 || die "$descriptor: invalid npm TUI plugin descriptor"
 }
 
@@ -226,12 +221,6 @@ validate_npm_server_descriptor() {
     (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
     ([keys[]] - ["kind", "name", "package", "schemaVersion", "source", "version"] | length == 0)
   ' "$descriptor" >/dev/null 2>&1 || die "$descriptor: invalid npm server plugin descriptor"
-}
-
-npm_tui_entry() {
-  local descriptor="$1" profiles_dest="$2" spec
-  spec="$(npm_plugin_spec "$descriptor")"
-  jq -cn --arg spec "$spec" --arg profilesDir "$profiles_dest" '[$spec, {profilesDir: $profilesDir}]'
 }
 
 sha256_file() {
@@ -351,28 +340,6 @@ install_external_tui_profiles() {
   done
 }
 
-install_npm_tui_profiles() {
-  local descriptor="$1" profiles_dest="$2" manifest="$3" profile_source profile
-  profile_source="$(external_descriptor_field "$descriptor" profileSource)"
-  prepare_tui_directory "$(dirname "$profiles_dest")" "$manifest"
-  prepare_tui_directory "$profiles_dest" "$manifest"
-  for profile in "$REPO_ROOT/$profile_source"/*.json; do
-    [ -f "$profile" ] || continue
-    install_tui_source "$profile" "$profiles_dest/$(basename "$profile")" "$manifest"
-  done
-}
-
-npm_tui_profiles_state() {
-  local descriptor="$1" profiles_dest="$2" profile_source profile support_state state="installed"
-  profile_source="$(external_descriptor_field "$descriptor" profileSource)"
-  for profile in "$REPO_ROOT/$profile_source"/*.json; do
-    [ -f "$profile" ] || continue
-    support_state="$(file_state "$profile" "$profiles_dest/$(basename "$profile")" copy_source)"
-    [ "$support_state" = "generated" ] || state="$support_state"
-  done
-  printf '%s' "$state"
-}
-
 tui_spec_for_dest() {
   local dest="$1"
   case "$dest" in
@@ -382,7 +349,7 @@ tui_spec_for_dest() {
 }
 
 runtime_install_component() {
-  local type="$1" name="$2" src="$3" dest="$4" manifest="$5" companion support spec package entry legacy_spec
+  local type="$1" name="$2" src="$3" dest="$4" manifest="$5" companion support spec package legacy_spec
   case "$type" in
     external-server-plugins)
       install_external_artifact "$type" "$name" "$src" "$dest" "$manifest"
@@ -411,21 +378,20 @@ runtime_install_component() {
       return 0
       ;;
     npm-tui-plugins)
-      install_npm_tui_profiles "$src" "$dest" "$manifest"
       maybe_fail_install "after-links"
       package="$(npm_plugin_package "$src")"
-      entry="$(npm_tui_entry "$src" "$dest")"
-      if ! managed_array_json_has "$TARGET/tui.json" plugin "$entry" &&
-        managed_array_npm_has "$TARGET/tui.json" plugin "$package"; then
-        remove_managed_npm_entries "$TARGET/tui.json" plugin "$package"
+      spec="$(npm_plugin_spec "$src")"
+      if ! managed_array_has "$dest" plugin "$spec" &&
+        managed_array_npm_has "$dest" plugin "$package"; then
+        remove_managed_npm_entries "$dest" plugin "$package"
       fi
       for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-        if managed_array_has "$TARGET/tui.json" plugin "$legacy_spec" &&
-          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$legacy_spec"; }; then
-          remove_managed_array_entry "$TARGET/tui.json" plugin "$legacy_spec"
+        if managed_array_has "$dest" plugin "$legacy_spec" &&
+          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; }; then
+          remove_managed_array_entry "$dest" plugin "$legacy_spec"
         fi
       done
-      ensure_managed_array_json_entry "$TARGET/tui.json" plugin "$entry" "$manifest"
+      ensure_managed_array_entry "$dest" plugin "$spec" "$manifest"
       maybe_fail_install "after-managed-array"
       return 0
       ;;
@@ -453,7 +419,7 @@ runtime_install_component() {
 
 runtime_component_state() {
   local type="$1" name="$2" src="$3" dest="$4" state companion companion_state compatibility support support_state
-  local profile profile_source profiles_dest spec version package entry
+  local profile profile_source profiles_dest spec version package
 
   if [ "$type" = "npm-server-plugins" ]; then
     if ! command -v jq >/dev/null 2>&1; then
@@ -493,27 +459,16 @@ runtime_component_state() {
     fi
     version="$(external_descriptor_field "$src" version)"
     package="$(npm_plugin_package "$src")"
-    entry="$(npm_tui_entry "$src" "$dest")"
-    companion_state="$(npm_tui_profiles_state "$src" "$dest")"
-    if managed_array_json_has "$TARGET/tui.json" plugin "$entry"; then
-      if [ "$companion_state" = "installed" ]; then
-        compatibility="$(opencode_compatibility)"
-        if [ "$compatibility" = "compatible" ]; then
-          printf 'registered@%s' "$version"
-        else
-          printf 'registered@%s; %s' "$version" "$compatibility"
-        fi
-      elif [ "$companion_state" = "foreign" ]; then
-        printf 'foreign'
+    spec="$(npm_plugin_spec "$src")"
+    if managed_array_has "$dest" plugin "$spec"; then
+      compatibility="$(opencode_compatibility)"
+      if [ "$compatibility" = "compatible" ]; then
+        printf 'registered@%s' "$version"
       else
-        printf 'stale'
+        printf 'registered@%s; %s' "$version" "$compatibility"
       fi
-    elif managed_array_npm_has "$TARGET/tui.json" plugin "$package"; then
+    elif managed_array_npm_has "$dest" plugin "$package"; then
       printf 'foreign'
-    elif [ "$companion_state" = "foreign" ]; then
-      printf 'foreign'
-    elif [ "$companion_state" = "stale" ]; then
-      printf 'stale'
     else
       printf 'not installed'
     fi
@@ -723,7 +678,7 @@ EOF
 
 runtime_pre_install() {
   local selected="$1" type name domain status src dest companion support profile profile_source profiles_dest
-  local package spec entry legacy_spec
+  local package spec legacy_spec
   local has_external=0 has_npm_server=0 has_npm_tui=0 has_npm=0 has_tui=0 has_managed_config=0
   select_brew_tools "$selected"
   awk -F '\t' '$1 == "external-server-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_external=1
@@ -795,28 +750,19 @@ runtime_pre_install() {
         ;;
       npm-tui-plugins)
         validate_npm_tui_descriptor "$name" "$src"
-        profile_source="$(external_descriptor_field "$src" profileSource)"
-        [ -d "$REPO_ROOT/$profile_source" ] || die "$src: profileSource does not exist: $profile_source"
-        preflight_tui_directory "$(dirname "$dest")"
-        preflight_tui_directory "$dest"
-        for profile in "$REPO_ROOT/$profile_source"/*.json; do
-          [ -f "$profile" ] || continue
-          preflight_tui_source "$profile" "$dest/$(basename "$profile")"
-        done
-
         package="$(npm_plugin_package "$src")"
-        entry="$(npm_tui_entry "$src" "$dest")"
-        if ! managed_array_json_has "$TARGET/tui.json" plugin "$entry" &&
-          managed_array_npm_has "$TARGET/tui.json" plugin "$package" &&
+        spec="$(npm_plugin_spec "$src")"
+        if ! managed_array_has "$dest" plugin "$spec" &&
+          managed_array_npm_has "$dest" plugin "$package" &&
           [ "$FORCE" -ne 1 ] &&
-          ! manifest_owns_npm_package "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$package"; then
-          die "$TARGET/tui.json already configures npm package $package; use --force to replace it"
+          ! manifest_owns_npm_package "$OLD_MANIFEST" "$dest" plugin "$package"; then
+          die "$dest already configures npm package $package; use --force to replace it"
         fi
         for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-          if managed_array_has "$TARGET/tui.json" plugin "$legacy_spec" &&
+          if managed_array_has "$dest" plugin "$legacy_spec" &&
             [ "$FORCE" -ne 1 ] &&
-            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$TARGET/tui.json" plugin "$legacy_spec"; then
-            die "$TARGET/tui.json contains foreign legacy Models Presets entry $legacy_spec; remove it or use --force"
+            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; then
+            die "$dest contains foreign legacy Models Presets entry $legacy_spec; remove it or use --force"
           fi
         done
         ;;
@@ -872,9 +818,6 @@ runtime_begin_install() {
     [ -n "$DEST_PATH" ] || continue
     snapshot_install_path "$DEST_PATH"
     case "$type" in
-      npm-tui-plugins)
-        snapshot_install_path "$(dirname "$DEST_PATH")"
-        ;;
       tui-plugins)
         companion="${src%.tsx}"
         [ ! -d "$companion" ] || snapshot_install_path "${DEST_PATH%.tsx}"
