@@ -17,6 +17,16 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 | `/arch-ideate` | Choose a target architecture | ADR and neutral execution plan |
 | `/boundary-inspector` | Inspect one service | Evidence-backed boundary map |
 
+```mermaid
+flowchart LR
+    request[Architecture request] --> architect{Architect operation}
+    architect -->|Map| map[C4-lite documentation]
+    architect -->|Review| review[Ranked risks and fitness functions]
+    architect -->|Ideate| ideate[ADR and execution plan]
+    architect -->|Boundary| boundary[Service boundary report]
+    ideate --> execute[Execute through Orchestraitor]
+```
+
 `architect` executes each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
 
 ## Components
