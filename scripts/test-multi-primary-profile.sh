@@ -599,6 +599,12 @@ shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
       [ -L "$target/skills/$skill" ] || fail "filtered $domain: allowlisted skill is missing: $skill"
     done < <(allowed_skills_for_domain "$domain")
 
+    if [ "$domain" = architecture ]; then
+      [ -L "$target/skills/java-testing" ] || fail "filtered architecture: Java testing handoff is missing"
+      [ "$(readlink "$target/skills/java-testing")" = "$ROOT/skills/java-testing" ] ||
+        fail "filtered architecture: Java testing handoff does not point to the shared body"
+    fi
+
     "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
   done
   pass shouldInstallEveryAllowedSkillWhenFilteringOneDomain

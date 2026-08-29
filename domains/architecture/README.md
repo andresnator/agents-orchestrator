@@ -33,6 +33,7 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 | Skill | `architecture-map` | Creates evidence-backed C4-lite docs |
 | Skill | `architecture-state` | Records verified current architecture |
 | Skill (handoff-only) | `code-conventions` | Names implementation conventions for SDD |
+| Skill (handoff-only) | `java-testing` | Names Java testing guidance for implementation |
 | Skill | `dependency-security-audit` | Audits current dependency evidence |
 | Skill | `design-patterns-pragmatic` | Applies patterns to evidenced forces |
 | Skill | `kiss-yagni` | Rejects speculative architecture complexity |
