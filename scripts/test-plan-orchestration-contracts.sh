@@ -232,7 +232,14 @@ assert_contains "$flow_runner" 'install_current_profile'
 assert_contains "$flow_runner" 'BigDecimal orderSubtotal = order.subtotal();'
 assert_contains "$flow_runner" 'select(.part?.tool == "question")'
 assert_not_contains "$flow_runner" 'no Judgment'
-assert_contains scripts/test-multi-primary-e2e.sh '"$PROFILE" install --project-root "$PROJECT" --no-install-brew-tools'
+paid_flow=scripts/test-multi-primary-e2e.sh
+assert_contains "$paid_flow" '"$PROFILE" install --project-root "$PROJECT" --no-install-brew-tools'
+assert_contains "$paid_flow" 'TIMEOUT_SECONDS="${MULTI_PRIMARY_E2E_TIMEOUT:-2400}"'
+assert_contains "$paid_flow" 'if ((SECONDS - started >= TIMEOUT_SECONDS)); then'
+assert_contains "$paid_flow" 'kill -TERM "$RUN_PID"'
+assert_contains "$paid_flow" 'kill -KILL "$RUN_PID"'
+assert_contains "$paid_flow" 'run_model_call deep-planner "$SCRATCH/plan.events.jsonl"'
+assert_contains "$paid_flow" 'run_model_call orchestraitor "$SCRATCH/execute.events.jsonl"'
 assert_contains docs/orchestration-test-plan.md 'ORCHESTRATION_FLOW_CONFIRM=run-paid-flow'
 
 CHECKS=$((CHECKS + 1))
