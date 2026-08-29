@@ -40,7 +40,7 @@
     "utility": {
       "description": "Cheap utility agents",
       "variant": null,
-      "agents": ["english-tutor"]
+      "agents": ["english-tutor", "learning-recorder"]
     }
   }
 }

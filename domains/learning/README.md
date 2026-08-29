@@ -17,7 +17,7 @@ Durable, multi-session learning and explicit English coaching. Learning remains 
 | `/english <text>` | Request English coaching | Correction, explanation, and practice |
 | `mentor` | Work in a primary learning session | Same routing as `/learn` |
 
-State lives under `.ai/learning/`. The mentor may inspect a repository and ask to run its tests, but never edits learner code. `/english` stores only synthetic gap patterns, and only after explicit opt-in. The optional `recall-calc` plugin provides read-only Leitner date calculations. See the [learning guide](../../docs/learning-domain.md).
+State lives under `.ai/learning/`. The mentor delegates exact state mutations to `learning-recorder`, with scoped direct writes only as failure fallback; it may inspect a repository and ask to run its tests, but never edits learner code. `/english` stores only synthetic gap patterns, and only after explicit opt-in. The optional `recall-calc` plugin provides read-only Leitner date calculations. See the [learning guide](../../docs/learning-domain.md).
 
 ## Components
 
@@ -25,6 +25,7 @@ State lives under `.ai/learning/`. The mentor may inspect a repository and ask t
 |---|---|---|
 | Agent (primary) | `mentor` | Coordinates multi-session learning flows |
 | Agent (subagent) | `english-tutor` | Provides explicit English coaching |
+| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |
 | Command | `/learn` | Routes learning and review modes |
 | Command | `/english` | Routes English correction and practice |
 | Plugin | `recall-calc` | Calculates Leitner dates read-only |
