@@ -33,6 +33,11 @@ assert_frontmatter_contains() {
   frontmatter "$1" | grep -Fq -- "$2" || fail "$1" "frontmatter missing: $2"
 }
 
+assert_frontmatter_not_contains() {
+  CHECKS=$((CHECKS + 1))
+  ! frontmatter "$1" | grep -Fq -- "$2" || fail "$1" "frontmatter retains: $2"
+}
+
 assert_absent() {
   CHECKS=$((CHECKS + 1))
   [ ! -e "$1" ] && [ ! -L "$1" ] || fail "$1" 'retired component remains'
@@ -41,6 +46,35 @@ assert_absent() {
 assert_primary() {
   assert_frontmatter_contains "$1" 'mode: primary'
   assert_frontmatter_contains "$1" 'question: allow'
+}
+
+permission_rule_block() {
+  local file="$1" rule="$2"
+  frontmatter "$file" | awk -v header="  $rule:" '
+    $0 == header { inside = 1; next }
+    inside && /^  [^ ]/ { exit }
+    inside { print }
+  '
+}
+
+assert_permission_rule_block() {
+  local file="$1" rule="$2" expected="$3" actual
+  CHECKS=$((CHECKS + 1))
+  actual="$(permission_rule_block "$file" "$rule")"
+  [ "$actual" = "$expected" ] || fail "$file" "unexpected permission.$rule rules"
+}
+
+permission_keys() {
+  frontmatter "$1" | awk '
+    /^permission:/ { inside = 1; next }
+    inside && /^[^ ]/ { exit }
+    inside && /^  [^ ]/ {
+      key = $0
+      sub(/^  /, "", key)
+      sub(/:.*/, "", key)
+      print key
+    }
+  '
 }
 
 planner=domains/plan/agents/deep-planner.md
@@ -74,6 +108,54 @@ for worker in jd-fix jd-judge-a jd-judge-b jd-solo; do
   assert_frontmatter_contains "$file" 'mode: subagent'
   assert_frontmatter_contains "$file" 'question: deny'
 done
+
+mentor=domains/learning/agents/mentor.md
+recorder=domains/learning/agents/learning-recorder.md
+learning_scope='    "*": deny
+    ".ai/learning/**": allow'
+
+assert_primary "$mentor"
+assert_permission_rule_block "$mentor" edit "$learning_scope"
+assert_permission_rule_block "$mentor" write "$learning_scope"
+assert_permission_rule_block "$mentor" task '    "*": deny
+    learning-recorder: allow'
+assert_frontmatter_not_contains "$mentor" 'general: allow'
+assert_contains "$mentor" 'Before any create, edit, or append, send `learning-recorder`'
+assert_contains "$mentor" 'After each card is graded, immediately send a fresh `learning-recorder` task'
+assert_contains "$mentor" 'Never pass or reuse `task_id`'
+assert_contains "$mentor" 'same checkpoint into one fresh handoff'
+assert_contains "$mentor" 'Do not perform a dedicated verification reread after `OK`'
+assert_contains "$mentor" 'On the first `BLOCK`, `FAIL`, timeout, or task error, do not retry'
+assert_contains "$mentor" 'reconcile any partial changes'
+assert_contains "$mentor" 'tell the learner that direct fallback was used'
+
+assert_frontmatter_contains "$recorder" 'mode: subagent'
+assert_frontmatter_contains "$recorder" 'temperature: 0.1'
+assert_frontmatter_not_contains "$recorder" 'model:'
+assert_frontmatter_contains "$recorder" '  "*": deny'
+assert_permission_rule_block "$recorder" read "$learning_scope"
+assert_permission_rule_block "$recorder" edit "$learning_scope"
+assert_permission_rule_block "$recorder" write "$learning_scope"
+CHECKS=$((CHECKS + 1))
+recorder_permission_keys="$(permission_keys "$recorder")"
+[ "$recorder_permission_keys" = '"*"
+read
+edit
+write
+external_directory' ] ||
+  fail "$recorder" 'effective tool permissions are not limited to read, edit, and write'
+assert_contains "$recorder" 'exact target paths, mutations, complete content, and anchors'
+assert_contains "$recorder" 'Do not calculate dates, cards, grades, progress, or content'
+assert_contains "$recorder" 'Do not infer, explore, ask, explain, run commands, load skills, or delegate'
+assert_contains "$recorder" 'OK files=<csv>'
+assert_contains "$recorder" 'BLOCK reason=<short>'
+assert_contains "$recorder" 'FAIL changed=<csv> reason=<short>'
+
+assert_contains domains/learning/README.md '| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |'
+assert_contains profiles/default.json '"agents": ["english-tutor", "learning-recorder"]'
+assert_contains docs/agent-models.md 'Assign `learning-recorder` individually with `/models-profiles`'
+assert_frontmatter_contains domains/learning/commands/english.md 'agent: english-tutor'
+assert_frontmatter_contains domains/learning/commands/english.md 'subtask: true'
 
 for removed in deep-plan wayfinder refactor-plan harden-plan; do
   assert_absent "domains/plan/commands/$removed.md"

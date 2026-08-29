@@ -21,9 +21,9 @@ Project config overrides global config. Reinstall after changing repository prof
 | Judge A | `jd-judge-a` | Strong model or provider A |
 | Judge B | `jd-judge-b` | Distinct strong model or provider B |
 | Judge solo | `jd-solo` | Fast balanced reviewer |
-| Utility | `english-tutor` | Economical utility model |
+| Utility | `english-tutor`, `learning-recorder` | Economical utility model |
 
-Assign `mentor` separately when installing the `learning` domain. Distinct Judge A and B providers reduce shared blind spots.
+Assign `mentor` separately when installing the `learning` domain. Assign `learning-recorder` individually with `/models-profiles` when it should use a lightweight model; the repository does not choose that model. Distinct Judge A and B providers reduce shared blind spots.
 
 ## Manual configuration
 

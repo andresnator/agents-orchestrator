@@ -62,7 +62,7 @@ Language topics use two waves:
   dialogues/
 ```
 
-The mentor writes only under `.ai/learning/**`. It may read repository files and ask permission to run tests, but never edits learner code. `english-tutor` may only append to an existing language topic after opt-in.
+The mentor delegates each exact state mutation to `learning-recorder`, which can only read, edit, or write under `.ai/learning/**`. If that handoff fails, the mentor reports the failure and uses its equally scoped direct-write fallback without retrying. It may read repository files and ask permission to run tests, but never edits learner code. `english-tutor` remains separate and may only append to an existing language topic after opt-in.
 
 ## Troubleshooting
 
