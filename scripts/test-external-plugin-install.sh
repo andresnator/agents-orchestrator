@@ -10,9 +10,9 @@ TUI_VERSION="0.3.2"
 TUI_SPEC="$TUI_PACKAGE@$TUI_VERSION"
 OLD_TUI_SPEC="$TUI_PACKAGE@0.3.1"
 SKILL_PACKAGE="opencode-skill-registry"
-SKILL_VERSION="0.1.3"
+SKILL_VERSION="0.2.0"
 SKILL_SPEC="$SKILL_PACKAGE@$SKILL_VERSION"
-OLD_SKILL_SPEC="$SKILL_PACKAGE@0.1.2"
+OLD_SKILL_SPEC="$SKILL_PACKAGE@0.1.3"
 GRAPHIFY_PACKAGE="opencode-graphify-init"
 GRAPHIFY_VERSION="0.1.5"
 GRAPHIFY_SPEC="$GRAPHIFY_PACKAGE@$GRAPHIFY_VERSION"
@@ -349,7 +349,7 @@ EOF
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" status --domain meta,common --target "$target" > "$status_output"
   assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tregistered@0.3.2' "status missed Models Presets"
-  assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.1.3' "status missed skill registry"
+  assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.2.0' "status missed skill registry"
   assert_contains "$status_output" $'common\tnpm-server-plugins\topencode-graphify-init\t-\tregistered@0.1.5' "status missed Graphify"
 
   printf 'corrupt\n' > "$target/$MODEL_PROFILES_DIR/$TUI_COMPONENT/default.json"
@@ -648,6 +648,58 @@ shouldSyncAwayDeselectedExternalPlugins() {
   pass "shouldSyncAwayDeselectedExternalPlugins"
 }
 
+shouldMigrateSkillRegistryWhenPreviousVersionIsManifestOwned() {
+  local scratch target binary config manifest managed_skill registry_state registry_before
+  local foreign_source foreign_link foreign_file
+  scratch="$(mktemp -d "${TMPDIR:-/tmp}/skill-registry-version-migration.XXXXXX")"
+  target="$scratch/target"
+  config="$target/opencode.jsonc"
+  manifest="$target/.agents-orchestrator-manifest"
+  managed_skill="$target/skills/skill-registry"
+  registry_state="$target/.ai/atl/skill-registry.md"
+  registry_before="$scratch/skill-registry.before.md"
+  foreign_source="$scratch/foreign-skill"
+  foreign_link="$target/skills/foreign-skill"
+  foreign_file="$target/skills/keep.txt"
+  mkdir -p "$target/skills" "$(dirname "$registry_state")" "$foreign_source"
+  binary="$(make_fake_opencode "$scratch/bin" "$MIN_OPENCODE_VERSION")"
+  ln -s "$ROOT/domains/meta/skills/skill-registry" "$managed_skill"
+  printf '%s\n' 'foreign skill body' > "$foreign_source/SKILL.md"
+  ln -s "$foreign_source" "$foreign_link"
+  printf '%s\n' 'keep foreign skill neighbor' > "$foreign_file"
+  printf '%s\n' '# preserved generated registry' > "$registry_state"
+  cp "$registry_state" "$registry_before"
+  printf '{"plugin":["%s","foreign-server-plugin"]}\n' "$OLD_SKILL_SPEC" > "$config"
+  {
+    printf 'link\t%s\n' "$managed_skill"
+    printf 'managed-array\t%s\tplugin\t%s\n' "$config" "$OLD_SKILL_SPEC"
+  } > "$manifest"
+
+  # Given the 0.1.3 registration and manual skill link are manifest-owned
+  # When the meta domain is synchronized with 0.2.0
+  OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
+
+  # Then the version and owned link migrate while generated and foreign state survives
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$SKILL_SPEC" >/dev/null ||
+    fail "migration did not register skill registry 0.2.0"
+  python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$OLD_SKILL_SPEC" >/dev/null 2>&1 &&
+    fail "migration retained skill registry 0.1.3"
+  jq -e --arg package "$SKILL_PACKAGE" --arg spec "$SKILL_SPEC" '
+    [.plugin[] | select(type == "string" and startswith($package + "@"))] == [$spec]
+  ' "$config" >/dev/null || fail "migration did not replace the skill registry version exactly"
+  [ ! -e "$managed_skill" ] && [ ! -L "$managed_skill" ] ||
+    fail "migration retained the manifest-owned manual skill"
+  assert_file_equals "$registry_state" "$registry_before" "migration changed the generated skill registry"
+  [ -L "$foreign_link" ] && [ "$(readlink "$foreign_link")" = "$foreign_source" ] ||
+    fail "migration changed a foreign skill link"
+  assert_contains "$foreign_file" 'keep foreign skill neighbor' "migration removed a foreign skill file"
+  assert_contains "$config" 'foreign-server-plugin' "migration removed foreign server configuration"
+  assert_count "$manifest" "$OLD_SKILL_SPEC" 0 "new manifest retained the previous skill registry version"
+  assert_count "$manifest" "$SKILL_SPEC" 1 "new manifest missed exact skill registry ownership"
+  rm -rf "$scratch"
+  pass "shouldMigrateSkillRegistryWhenPreviousVersionIsManifestOwned"
+}
+
 seed_external_bundle_layout() {
   local target="$1"
   local manifest="$target/.agents-orchestrator-manifest"
@@ -862,6 +914,7 @@ run_contracts() {
   shouldAbortBeforeMutationOnInvalidPreconditions
   shouldRollbackExternalPluginTransaction
   shouldSyncAwayDeselectedExternalPlugins
+  shouldMigrateSkillRegistryWhenPreviousVersionIsManifestOwned
   shouldMigrateManagedBundlesToNpmPackages
   shouldMigrateOwnedFlatProfilesWithoutRemovingForeignFiles
   shouldUsePrecedenceResolvedServerConfig

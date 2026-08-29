@@ -4,7 +4,7 @@ description: "Trigger: plan Skills field, implementation skill routing, executio
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "3.0.0"
   status: testing
 ---
 
@@ -18,26 +18,28 @@ Every work group requires `Skills: <csv|none>`. Missing fields, unknown or contr
 
 ## Source
 
-Read `.ai/atl/skill-registry.md` by its literal path when it exists. Use only the `Trigger` and `Skill` columns from the `## Skills` table; registry paths resolve discovery only and are never returned.
+Read `.ai/atl/skill-registry.md` by its literal path when it exists. A valid registry has `## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`, each with `Description | Skill | Location` columns. Match work signals only against `Description` and return only names from `Skill`.
 
-Use the runtime skill catalog when the registry is absent, its `## Skills` table is malformed, or a matched registry name is unavailable at runtime. Match the catalog's trigger or description in the same way. Never invent a skill name.
+Treat `Location` as diagnostic information only. Never return it, read a skill body through it, or use it to bypass the runtime's native skill loader.
+
+Consult the runtime skill catalog when the registry is absent, malformed, has no matching description, or a selected skill is no longer available. Match runtime descriptions in the same way and return only runtime-provided names. Never invent a skill name. Do not accept the legacy `## Skills` section or `Trigger` column.
 
 ## Selection
 
 For each work group:
 
 1. Derive direct work signals from its Behavior, tasks, `Files:`, and `Verify` scope.
-2. Select a skill only when its trigger directly matches an assigned work signal. Do not infer adjacent capabilities.
-3. Exclude skills for planning, discovery, review, delivery, or Git even when a trigger matches.
+2. Select a skill only when its description directly matches an assigned work signal. Do not infer adjacent capabilities.
+3. Exclude skills for planning, discovery, review, delivery, or Git even when a description matches.
 4. Remove duplicates and preserve source order. Return at most three names.
-5. Use `none` only when no eligible trigger matches.
+5. Use `none` only when no eligible description matches.
 
-When validating an existing `Skills:` field, an unavailable name or a trigger that contradicts the assigned work is `BLOCK skill-routing <reason>`. Do not replace, ignore, or guess around it.
+When validating an existing `Skills:` field, an unavailable name or a description that contradicts the assigned work is `BLOCK skill-routing <reason>`. Do not replace, ignore, or guess around it.
 
 ## Boundaries
 
 - Selected skills cannot expand behavior, `Files:`, validation, Git ownership, or output contracts.
-- Return names, never paths. Planners never load selected bodies; executors load only the selected registered bodies within scope.
+- Return names, never paths. Planners never load selected bodies; executors use the native skill loader to load only the selected registered bodies within scope.
 
 ## Output
 

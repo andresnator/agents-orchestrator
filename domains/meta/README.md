@@ -1,6 +1,6 @@
 # Meta Domain
 
-Prompt, skill, registry, and agent-model configuration utilities for this artifact repository.
+Prompt, skill-authoring, registry, and agent-model configuration utilities for this artifact repository.
 
 ## Quick path
 
@@ -14,9 +14,11 @@ Prompt, skill, registry, and agent-model configuration utilities for this artifa
 |---|---|---|
 | `/absorb` | Compare an external AI harness | Evidence-backed adoption report |
 | `/models-profiles` | Assign agent models and variants | Targeted OpenCode configuration |
-| OpenCode startup | Refresh the skill registry | `.ai/atl/skill-registry.md` |
+| OpenCode startup | Generate the resolved skill snapshot | `.ai/atl/skill-registry.md` |
 
 External plugin descriptors pin either GitHub bundles by commit and SHA-256 or npm packages by exact version and runtime target. This repository owns those locks and abstract `profiles/`; each external repository owns its plugin implementation and tests. See [agent models](../../docs/agent-models.md) and [Graphify](../../docs/graphify.md).
+
+`opencode-skill-registry` is the sole owner of `.ai/atl/skill-registry.md`. The file is an automatic snapshot of OpenCode's resolved `/skill` catalog and refreshes when OpenCode restarts; there is no manual generator in this repository.
 
 ## Components
 
@@ -26,6 +28,5 @@ External plugin descriptors pin either GitHub bundles by commit and SHA-256 or n
 | Skill | `absorb` | Extracts reusable external harness practices |
 | Skill | `prompt-structure-writer` | Turns ideas into executable prompts |
 | Skill | `skill-creator` | Creates Agent Skills-compliant skills |
-| Skill | `skill-registry` | Generates the project skill registry |
-| External npm server plugin | `opencode-skill-registry` | Refreshes the runtime skill index |
+| External npm server plugin | `opencode-skill-registry` | Generates the resolved skill snapshot |
 | External npm TUI plugin | `opencode-models-presets` | Assigns agent models and variants |

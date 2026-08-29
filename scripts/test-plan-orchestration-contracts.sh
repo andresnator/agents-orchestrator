@@ -70,17 +70,26 @@ execution_skill=skills/execution-plan/SKILL.md
 execution_template=skills/execution-plan/assets/plan-template.md
 routing_skill=skills/implementation-skill-routing/SKILL.md
 assert_frontmatter_contains "$execution_skill" 'version: "1.0.1"'
-assert_frontmatter_contains "$routing_skill" 'version: "2.0.0"'
+assert_frontmatter_contains "$routing_skill" 'version: "3.0.0"'
 assert_contains "$execution_skill" 'Update an existing plan only when the user supplied its exact path or the active conversation already created or selected it.'
 assert_contains "$execution_skill" 'reuse the existing plan or generate a new slug'
 assert_contains "$execution_skill" 'Never overwrite implicitly.'
 assert_contains "$routing_skill" 'Read `.ai/atl/skill-registry.md` by its literal path'
-assert_contains "$routing_skill" 'the `Trigger` and `Skill` columns from the `## Skills` table'
-assert_contains "$routing_skill" 'Use the runtime skill catalog when the registry is absent'
+assert_contains "$routing_skill" '`## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`'
+assert_contains "$routing_skill" '`Description | Skill | Location` columns'
+assert_contains "$routing_skill" 'Match work signals only against `Description` and return only names from `Skill`.'
+assert_contains "$routing_skill" 'Treat `Location` as diagnostic information only.'
+assert_contains "$routing_skill" "bypass the runtime's native skill loader"
+assert_contains "$routing_skill" 'registry is absent, malformed, has no matching description, or a selected skill is no longer available'
+assert_contains "$routing_skill" 'Do not accept the legacy `## Skills` section or `Trigger` column.'
 assert_contains "$routing_skill" 'planning, discovery, review, delivery, or Git'
 assert_contains "$routing_skill" 'Return at most three names.'
 assert_contains "$routing_skill" 'Return names, never paths.'
-assert_contains "$routing_skill" 'an unavailable name or a trigger that contradicts the assigned work is `BLOCK skill-routing <reason>`'
+assert_contains "$routing_skill" 'an unavailable name or a description that contradicts the assigned work is `BLOCK skill-routing <reason>`'
+assert_not_contains "$routing_skill" 'the `Trigger` and `Skill` columns from the `## Skills` table'
+assert_not_contains "$routing_skill" 'trigger directly matches an assigned work signal'
+assert_not_contains "$routing_skill" 'eligible trigger matches'
+assert_not_contains "$routing_skill" '| Trigger | Skill |'
 assert_not_contains "$routing_skill" '| Work signal | Skill name |'
 assert_absent skills/implementation-skill-routing/assets/routing-cases.tsv
 for heading in '## Outcome' '## Scope' '## Evidence' '## Behavior' '## Approach' \
@@ -123,6 +132,8 @@ assert_contains "$orchestraitor" 'ask one closed confirmation before creating st
 assert_contains "$orchestraitor" 'Git delivery is outside this primary and every worker.'
 assert_contains "$orchestraitor" 'Never stage, commit, or push.'
 assert_contains "$orchestraitor" 'finish the verified changes and explain that Git delivery must happen outside Orchestraitor'
+assert_contains "$orchestraitor" 'Delegate every implementation skill selection and validation to `implementation-skill-routing`.'
+assert_contains "$orchestraitor" 'never resolve candidates yourself'
 assert_contains "$orchestraitor" 'Review is a separate primary, not an SDD phase or completion gate.'
 assert_contains "$orchestraitor" '.ai/orchestration/runs/<slug>/run.md'
 assert_contains "$orchestraitor" 'never copy, rewrite, or mark it'
@@ -140,6 +151,8 @@ assert_frontmatter_contains "$orchestraitor" 'implementation-skill-routing: allo
 assert_frontmatter_contains "$orchestraitor" '"*": allow'
 assert_frontmatter_contains "$orchestraitor" 'judgment-day: deny'
 assert_frontmatter_contains "$orchestraitor" 'work-unit-commits: deny'
+assert_not_contains "$orchestraitor" 'Resolve skill names from `.ai/atl/skill-registry.md`'
+assert_not_contains "$orchestraitor" 'fall back to the runtime skill catalog'
 assert_frontmatter_order "$orchestraitor" '"*": allow' 'judgment-day: deny'
 assert_frontmatter_order "$orchestraitor" '"*": allow' 'work-unit-commits: deny'
 
@@ -178,6 +191,17 @@ assert_not_contains domains/orchestration/README.md 'Judgment'
 assert_not_contains domains/orchestration/README.md 'work-unit-commits'
 assert_contains installers/opencode.sh 'install --domain orchestration --target /tmp/opencode-test --dry-run'
 assert_contains installers/opencode.sh 'install --domain review --target /tmp/opencode-review --dry-run'
+
+global_rules=global/AGENTS.md
+assert_contains "$global_rules" '`## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`'
+assert_contains "$global_rules" '`Description | Skill | Location` columns'
+assert_contains "$global_rules" 'Match assigned work against `Description` and select only names from `Skill`.'
+assert_contains "$global_rules" 'Treat `Location` as diagnostic information only'
+assert_contains "$global_rules" 'registry is absent, malformed, has no matching description, or a selected skill is no longer available'
+assert_contains "$global_rules" 'Do not accept the legacy `## Skills` section or `Trigger` column.'
+assert_not_contains "$global_rules" 'match a trigger in its `## Skills` table'
+assert_not_contains "$global_rules" 'at the listed path for the full contract'
+assert_not_contains "$global_rules" '| Trigger | Skill |'
 
 cold_verification=domains/orchestration/skills/sdd-cold-verification/SKILL.md
 assert_frontmatter_contains "$cold_verification" 'version: "2.0.0"'
