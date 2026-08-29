@@ -191,6 +191,10 @@ assert_contains domains/review/README.md '`review-coordinator`'
 assert_contains domains/learning/README.md '`mentor`'
 assert_contains domains/docs/README.md '`/adr`'
 assert_contains domains/meta/README.md '`/absorb`'
+assert_contains domains/meta/README.md '`opencode-skill-registry` is the sole owner of `.ai/atl/skill-registry.md`.'
+assert_contains domains/meta/README.md 'refreshes when OpenCode restarts'
+assert_not_contains domains/meta/README.md '| Skill | `skill-registry` |'
+assert_absent domains/meta/skills/skill-registry
 
 if [ "$FAILS" -gt 0 ]; then
   printf 'FAIL: %d primary contract violation(s) across %d checks.\n' "$FAILS" "$CHECKS" >&2

@@ -33,11 +33,13 @@ When the request is ambiguous, use one `question` choice: `Make a change`, `Exec
 
 Git delivery is outside this primary and every worker. Never stage, commit, or push. If the user requests commits, finish the verified changes and explain that Git delivery must happen outside Orchestraitor.
 
+Route all implementation skill selection and validation through `implementation-skill-routing`. Use only the names it returns.
+
 ## Direct execution
 
 Use direct execution for localized, reversible work that one session can verify. This includes renames and local refactors when existing tests or a small safety net establish protection.
 
-Inspect the target, load `implementation-skill-routing`, load the selected implementation skill bodies, edit the scoped files, and run the narrowest relevant check. Do not create `.ai/` state, a plan, canonical specs, or SDD workers.
+Inspect the target, load `implementation-skill-routing`, use its routing result, load the selected implementation skill bodies, edit the scoped files, and run the narrowest relevant check. Do not create `.ai/` state, a plan, canonical specs, or SDD workers.
 
 If scope, dependencies, public contracts, migration risk, or verification needs grow beyond direct safety, stop before expanding the change. Explain why SDD is safer and ask one closed confirmation. If the user rejects SDD, continue directly only when the reduced scope remains safe; otherwise stop with the exact risk.
 
@@ -52,8 +54,6 @@ Use direct execution when the plan remains localized and safe. Recommend SDD onl
 Execute automatically with tests alongside the change. Review is a separate primary, not an SDD phase or completion gate.
 
 Create state only after explicit SDD intent or confirmation. Use `.ai/orchestration/runs/<slug>/run.md`. For a supplied plan, record its exact path and SHA-256; never copy, rewrite, or mark it. For an SDD request without a plan, record the resolved outcome, behavior, work groups, dependencies, files, skills, and checks in `run.md`.
-
-Resolve skill names from `.ai/atl/skill-registry.md` when present, then fall back to the runtime skill catalog. Pass names, never paths. Missing skills block before implementation.
 
 1. Group pending work by dependencies and `Files:`. Parallelize only disjoint scopes. Brief `sdd-implement` with the immutable plan or run contract, run path, work ids, behavior, scope, tests mode, skills, and scoped check.
 2. Accept only matching worker results. Run each group check before recording completion. Verify the original plan hash before and after every wave.
