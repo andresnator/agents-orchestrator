@@ -45,7 +45,6 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | `domains/<domain>/skills/<shared-skill>` | Relative symlinks declaring shared usage |
 | `domains/<domain>/plugins/` | Repository-specific plugins |
 | `domains/<domain>/external-plugins/` | Pinned standalone plugin descriptors |
-| `profiles/` | Provider-independent agent tiers |
 | `installers/` | Discovery, installation, sync, and uninstall |
 | `docs/` | Unique operational guides |
 
