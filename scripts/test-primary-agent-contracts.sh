@@ -127,8 +127,10 @@ done
 
 mentor=domains/learning/agents/mentor.md
 recorder=domains/learning/agents/learning-recorder.md
+spaced_recall=domains/learning/skills/spaced-recall/SKILL.md
 learning_scope='    "*": deny
-    ".ai/learning/**": allow'
+    ".ai/learning/**": allow
+    "**/.ai/learning/**": allow'
 
 assert_primary "$mentor"
 assert_permission_rule_block "$mentor" edit "$learning_scope"
@@ -136,14 +138,36 @@ assert_permission_rule_block "$mentor" write "$learning_scope"
 assert_permission_rule_block "$mentor" task '    "*": deny
     learning-recorder: allow'
 assert_frontmatter_not_contains "$mentor" 'general: allow'
-assert_contains "$mentor" 'Before any create, edit, or append, send `learning-recorder`'
-assert_contains "$mentor" 'After each card is graded, immediately send a fresh `learning-recorder` task'
-assert_contains "$mentor" 'Never pass or reuse `task_id`'
-assert_contains "$mentor" 'same checkpoint into one fresh handoff'
-assert_contains "$mentor" 'Do not perform a dedicated verification reread after `OK`'
-assert_contains "$mentor" 'On the first `BLOCK`, `FAIL`, timeout, or task error, do not retry'
-assert_contains "$mentor" 'reconcile any partial changes'
-assert_contains "$mentor" 'tell the learner that direct fallback was used'
+assert_contains "$mentor" 'Before any create/edit/append, send `learning-recorder` only exact target paths, mutations, complete content, and anchors.'
+assert_contains "$mentor" 'After each grade, immediately launch a fresh `learning-recorder` with `background: true`'
+assert_contains "$mentor" 'omit `task_id`—never pass or reuse one.'
+assert_contains "$mentor" 'its description must equal `Persist review grade topic=<topic-slug> card=<C-NNNN> review=<ordinal>`.'
+assert_contains "$mentor" 'Track the returned runtime task ID as pending with its description, targets, and intended mutation.'
+assert_contains "$mentor" 'It is only a notification-correlation handle, never a retry/resume handle.'
+assert_contains "$mentor" 'first get the learner'
+assert_contains "$mentor" 'then launch one compound handoff with exact anchored queue and path-log mutations, never separate handoffs.'
+assert_contains "$mentor" 'After a non-final launch returns its ID, ask the next cue immediately; do not wait for its receipt.'
+assert_contains "$mentor" '`OK files=<csv>` settles only that ID: no verification reread; no repeating, answering, or advancing the open cue.'
+assert_contains "$mentor" 'On the first `BLOCK`, `FAIL`, timeout, cancellation, or runtime task error, never retry, resume, or delegate again.'
+assert_contains "$mentor" 'Freshly re-read every affected target, reconcile partial changes, directly apply only that card'
+assert_contains "$mentor" 'intended mutation under `.ai/learning/**`, report the fallback, then settle only that ID.'
+assert_contains "$mentor" 'Unrelated/out-of-order notifications never settle another task, change the card index, repeat a cue, or advance an open question.'
+assert_contains "$mentor" 'Only learner input advances review.'
+assert_contains "$mentor" 'Unsupported background mode or a rejected launch is the first task error: use scoped direct fallback, then ask the next cue.'
+assert_contains "$mentor" 'Never substitute a foreground recorder.'
+assert_contains "$mentor" 'pending IDs permit only “persistence is finishing.”'
+assert_contains "$mentor" 'Withhold the persisted-artifact summary and next-due report until every ID returns `OK` or completes direct fallback.'
+assert_contains "$mentor" 'Rely only on automatic notifications; never sleep, poll, request status, or fabricate completion.'
+
+assert_contains "$spaced_recall" 'launch one fresh `learning-recorder` with `background: true`, unique topic/card/review-ordinal description, and no `task_id`'
+assert_contains "$spaced_recall" 'immediately ask the next cue without waiting for receipt.'
+assert_contains "$spaced_recall" '`OK` settles only its ID, with no reread, repeated cue, or open-cue advance.'
+assert_contains "$spaced_recall" '`BLOCK`, `FAIL`, error, cancellation, timeout, or unsupported/rejected background launch triggers Mentor'
+assert_contains "$spaced_recall" 'fresh-read, card-scoped direct fallback—never retry, resume, poll, or substitute foreground recording.'
+assert_contains "$spaced_recall" 'Notifications alone settle tasks and never alter review progression.'
+assert_contains "$spaced_recall" 'withhold persisted artifacts/next due date until all IDs settle by `OK` or fallback'
+assert_contains "$spaced_recall" 'meanwhile report only that persistence is finishing.'
+assert_contains "$spaced_recall" 'Never sleep, request status, or fabricate completion.'
 
 assert_frontmatter_contains "$recorder" 'mode: subagent'
 assert_frontmatter_contains "$recorder" 'temperature: 0.1'
@@ -161,8 +185,14 @@ write
 external_directory' ] ||
   fail "$recorder" 'effective tool permissions are not limited to read, edit, and write'
 assert_contains "$recorder" 'exact target paths, mutations, complete content, and anchors'
-assert_contains "$recorder" 'Do not calculate dates, cards, grades, progress, or content'
-assert_contains "$recorder" 'Do not infer, explore, ask, explain, run commands, load skills, or delegate'
+assert_contains "$recorder" 'Never calculate dates, cards, grades, progress, or content'
+assert_contains "$recorder" 'Never infer, explore, ask, explain, run commands, load skills, or delegate.'
+assert_contains "$recorder" 'Existing: only exact anchored `edit`; the anchor must match exactly and unambiguously.'
+assert_contains "$recorder" 'Never `write` an existing file.'
+assert_contains "$recorder" 'Absent: `write` only supplied complete new-file content; otherwise `BLOCK` before any change.'
+assert_contains "$recorder" 'Compound: apply only listed anchored operations.'
+assert_contains "$recorder" 'Never broaden anchors or replace unrelated rows when another task may touch the file.'
+assert_contains "$recorder" 'Return exactly one line:'
 assert_contains "$recorder" 'OK files=<csv>'
 assert_contains "$recorder" 'BLOCK reason=<short>'
 assert_contains "$recorder" 'FAIL changed=<csv> reason=<short>'

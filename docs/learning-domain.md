@@ -10,7 +10,7 @@ installers/opencode.sh install --domain learning,common
 
 Filtered installation is a sync; include every domain you want to keep in the selected list.
 
-Start with `/learn <topic>`, confirm the proposed mission and path, then return with `/learn`. Every session offers due reviews before new material; there is no background scheduler.
+Start with `/learn <topic>`, confirm the proposed mission and path, then return with `/learn`. Every session offers due reviews before new material. There is no persistent background scheduler: only an active review creates transient, per-card recorder tasks, and each task ends when its handoff settles.
 
 ## Commands
 
@@ -33,6 +33,20 @@ General modules combine 10% formal input in Cornell notes, 70% real exercises, a
 Retrieval cues become Leitner cards with 1, 3, 7, 14, and 30-day intervals. Repeated failures become leeches to split or rewrite. `recall-calc` supplies read-only date arithmetic when installed; the skill tables are the fallback.
 
 Module completion is not mission completion. A capstone teach-back must satisfy the observable goal; reviews continue until cards are mastered.
+
+## Background review persistence
+
+After each review grade, the mentor starts a fresh, transient `learning-recorder` task and asks the next cue without waiting for persistence. A completion notification settles only its matching handoff; it does not repeat, answer, or advance a cue that is already open. After the final grade, the mentor may report that persistence is finishing, but the final persisted-artifact and next-due summary waits until every handoff has settled.
+
+Background recorder support depends on the running OpenCode build. Supported builds may require this experimental flag to be set before OpenCode starts:
+
+```bash
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+```
+
+Restart OpenCode after setting the flag. No minimum OpenCode release is claimed here; check whether the installed build exposes background Task mode.
+
+If background mode is missing, rejects a launch, or a detached recorder task fails, the mentor reports the problem and uses the existing direct fallback for only that card's intended changes under `.ai/learning/**`. It rereads affected targets first so it can reconcile partial changes. It never silently falls back to a foreground recorder and never retries or resumes the failed detached task.
 
 ## Language topics
 
@@ -62,7 +76,7 @@ Language topics use two waves:
   dialogues/
 ```
 
-The mentor delegates each exact state mutation to `learning-recorder`, which can only read, edit, or write under `.ai/learning/**`. If that handoff fails, the mentor reports the failure and uses its equally scoped direct-write fallback without retrying. It may read repository files and ask permission to run tests, but never edits learner code. `english-tutor` remains separate and may only append to an existing language topic after opt-in.
+The mentor delegates each exact state mutation to `learning-recorder`, which can only read, edit, or write under `.ai/learning/**`. Review-card handoffs follow the background timing and fallback above; other checkpoints remain foreground. The mentor may read repository files and ask permission to run tests, but never edits learner code. `english-tutor` remains separate and may only append to an existing language topic after opt-in.
 
 ## Troubleshooting
 
