@@ -5,70 +5,71 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.2.1"
+  version: "1.3.0"
 ---
 
 # Spaced Recall
 
 ## Activation Contract
 
-Use when a learning flow needs long-term retention: scheduling new recall cards, checking which cards are due, or running a review session. Owns `review-queue.md` under each `.ai/learning/<topic-slug>/`, following `assets/review-queue-template.md`.
+Use for long-term retention: schedule cards, check due cards, or run reviews. Own each `.ai/learning/<topic-slug>/review-queue.md` per `assets/review-queue-template.md`.
 
-Do not use for ungraded quizzes — quiz mode reads the same cues but never moves boxes; only review sessions do.
+Do not use for ungraded quizzes: they read cues but never move boxes; only reviews do.
 
 ## Hard Rules
 
-- There is no scheduler: scheduling is **pull-based**. The due-check below runs at the start of every `/learn` invocation, in every mode.
-- Never reveal an answer before the learner attempts recall. Retrieval effort is the mechanism, not a formality.
-- Ask each retrieval cue in normal chat and wait for the learner's free-text attempt.
-- Use the `question` tool for the closed `Again | Hard | Good | Easy` grade, with `Good` recommended first by default.
-- **Today's date comes from the environment**, never from a guess: read it from the runtime context or the agent's allow-listed `date` command. If it is genuinely unavailable, confirm the date with the learner before any due-check or box transition.
-- Dates are absolute `YYYY-MM-DD`. Compute `Next` strictly from the transition table; never invent or backfill review history.
-- **Deterministic math over mental math**: when the runtime exposes recall calculator tools (for example `recall_due` and `recall_schedule` from the learning domain's `recall-calc` plugin), take due lists, box transitions, and every `Last`/`Next` date from them and transcribe the results into `review-queue.md` — never recompute a date the calculator already returned. Without such tools, apply the tables below manually.
-- Card IDs (`C-NNNN`) are unique per topic and never reused; each card links back to its source Cornell note. In an all-topic review, reference cards as `<topic-slug>/C-NNNN` because IDs are only unique within a topic.
-- **Interleave, don't block**: when due cards span several notes or topics, order the session by mixing sources rather than grouping all of one note's cards together — interleaving is part of the retention mechanism, not a cosmetic choice.
+- No scheduler: pull-based due-check starts every `/learn` invocation in every mode.
+- Never reveal answers before a recall attempt. Ask each cue in normal chat; wait for free text.
+- Use `question` for closed grade `Again | Hard | Good | Easy`; recommend `Good` first by default.
+- Get today from runtime context or allow-listed `date`, never guess. If genuinely unavailable, confirm it before due-checks/box transitions.
+- Use absolute `YYYY-MM-DD`; derive `Next` strictly from transitions. Never invent/backfill history.
+- Prefer deterministic calculator tools such as `recall_due`/`recall_schedule`: transcribe their due lists, box transitions, and every `Last`/`Next`; never recompute returned dates. Without tools, apply these tables manually.
+- `C-NNNN` IDs are unique per topic, never reused, and link a source Cornell note. In all-topic reviews use `<topic-slug>/C-NNNN` because IDs are not cross-topic unique.
+- Interleave due cards across notes/topics; never group by one source. Interleaving affects retention.
 
 ## Queue Format
 
-`review-queue.md` per topic (see `assets/review-queue-template.md`):
+Per-topic `review-queue.md`:
 
 | Column | Meaning |
 | --- | --- |
 | ID | `C-NNNN`, sequential per topic |
-| Cue | The retrieval question, verbatim from the Cornell note |
+| Cue | Retrieval question, verbatim from Cornell note |
 | Box | Leitner box 1–5 |
-| Last | Date of last review (or creation) |
+| Last | Last review (or creation) date |
 | Next | Due date = Last + box interval |
-| Note | Relative path to the source Cornell note |
+| Note | Relative source Cornell-note path |
 
 Mastered cards move to the `## Mastered` section and leave the schedule.
 
 ## Box Transitions
 
-Intervals: box 1 → +1d · box 2 → +3d · box 3 → +7d · box 4 → +14d · box 5 → +30d. New card → box 1, `Next` = tomorrow.
+Intervals: box 1 +1d · box 2 +3d · box 3 +7d · box 4 +14d · box 5 +30d. New card: box 1, `Next` tomorrow.
 
 | Grade | Meaning | Transition |
 | --- | --- | --- |
-| Again | Could not recall | → box 1 |
-| Hard | Recalled with heavy effort or partially | stays in box |
-| Good | Recalled correctly | → box + 1 |
-| Easy | Instant, effortless | → box + 2 (max 5) |
+| Again | No recall | box 1 |
+| Hard | Heavy/partial recall | same box |
+| Good | Correct recall | box +1 |
+| Easy | Instant recall | box +2 (max 5) |
 
-On every grade set `Last` = today and `Next` = today + the new box's interval — including `Hard`, which keeps the box but still re-dates from today. Good or Easy at box 5 → move to `## Mastered` with the date.
+Every grade sets `Last` = today and `Next` = today + new-box interval. `Hard` keeps its box but re-dates from today. `Good`/`Easy` at box 5 moves to `## Mastered` with date.
 
-**Leeches**: when a card is graded `Again` for the 3rd time, mark it `⚠ leech` in its `Cue` cell and stop letting it churn — use the `question` tool for the closed choice between reformulating the cue in place or splitting it into two clearer cards, and log the decision in the topic's `path.md`. A leech is a signal the cue is badly formed or the underlying lesson needs a re-teach, not a card to keep failing.
+**Leeches:** On a 3rd `Again`, stop before persistence. Use `question` for closed choice: reformulate in place or split into two clearer cards. After the learner chooses, mark `⚠ leech` in the queue and log the decision in topic `path.md` through one compound card handoff. A leech signals a bad cue or needed re-teach, not a card to keep failing.
 
 ## Due-Check Contract
 
-1. Read every `review-queue.md` (active topic, or all topics for `status`/bare `review`).
-2. List cards with `Next` ≤ today, oldest first (via a due-check calculator tool such as `recall_due` when available).
-3. Offer — never force — to review them before new material: use the `question` tool for the closed confirmation "You have N reviews due; do them first?".
-4. **Cap the backlog per session**: offer due cards in chunks of ~15, oldest-first within the chunk, and confirm before continuing to the next chunk. A large backlog is cleared over several passes, not one exhausting marathon.
+1. Read every active-topic queue, or all queues for `status`/bare `review`.
+2. List `Next` ≤ today oldest-first, using available tools such as `recall_due`.
+3. Offer, never force, review before new material via closed `question`: "You have N reviews due; do them first?".
+4. Offer ~15-card chunks, oldest-first within each; confirm before the next chunk. Clear large backlogs over several passes, never one marathon.
 
 ## Review Session
 
-Take up to ~15 due cards, interleaved across their source notes/topics rather than grouped. For each card, in order: ask the Cue in normal chat and wait for the learner's attempt → reveal the Notes answer (from the linked note) → ask for the grade through the `question` tool (`Good` recommended first by default) → apply the transition (via a calculator tool such as `recall_schedule` when available) and update Box/Last/Next. Watch for the 3rd `Again` on a card and apply the leech rule. Close by reporting cards reviewed, grades, promotions/demotions, mastered cards, any leeches flagged, and the next due date.
+Take up to ~15 due cards, interleaved by source. For each, in order: ask Cue in normal chat and wait → reveal linked-note answer → ask grade via `question` (`Good` recommended first) → calculate transition with `recall_schedule` when available and exact anchored mutations → on 3rd `Again`, get leech choice before persistence → launch one fresh `learning-recorder` with `background: true`, unique topic/card/review-ordinal description, and no `task_id` → immediately ask the next cue without waiting for receipt. Use one compound queue/path-log handoff per leech. Keep non-review checkpoints foreground.
+
+Track each runtime task ID until automatic notification settles it. `OK` settles only its ID, with no reread, repeated cue, or open-cue advance. `BLOCK`, `FAIL`, error, cancellation, timeout, or unsupported/rejected background launch triggers Mentor's fresh-read, card-scoped direct fallback—never retry, resume, poll, or substitute foreground recording. Notifications alone settle tasks and never alter review progression. After the final card, withhold persisted artifacts/next due date until all IDs settle by `OK` or fallback; meanwhile report only that persistence is finishing. Never sleep, request status, or fabricate completion.
 
 ## Output Contract
 
-Return: due count found, cards reviewed with grade and new box, cards added (ID + cue), and the earliest upcoming `Next` date. State plainly when the learner failed a card; failed cards are the loop's most valuable signal.
+Return due count; reviewed cards with grade/new box; added cards with ID/cue; earliest upcoming `Next`. State failed cards plainly; they are the loop's most valuable signal.
