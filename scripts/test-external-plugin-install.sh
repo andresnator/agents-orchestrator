@@ -9,7 +9,7 @@ TUI_VERSION="0.3.2"
 TUI_SPEC="$TUI_PACKAGE@$TUI_VERSION"
 OLD_TUI_SPEC="$TUI_PACKAGE@0.3.1"
 SKILL_PACKAGE="opencode-skill-registry"
-SKILL_VERSION="0.2.0"
+SKILL_VERSION="0.2.1"
 SKILL_SPEC="$SKILL_PACKAGE@$SKILL_VERSION"
 OLD_SKILL_SPEC="$SKILL_PACKAGE@0.1.3"
 GRAPHIFY_PACKAGE="opencode-graphify-init"
@@ -297,7 +297,7 @@ EOF
   AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR="$artifacts" OPENCODE_BIN="$binary" \
     "$INSTALLER" status --domain meta,common --target "$target" > "$status_output"
   assert_contains "$status_output" $'meta\tnpm-tui-plugins\topencode-models-presets\t-\tregistered@0.3.2' "status missed Models Presets"
-  assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.2.0' "status missed skill registry"
+  assert_contains "$status_output" $'meta\tnpm-server-plugins\topencode-skill-registry\t-\tregistered@0.2.1' "status missed skill registry"
   assert_contains "$status_output" $'common\tnpm-server-plugins\topencode-graphify-init\t-\tregistered@0.1.5' "status missed Graphify"
 
   registration_removed="$scratch/tui-without-models.jsonc"
@@ -608,12 +608,12 @@ shouldMigrateSkillRegistryWhenPreviousVersionIsManifestOwned() {
   } > "$manifest"
 
   # Given the 0.1.3 registration and manual skill link are manifest-owned
-  # When the meta domain is synchronized with 0.2.0
+  # When the meta domain is synchronized with 0.2.1
   OPENCODE_BIN="$binary" "$INSTALLER" install --domain meta --target "$target" >/dev/null
 
   # Then the version and owned link migrate while generated and foreign state survives
   python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$SKILL_SPEC" >/dev/null ||
-    fail "migration did not register skill registry 0.2.0"
+    fail "migration did not register skill registry 0.2.1"
   python3 "$ROOT/scripts/jsonc-array.py" has "$config" plugin "$OLD_SKILL_SPEC" >/dev/null 2>&1 &&
     fail "migration retained skill registry 0.1.3"
   jq -e --arg package "$SKILL_PACKAGE" --arg spec "$SKILL_SPEC" '
