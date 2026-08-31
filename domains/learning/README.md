@@ -6,7 +6,7 @@
 
 1. Install the `learning,common` domains.
 2. Use `/learn session <request>` for an explanation now, or `/learn path <topic>` for multi-session learning.
-3. If `/learn <topic>` is ambiguous, choose `Sesión puntual` or `Ruta durable` before Mentor accesses state.
+3. If `/learn <topic>` is ambiguous, choose the localized one-off or durable option before Mentor accesses state.
 
 Examples:
 
@@ -19,7 +19,7 @@ Return with `/learn` to continue a durable path. See the [operator guide](../../
 
 ## Entry points
 
-Both `/learn` and direct messages to `mentor` use the same classification. `/english` remains a separate explicit coaching flow.
+Both `/learn` and direct messages to `mentor` use the same classification. Both choice labels and summary notices follow the conversation language; the internal routes remain `learning-session` and `learning-loop`. `/english` remains a separate explicit coaching flow.
 
 ### Flow
 
@@ -28,7 +28,7 @@ flowchart TD
     U["/learn request or direct Mentor message"] --> C{"Classify before skill or state access"}
     C -->|"Clearly bounded or session"| S["learning-session: teach now"]
     C -->|"Route, follow-up, existing mode, or path"| D["learning-loop: durable learning"]
-    C -->|"Ambiguous topic"| Q{"Sesión puntual or Ruta durable?"}
+    C -->|"Ambiguous topic"| Q{"Localized one-off or durable choice?"}
     Q --> S
     Q --> D
 
@@ -50,7 +50,7 @@ flowchart TD
 |---|---|---|
 | Learn one bounded concept now | `/learn session diferencia entre proceso e hilo` | Teaches in the user's language; no due-check or durable state. |
 | Build a durable route | `/learn path concurrencia en Java` | Proposes a mission, cadence, path, and resources. |
-| Resolve an ambiguous topic | `/learn pizza` | Asks `Sesión puntual` or `Ruta durable` before reading `.ai/learning/`. |
+| Resolve an ambiguous topic | `/learn pizza` | Asks a localized one-off or durable choice before reading `.ai/learning/`. |
 | Continue or inspect durable work | `/learn`, `/learn status` | Runs due-check first, then resumes or reports progress. |
 | Use an existing durable mode | `/learn review`, `/learn quiz`, `/learn map`, `/learn teach`, `/learn vocab`, `/learn drill` | Preserves the existing learning-loop behavior. |
 | Request explicit English coaching | `/english I have worked here since three years` | Corrects and practices; stores only synthetic gaps after opt-in. |
@@ -59,12 +59,7 @@ flowchart TD
 
 A one-off session is not saved automatically. After an explicit positive save request, Mentor sends only the pertinent session segment and sources actually used to a fresh `learning-summarizer` with `background: true` and no reused task ID. Teaching continues immediately.
 
-The summarizer creates one new standalone Cornell file under `.ai/learning/summaries/`. Its notification never interrupts or advances the conversation. The next normal response appends only one result:
-
-```text
-(Resumen guardado: .ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md.)
-(No se pudo guardar el resumen.)
-```
+The summarizer creates one new standalone Cornell file under `.ai/learning/summaries/`. Its notification never interrupts or advances the conversation. The next normal response appends exactly one brief parenthetical notice in the conversation language: success says the summary was saved and includes `.ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md`; failure says it could not be saved. Internal `OK summary=<path>`, `BLOCK`, and `FAIL` receipts remain unchanged.
 
 Failure, timeout, cancellation, `BLOCK`, or `FAIL` does not retry, resume, poll, or fall back to foreground writing.
 

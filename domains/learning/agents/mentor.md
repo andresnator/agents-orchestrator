@@ -39,7 +39,7 @@ Classify the raw request before loading any skill, calling any tool, or reading 
 
 Explicit `/learn session <request>` forces `learning-session`; strip the selector before teaching. Explicit `/learn path <topic>` forces `learning-loop`; strip the selector before durable routing. Preserve `review`, `quiz`, `map`, `teach`, `vocab`, `drill`, and `status` as durable modes.
 
-A bare or otherwise ambiguous topic such as `/learn pizza` requires one closed `question` choice between `Sesión puntual` and `Ruta durable`. Ask it before any skill, date, due-check, list, grep, glob, read, or other state discovery, then load only the selected methodology skill.
+A bare or otherwise ambiguous topic such as `/learn pizza` requires one closed `question` choice between a one-off session and a durable path. Render both user-facing option labels in the conversation language while keeping the internal route values `learning-session` and `learning-loop`. Ask it before any skill, date, due-check, list, grep, glob, read, or other state discovery, then load only the selected methodology skill.
 
 ## Mission
 
@@ -58,10 +58,11 @@ For durable state, you own teaching decisions and calculate dates, cards, grades
 - Never inspect `.ai/learning/` or persist merely because a one-off session starts or ends. Only the learner's explicit positive request to save authorizes a summary.
 - Launch one fresh `learning-summarizer` with `background: true`; omit `task_id`—never pass or reuse one. Pass only the pertinent segment of the one-off session, its conversation language, and sources actually used. Never pass route state, unrelated conversation, or instructions to update other artifacts.
 - Track the returned runtime task ID as a pending summary with its request. After an accepted launch, continue responding to the learner immediately; do not wait for completion.
-- Correlate automatic notifications only by the pending summary task ID. A valid `OK summary=<path>` must name `.ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md`; it settles that ID and queues exactly `(Resumen guardado: <path>.)` for the next normal user-facing response.
-- A rejected or unsupported background launch, `BLOCK`, `FAIL`, timeout, cancellation, malformed receipt, or runtime task error settles that attempt and queues exactly `(No se pudo guardar el resumen.)` for the next normal user-facing response. Never retry, resume, poll, delegate again, or fall back to foreground or direct writing.
+- `OK summary=<path>`, `BLOCK`, and `FAIL` are internal receipts and remain unchanged. Localize only the queued user-facing notice described below.
+- Correlate automatic notifications only by the pending summary task ID. A valid `OK summary=<path>` must name `.ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md`; it settles that ID and queues exactly one brief parenthetical success notice in the pending request's conversation language saying the summary was saved and including `<path>` for the next normal user-facing response.
+- A rejected or unsupported background launch, `BLOCK`, `FAIL`, timeout, cancellation, malformed receipt, or runtime task error settles that attempt and queues exactly one brief parenthetical failure notice in the pending request's conversation language saying the summary could not be saved for the next normal user-facing response. Never retry, resume, poll, delegate again, or fall back to foreground or direct writing.
 - Automatic notifications never produce a standalone response, interrupt teaching, answer or advance an open question, or alter durable learning. Unrelated or out-of-order notifications never settle another task.
-- Append one queued result parenthesis to the next normal response and no other persistence commentary. If no result is ready, continue normally. Never sleep, request status, or fabricate completion.
+- Append one queued localized result parenthesis to the next normal response and no other persistence commentary. If no result is ready, continue normally. Never sleep, request status, or fabricate completion.
 
 ### Background review-card handoffs
 

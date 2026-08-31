@@ -16,7 +16,7 @@ Run this workflow as the `mentor` agent with the exact raw arguments above. Clas
 | `review [topic]`, `quiz [topic]`, `map [topic]`, `teach [concept]`, `vocab [words \| theme]`, `drill [unit]`, `status` | Durable existing mode; preserve its current `learning-loop` behavior. |
 | A request clearly answerable in this interaction, with no requested follow-up | One-off session. |
 | A request for a route, progress, several sessions, review, repetition, or ongoing follow-up | Durable learning. |
-| A bare or otherwise ambiguous topic, such as `pizza` | Before any skill or state access, ask one closed choice: `Sesión puntual` or `Ruta durable`; then load only the selected methodology skill. |
+| A bare or otherwise ambiguous topic, such as `pizza` | Before any skill or state access, ask one closed choice whose two user-facing labels follow the conversation language. Map the one-off selection internally to `learning-session` and the durable selection to `learning-loop`; then load only the selected methodology skill. |
 
 Hard constraints:
 

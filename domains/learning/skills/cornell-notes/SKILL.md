@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Cornell Notes
@@ -45,12 +45,47 @@ Return the note path, the list of new cues (as questions), and confirmation that
 
 ## Standalone Summary Profile
 
-- Follow `assets/standalone-summary-template.md` in the conversation language; never force English.
+- Follow the complete format below in the conversation language; never force English.
 - Start with the synthesis. Then record key questions with notes that stand alone without the transcript.
 - Include an application or example only when the supplied session contains one. List only sources actually used in that session; write `None` in the conversation language when none were used.
 - Mermaid is optional and appears only when it materially reduces cognitive load.
 - This profile is independent: never create or update a topic, mission, path, route note, cards, review queue, quiz bank, dashboard, or recall hand-off.
 - The summarizer writes one complete new file and never edits or overwrites an existing file.
+
+### Complete Format
+
+Translate every heading and label into the conversation language. Omit the application/example section when the supplied session has none, and omit the Mermaid section unless it materially reduces cognitive load.
+
+````markdown
+# {Session topic}
+
+> {Localized date label}: {YYYY-MM-DD}
+
+## {Localized synthesis heading}
+
+{Direct summary of the central idea.}
+
+## {Localized key questions heading}
+
+| {Localized question label} | {Localized notes label} |
+| --- | --- |
+| {Key question} | {Self-contained explanation} |
+| {Key question} | {Self-contained explanation} |
+
+## {Localized application or example heading}
+
+{Application or example supplied by the session.}
+
+## {Localized sources heading}
+
+- {Only sources actually used in the session, or the conversation-language equivalent of `None`.}
+
+## {Optional localized map heading}
+
+```mermaid
+{Diagram that materially reduces cognitive load.}
+```
+````
 
 ### Output Contract
 

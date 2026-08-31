@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 
 # Learning Loop
@@ -24,7 +24,7 @@ Do not use for one-off explanations, book-chapter synthesis (`summarize` skill),
 - `/learn path <topic>` explicitly selects this skill. Strip `path` before routing the topic.
 - Empty input and the existing `review`, `quiz`, `map`, `teach`, `vocab`, `drill`, and `status` modes are durable.
 - A request for a route, progress, several sessions, review, repetition, or ongoing follow-up is durable.
-- Resolve a bare or ambiguous topic through the closed choice `Sesión puntual` or `Ruta durable` before loading this skill. Do not list, grep, glob, or read `.ai/learning/` while that choice is open.
+- Resolve a bare or ambiguous topic through a closed choice whose two user-facing labels follow the conversation language. Map the one-off selection internally to `learning-session` and the durable selection to `learning-loop` before loading either skill. Do not list, grep, glob, or read `.ai/learning/` while that choice is open.
 
 ## Hard Rules
 

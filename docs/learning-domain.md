@@ -15,7 +15,7 @@ Filtered installation is a sync; include every domain you want to keep in the se
 /learn path event-driven architecture para sistemas Java
 ```
 
-A bare topic such as `/learn pizza` is intentionally ambiguous. Mentor first asks `Sesión puntual` or `Ruta durable`; it does not inspect existing topics to infer the answer.
+A bare topic such as `/learn pizza` is intentionally ambiguous. Mentor first asks a one-off or durable choice using labels in the conversation language; it does not inspect existing topics to infer the answer. The internal routes remain `learning-session` and `learning-loop`.
 
 ## One-off sessions
 
@@ -35,12 +35,7 @@ The summarizer creates one complete file and never edits an existing one:
 
 The standalone Cornell profile contains an opening synthesis, key questions with notes, an application or example when present, and only sources actually used. Mermaid is optional and appears only when it reduces cognitive load. It never creates route notes, cards, recall handoffs, queues, or dashboard state.
 
-Automatic completion never interrupts or advances the conversation. The next normal response appends only the matching result:
-
-```text
-(Resumen guardado: <path>.)
-(No se pudo guardar el resumen.)
-```
+Automatic completion never interrupts or advances the conversation. The next normal response appends exactly one brief parenthetical notice in the conversation language: a success notice says the summary was saved and includes `<path>`; a failure notice says it could not be saved. The internal `OK summary=<path>`, `BLOCK`, and `FAIL` receipts are never translated.
 
 On rejection, unavailable background mode, timeout, cancellation, `BLOCK`, or `FAIL`, Mentor does not retry, resume, poll, or fall back to foreground or direct writing.
 

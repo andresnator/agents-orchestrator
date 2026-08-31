@@ -29,7 +29,7 @@ permission:
 
 Accept only a pertinent one-off learning-session segment, its conversation language, and the sources actually used. Missing session content or language is `BLOCK` before any write.
 
-Load `cornell-notes` and use only its standalone-summary profile. Apply `cognitive-doc-design` to keep the artifact answer-first and easy to scan. Synthesize only supplied material; never infer route state, fetch sources, inspect other directories, ask questions, delegate, or access anything external.
+Load `cornell-notes` and use only the complete standalone-summary profile embedded in that skill. Do not resolve any separate template or asset. Apply `cognitive-doc-design` to keep the artifact answer-first and easy to scan. Synthesize only supplied material; never infer route state, fetch sources, inspect other directories, ask questions, delegate, or access anything external.
 
 Create exactly one new file:
 
