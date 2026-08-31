@@ -23,6 +23,22 @@ assert_contains() {
   grep -Fq -- "$2" "$1" || fail "$1" "missing contract text: $2"
 }
 
+assert_exact_block() {
+  local file="$1" expected="$2" content
+  CHECKS=$((CHECKS + 1))
+  content="$(<"$file")"
+  [[ "$content" == *"$expected"* ]] || fail "$file" 'missing exact contract block'
+}
+
+assert_before() {
+  local file="$1" first="$2" second="$3" first_line second_line
+  CHECKS=$((CHECKS + 1))
+  first_line="$(awk -v needle="$first" 'index($0, needle) { print NR; exit }' "$file")"
+  second_line="$(awk -v needle="$second" 'index($0, needle) { print NR; exit }' "$file")"
+  [ -n "$first_line" ] && [ -n "$second_line" ] && [ "$first_line" -lt "$second_line" ] ||
+    fail "$file" "expected '$first' before '$second'"
+}
+
 assert_not_contains() {
   CHECKS=$((CHECKS + 1))
   ! grep -Fq -- "$2" "$1" || fail "$1" "retains forbidden text: $2"
@@ -41,6 +57,11 @@ assert_frontmatter_not_contains() {
 assert_absent() {
   CHECKS=$((CHECKS + 1))
   [ ! -e "$1" ] && [ ! -L "$1" ] || fail "$1" 'retired component remains'
+}
+
+assert_present() {
+  CHECKS=$((CHECKS + 1))
+  [ -f "$1" ] || fail "$1" "missing contract component: $2"
 }
 
 assert_primary() {
@@ -127,17 +148,137 @@ done
 
 mentor=domains/learning/agents/mentor.md
 recorder=domains/learning/agents/learning-recorder.md
+summarizer=domains/learning/agents/learning-summarizer.md
+learn_command=domains/learning/commands/learn.md
+learning_loop=domains/learning/skills/learning-loop/SKILL.md
+learning_session=domains/learning/skills/learning-session/SKILL.md
 spaced_recall=domains/learning/skills/spaced-recall/SKILL.md
 learning_scope='    "*": deny
     ".ai/learning/**": allow
     "**/.ai/learning/**": allow'
+summary_scope='    "*": deny
+    ".ai/learning/summaries/**": allow
+    "**/.ai/learning/summaries/**": allow'
+summarizer_skill_scope='    "*": deny
+    learning-session: allow
+    cornell-notes: allow
+    cognitive-doc-design: allow'
+summary_payload_contract='Before launching, build exactly this seven-field payload with separate lines and these names:
+```yaml
+operation: <create|update>
+target: <exact .ai/learning/summaries/... path>
+conversation_language: <language>
+covered_material: <complete material covered>
+sources_used: <sources|none>
+explicit_corrections: <corrections|none>
+request_ordinal: <ordinal>
+```
+All seven fields are mandatory. Do not launch until each field is present; use `none` explicitly only for `sources_used` or `explicit_corrections` when applicable.'
+summary_task_call_contract='Invoke the `task` tool with exactly this call; replace placeholders, but do not add fields:
+```yaml
+subagent_type: learning-summarizer
+description: Persist learning summary operation=<create|update> target=<path> request=<ordinal>
+background: true
+prompt: |-
+  operation: <create|update>
+  target: <exact .ai/learning/summaries/... path>
+  conversation_language: <language>
+  covered_material: <complete material covered>
+  sources_used: <sources|none>
+  explicit_corrections: <corrections|none>
+  request_ordinal: <ordinal>
+```'
+learning_session_payload_contract='On an explicit save or update request, before any `task` call, build exactly this seven-line payload and no other fields:
+
+```yaml
+operation: <create|update>
+target: <exact .ai/learning/summaries/... path>
+conversation_language: <language>
+covered_material: <complete material covered>
+sources_used: <sources|none>
+explicit_corrections: <corrections|none>
+request_ordinal: <ordinal>
+```'
 
 assert_primary "$mentor"
 assert_permission_rule_block "$mentor" edit "$learning_scope"
 assert_permission_rule_block "$mentor" write "$learning_scope"
 assert_permission_rule_block "$mentor" task '    "*": deny
-    learning-recorder: allow'
+    learning-recorder: allow
+    learning-summarizer: allow'
 assert_frontmatter_not_contains "$mentor" 'general: allow'
+
+# Durable learning remains the owner of explicit modes and multi-session intent.
+assert_contains "$learning_loop" 'Use when the user wants to learn a topic or skill over multiple sessions'
+assert_contains "$learning_loop" 'Do not use for one-off explanations'
+assert_contains "$mentor" 'Explicit modes, an existing topic selected for continuation, and clear path, progress, or continued-practice intent take precedence and route through `learning-loop`.'
+assert_contains "$mentor" 'Keep review-card task IDs, targets, lifecycle handling, fallback, and completion gates independent from summary tasks.'
+
+# Bounded direct messages and /learn prompts share one routing contract.
+assert_contains "$mentor" 'Classify direct messages and raw `/learn` arguments with the same rules.'
+assert_contains "$mentor" 'Classification is the first action. Until it resolves, do not load `learning-loop`, get today'
+assert_contains "$mentor" 'Durable intent is clear only when the input contains an explicit path or route signal, a multi-session deadline or cadence, existing progress to continue, or continued practice.'
+assert_contains "$mentor" 'A generic “quiero aprender X”, or an equivalent learning request without those durable signals, is ambiguous.'
+assert_contains "$mentor" 'If bounded-session versus durable-path intent is ambiguous, ask one direct question: session or path; never infer silently.'
+assert_contains "$mentor" 'A bounded session exits through `learning-session` before date lookup, state discovery, or the automatic due-check.'
+assert_contains "$mentor" 'Do not create a mission, path, topic, exercise, capstone, note, or review card from a bounded session.'
+assert_contains "$mentor" 'Run the existing due-check during a bounded session only when the learner explicitly asks to review.'
+assert_contains "$learn_command" 'Classify the exact raw arguments with the same precedence and bounded-session rules as a direct `mentor` message.'
+assert_contains "$learn_command" 'Explicit modes, existing topics selected for continuation, and clear durable-path intent still route through `learning-loop`.'
+assert_contains "$learn_command" 'Before classification resolves, do not load `learning-loop`, look up today'
+assert_contains "$learn_command" 'A generic “quiero aprender X”, or an equivalent request without an explicit path or route, multi-session deadline or cadence, existing progress, or continued-practice signal, is ambiguous.'
+assert_before "$mentor" 'Classification is the first action.' 'For durable learning, optimize mission-grounded paths'
+assert_before "$learn_command" 'Before classification resolves' 'Use this routing table after applying that common boundary:'
+
+# A bare exact topic name gets one names-only lookup before generic ambiguity.
+assert_contains "$mentor" 'Before applying the generic “quiero aprender X” ambiguity rule, use one narrow exception only when the direct message or raw `/learn` argument has the form of a bare topic selection: a slug or name, not a concrete question.'
+assert_contains "$mentor" 'List and compare only the names of direct child directories of `.ai/learning/`, always excluding `summaries/`.'
+assert_contains "$mentor" 'Do not read child contents, `mission.md`, `path.md`, `review-queue.md`, today'
+assert_contains "$mentor" 'On an exact existing-topic match, classify durable immediately, then execute the normal durable workflow.'
+assert_contains "$mentor" 'On no match, continue to the remaining intent and ambiguity rules; never create a topic from this lookup.'
+assert_contains "$mentor" 'Concrete questions never activate the topic lookup or read learning state.'
+assert_before "$mentor" 'Explicit modes take precedence.' 'Before applying the generic “quiero aprender X” ambiguity rule'
+assert_before "$mentor" 'A concrete question, explanation, or small concept resolvable now routes through `learning-session`.' 'Before applying the generic “quiero aprender X” ambiguity rule'
+assert_before "$mentor" 'Before applying the generic “quiero aprender X” ambiguity rule' 'A generic “quiero aprender X”, or an equivalent learning request without those durable signals, is ambiguous.'
+assert_contains "$learn_command" 'Before applying the generic “quiero aprender X” ambiguity rule, use one narrow exception only when the exact raw argument has the form of a bare topic selection: a slug or name, not a concrete question.'
+assert_contains "$learn_command" 'List and compare only the names of direct child directories of `.ai/learning/`, always excluding `summaries/`.'
+assert_contains "$learn_command" 'Do not read child contents, `mission.md`, `path.md`, `review-queue.md`, today'
+assert_contains "$learn_command" 'On an exact existing-topic match, classify durable immediately, then execute the normal durable workflow.'
+assert_contains "$learn_command" 'On no match, continue to the remaining intent and ambiguity rules; never create a topic from this lookup.'
+assert_contains "$learn_command" 'Concrete questions never activate the topic lookup or read learning state.'
+assert_before "$learn_command" 'Explicit modes and clear durable-path, progress, or continued-practice intent take precedence' 'Before applying the generic “quiero aprender X” ambiguity rule'
+assert_before "$learn_command" 'A concrete question, explanation, or small concept resolvable now routes through `learning-session`' 'Before applying the generic “quiero aprender X” ambiguity rule'
+assert_before "$learn_command" 'Before applying the generic “quiero aprender X” ambiguity rule' 'A generic “quiero aprender X”, or an equivalent request without an explicit path or route, multi-session deadline or cadence, existing progress, or continued-practice signal, is ambiguous.'
+
+# Summary persistence is opt-in, asynchronous, serialized per target, and receipt-only.
+assert_contains "$mentor" 'Without an explicit save or update request, never create, update, or delegate a summary.'
+assert_contains "$mentor" 'Before constructing `covered_material`, derive a learning-material-only view containing concepts, canonical answers, examples, limits, and covered corrections.'
+assert_contains "$mentor" 'Exclude card and task IDs, `review-queue.md` rows or queue state, grades, Box/Last/Next metadata, due dates, scheduling dates, and review instructions or plans.'
+assert_contains "$mentor" 'Do not pass or promise excluded metadata in any handoff field, even when `spaced-recall` is loaded.'
+assert_contains "$mentor" 'Preserve dates that are genuine conceptual learning content; only labeled scheduling metadata is excluded.'
+assert_before "$mentor" 'Before constructing `covered_material`' 'Send `learning-summarizer` the operation, exact target, conversation language, covered material'
+assert_contains "$mentor" 'Send `learning-summarizer` the operation, exact target, conversation language, covered material, sources used, explicit corrections, and request ordinal.'
+assert_exact_block "$mentor" "$summary_payload_contract"
+assert_exact_block "$mentor" "$summary_task_call_contract"
+assert_contains "$mentor" 'The `prompt` value is exactly the seven payload lines above, with no preface, suffix, or additional field.'
+assert_contains "$mentor" 'The call must omit `task_id` entirely; never set it to `null`.'
+assert_contains "$mentor" 'If `background: true` is unavailable, do not execute the `task` call: emit only `No se pudo guardar: <motivo>. Puedes pedir “reintenta guardarlo”.` and stop the turn.'
+assert_contains "$mentor" 'After a valid launch, require its fresh runtime task ID immediately, track it, and continue the current turn without waiting, polling, or reading the task result.'
+assert_contains "$mentor" 'Track review tasks and summary tasks in separate pending maps correlated by runtime task ID and target.'
+assert_contains "$mentor" 'Allow only one pending summary mutation per target; coalesce the latest explicit update until the current task returns `OK`.'
+assert_contains "$mentor" 'If that task fails, discard its coalesced update and require a new explicit request.'
+assert_contains "$mentor" 'A correlated `OK` emits exactly one line: `Resumen guardado: <ruta>`, then terminates the turn.'
+assert_contains "$mentor" 'A correlated `BLOCK`, `FAIL`, timeout, cancellation, rejected launch, or runtime error emits exactly one line: `No se pudo guardar: <motivo>. Puedes pedir “reintenta guardarlo”.`, then terminates the turn.'
+assert_contains "$mentor" 'A summary-notification turn contains no text before or after that receipt. Never explain it, inspect, re-read, or verify the file, or add another claim.'
+assert_contains "$mentor" 'A summary notification never retries, resumes, uses foreground, applies direct fallback, answers, repeats, or advances the open interaction.'
+assert_contains "$mentor" 'Treat `summaries/` as reserved state: exclude it from topic discovery and never look there for `mission.md`, `path.md`, or `review-queue.md`.'
+
+# Selected durable modes execute now instead of degrading into planning-only output.
+assert_contains "$mentor" 'Once routing selects a durable mode, execute that mode now. Never answer with a plan, proposal, checklist of future actions, or planning-only substitute.'
+assert_contains "$mentor" 'This applies especially to `/learn review` and an existing topic selected for continuation: run the due-check, open the required learner interaction immediately, continue it across genuine learner answers, persist each resulting checkpoint through `learning-recorder`, and close through the existing durable contracts.'
+assert_contains "$learn_command" 'Once routing selects any durable mode, execute it now; never return a plan, proposed actions, future-action checklist, or planning-only substitute.'
+assert_contains "$learn_command" 'For `/learn review` and existing-topic continuation, perform the due-check, open the required interaction immediately, continue it across genuine learner answers, persist resulting checkpoints through `learning-recorder`, and close under the existing durable contracts.'
+
 assert_contains "$mentor" 'Before any create/edit/append, send `learning-recorder` only exact target paths, mutations, complete content, and anchors.'
 assert_contains "$mentor" 'After each grade, immediately launch a fresh `learning-recorder` with `background: true`'
 assert_contains "$mentor" 'omit `task_id`—never pass or reuse one.'
@@ -196,6 +337,60 @@ assert_contains "$recorder" 'Return exactly one line:'
 assert_contains "$recorder" 'OK files=<csv>'
 assert_contains "$recorder" 'BLOCK reason=<short>'
 assert_contains "$recorder" 'FAIL changed=<csv> reason=<short>'
+
+# The bounded teaching contract is additive and does not broaden learning-loop.
+assert_present "$learning_session" 'learning-session/classify-bounded-request'
+if [ -f "$learning_session" ]; then
+  assert_contains "$learning_session" 'Use for a concrete learning request that can be resolved in the current session.'
+  assert_contains "$learning_session" 'Direct messages and raw `/learn` prompts use the same classification.'
+  assert_contains "$learning_session" 'When “I want to learn X” is ambiguous, ask once whether the learner wants a bounded session or a multi-session path.'
+  assert_contains "$learning_session" 'Do not read learning state or run the due-check when a bounded session starts.'
+  assert_contains "$learning_session" 'If the learner explicitly asks what is due, run the existing `spaced-recall` due-check then.'
+  assert_contains "$learning_session" 'Lead with the answer, teach in short chunks, and ask questions only when they help.'
+  assert_contains "$learning_session" 'Never require a quiz, Feynman teach-back, or exercise.'
+  assert_contains "$learning_session" 'Persist only after an explicit save or update request.'
+  assert_contains "$learning_session" 'Choose `.ai/learning/summaries/YYYY-MM-DD-<slug>.md`; for an unrelated collision, use the next available suffix.'
+  assert_contains "$learning_session" 'Pass exactly the seven fields `operation`, `target`, `conversation_language`, `covered_material`, `sources_used`, `explicit_corrections`, and `request_ordinal` to the authorized writer; use the names, order, and rules in the mandatory block below.'
+  assert_exact_block "$learning_session" "$learning_session_payload_contract"
+  assert_contains "$learning_session" 'Keep each value on its field'"'"'s single line. All seven fields are mandatory. Use `none` only for `sources_used` or `explicit_corrections` when applicable. If any field is absent, abort without launching a task.'
+  assert_contains "$learning_session" 'Invoke only `learning-summarizer`, only with `background: true`, and omit `task_id` entirely. The description must equal `Persist learning summary operation=<create|update> target=<path> request=<ordinal>`.'
+  assert_contains "$learning_session" 'If background execution is unavailable or the launch is rejected, do not invoke or wait for a foreground task, retry, resume, or apply any fallback.'
+  assert_contains "$learning_session" 'A correlated `OK` emits exactly one line: `Resumen guardado: <ruta>`.'
+  assert_contains "$learning_session" 'A correlated `BLOCK`, `FAIL`, timeout, cancellation, or runtime error emits exactly one line: `No se pudo guardar: <motivo>. Puedes pedir “reintenta guardarlo”.`'
+  assert_contains "$learning_session" 'After that one line, stop. Do not explain, verify, re-read, answer, repeat, or advance the open interaction.'
+  assert_contains "$learning_session" 'A compact summary uses the conversation language and one document with a title, date, brief synthesis, and lightweight Cornell cue-and-answer table.'
+  assert_contains "$learning_session" 'Do not create a mission, path, module folder, learner-voiced summary, `Recall hand-off`, or review cards.'
+  assert_contains "$learning_session" 'Loading `spaced-recall` for an on-demand review does not change this compact-summary boundary.'
+  assert_contains "$learning_session" 'The summary may cover material discussed during that review, but it never creates, promises, schedules, or includes new cards, `review-queue.md`, `Recall hand-off`, card IDs, or a review plan.'
+  assert_contains "$learning_session" 'Never mutate the review system from compact-summary persistence.'
+fi
+
+# The semantic writer has a narrow state and tool boundary.
+assert_present "$summarizer" 'learning-summary/background-generation'
+if [ -f "$summarizer" ]; then
+  assert_frontmatter_contains "$summarizer" 'mode: subagent'
+  assert_frontmatter_contains "$summarizer" 'question: deny'
+  assert_frontmatter_contains "$summarizer" '  "*": deny'
+  assert_permission_rule_block "$summarizer" read "$summary_scope"
+  assert_permission_rule_block "$summarizer" edit "$summary_scope"
+  assert_permission_rule_block "$summarizer" write "$summary_scope"
+  assert_permission_rule_block "$summarizer" skill "$summarizer_skill_scope"
+  assert_frontmatter_not_contains "$summarizer" '  bash:'
+  assert_frontmatter_not_contains "$summarizer" '  webfetch:'
+  assert_frontmatter_not_contains "$summarizer" '  task:'
+  assert_contains "$summarizer" 'Require operation, exact target, source material, conversation language, sources used, explicit corrections, and request ordinal.'
+  assert_contains "$summarizer" 'BLOCK before mutation when input is ambiguous, incomplete, outside `.ai/learning/summaries/**`, or collides with an unrelated existing file.'
+  assert_contains "$summarizer" 'For create, confirm the target is absent and write one complete document.'
+  assert_contains "$summarizer" 'For update, re-read the target, merge semantically equivalent ideas, preserve distinct nuances, and rewrite the complete document.'
+  assert_contains "$summarizer" 'An explicit correction replaces the prior claim; mark unresolved differences instead of silently deleting them.'
+  assert_contains "$summarizer" 'Before drafting and again before writing, apply a final learning-material filter to supplied source material and merged update content.'
+  assert_contains "$summarizer" 'Keep only concepts, canonical answers, examples, limits, and covered corrections.'
+  assert_contains "$summarizer" 'Never write card or task IDs, `review-queue.md` rows or queue state, grades, Box/Last/Next metadata, due dates, scheduling dates, or review instructions or plans, even when they appear in source material.'
+  assert_contains "$summarizer" 'Do not promise that metadata.'
+  assert_contains "$summarizer" 'Preserve dates that are genuine conceptual learning content; only labeled scheduling metadata is excluded.'
+  assert_contains "$summarizer" 'Never infer uncovered facts, expose sensitive data, ask questions, run commands, access external sources, delegate, or write outside the exact target.'
+  assert_contains "$summarizer" 'Return exactly one line: `OK target=<path>`, `BLOCK reason=<short>`, or `FAIL changed=<path|none> reason=<short>`.'
+fi
 
 assert_contains domains/learning/README.md '| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |'
 assert_contains docs/agent-models.md 'Assign `learning-recorder` individually with `/models-profiles`'

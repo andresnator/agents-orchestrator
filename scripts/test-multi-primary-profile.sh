@@ -585,7 +585,7 @@ shouldMigratePreviousProfileInventories() {
 shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
   local domain project target skill
 
-  for domain in plan architecture orchestration review; do
+  for domain in plan architecture orchestration review learning; do
     project="$(make_project "filtered-$domain")"
     target="$project/.opencode"
 
@@ -603,6 +603,17 @@ shouldInstallEveryAllowedSkillWhenFilteringOneDomain() {
       [ -L "$target/skills/java-testing" ] || fail "filtered architecture: Java testing handoff is missing"
       [ "$(readlink "$target/skills/java-testing")" = "$ROOT/skills/java-testing" ] ||
         fail "filtered architecture: Java testing handoff does not point to the shared body"
+    fi
+
+    if [ "$domain" = learning ]; then
+      [ -L "$target/agents/learning-summarizer.md" ] ||
+        fail "filtered learning: learning-summarizer agent is missing"
+      [ -L "$target/skills/learning-session" ] ||
+        fail "filtered learning: learning-session skill is missing"
+      [ -L "$target/skills/cornell-notes" ] ||
+        fail "filtered learning: cornell-notes skill is missing"
+      [ -L "$target/skills/cognitive-doc-design" ] ||
+        fail "filtered learning: cognitive-doc-design skill is missing"
     fi
 
     "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
