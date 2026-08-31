@@ -109,6 +109,12 @@ assert_contains "$planner" 'one `.ai/deep-planner/plans/<slug>.md`'
 assert_contains "$orchestraitor" 'A change request uses direct execution.'
 assert_contains "$orchestraitor" '`Make a change`, `Execute a plan`, or `Resume work`'
 assert_contains "$orchestraitor" 'Do not create `.ai/` state'
+assert_contains "$orchestraitor" 'Delivery defaults to `working-tree`; never create a commit unless the current user request explicitly asks for one.'
+assert_contains "$orchestraitor" 'load `work-unit-commits` directly after implementation routing, never through it.'
+assert_contains "$orchestraitor" 'Never load `chained-pr` or `tcr` as part of delivery; never push.'
+assert_frontmatter_contains "$orchestraitor" 'work-unit-commits: allow'
+assert_frontmatter_contains "$orchestraitor" 'chained-pr: deny'
+assert_frontmatter_contains "$orchestraitor" 'tcr: deny'
 assert_contains "$orchestraitor" 'Review is a separate primary'
 assert_contains "$review" 'For `judgment`, load `judgment-day`.'
 assert_not_contains "$review" 'SDD reconciliation'
@@ -118,7 +124,10 @@ for worker in sdd-explore sdd-implement sdd-canonical-merge sdd-verify; do
   file="domains/orchestration/agents/$worker.md"
   assert_frontmatter_contains "$file" 'mode: subagent'
   assert_frontmatter_contains "$file" 'question: deny'
+  assert_frontmatter_contains "$file" 'work-unit-commits: deny'
 done
+assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'chained-pr: deny'
+assert_frontmatter_contains domains/orchestration/agents/sdd-implement.md 'tcr: deny'
 for worker in jd-fix jd-judge-a jd-judge-b jd-solo; do
   file="domains/review/agents/$worker.md"
   assert_frontmatter_contains "$file" 'mode: subagent'

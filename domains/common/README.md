@@ -54,6 +54,6 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 | Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
 | Skill | `systematic-debugging` | Finds root causes before fixes |
 | Skill | `tcr` | Runs test-commit-revert micro-cycles |
-| Skill | `work-unit-commits` | Plans reviewable and cohesive commits |
+| Skill | `work-unit-commits` | Delivers cohesive commits without owning push or review |
 | Plugin | `caveman-mode` | Propagates mode through session trees |
 | External npm server plugin | `opencode-graphify-init` | Refreshes approved Graphify indexes |

@@ -10,6 +10,7 @@ permission:
   skill:
     "*": deny
     graphify-cli: allow
+    work-unit-commits: deny
 ---
 # SDD Explore
 

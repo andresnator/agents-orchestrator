@@ -11,7 +11,9 @@ permission:
     ".ai/orchestration/specs/**": allow
   question: deny
   bash: deny
-  skill: deny
+  skill:
+    "*": deny
+    work-unit-commits: deny
 ---
 # SDD Canonical Merge
 

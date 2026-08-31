@@ -27,6 +27,8 @@ Seed state uses `ai/`, not `.ai/`, because the repository ignores `.ai/`. The ru
 | --- | --- | --- |
 | `complex-plan` | SDD-CONFIRM-01, SDD-COMPLETE-01 | One neutral plan with dependent groups and canonical behavior. |
 | `canonical-spec` | SDD-COMPLETE-01 | Existing order-pricing behavior under `.ai/orchestration/specs/`. |
+| `delivery-plan` | SDD-WORKING-TREE-01, SDD-COMMIT-PER-UNIT-01, SDD-COMMIT-FAILURE-01, SDD-DIRTY-SCOPE-01 | Two ordered public behaviors with exact unit messages. |
+| `resume-run` | SDD-RESUME-01 | One active planless run whose development and delivery values are already resolved. |
 
 ## Changing the fixture
 

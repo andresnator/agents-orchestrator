@@ -622,7 +622,11 @@ shouldInstallOrchestrationAndReviewIndependently() {
 
   # Then Review does not leak into its inventory
   [ -L "$target/agents/orchestraitor.md" ] || fail "independent orchestration: primary missing"
+  [ -L "$target/skills/work-unit-commits" ] || fail "independent orchestration: delivery skill missing"
+  [ "$(readlink "$target/skills/work-unit-commits")" = "$ROOT/skills/work-unit-commits" ] ||
+    fail "independent orchestration: delivery skill does not point to the shared body"
   [ ! -e "$target/agents/review-coordinator.md" ] || fail "independent orchestration: review primary leaked"
+  [ ! -e "$target/skills/tcr" ] || fail "independent orchestration: Common-only TCR skill leaked"
   "$ROOT/installers/opencode.sh" uninstall --target "$target" >/dev/null
 
   # Given a fresh Review-only target

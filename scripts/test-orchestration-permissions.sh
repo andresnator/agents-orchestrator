@@ -132,12 +132,26 @@ shouldWriteCompleteBlocksPreservingFrontmatterDenies() {
     "on: orchestraitor task allowlist lost sdd-implement"
   assert_json_value "$config" '.agent.orchestraitor.permission.task["sdd-verify"]' allow \
     "on: orchestraitor task allowlist lost sdd-verify"
-  # Dynamic implementation skills stay open, with later review and Git-skill denies.
-  for name in orchestraitor sdd-implement; do
-    assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"*\"]" allow \
-      "on: $name lost dynamic skill loading"
-    assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"judgment-day\"]" deny \
-      "on: $name can load the review skill"
+  # The primary owns opt-in delivery; every worker keeps an explicit Git-skill deny.
+  assert_json_value "$config" '.agent.orchestraitor.permission.skill["*"]' allow \
+    "on: orchestraitor lost dynamic skill loading"
+  assert_json_value "$config" '.agent.orchestraitor.permission.skill["judgment-day"]' deny \
+    "on: orchestraitor can load the review skill"
+  assert_json_value "$config" '.agent.orchestraitor.permission.skill["chained-pr"]' deny \
+    "on: orchestraitor can load chained PR delivery"
+  assert_json_value "$config" '.agent.orchestraitor.permission.skill.tcr' deny \
+    "on: orchestraitor can load TCR"
+  assert_json_value "$config" '.agent.orchestraitor.permission.skill["work-unit-commits"]' allow \
+    "on: orchestraitor cannot load the delivery skill"
+  assert_json_value "$config" '.agent["sdd-implement"].permission.skill["*"]' allow \
+    "on: sdd-implement lost dynamic implementation skills"
+  assert_json_value "$config" '.agent["sdd-implement"].permission.skill["judgment-day"]' deny \
+    "on: sdd-implement can load the review skill"
+  assert_json_value "$config" '.agent["sdd-implement"].permission.skill["chained-pr"]' deny \
+    "on: sdd-implement can load chained PR delivery"
+  assert_json_value "$config" '.agent["sdd-implement"].permission.skill.tcr' deny \
+    "on: sdd-implement can load TCR"
+  for name in sdd-explore sdd-implement sdd-verify sdd-canonical-merge; do
     assert_json_value "$config" ".agent[\"$name\"].permission.skill[\"work-unit-commits\"]" deny \
       "on: $name can load the Git delivery skill"
   done
