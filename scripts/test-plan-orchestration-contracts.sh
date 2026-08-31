@@ -344,6 +344,8 @@ for contract in \
 done
 
 flow_runner=scripts/test-orchestration-flows.sh
+CHECKS=$((CHECKS + 1))
+"$flow_runner" contracts >/dev/null || fail "$flow_runner" 'final-response event contracts failed'
 assert_contains "$flow_runner" 'install_current_profile'
 assert_contains "$flow_runner" 'BigDecimal orderSubtotal = order.subtotal();'
 assert_contains "$flow_runner" 'select(.part?.tool == "question")'
@@ -355,6 +357,9 @@ assert_contains "$flow_runner" 'assert_no_ai_commits'
 assert_contains "$flow_runner" 'assert_plan_unchanged'
 assert_contains "$flow_runner" 'make_downstream_failure_maven'
 assert_contains "$flow_runner" 'intentional downstream verification failure after first delivered unit'
+assert_contains "$flow_runner" 'select(.type == "step_finish" and .part.reason == "stop")'
+assert_contains "$flow_runner" "assert_final_response_contains 'intentional downstream verification failure'"
+assert_not_contains "$flow_runner" "grep -Eiq 'BLOCK|FAIL|intentional downstream verification failure'"
 assert_contains "$flow_runner" "assert_run_line \"\$RUN_ROOT\" \"Baseline: \$BASELINE_HEAD\""
 assert_contains "$flow_runner" "assert_run_line \"\$RUN_ROOT\" 'Commits: none'"
 assert_contains "$flow_runner" 'assert_no_question'

@@ -24,6 +24,59 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+final_response() {
+  local events="${1:--}"
+  jq -rs '
+    ([.[] | select(.type == "step_finish" and .part.reason == "stop") | .part.messageID] | last) as $message_id
+    | [.[] | select(.type == "text" and .part.messageID == $message_id and (.part.text | type == "string")) | .part.text]
+    | join("\n")
+  ' "$events"
+}
+
+shouldIgnoreToolFailureWhenFinalResponseOmitsIt() {
+  local events response
+
+  # Given
+  events='{"type":"tool_use","part":{"state":{"output":"intentional downstream verification failure after first delivered unit"}}}
+{"type":"text","part":{"messageID":"final","text":"The run stopped."}}
+{"type":"step_finish","part":{"messageID":"final","reason":"stop"}}'
+
+  # When
+  response="$(printf '%s\n' "$events" | final_response)"
+
+  # Then
+  [ "$response" = 'The run stopped.' ] || die 'final response parser included non-final events'
+  ! printf '%s\n' "$response" | grep -Fqi -- 'intentional downstream verification failure' ||
+    die 'tool failure leaked into the final response'
+}
+
+shouldReadFailureFromFinalResponse() {
+  local events response
+
+  # Given
+  events='{"type":"text","part":{"messageID":"final","text":"Stopped: intentional downstream verification failure after first delivered unit."}}
+{"type":"step_finish","part":{"messageID":"final","reason":"stop"}}'
+
+  # When
+  response="$(printf '%s\n' "$events" | final_response)"
+
+  # Then
+  printf '%s\n' "$response" | grep -Fqi -- 'intentional downstream verification failure' ||
+    die 'final response parser omitted the reported failure'
+}
+
+run_contracts() {
+  command -v jq >/dev/null 2>&1 || die 'jq is required'
+  shouldIgnoreToolFailureWhenFinalResponseOmitsIt
+  shouldReadFailureFromFinalResponse
+  printf 'PASS orchestration flow event contracts\n'
+}
+
+if [ "$SCENARIO" = contracts ]; then
+  run_contracts
+  exit 0
+fi
+
 [ -n "${OPENCODE_BIN:-}" ] || die 'OPENCODE_BIN is required'
 [ -x "$OPENCODE_BIN" ] || die "OPENCODE_BIN is not executable: $OPENCODE_BIN"
 
@@ -227,6 +280,14 @@ assert_plan_unchanged() {
   [ "$before" = "$after" ] || die 'source plan changed'
 }
 
+assert_final_response_contains() {
+  local expected="$1" response
+  response="$(final_response "$EVENTS")"
+  [ -n "$response" ] || die 'model run returned no final assistant response'
+  printf '%s\n' "$response" | grep -Fqi -- "$expected" ||
+    die "final assistant response is missing: $expected"
+}
+
 make_downstream_failure_maven() {
   local failure_bin="$SCRATCH/failure-bin"
   mkdir -p "$failure_bin"
@@ -353,8 +414,8 @@ case "$SCENARIO" in
     assert_commit_chain
     assert_no_ai_commits
     assert_plan_unchanged "$PLAN" "$PLAN_SHA_BEFORE"
-    grep -Eiq 'BLOCK|FAIL|intentional downstream verification failure' "$EVENTS" "$STDERR_LOG" ||
-      die 'failure run did not report the downstream check failure'
+    assert_final_response_contains 'intentional downstream verification failure'
+    assert_final_response_contains "$(git -C "$PROJECT" rev-parse HEAD)"
     ;;
   SDD-DIRTY-SCOPE-01)
     seed_state delivery-plan
