@@ -1,11 +1,11 @@
 ---
 name: cornell-notes
-description: "Trigger: cornell note, cornell notes, nota cornell, learning lesson capture. Markdown Cornell note format for micro-lessons: cue questions + notes + learner-voiced summary; cues feed quizzes and the spaced-repetition queue."
+description: "Trigger: cornell note, cornell notes, nota cornell, learning lesson capture, bounded session summary. Full learning-path notes plus an additive compact Cornell format for explicitly saved sessions."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # Cornell Notes
@@ -39,3 +39,14 @@ See `assets/cornell-template.md`. Structure:
 ## Output Contract
 
 Return the note path, the list of new cues (as questions), and confirmation that each cue was scheduled via `spaced-recall`. Flag any cue the learner could not answer during capture so the loop can reinforce it.
+
+## Compact Session Summary Variant
+
+Use this additive variant only when a bounded `learning-session` receives an explicit save or update request. It does not change the full learning-path note contract above.
+
+- Follow `assets/session-summary-template.md`.
+- Write one document in the conversation language with a title, date, brief synthesis, and lightweight Cornell table of guide questions and canonical answers.
+- Add application, steps, examples, limits, unresolved questions, or sources only when they exist in the covered material and add value.
+- Merge semantically equivalent ideas, preserve distinct nuances, and let explicit corrections replace superseded claims. Mark unresolved differences.
+- Redact unnecessary sensitive data. Never invent facts, sources, examples, opinions, or conclusions not covered in the session.
+- Do not apply the full variant's numbering, learner-voice, Mermaid, source, scheduling, or output-receipt requirements to this compact variant.
