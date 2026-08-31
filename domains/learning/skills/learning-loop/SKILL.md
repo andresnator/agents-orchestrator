@@ -1,27 +1,36 @@
 ---
 name: learning-loop
-description: "Trigger: /learn, learn topic, learning path, teach me, ensename, aprender, ruta de aprendizaje. Mission-grounded 70-20-10 learning loop: Mermaid roadmaps, Cornell micro-lessons, real-repo exercises, Socratic debriefs, and spaced-repetition hand-off."
+description: "Trigger: durable /learn path, learning route, progress, review, several sessions, spaced repetition. Mission-grounded 70-20-10 learning loop: Mermaid roadmaps, Cornell micro-lessons, real-repo exercises, Socratic debriefs, and spaced-repetition hand-off."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Learning Loop
 
 ## Activation Contract
 
-Use when the user wants to learn a topic or skill over multiple sessions: starting a learning path, continuing one, quizzing, mapping, or checking progress. This is the methodology contract for the `mentor` agent and the `/learn` command.
+Use after `mentor` has classified the raw request as durable learning: starting or continuing a multi-session path, reviewing, quizzing, mapping, drilling, teaching back, or checking progress. This is the durable methodology contract for the `mentor` agent and the `/learn` command.
 
 Do not use for one-off explanations, book-chapter synthesis (`summarize` skill), or on-demand English corrections outside `/learn` (`english-tutor` skill).
+
+## Routing Precondition
+
+- Classify from the raw request before loading this skill or reading `.ai/learning/`; never use learning state to decide between a one-off session and a durable path.
+- `/learn path <topic>` explicitly selects this skill. Strip `path` before routing the topic.
+- Empty input and the existing `review`, `quiz`, `map`, `teach`, `vocab`, `drill`, and `status` modes are durable.
+- A request for a route, progress, several sessions, review, repetition, or ongoing follow-up is durable.
+- Resolve a bare or ambiguous topic through the closed choice `Sesión puntual` or `Ruta durable` before loading this skill. Do not list, grep, glob, or read `.ai/learning/` while that choice is open.
 
 ## Hard Rules
 
 - Optimize **storage strength over fluency**: long-term retention through effortful retrieval, spacing, and interleaving beats feeling fluent in the moment. Knowledge acquisition minimizes difficulty; practice maximizes effortful retrieval.
-- All state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. The conversation follows the user's language.
+- Durable topic state lives under `.ai/learning/<topic-slug>/`; artifacts are Markdown only (never HTML), written in English — except Anki batch exports under `anki/`, plain `;`-separated `.txt` per `anki-vocab`. `.ai/learning/summaries/` is reserved standalone-summary infrastructure, never a durable topic. The conversation follows the user's language.
+- The exact `summaries` topic slug is reserved. Exclude that directory from topic discovery and never create or resume a topic with that slug. If a requested topic normalizes to `summaries`, propose a distinct slug such as `summaries-topic` for learner confirmation while preserving the topic title.
 - **State discovery reads the directory, never a pattern search**: `.ai/learning/` is a dot-directory that search tools commonly skip, so an empty glob/grep result is inconclusive. List the directory itself before concluding a topic or queue is absent, and cite the files inspected when reporting that nothing is active or due.
 - Ask open-ended interviews, retrieval prompts, Socratic debriefs, and teach-backs directly in normal chat, one question at a time, then stop and wait. Add `Recommendation: ...` only when useful; do not add question headings, numbering, rationale blocks, or interview-length estimates.
 - Use the `question` tool only for closed choices such as topic selection, review confirmation, grades, or modes.
@@ -49,7 +58,8 @@ Route the raw `/learn` arguments:
 | `vocab [words \| theme]` | vocab | Anki vocabulary batch per `anki-vocab`: natural phrases from a situation or the given units, reinforced from `vocabulary.md` and the review queue; language topics only; empty input proposes a batch from mission context plus weak cards. |
 | `drill [unit]` | drill | Standalone bidirectional-translation session per `bidirectional-translation` on the named dialogue unit (weakest-first when empty); language topics only. |
 | `status` | status | Rebuild `.ai/learning/dashboard.md`: per-topic progress, due/upcoming reviews, mastered counts. |
-| anything else | topic | Treat as a topic: resume if `<topic-slug>` exists, otherwise start a new path. |
+| `path <topic>` | topic | Explicitly start or resume the durable topic after stripping the `path` selector. |
+| anything else | topic | Treat as a topic: resume only if `<topic-slug>/mission.md` exists and the slug is not `summaries`; otherwise start a new path with a non-reserved slug. |
 
 ## New Topic Flow
 

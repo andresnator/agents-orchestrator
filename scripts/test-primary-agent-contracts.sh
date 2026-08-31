@@ -127,18 +127,58 @@ done
 
 mentor=domains/learning/agents/mentor.md
 recorder=domains/learning/agents/learning-recorder.md
+summarizer=domains/learning/agents/learning-summarizer.md
+learn_command=domains/learning/commands/learn.md
+learning_loop=domains/learning/skills/learning-loop/SKILL.md
+learning_session=domains/learning/skills/learning-session/SKILL.md
+cornell_notes=domains/learning/skills/cornell-notes/SKILL.md
+standalone_cornell_template=domains/learning/skills/cornell-notes/assets/standalone-summary-template.md
 spaced_recall=domains/learning/skills/spaced-recall/SKILL.md
 learning_scope='    "*": deny
     ".ai/learning/**": allow
     "**/.ai/learning/**": allow'
+summary_scope='    "*": deny
+    ".ai/learning/summaries/**": allow
+    "**/.ai/learning/summaries/**": allow'
+summary_bash_scope='    "*": deny
+    "date +%Y-%m-%d-%H%M%S": allow
+    "mkdir -p .ai/learning/summaries": allow'
+summary_skill_scope='    "*": deny
+    cornell-notes: allow
+    cognitive-doc-design: allow'
 
 assert_primary "$mentor"
 assert_permission_rule_block "$mentor" edit "$learning_scope"
 assert_permission_rule_block "$mentor" write "$learning_scope"
 assert_permission_rule_block "$mentor" task '    "*": deny
-    learning-recorder: allow'
+    learning-recorder: allow
+    learning-summarizer: allow'
 assert_frontmatter_not_contains "$mentor" 'general: allow'
-assert_contains "$mentor" 'Before any create/edit/append, send `learning-recorder` only exact target paths, mutations, complete content, and anchors.'
+assert_contains "$mentor" 'Classify the raw request before loading any skill, calling any tool, or reading `.ai/learning/`.'
+assert_contains "$mentor" 'Load exactly one initial methodology skill:'
+assert_contains "$mentor" '`learning-session` for a request clearly answerable in the current interaction with no requested follow-up.'
+assert_contains "$mentor" '`learning-loop` for a route, progress, several sessions, review, repetition, ongoing follow-up, empty input, or any existing durable mode.'
+assert_contains "$mentor" 'Explicit `/learn session <request>` forces `learning-session`'
+assert_contains "$mentor" 'Explicit `/learn path <topic>` forces `learning-loop`'
+assert_contains "$mentor" 'Preserve `review`, `quiz`, `map`, `teach`, `vocab`, `drill`, and `status` as durable modes.'
+assert_contains "$mentor" 'A bare or otherwise ambiguous topic such as `/learn pizza` requires one closed `question` choice between `Sesión puntual` and `Ruta durable`.'
+assert_contains "$mentor" 'Ask it before any skill, date, due-check, list, grep, glob, read, or other state discovery'
+assert_contains "$mentor" 'Run this protocol only after durable classification and loading `learning-loop`; never run any step for `learning-session`.'
+assert_contains "$mentor" 'The exact `summaries` slug is reserved infrastructure: never treat it as a topic or generate it for one.'
+assert_contains "$mentor" 'Treat a child directory as a durable topic only when it is not the exact reserved `summaries` directory and contains `mission.md`'
+assert_contains "$mentor" 'never read topic files from `summaries/`.'
+assert_contains "$mentor" 'Before any durable create/edit/append, send `learning-recorder` only exact target paths, mutations, complete content, and anchors.'
+assert_contains "$mentor" 'explicit positive request to save authorizes a summary.'
+assert_contains "$mentor" 'Launch one fresh `learning-summarizer` with `background: true`; omit `task_id`—never pass or reuse one.'
+assert_contains "$mentor" 'Pass only the pertinent segment of the one-off session, its conversation language, and sources actually used.'
+assert_contains "$mentor" 'After an accepted launch, continue responding to the learner immediately; do not wait for completion.'
+assert_contains "$mentor" 'Correlate automatic notifications only by the pending summary task ID.'
+assert_contains "$mentor" 'A valid `OK summary=<path>` must name `.ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md`'
+assert_contains "$mentor" 'queues exactly `(Resumen guardado: <path>.)`'
+assert_contains "$mentor" 'queues exactly `(No se pudo guardar el resumen.)`'
+assert_contains "$mentor" 'Never retry, resume, poll, delegate again, or fall back to foreground or direct writing.'
+assert_contains "$mentor" 'Automatic notifications never produce a standalone response, interrupt teaching, answer or advance an open question, or alter durable learning.'
+assert_contains "$mentor" 'Append one queued result parenthesis to the next normal response and no other persistence commentary.'
 assert_contains "$mentor" 'After each grade, immediately launch a fresh `learning-recorder` with `background: true`'
 assert_contains "$mentor" 'omit `task_id`—never pass or reuse one.'
 assert_contains "$mentor" 'its description must equal `Persist review grade topic=<topic-slug> card=<C-NNNN> review=<ordinal>`.'
@@ -197,8 +237,87 @@ assert_contains "$recorder" 'OK files=<csv>'
 assert_contains "$recorder" 'BLOCK reason=<short>'
 assert_contains "$recorder" 'FAIL changed=<csv> reason=<short>'
 
+assert_contains "$learn_command" 'Classify the raw request before loading any skill, calling any tool, or reading `.ai/learning/`.'
+assert_contains "$learn_command" '`session <request>` | One-off session'
+assert_contains "$learn_command" '`path <topic>` | Durable path'
+assert_contains "$learn_command" '`Sesión puntual` or `Ruta durable`'
+assert_contains "$learn_command" 'One-off sessions never run a due-check, inspect `.ai/learning/`'
+assert_contains "$learn_command" 'Run the `spaced-recall` due-check first in every durable mode'
+assert_contains "$learn_command" '`summaries` is a reserved infrastructure slug, never a durable topic.'
+
+assert_frontmatter_contains "$learning_session" '  version: "1.0.0"'
+assert_contains "$learning_session" 'Lead with the direct answer in the user'
+assert_contains "$learning_session" 'Ask no more than two questions before stopping for the learner'
+assert_contains "$learning_session" 'Do not run a due-check or inspect `.ai/learning/`.'
+assert_contains "$learning_session" 'Do not persist automatically or merely because the session ends.'
+assert_contains "$learning_session" 'explicit positive request to save may start Mentor'
+assert_frontmatter_contains "$learning_loop" '  version: "2.1.0"'
+assert_contains "$learning_loop" 'Classify from the raw request before loading this skill or reading `.ai/learning/`'
+assert_contains "$learning_loop" 'Resolve a bare or ambiguous topic through the closed choice `Sesión puntual` or `Ruta durable` before loading this skill.'
+assert_contains "$learning_loop" '`.ai/learning/summaries/` is reserved standalone-summary infrastructure, never a durable topic.'
+assert_contains "$learning_loop" 'The exact `summaries` topic slug is reserved.'
+assert_contains "$learning_loop" 'resume only if `<topic-slug>/mission.md` exists and the slug is not `summaries`'
+
+assert_frontmatter_contains "$summarizer" 'mode: subagent'
+assert_frontmatter_contains "$summarizer" 'temperature: 0.1'
+assert_frontmatter_not_contains "$summarizer" 'model:'
+assert_frontmatter_contains "$summarizer" '  "*": deny'
+assert_frontmatter_not_contains "$summarizer" '  write:'
+assert_frontmatter_contains "$summarizer" '  question: deny'
+assert_frontmatter_contains "$summarizer" '  task: deny'
+assert_frontmatter_contains "$summarizer" '  webfetch: deny'
+assert_frontmatter_contains "$summarizer" '  external_directory: deny'
+assert_permission_rule_block "$summarizer" read "$summary_scope"
+assert_permission_rule_block "$summarizer" edit "$summary_scope"
+assert_permission_rule_block "$summarizer" bash "$summary_bash_scope"
+assert_permission_rule_block "$summarizer" skill "$summary_skill_scope"
+CHECKS=$((CHECKS + 1))
+summarizer_permission_keys="$(permission_keys "$summarizer")"
+[ "$summarizer_permission_keys" = '"*"
+read
+edit
+bash
+skill
+question
+task
+webfetch
+external_directory' ] ||
+  fail "$summarizer" 'effective tool permissions exceed summary read/edit, exact bash, and two skills'
+assert_contains "$summarizer" 'read only that exact target to confirm it does not exist.'
+assert_contains "$summarizer" 'A collision is `BLOCK`; never choose an overwrite or edit an existing file.'
+assert_contains "$summarizer" 'Write the complete standalone summary in one `write` operation.'
+assert_contains "$summarizer" 'never infer route state, fetch sources, inspect other directories, ask questions, delegate, or access anything external.'
+assert_contains "$summarizer" 'OK summary=<path>'
+assert_contains "$summarizer" 'BLOCK reason=<short>'
+assert_contains "$summarizer" 'FAIL file=<path|none> reason=<short>'
+
+assert_frontmatter_contains "$cornell_notes" '  version: "1.1.0"'
+assert_contains "$cornell_notes" '**Route lesson:** the 10% formal step of `learning-loop`'
+assert_contains "$cornell_notes" 'The **Summary is the learner'
+assert_contains "$cornell_notes" 'Every cue is handed to `spaced-recall` as a new card'
+assert_contains "$cornell_notes" 'Notes are Markdown in English; never HTML.'
+assert_contains "$cornell_notes" '**Standalone summary:** a saved one-off `learning-session`'
+assert_contains "$cornell_notes" 'This profile is independent: never create or update a topic, mission, path, route note, cards, review queue, quiz bank, dashboard, or recall hand-off.'
+assert_contains "$cornell_notes" 'Mermaid is optional and appears only when it materially reduces cognitive load.'
+assert_contains "$cornell_notes" 'Do not schedule cues or request any route-state mutation.'
+assert_contains "$standalone_cornell_template" '## Synthesis'
+assert_contains "$standalone_cornell_template" '## Key questions'
+assert_contains "$standalone_cornell_template" '## Application or example'
+assert_contains "$standalone_cornell_template" '## Sources'
+assert_not_contains "$standalone_cornell_template" 'Recall hand-off'
+assert_not_contains "$standalone_cornell_template" 'review-queue.md'
+assert_not_contains "$standalone_cornell_template" 'mission.md'
+CHECKS=$((CHECKS + 1))
+[ -L domains/learning/skills/cognitive-doc-design ] &&
+  [ "$(readlink domains/learning/skills/cognitive-doc-design)" = '../../../skills/cognitive-doc-design' ] ||
+  fail domains/learning/skills/cognitive-doc-design 'shared skill link is missing or incorrect'
+
 assert_contains domains/learning/README.md '| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |'
+assert_contains domains/learning/README.md '| Agent (subagent) | `learning-summarizer` | Creates isolated one-off summaries |'
+assert_contains domains/learning/README.md 'Topic discovery excludes that directory and resumes only directories containing `mission.md`'
 assert_contains docs/agent-models.md 'Assign `learning-recorder` individually with `/models-profiles`'
+assert_contains docs/agent-models.md 'Assign `learning-summarizer` individually with `/models-profiles`'
+assert_contains docs/learning-domain.md 'OpenCode gates its file tools through `permission.edit`, scoped only to `summaries/**`'
 assert_frontmatter_contains domains/learning/commands/english.md 'agent: english-tutor'
 assert_frontmatter_contains domains/learning/commands/english.md 'subtask: true'
 

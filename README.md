@@ -29,7 +29,7 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
 | [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` |
 | [review](domains/review/README.md) | Adversarial review and Socratic design defense | `review-coordinator`, `/judgment`, `/defend` |
-| [learning](domains/learning/README.md) | Multi-session learning and English coaching | `/learn`, `/english` |
+| [learning](domains/learning/README.md) | One-off teaching, durable learning paths, and English coaching | `/learn`, `/english` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/absorb` |
 | [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
@@ -69,7 +69,7 @@ Install `orchestration` and `review` independently. Select `review-coordinator` 
 | [Plan flow scenarios](docs/plan-flow-test-scenarios.md) | Copy-ready hypothetical prompts and expected Plan evidence |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |
 | [Orchestration permissions](docs/orchestration-permissions.md) | Toggle coordinator and worker permissions |
-| [Learning](docs/learning-domain.md) | Run durable learning topics |
+| [Learning](docs/learning-domain.md) | Run one-off sessions or durable learning paths |
 | [Graphify](docs/graphify.md) | Index and query structural graphs |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |
 | [LM Studio](docs/lm-studio.md) | Connect OpenCode to LAN-hosted models |
