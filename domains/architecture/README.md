@@ -29,6 +29,8 @@ flowchart LR
 
 `architect` executes each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
 
+After changing this domain, run the affected [Architecture manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

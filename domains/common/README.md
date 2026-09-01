@@ -18,6 +18,8 @@ Shared engineering, quality, question, and output skills used across domains. It
 
 Shared skills have one body under top-level `skills/`; each consuming domain declares it with a relative symlink. `/graphify-index` owns first-run consent, while the pinned `opencode-graphify-init` package only refreshes previously approved indexes. See the [Graphify guide](../../docs/graphify.md).
 
+After changing this domain, run the affected [Common manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

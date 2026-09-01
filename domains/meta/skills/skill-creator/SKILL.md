@@ -8,7 +8,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "2.0.0"
+  version: "2.0.1"
   status: in-progress
 ---
 
@@ -141,7 +141,7 @@ Need edge cases?            → references/
 
 ## Behavioral Evaluation (Conditional)
 
-Structural checks (`scripts/validate-harness.sh`) validate metadata and links, not model behavior. When a high-impact discipline skill shows a reproducible agent failure despite being available, run the bounded evaluation pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, and reported variance and cost. It is never a routine step or a CI gate.
+The manual-catalog linter (`python3 scripts/lint-manual-tests.py`) validates case metadata, links, and changed-runtime coverage, not model behavior. When a high-impact discipline skill shows a reproducible agent failure despite being available, run the bounded evaluation pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, and reported variance and cost. It is never a routine step or a CI gate.
 
 ---
 
@@ -165,6 +165,7 @@ After creating or changing a skill, keep `metadata.version` and `metadata.status
 - [ ] Critical patterns are clear
 - [ ] Code examples are minimal
 - [ ] Commands section exists only when useful
+- [ ] Existing manual coverage key is updated, or one new immutable manual case is added
 
 ## Resources
 

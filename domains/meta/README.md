@@ -20,6 +20,8 @@ External plugin descriptors pin either GitHub bundles by commit and SHA-256 or n
 
 `opencode-skill-registry` is the sole owner of `.ai/atl/skill-registry.md`. The file is an automatic snapshot of OpenCode's resolved `/skill` catalog and refreshes when OpenCode restarts; there is no manual generator in this repository.
 
+After changing this domain, run the affected [Meta manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

@@ -33,7 +33,7 @@ flowchart LR
 
 Direct execution is the default for localized, reversible work that one session can verify. It includes protected local refactors and renames. It creates no plan, run, canonical spec, or SDD worker.
 
-Use SDD only for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. After explicit intent or confirmation, it records immutable plan evidence under `.ai/orchestration/runs/<slug>/`, executes internal waves, cold-verifies, optionally merges canonical specs, and archives the run. Git delivery stays outside this primary. See [Orchestration verification](../../docs/orchestration-test-plan.md).
+Use SDD only for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. After explicit intent or confirmation, it records immutable plan evidence under `.ai/orchestration/runs/<slug>/`, executes internal waves, cold-verifies, optionally merges canonical specs, and archives the run. Git delivery stays outside this primary. See the [Orchestration manual tests](manual-tests.md).
 
 Review is independent. After Orchestration completes, select `review-coordinator` for a separate evaluation; Orchestration never waits for or reconciles review state.
 

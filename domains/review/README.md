@@ -17,6 +17,8 @@ Adversarial Judgment and Socratic Defend run through one direct review primary w
 
 Full Judgment runs blind A/B judges, synthesizes evidence, and fixes only authorized confirmed findings. Light Judgment uses one solo judge; Defend remains read-only.
 
+After changing this domain, run the affected [Review manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

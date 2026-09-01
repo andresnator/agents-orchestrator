@@ -18,6 +18,8 @@ Product documents, technical decisions, Jira artifacts, summaries, presentations
 
 The selected skill owns its workflow and output. Commands do not duplicate or override skill contracts.
 
+After changing this domain, run the affected [Docs manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

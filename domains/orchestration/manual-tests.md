@@ -1,0 +1,95 @@
+# Orchestration manual tests
+
+Run these cases only in a copied fixture or disposable project. Agent cases may consume model credits; execute them only when that separate cost is explicitly authorized, and never infer a result from these written expectations.
+
+## Quick path
+
+1. Copy `manual-tests/fixtures/orchestration-agent-routes/java-orders/` outside the repository and install the current multi-primary profile there.
+2. Run only the affected IDs from the pull-request summary and wait for each process to finish.
+3. Inspect source, hidden `.ai/` state, worker activity, and final verification before cleanup.
+
+### MT-ORCHESTRATION-DIRECT-CHANGE
+
+- **Title:** Execute one local change without SDD state
+- **Coverage key:** `orchestration/direct/local-change`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/implementation-skill-routing/**`
+- **Preconditions:** Use a clean copied Java fixture with a passing baseline and no `.ai/orchestration/` directory.
+- **Steps:**
+  1. Ask `orchestraitor` to rename only the local `subtotal` variable in `OrderPricing`, preserve behavior, and run the narrowest check.
+  2. Inspect the diff, worker activity, `.ai/`, Git state, and final response.
+- **Expected result:** Only the local declaration and use change, fresh verification completes, no SDD worker or orchestration state appears, and Orchestraitor does not stage, commit, or push.
+- **Cleanup:** Revert the fixture copy and delete it.
+
+### MT-ORCHESTRATION-DIRECT-PLAN
+
+- **Title:** Execute one localized plan directly
+- **Coverage key:** `orchestration/plan/direct-execution`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/implementation-skill-routing/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Preconditions:** In a clean copied Java fixture, use `deep-planner` to create a localized plan for `Order.lineCount()` and record its checksum.
+- **Steps:**
+  1. Tell `orchestraitor`, `ejecuta el plan <exact-path>`.
+  2. Inspect implementation and focused coverage, rerun the named check, and compare the plan checksum.
+- **Expected result:** The method and focused test are implemented directly, the source plan is unchanged, no `.ai/orchestration/runs/` state or SDD worker appears, and Git delivery remains untouched.
+- **Cleanup:** Remove generated `.ai/` state and delete the fixture copy.
+
+### MT-ORCHESTRATION-SDD-CONFIRM
+
+- **Title:** Confirm SDD before creating durable state
+- **Coverage key:** `orchestration/sdd/confirmation-gate`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/complex-plan/**`
+- **Preconditions:** Copy the Java fixture and restore the `complex-plan/ai/` seed as `.ai/`; do not explicitly request SDD.
+- **Steps:**
+  1. Tell `orchestraitor`, `ejecuta el plan .ai/deep-planner/plans/adjust-order-pricing.md`.
+  2. Inspect the explanation, closed confirmation, task activity, and `.ai/orchestration/runs/` before answering.
+- **Expected result:** Orchestraitor explains the public-contract/dependency reason and asks once; it creates no run state or SDD worker before positive confirmation.
+- **Essential negative variant:** Decline SDD and confirm no run is created and work stops or remains within an explicitly safe reduced scope.
+- **Cleanup:** Remove the seeded `.ai/` directory and fixture copy.
+
+### MT-ORCHESTRATION-SDD-COMPLETE
+
+- **Title:** Complete and archive one verified SDD run
+- **Coverage key:** `orchestration/sdd/verified-archive`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-explore.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/agents/sdd-canonical-merge.md`, `domains/orchestration/skills/sdd-cold-verification/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
+- **Preconditions:** Copy the Java fixture, restore both state seeds under `.ai/`, ensure the baseline passes, and record the plan checksum.
+- **Steps:**
+  1. Explicitly request SDD execution of the seeded plan and wait through implementation, cold verification, and canonical merge.
+  2. Rerun the plan's verification, inspect the archived run and canonical delta, and compare the plan checksum and Git state.
+- **Expected result:** Matching scoped workers run, every source scenario and check is counted once, the completed run is archived, canonical behavior has no stale row, the plan is unchanged, and no Git mutation occurs.
+- **Cleanup:** Delete the copied fixture and all generated state.
+
+### MT-ORCHESTRATION-SDD-RESUME
+
+- **Title:** Resume the exact active SDD run
+- **Coverage key:** `orchestration/sdd/exact-resume`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`
+- **Preconditions:** Prepare a disposable active run with a valid `run.md`, immutable plan hash, one completed group, and one pending group; record all paths and checksums.
+- **Steps:**
+  1. Start a fresh session and tell `orchestraitor`, `continúa <exact-run-path>`.
+  2. Inspect which group resumes, final verification, archive destination, and plan checksum.
+- **Expected result:** Orchestraitor resumes only the named run, preserves completed work, executes pending scope without creating a second run or plan, verifies the original contract, and archives on completion.
+- **Cleanup:** Delete the disposable run, plan, and project.
+
+### MT-ORCHESTRATION-PARALLEL-WAVE
+
+- **Title:** Parallelize only disjoint ready work
+- **Coverage key:** `orchestration/sdd/disjoint-wave`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`
+- **Preconditions:** Use a disposable plan with two dependency-free groups on disjoint files and a third group depending on both; enable visible task timing.
+- **Steps:**
+  1. Explicitly run the plan with SDD and observe task start/end times for the first wave.
+  2. Observe the dependent group and final cold verification after both first-wave tasks settle.
+- **Expected result:** The two disjoint ready groups overlap in one wave, the dependent group starts only after both finish, overlapping file scopes never run together, and serial verification begins after the barrier.
+- **Cleanup:** Remove the disposable run state and project.
+
+### MT-ORCHESTRATION-PERMISSIONS
+
+- **Title:** Toggle orchestration permissions safely
+- **Coverage key:** `orchestration/permissions/config-lifecycle`
+- **Applies to:** `scripts/orchestration-permissions.sh`, `domains/orchestration/agents/**`
+- **Preconditions:** Create a disposable target with valid JSON OpenCode config, one unrelated agent setting, and `jq` available.
+- **Steps:**
+  1. Run `on --dry-run`, then `on --target <target>`, `show`, a second `on`, and `off`.
+  2. Inspect the backup, per-agent states, frontmatter-deny preservation, unrelated setting, and final config.
+- **Expected result:** Dry run writes nothing; on creates complete discovered-agent blocks and reports `on`; the second on is idempotent; off removes managed permissions while preserving unrelated configuration.
+- **Essential negative variant:** Add a JSONC comment and confirm `on` fails clearly before backup or mutation because this helper requires valid JSON.
+- **Cleanup:** Remove the disposable target.
