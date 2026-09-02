@@ -60,6 +60,8 @@ RUNTIME_PATTERNS = (
 )
 NON_RUNTIME_PATTERNS = (
     "scripts/lint-manual-tests.py",
+    "scripts/test-*.sh",
+    "scripts/validate-harness.sh",
     "skills/README.md",
     "domains/*/README.md",
     "domains/*/manual-tests.md",
@@ -429,9 +431,6 @@ def matching_case_ids(path: str, cases: list[ManualCase]) -> set[str]:
 
 def is_runtime_artifact(path: str) -> bool:
     if any(path_matches(path, pattern) for pattern in NON_RUNTIME_PATTERNS):
-        return False
-    absolute_path = REPOSITORY_ROOT / path
-    if not absolute_path.exists() and not absolute_path.is_symlink():
         return False
     return any(path_matches(path, pattern) for pattern in RUNTIME_PATTERNS)
 
