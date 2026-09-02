@@ -55,6 +55,7 @@ RUNTIME_PATTERNS = (
     "domains/*/skills/**",
     "domains/*/plugins/**",
     "domains/*/external-plugins/**",
+    "domains/*/tui-plugins/**",
     "skills/**",
 )
 NON_RUNTIME_PATTERNS = (
