@@ -20,7 +20,7 @@ Wayfinder records evidence, decisions, and open questions without status markers
 
 Deep Plan always writes one file. Large plans use work groups and dependencies, not roadmaps or slices. Refactor and hardening are internal rules: missing protection places tooling, seams, tests, and revalidation before restructuring.
 
-Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el plan <path>`. See [Plan flow test scenarios](../../docs/plan-flow-test-scenarios.md).
+Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el plan <path>`. After changing this domain, run the affected [Plan manual tests](manual-tests.md).
 
 ## Components
 

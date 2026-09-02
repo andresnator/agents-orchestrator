@@ -49,15 +49,16 @@ Every domain README uses this H2 sequence: `## Quick path`, `## Entry points`, t
 
 When adding, removing, or moving a component, update the owning domain README's single `## Components` table. Update the root domain table only when entry points or domain purpose change. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
 
+Every runtime behavior change also updates the matching case in the [manual regression catalog](docs/manual-testing.md). Keep its ID and canonical coverage key immutable. If no case covers the changed surface, add one short case under the owning domain instead of adding an automated runner.
+
 ## Validation
 
-Run the narrowest relevant check, then the structural harness:
+Lint the catalog, then run the affected manual IDs in a disposable target:
 
 ```bash
-installers/opencode.sh install --dry-run
-scripts/validate-harness.sh
+python3 scripts/lint-manual-tests.py
 ```
 
-Use the touched script's syntax/test command for executable changes. External-plugin changes use `scripts/test-external-plugin-install.sh contracts`; remote lock verification is opt-in. Model-backed orchestration flows spend credits and run only when explicitly authorized; see [docs/orchestration-test-plan.md](docs/orchestration-test-plan.md).
+The pull-request job reports the union of IDs matched by changed paths and cases edited in the branch. It is a catalog-only gate: it never runs installers, plugins, agents, or OpenCode. Syntax-check a changed executable when appropriate, but use the documented manual case for behavior. Model-backed cases spend credits and require separate explicit authorization.
 
 Do not commit unless explicitly asked.

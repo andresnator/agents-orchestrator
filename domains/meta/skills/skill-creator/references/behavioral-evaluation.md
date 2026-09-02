@@ -32,5 +32,5 @@ Never run as a blanket CI gate, for cosmetic skill edits, or to "prove" a skill 
 ## Boundaries
 
 - Token greps over one run are not behavioral proof; do not promote them to verified behavior.
-- Do not turn this protocol into a required step of skill creation or a harness validator stage; `scripts/validate-harness.sh` stays deterministic and structural.
+- Do not turn this protocol into a required step of skill creation or a CI stage; keep the catalog linter structural and record only the relevant manual case under the owning domain.
 - Receipts under `.ai/` are local tool state and never become managed repo artifacts.

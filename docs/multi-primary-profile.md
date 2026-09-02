@@ -36,9 +36,6 @@ scripts/multi-primary-profile.sh uninstall --project-root /absolute/project
 
 Uninstall removes only manifest-owned content. It restores the prior `subagent_depth` and preserves foreign files and configuration.
 
-## Verify
+## Manual regression
 
-```bash
-scripts/test-multi-primary-profile.sh
-scripts/test-plan-orchestration-contracts.sh
-```
+Follow [`MT-REPOSITORY-MULTI-PRIMARY-PROFILE`](manual-testing.md#mt-repository-multi-primary-profile) in a disposable Git project. Unsafe project roots and symlinked targets are covered separately by [`MT-REPOSITORY-UNSAFE-TARGETS`](manual-testing.md#mt-repository-unsafe-targets).

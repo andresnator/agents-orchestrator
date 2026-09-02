@@ -19,8 +19,6 @@ The script discovers agents under `domains/orchestration/agents/`. Frontmatter d
 
 The script rejects JSONC comments because it uses `jq`. It creates a timestamped backup before changing an existing config.
 
-## Verify
+## Manual regression
 
-```bash
-scripts/test-orchestration-permissions.sh
-```
+Follow [`MT-ORCHESTRATION-PERMISSIONS`](../domains/orchestration/manual-tests.md#mt-orchestration-permissions) in a disposable target. It covers dry run, on/show/off, idempotency, backups, preserved denies, and the invalid-JSON boundary.

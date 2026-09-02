@@ -69,6 +69,8 @@ Failure, timeout, cancellation, `BLOCK`, or `FAIL` does not retry, resume, poll,
 
 Durable modes still offer due reviews before new material. Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Automatic task notifications correlate by ID and never advance an open cue. See the operator guide for capability flags and fallback details.
 
+After changing this domain, run the affected [Learning manual tests](manual-tests.md).
+
 ## Components
 
 | Type | Name | Purpose |

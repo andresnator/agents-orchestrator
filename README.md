@@ -47,6 +47,7 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | `domains/<domain>/external-plugins/` | Pinned standalone plugin descriptors |
 | `installers/` | Discovery, installation, sync, and uninstall |
 | `docs/` | Unique operational guides |
+| `manual-tests/fixtures/` | Reusable inputs for human regression cases |
 
 Filtered installation is a sync: include every domain and lifecycle status you want to keep.
 
@@ -65,8 +66,7 @@ Install `orchestration` and `review` independently. Select `review-coordinator` 
 | Guide | Purpose |
 |---|---|
 | [Multi-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back direct primaries |
-| [Orchestration test plan](docs/orchestration-test-plan.md) | Choose deterministic or model-backed flow checks |
-| [Plan flow scenarios](docs/plan-flow-test-scenarios.md) | Copy-ready hypothetical prompts and expected Plan evidence |
+| [Manual regression catalog](docs/manual-testing.md) | Find affected cases by repository surface |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |
 | [Orchestration permissions](docs/orchestration-permissions.md) | Toggle coordinator and worker permissions |
 | [Learning](docs/learning-domain.md) | Run one-off sessions or durable learning paths |
@@ -78,8 +78,7 @@ Install `orchestration` and `review` independently. Select `review-coordinator` 
 ## Validate changes
 
 ```bash
-installers/opencode.sh install --dry-run
-scripts/validate-harness.sh
+python3 scripts/lint-manual-tests.py
 ```
 
-Use component-specific checks documented in [CONTRIBUTING.md](CONTRIBUTING.md). Model-backed tests are opt-in because they spend credits.
+The linter validates only the manual catalog and never executes OpenCode or product scripts. In a pull request, its `manual-test-catalog` summary lists the human cases affected by the diff; follow the [manual testing guide](docs/manual-testing.md) and run model-backed cases only with separate cost authorization.

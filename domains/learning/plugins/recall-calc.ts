@@ -138,7 +138,7 @@ function applyGrade(grade: Grade, box: number | undefined, today: string): Trans
 }
 
 // The plugin loader treats every exported function as a plugin entrypoint, so
-// the pure calculator surface is exported as one object for the contract tests.
+// the pure calculator surface is exported as one object for runtime consumers.
 export const recallCalcContracts = {
   BOX_INTERVAL_DAYS,
   MAX_BOX,
