@@ -58,26 +58,28 @@ Use `/learn path <topic>` to force a durable route. Bare `/learn`, `review`, `qu
 | `/learn status` | Rebuild the dashboard |
 | `/english [text]` | Correct, explain, or practice English |
 
-General modules combine 10% formal input in Cornell route notes, 70% learner-owned exercises, and 20% Socratic debrief. The lifecycle, staged checkpoint, resume, and scoped-gap rules below apply only to durable general non-language modules. Language topics retain their separate two-wave flow, and standalone summaries never use this state.
+General non-language modules follow one rule: **Mentor explains first, stops at a persisted checkpoint, and starts Practice only after later learner input signals readiness.** Language topics keep their two-wave flow; standalone summaries never use this state.
 
-### General module lifecycle
+### General non-language module
 
-1. **Due-check** — offer overdue reviews before new material.
-2. **Class** — teach the objective, essential concepts, their relationships, one example, and a brief recap. Persist the Mermaid `Map` and Mentor-authored `Notes`; one Notes row synthesizes the section's central model. Report the checkpoint, ask one readiness or clarification question, and stop.
-3. **Practice** — only after later learner input signals readiness, assign one tangible learner-owned exercise. Mentor constrains, coaches, and reveals escalating hints without solving it.
-4. **Consolidation** — after meaningful practice, ask for a 2–3 sentence summary in the learner's own words. Confirm what is correct first, explain each missing or incorrect concept, and ask for a revision one question at a time. After accepting the Summary, schedule the cues and record matching card IDs in the note and exercise.
-5. **Close** — finalize the learner Summary, recall hand-off, exercise result, debrief, and exercise cue hand-off. `> Teach-back: required` mandates a Feynman teach-back whose `## Verdict` is `gap-free`; `not-required` skips it.
+| Phase | What happens | Gate to continue |
+| --- | --- | --- |
+| Due-check | Offer overdue reviews before new material. | Learner chooses whether to review first. |
+| Class (10%) | Explain the objective, essential concepts and relationships, one non-solving example, and a recap. Persist a Mermaid `Map` and Mentor-authored `Notes`, including one row for the central model. | Persist the staged note, report module `🔄`, ask one readiness-or-clarification question, and stop. |
+| Practice (70%) | After a later readiness message, assign one tangible learner-owned exercise; constrain, coach, and reveal hints without solving it. | `Result: done` after meaningful practice. |
+| Consolidation | Ask for a 2–3 sentence learner summary. Confirm what is correct first; explain each material gap and request revisions one question at a time. | Accept the Summary, schedule every cue, and write the same actual card IDs to the note and exercise. |
+| Debrief and Close (20%) | Capture the Socratic debrief and finish any required Feynman teach-back. | All close fields are final and required evidence is `gap-free`. |
 
-`Notes` and `Summary` have different owners: Notes are Mentor's self-contained explanation of the concepts; Summary is only the learner's wording, lightly cleaned up. Mentor never fabricates or completes it. A pause or unresolved concept leaves the note pending and the module `🔄`.
+`Notes` and `Summary` have different owners: Notes are Mentor's self-contained explanation; Summary is only the learner's wording, lightly cleaned up. Mentor explains missing concepts but never adds them to the learner's Summary. A pause or unresolved gap leaves the markers pending and the module `🔄`.
 
-### Staged checkpoint and resume
+### Class checkpoint
 
-Immediately after `Class`, `learning-recorder` creates the route note in normal Cornell order. Its header records exactly one conditional state:
+The note header records exactly one initial state:
 
 - `> Teach-back: required` for a load-bearing concept.
 - `> Teach-back: not-required` otherwise.
 
-The body uses these exact placeholders:
+Its body contains these exact markers:
 
 ```markdown
 ## Summary
@@ -89,36 +91,44 @@ _Pending learner summary after practice._
 Cues added to `review-queue.md`: pending until consolidation.
 ```
 
-The pending markers are resumable state only: they are not learner-authored content, do not schedule cards, do not enter the quiz bank, and do not authorize module completion. When a required Feynman teach-back creates an artifact, its header state becomes `> Teach-back: teachbacks/NNNN-<concept>.md`; Close follows that file and requires a `gap-free` verdict.
+In one foreground handoff, `learning-recorder` creates the note and replaces `—` in the active `🔄` row's `10% lesson` cell with its relative link. Mentor then shows a compact recap, reports the note path and checkpoint, asks exactly one localized readiness-or-clarification question in normal chat, and stops.
 
-At the Class checkpoint, Mentor replaces `—` in the active `🔄` row's `10% lesson` cell with the persisted note link. It then shows a brief recap, reports the staged checkpoint and module `🔄`, asks exactly one normal-chat readiness or clarification question, and stops. It never creates Practice in that response. Only later learner input can start Practice; a recorder receipt or automatic notification does not count. If the learner asks for clarification, Mentor answers it, updates the staged teaching when needed, repeats this one-question boundary, and stops again.
+- This response never creates Practice, schedules cues, or closes the module.
+- A recorder receipt or automatic notification is not learner input.
+- A clarification updates the staged teaching when needed, repeats the one-question boundary, and stops again.
+- A later readiness message creates Practice, records its link in `70% exercise`, and initializes `Attempted: pending`, `Result: pending`, `Debrief (20%): pending until consolidation`, and `Cues sent to review queue: pending until consolidation`.
+- Pending cues are not cards, are excluded from quizzes, and cannot authorize completion.
 
-When later input starts Practice, Mentor stores its link in that row's `70% exercise` cell and initializes `Attempted: pending`, `Result: pending`, `Debrief (20%): pending until consolidation`, and `Cues sent to review queue: pending until consolidation`.
+### Resume from persisted links
 
-A fresh session starts from the active `🔄` row and follows those persisted links; it never discovers or infers a lesson or exercise from directory contents.
+Start from the active `🔄` row. Its lesson and exercise links are the artifact index; never infer a target from directory contents or repeat a completed phase.
 
-| Active row and linked state | Resume phase |
+| Persisted state | Resume action |
 | --- | --- |
-| `10% lesson` is `—` | `Class`; create the note and replace `—` with its link |
-| Lesson link exists but its target is absent | `Class`; recreate that exact target without changing the cell |
-| Lesson linked; `70% exercise` is `—` | After later learner readiness, enter `Practice` and persist the exercise link |
-| Exercise link exists but its target is absent | Recreate that exact target without changing the cell, then `Practice` |
-| Both linked; Summary pending and `Result` is `pending`, `partial`, or `stuck at ...` | `Practice` |
-| Both linked; `Result: done` and Summary pending | `Consolidation` |
-| Summary filled but recall hand-off, debrief, or `Cues sent to review queue` is pending | Finish `Consolidation` |
-| Both linked; Summary and actual recall IDs, `Result: done`, real debrief, matching exercise cue IDs; Teach-back is `required` | Run Feynman and replace `required` with its evidence path |
-| Teach-back evidence reports gaps | Keep the module `🔄`, resolve its return paths, then run a later teach-back and replace the header path |
-| Both linked and all fields complete; Teach-back is `not-required` or its evidence verdict is `gap-free` | `Close` |
+| `10% lesson` is `—` | Run Class; create the note and replace only that cell. |
+| Lesson link exists but its target is absent | Run Class; recreate that exact target without changing the cell. |
+| Staged note linked; `70% exercise` is `—` | After later learner readiness, create Practice and replace only that cell. |
+| Exercise link exists but its target is absent | Recreate that exact target without changing the cell; resume Practice. |
+| Summary pending; `Result` is `pending`, `partial`, or `stuck at ...` | Resume Practice. |
+| `Result: done`; Summary pending | Resume Consolidation at the summary or unresolved feedback loop. |
+| Summary exists; recall hand-off, debrief, or exercise cue hand-off is pending | Finish Consolidation; do not close. |
+| All fields final; Teach-back is `required` | Run Feynman; after its artifact exists, replace `required` with `> Teach-back: teachbacks/NNNN-<concept>.md`. |
+| Referenced Teach-back reports gaps | Keep `🔄`, resolve its return paths, run another teach-back, and replace the header path. |
+| All fields final; Teach-back is `not-required` or its referenced verdict is `gap-free` | Close the module. |
 
-Existing finalized route notes remain valid and need no staged-marker migration. When an active `🔄` legacy row links such a note but its exercise is absent, `pending`, `partial`, or `stuck at ...`, resume `Practice` through the row without requesting another Summary or adding staged markers or a Teach-back header. Create and link an exercise only for `—`; recreate an absent linked target without changing its cell. Before legacy Close, copy the note's actual card IDs into the exercise cue hand-off; a completed exercise finishes its original debrief and conditional Feynman flow. Never reopen an already ✅ legacy module. Resume preserves recorded outcomes and never repeats a completed phase.
+“All fields final” means both artifacts are linked, Summary is learner-authored, `Result: done`, debrief is captured, and the note and exercise contain the same actual card IDs. An accepted Summary creates Leitner cards at 1, 3, 7, 14, and 30-day intervals; Close still waits for debrief and any required `gap-free` evidence.
 
-### Scoped concept gaps
+### Gaps and compatibility
 
-For these general non-language modules, if the learner requests a supporting concept that still fits the same tangible win and the Cornell limit of 3–7 cues, Mentor teaches it now and incorporates it into `Map`, `Notes`, cues, and practice. The final learner summary must connect that concept too.
+| Case | Decision |
+| --- | --- |
+| Learner requests a supporting concept that still fits the tangible win and 3–7 cues. | Teach it now; add it to `Map`, `Notes`, cues, and practice, and require the learner's final Summary to connect it. |
+| Mentor detects a gap, or the request expands scope. | Offer one localized closed choice with a recommendation: address now or defer. Use a targeted reinforcement step when needed to preserve the single win and cue limit. |
+| Learner defers. | Record reinforcement in `path.md`; exclude it from the current note, Summary, cues, and exercise. A blocking gap keeps the module `🔄`. |
+| Active `🔄` legacy row links a finalized note with real Summary and card IDs. | Do not migrate it, add staged markers or a Teach-back header, or ask for another Summary. Resume Practice if its exercise is absent or incomplete; create only for `—`, or recreate an absent linked target without changing its cell. Before Close, copy the note IDs to the exercise cue hand-off and finish the original debrief and conditional Feynman flow. |
+| Legacy module is already ✅. | Never reopen it. |
 
-When Mentor detects the gap, or the requested concept would expand the module, Mentor offers a localized closed choice with a recommendation: address it now or defer it as reinforcement. Addressing it now uses a targeted reinforcement step when necessary to preserve the single-win and 3–7-cue limits. Deferred material is recorded in `path.md` and excluded from the current note, summary, cues, and exercise. A gap that blocks the exercise keeps the module `🔄` until resolved.
-
-During Consolidation, an accepted learner Summary turns the retrieval cues into Leitner cards with 1, 3, 7, 14, and 30-day intervals. Close still waits for the exercise debrief and any required gap-free Feynman evidence. A capstone teach-back closes the mission; reviews continue until cards are mastered.
+A capstone teach-back closes the mission; reviews continue until cards are mastered.
 
 ### Background review persistence
 
