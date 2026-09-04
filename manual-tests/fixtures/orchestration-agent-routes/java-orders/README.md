@@ -10,10 +10,21 @@ The project is intentionally small, so a human can establish the baseline quickl
 pom.xml                                   Java 17, JUnit Jupiter 5.12.2, surefire 3.5.4
 src/main/java/com/example/orders/         Order, OrderLine, OrderPricing
 src/test/java/com/example/orders/         OrderPricingTest (3 passing tests)
+hooks/                                    Opt-in manual Git hook fixture
 state-seeds/<seed>/                       plan or canonical state for one scenario
 ```
 
 Before a case, run `mvn -o test` from the copied directory and expect 3 tests with 0 failures.
+
+For a Git-delivery case, initialize an attached disposable branch and commit the fixture baseline before adding the case-specific unrelated state:
+
+```bash
+git init -b manual-test
+git add -- README.md pom.xml hooks src state-seeds
+git commit -m "test: establish manual fixture baseline"
+```
+
+`MT-ORCHESTRATION-SDD-COMMITS` installs `hooks/reject-order-pricing-pre-commit` as `.git/hooks/pre-commit`. The hook permits the test-only unit and deliberately rejects a later commit containing `OrderPricing.java`; it never edits the index or working tree. Disable it manually only after inspecting the stopped run, then resume in a fresh session.
 
 ## Seeds
 

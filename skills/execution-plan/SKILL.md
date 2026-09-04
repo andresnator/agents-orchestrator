@@ -4,7 +4,7 @@ description: "Trigger: execution plan, executable plan, deep plan. Draft one neu
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.1.0"
   status: testing
 ---
 
@@ -18,10 +18,13 @@ Create exactly one plan for the requested outcome. The plan may be small or larg
 - Omit empty sections and filler. Keep the artifact clear to a human; do not use cryptic A2A fragments inside it.
 - Before writing, check the exact destination. Update an existing plan only when the user supplied its exact path or the active conversation already created or selected it. On any other slug collision, ask one closed choice: reuse the existing plan or generate a new slug. Never overwrite implicitly.
 - Qualify behavior identifiers as `<capability>/<requirement>` when canonical specs matter. Use observable `WHEN` and `THEN` scenarios.
+- Add `Delivery: working-tree | commit-per-unit | tcr` immediately after the title only when the user explicitly requests commits, TCR, or no commits. Write exactly one resolved value. Omit the line otherwise; absence means `working-tree` during execution.
+- Contradictory, duplicated, or unknown delivery requests block plan creation until resolved. Never infer delivery from a PR request, route, work group, or skill name.
 - Use ordered work groups with explicit dependencies. Keep one file even when groups span sessions.
 - Every work group requires `Files:` and `Skills:`. Select names with `implementation-skill-routing`; use names, never paths.
+- `Delivery` is a plan control, not an implementation skill. Never include `tcr`, `work-unit-commits`, or another Git skill in `Work groups → Skills:`.
 - Include one `Execution guidance` recommendation: `direct` or `SDD`. State the reason and show `ejecuta el plan <path>`.
-- Artifacts default to English. Planning is read-only except for the plan file. Never edit production code, commit, or push.
+- Artifacts default to English. Planning is read-only except for the plan file. A `Delivery` line authorizes later execution, not planning-time Git mutation. Never edit production code, stage, commit, or push.
 
 ## Self-check
 
@@ -29,6 +32,7 @@ Create exactly one plan for the requested outcome. The plan may be small or larg
 - Every claim is evidenced or explicitly marked as an open question.
 - Every task is actionable and verifiable; behavior changes do not hide in tasks.
 - Every work group names its implementation skills or `none`.
+- `Delivery`, when present, appears once immediately after the title and reflects explicit user language.
 - Dependencies are explicit and acyclic.
 - Risks contain only real rollback conditions or execution hazards.
 

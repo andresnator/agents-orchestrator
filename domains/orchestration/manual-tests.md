@@ -32,6 +32,19 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Expected result:** The method and focused test are implemented directly, the source plan is unchanged, no `.ai/orchestration/runs/` state or SDD worker appears, and Git delivery remains untouched.
 - **Cleanup:** Remove generated `.ai/` state and delete the fixture copy.
 
+### MT-ORCHESTRATION-DIRECT-COMMITS
+
+- **Title:** Deliver exact Direct commits without absorbing unrelated state
+- **Coverage key:** `orchestration/delivery/direct-commits`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/work-unit-commits/**`, `domains/orchestration/skills/work-unit-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Preconditions:** Initialize a copied Java fixture as a Git repository on an attached branch, commit the passing baseline, and stage an unrelated `notes.txt` outside the requested target scope.
+- **Steps:**
+  1. Explicitly request `commit-per-unit`: first rename the local `subtotal` variable with exact message `refactor: clarify subtotal variable`, then add `Order.lineCount()` with focused coverage and exact message `feat: expose order line count`.
+  2. Wait for both units, rerun `mvn -o test`, and inspect commit parents, messages, path sets, the staged diff, working tree, and remote activity.
+- **Expected result:** Each requested unit runs green before one serial commit; the two messages, order, and path boundaries match the request; both commits form a continuous chain; `notes.txt` remains staged and unchanged; `.ai/` is absent; and no push occurs.
+- **Essential negative variant:** Start again with a target file already modified and confirm Orchestraitor asks whether to include it, switch to `working-tree`, or stop before making another edit.
+- **Cleanup:** Delete the disposable repositories without pushing them.
+
 ### MT-ORCHESTRATION-SDD-CONFIRM
 
 - **Title:** Confirm SDD before creating durable state
@@ -57,6 +70,21 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Expected result:** Matching scoped workers run, every source scenario and check is counted once, the completed run is archived, canonical behavior has no stale row, the plan is unchanged, and no Git mutation occurs.
 - **Cleanup:** Delete the copied fixture and all generated state.
 
+### MT-ORCHESTRATION-SDD-COMMITS
+
+- **Title:** Resume serial SDD commits after an honest hook failure
+- **Coverage key:** `orchestration/delivery/sdd-commits`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/skills/sdd-cold-verification/**`, `domains/common/skills/work-unit-commits/**`, `domains/orchestration/skills/work-unit-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Preconditions:** Initialize a copied fixture as a Git repository on an attached branch, commit a green baseline, restore the complex plan under `.ai/`, record its checksum, and install `hooks/reject-order-pricing-pre-commit` as the executable `.git/hooks/pre-commit`.
+- **Steps:**
+  1. Explicitly request SDD execution of the seeded plan with `commit-per-unit` and wait until the hook rejects the unit that stages `OrderPricing.java`.
+  2. Inspect the active run, `Delivery`, full `Baseline`, commit ledger, `HEAD`, index, working tree, hook invocation, worker timing, and commit contents before changing anything.
+  3. Disable the fixture hook, start a fresh session with `continúa <exact-run-path>`, and wait for completion and cold verification.
+  4. Rerun `mvn -o test`; inspect the archived ledger, plan checksum, full commit chain, `.ai/` exclusion, and the baseline selector supplied to verification.
+- **Expected result:** Units implement and commit serially; the first green unit is recorded before the hook failure; no hook bypass, rewrite, push, or destructive retry occurs; resume requires the ledger `HEAD`, safely completes the pending unit, and appends full SHAs; `.ai/` never enters a commit; and cold verification uses exactly `<Baseline>..HEAD` before archive.
+- **Essential negative variant:** Begin a fresh commit-mode SDD run with a modified target path and confirm it blocks before implementation, leaves the change intact, and does not silently switch delivery.
+- **Cleanup:** Remove the disposable hook, run state, and repository without pushing them.
+
 ### MT-ORCHESTRATION-SDD-RESUME
 
 - **Title:** Resume the exact active SDD run
@@ -68,6 +96,20 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
   2. Inspect which group resumes, final verification, archive destination, and plan checksum.
 - **Expected result:** Orchestraitor resumes only the named run, preserves completed work, executes pending scope without creating a second run or plan, verifies the original contract, and archives on completion.
 - **Cleanup:** Delete the disposable run, plan, and project.
+
+### MT-ORCHESTRATION-DIRECT-TCR
+
+- **Title:** Commit green TCR micropsteps and revert only attributable red changes
+- **Coverage key:** `orchestration/delivery/direct-tcr`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/tcr/**`, `domains/orchestration/skills/tcr/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Preconditions:** Initialize a copied fixture as a Git repository on an attached branch, commit a passing baseline, keep the target scope clean, and stage one unrelated file outside it.
+- **Steps:**
+  1. Explicitly request TCR for renaming local `subtotal` to `rawSubtotal`, with the complete `mvn -o test` verification before and after and exact final message `refactor: clarify raw subtotal`.
+  2. Require one deliberate red micropstep that changes only the tracked declaration, inspect its exact restoration, then one deliberate red micropstep that creates malformed untracked `TcrProbe.java`, and inspect its exact removal.
+  3. Let the correct rename run green and commit, then inspect the final verification, commit parent and paths, unrelated index entry, and remote activity.
+- **Expected result:** The full baseline is green before editing; neither red micropstep creates a commit; the tracked file returns byte-for-byte and only the newly created untracked probe is removed; unrelated staged state is preserved; the correct micropstep commits once after its focused check; the full final verification passes; and no push occurs.
+- **Essential negative variant:** Start with a modified, staged, or untracked target path and confirm TCR blocks before editing rather than offering to absorb or clean it.
+- **Cleanup:** Delete the disposable repository without pushing it.
 
 ### MT-ORCHESTRATION-PARALLEL-WAVE
 

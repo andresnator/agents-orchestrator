@@ -1,4 +1,5 @@
 # Plan: <verb-led outcome>
+<!-- Only for an explicit delivery request, replace this comment with exactly one `Delivery: working-tree | commit-per-unit | tcr` line. Otherwise remove the comment. -->
 
 ## Outcome
 
