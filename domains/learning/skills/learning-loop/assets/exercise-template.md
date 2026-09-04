@@ -19,7 +19,7 @@
 
 ## Outcome log
 
-- Attempted: {YYYY-MM-DD}
-- Result: {done | partial | stuck at ...}
-- Debrief (20%): {learner's takeaways, in their words: what did you learn, what surprised you, where would you use it}
-- Cues sent to review queue: {C-NNNN, ...}
+- Attempted: pending
+- Result: pending
+- Debrief (20%): pending until consolidation
+- Cues sent to review queue: pending until consolidation
