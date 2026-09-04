@@ -71,6 +71,7 @@ Durable non-language modules follow `Due-check → Class → Practice → Consol
 
 | Phase | Learner experience | Persisted result |
 |---|---|---|
+| Due-check | Mentor offers overdue reviews before new material. | Keep the existing review state. |
 | Class | Mentor explains the objective, concepts, relationships, one non-solving example, and a recap. | Save `Map` and Mentor-authored `Notes`; leave `Summary`, recall, and exercise pending. |
 | Practice | After a later readiness message, the learner completes one coached exercise. | Link the exercise and record its real result. |
 | Consolidation | The learner summarizes in 2–3 sentences; Mentor confirms, explains gaps, and requests revisions. | Save only the learner's wording, then schedule cues and matching card IDs. |
