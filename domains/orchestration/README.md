@@ -1,11 +1,11 @@
 # Orchestration Domain
 
-`orchestraitor` executes safe local changes directly and escalates only work that needs durable SDD coordination. Git delivery is opt-in; the default is a verified, uncommitted working-tree diff.
+`orchestraitor` executes local changes directly or coordinates durable SDD runs. Git delivery is opt-in; the default is a verified, uncommitted diff.
 
 ## Quick path
 
 1. Select `orchestraitor` and request a change or exact plan.
-2. State commits or TCR explicitly only when wanted; otherwise delivery stays `working-tree`.
+2. Request commits or TCR when wanted, directly or through the plan's `Delivery:` line.
 3. Inspect fresh verification, optional commit SHAs, and any archived run.
 
 ## Entry points
@@ -13,65 +13,44 @@
 | Request | Route | Result |
 |---|---|---|
 | Clear localized change | Direct | Verified working-tree change by default |
-| Explicit commits | Direct or SDD | Cohesive green commits created only by `orchestraitor` |
-| Explicit TCR | Direct only | Green micropsteps commit; attributable red micropsteps revert exactly |
-| `ejecuta el plan <path>` | Plan execution | Direct work or confirmed SDD using the resolved delivery |
-| `continúa <run>` | Resume | Continue the exact recorded SDD run and `HEAD` |
+| Explicit commits | Direct or SDD | Cohesive commits after focused checks pass |
+| Explicit TCR | Direct only | Commit green microsteps; revert attributable red changes |
+| `ejecuta el plan <path>` | Plan execution | Direct work or confirmed SDD |
+| `continúa <run>` | Resume | Continue the exact recorded SDD run |
 
-```mermaid
-flowchart LR
-    request[Change or exact plan] --> resolve{Resolve Delivery}
-    resolve -->|working-tree| route{Direct or SDD}
-    resolve -->|commit-per-unit| route
-    resolve -->|tcr| tcr[TCR Direct]
-    route --> direct[Direct execution]
-    route --> sdd[Durable SDD run]
-    direct --> verify[Final verification]
-    tcr --> verify
-    sdd --> cold[Cold verification]
-    cold --> archive[Archive run]
-```
+Direct handles localized, reversible work without `.ai/` state or workers. Use SDD for dependencies, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs; it requires explicit intent or confirmation. TCR requires safe Direct work; otherwise choose `commit-per-unit` for SDD or reduce scope before editing.
 
-Direct execution is the default for localized, reversible work that one session can verify. It creates no plan, run, canonical spec, or SDD worker. `working-tree` never stages, commits, or pushes. `commit-per-unit` commits each cohesive unit after its focused check. `tcr` additionally requires a green baseline and clean target, then rolls back only a failing micropstep whose exact changes are provable.
+### Delivery
 
-Use SDD for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. It records immutable plan evidence under `.ai/orchestration/runs/<slug>/`, cold-verifies, optionally merges canonical specs, and archives the run. TCR cannot run under SDD; Orchestraitor asks whether to use `commit-per-unit` or reduce the scope before editing.
+Use the current explicit execution instruction, then the plan's optional `Delivery:` value, then `working-tree`. A valid plan value authorizes delivery without another confirmation. Duplicate lines, unknown values, or contradictions within either source block before editing; delivery cannot change after editing starts.
 
-## Delivery contract
+Only `orchestraitor` owns Git delivery. It preserves unrelated changes and staged entries, excludes `.ai/`, and runs hooks. Workers never stage, commit, roll back, or push. See [work-unit-commits](skills/work-unit-commits/SKILL.md) and [tcr](skills/tcr/SKILL.md) for preflight, commit, and failure rules.
 
-Delivery precedence is current execution instruction, then the plan's optional `Delivery:` line, then `working-tree`. A valid plan line authorizes its mode without a second confirmation. Duplicate, unknown, or contradictory values block before editing. Delivery cannot change after the first implementation edit.
+### SDD resume
 
-| Delivery | Contract |
-|---|---|
-| `working-tree` | Leave verified changes unstaged and uncommitted. |
-| `commit-per-unit` | Capture full `HEAD`, check each unit, stage exact paths, run hooks, and commit serially. |
-| `tcr` | Direct only; run the complete baseline, commit each focused green micropstep, and revert only an attributable red step. |
+Runs live at `.ai/orchestration/runs/<slug>/run.md` and retain the plan path and checksum. In `commit-per-unit`, units run serially: save pending delivery before staging and hooks, then record each verified commit. Resume requires matching `HEAD` and saved Git state, including when the first hook fails. Cold verification checks exactly `<Baseline>..HEAD`; completion archives the run with no pending unit.
 
-Only `orchestraitor` owns the index. Workers never stage, commit, roll back, or push. Existing out-of-scope changes remain untouched, `.ai/` never enters commits, hooks are never skipped, and automatic amend, reset, rebase, squash, rewrite, push, PR, or merge are forbidden.
+Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [orchestraitor](agents/orchestraitor.md) for the run controls.
 
-An SDD `run.md` persists one concrete value on each line:
-
-```text
-Delivery: working-tree | commit-per-unit
-Baseline: working-tree | <full SHA>
-Commits: none
-```
-
-In commit mode, each delivered unit replaces or appends `Commits: <unit-id> | <full SHA> | <message>`. Units implement and commit serially, resume requires `HEAD` continuity, and cold verification inspects exactly `<Baseline>..HEAD`. Working-tree SDD keeps disjoint implementation waves available and verifies the scoped working-tree diff.
-
-Review and Judgment remain independent. After Orchestration completes, select `review-coordinator` for a separate evaluation. Publication also remains outside Orchestration.
-
-See the [Orchestration manual tests](manual-tests.md).
+Push, PRs, merge, Review, and Judgment remain separate workflows. For later evaluation, select `review-coordinator`. Validate changes with the [Orchestration manual tests](manual-tests.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `orchestraitor` | Executes Direct work, SDD runs, and opt-in Git delivery |
+| Agent (primary) | `orchestraitor` | Executes changes and opt-in Git delivery |
 | Agent (subagent) | `sdd-explore` | Explores code read-only |
-| Agent (subagent) | `sdd-implement` | Implements one scoped work unit without Git authority |
+| Agent (subagent) | `sdd-implement` | Implements scoped units without Git authority |
 | Agent (subagent) | `sdd-canonical-merge` | Merges verified canonical spec deltas |
 | Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
+| Skill | `behavior-characterization` | Captures current behavior during hardening |
+| Skill | `code-conventions` | Applies code and test conventions |
+| Skill | `cognitive-doc-design` | Keeps human-facing documentation clear |
+| Skill | `graphify-cli` | Queries code graphs read-only |
 | Skill | `implementation-skill-routing` | Selects implementation skills without delivery skills |
+| Skill | `java-testing` | Implements focused Java tests |
+| Skill | `legacy-code-safety` | Protects behavior during legacy changes |
 | Skill | `sdd-cold-verification` | Verifies `working-tree` or the recorded commit range |
-| Skill | `tcr` | Runs exact Direct Test && Commit || Revert micropsteps |
-| Skill | `work-unit-commits` | Delivers cohesive verified units when commits are enabled |
+| Skill | `systematic-debugging` | Finds root causes before fixes |
+| Skill | `tcr` | Commits green microsteps; reverts attributable failures |
+| Skill | `work-unit-commits` | Delivers cohesive verified units as commits |

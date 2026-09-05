@@ -24,7 +24,7 @@ git add -- README.md pom.xml hooks src state-seeds
 git commit -m "test: establish manual fixture baseline"
 ```
 
-`MT-ORCHESTRATION-SDD-COMMITS` installs `hooks/reject-order-pricing-pre-commit` as `.git/hooks/pre-commit`. The hook permits the test-only unit and deliberately rejects a later commit containing `OrderPricing.java`; it never edits the index or working tree. Disable it manually only after inspecting the stopped run, then resume in a fresh session.
+`MT-ORCHESTRATION-SDD-COMMITS` installs `hooks/reject-order-pricing-pre-commit` as `.git/hooks/pre-commit`. It rejects any commit containing `OrderPricing.java`, including the first, without changing Git state. Inspect the pending record and snapshots before disabling it manually, then resume in a fresh session.
 
 ## Seeds
 
@@ -34,7 +34,7 @@ Seed state uses `ai/`, not `.ai/`, because the repository ignores `.ai/`. The pe
 
 | Seed | Feeds | Content |
 | --- | --- | --- |
-| `complex-plan` | `MT-ORCHESTRATION-SDD-CONFIRM`, `MT-ORCHESTRATION-SDD-COMPLETE` | One neutral plan with dependent groups and canonical behavior. |
+| `complex-plan` | `MT-ORCHESTRATION-SDD-CONFIRM`, `MT-ORCHESTRATION-SDD-COMPLETE`, `MT-ORCHESTRATION-SDD-COMMITS` | One neutral plan with dependent groups and canonical behavior. |
 | `canonical-spec` | `MT-ORCHESTRATION-SDD-COMPLETE` | Existing order-pricing behavior under `.ai/orchestration/specs/`. |
 
 ## Changing the fixture

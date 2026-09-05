@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: in-progress
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 
 # Work-unit commits
@@ -38,19 +38,29 @@ Deliver units serially:
 
 1. Apply only the unit and run its focused check. A failing unit is not committed.
 2. Require the current full `HEAD` to equal the previous unit SHA, or the baseline for the first unit.
-3. Derive the exact changed path list for the unit and ensure it contains no unrelated or `.ai/` path.
+3. Derive the exact changed path list for the unit and ensure it contains no unrelated or `.ai/` path. For SDD, persist the pending record below before staging.
 4. Stage only those paths with `git add -- <paths>`. Require no unstaged diff in them.
 5. Inspect the staged path set and staged diff for those paths. Reject empty, missing, or unexpected content, then run `git diff --cached --check -- <paths>`.
-6. Commit with hooks enabled and an explicit pathspec, such as `git commit -m <message> -- <paths>`. This must exclude and preserve unrelated staged entries.
+6. For SDD, save the pre-hook snapshot below. Commit with hooks enabled and an explicit pathspec, such as `git commit -m <message> -- <paths>`. Preserve unrelated staged entries.
 7. Verify that the new commit has the recorded pre-commit `HEAD` as parent, contains exactly the unit paths, excludes `.ai/`, and leaves the unit paths without staged or unstaged changes.
 
 Use outcome-oriented Conventional Commit messages unless the user supplied exact messages. Inspect repository message style before choosing them.
 
-For SDD, replace `Commits: none` after the first successful commit and append one complete row per delivered unit:
+## SDD pending delivery
+
+Before staging, persist a pending record in `run.md`: unit id, source work ids, declared scope and exact changed paths, focused check and result, intended message, expected parent SHA, and a pre-stage Git snapshot. Store snapshot evidence under the run root, outside commits. Include index paths, modes and blob IDs, plus working-tree paths, status, modes and content hashes for tracked and untracked changes, including unrelated state; mark absent paths and exclude `.ai/`.
+
+After staging and validation, save a separate pre-hook snapshot of the same state before invoking `git commit`. Keep both snapshots and the pending record on failure; record the failure and observed state without replacing that evidence.
+
+On resume, require `HEAD` to match both the ledger tip (or `Baseline` when `Commits: none`) and the pending parent. Require Git state to match the saved pre-stage or pre-hook snapshot, then rerun the focused check before retrying that same unit. Missing evidence or any mismatch blocks; never reconstruct a split or combined unit from work groups or absorb new changes.
+
+Only after commit verification, replace `Commits: none` or append one complete row, then clear the pending record:
 
 ```text
 Commits: <unit-id> | <full SHA> | <message>
 ```
+
+No pending unit may remain at final verification or archive.
 
 ## Hooks, failures, and continuity
 
