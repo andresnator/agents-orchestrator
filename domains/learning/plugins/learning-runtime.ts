@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
-import { mkdir, open, readFile, readdir, realpath, rename, stat, unlink } from "node:fs/promises"
+import { constants } from "node:fs"
+import { mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import type { Plugin, ToolContext } from "@opencode-ai/plugin"
 import { recallCalcContracts, recallCalcHost } from "./recall-calc.ts"
@@ -83,6 +84,43 @@ type LearningEvent =
   | { type: "record_gap"; event_id: string; date: string; gap_id: string; category: string; synthetic_pattern: string; occurrence_refs: string[] }
   | { type: "attach_artifact"; event_id: string; date: string; path: string; content: string; source_revision: number; job_id: string; module_id?: string; selected_card_ids?: string[] }
   | { type: "complete_topic"; event_id: string; date: string; evidence: string }
+
+type EventType = LearningEvent["type"]
+const EVENT_TYPES = [
+  "create_topic", "record_class", "preview_cards", "select_cards", "start_practice", "record_attempt", "record_consolidation", "close_module",
+  "grade_card", "preview_card_change", "apply_card_change", "set_card_status", "set_fundamental_override", "add_language_unit", "record_language_attempt",
+  "set_vocab_candidates", "export_vocab", "adopt_gap", "record_gap", "attach_artifact", "complete_topic",
+] as const satisfies readonly EventType[]
+
+interface EventReference {
+  event: Record<string, unknown>
+  consent_subject?: Record<string, unknown> | string
+  rules?: string[]
+}
+
+const EVENT_REFERENCE: Record<EventType, EventReference> = {
+  create_topic: { event: { type: "create_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
+  record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
+  preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts"] },
+  select_cards: { event: { type: "select_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", interaction_id: "UUID", disposition: "selected | none | deferred", proposal_ids: ["proposal_id"] }, consent_subject: "exact stored module.retention.preview with digest omitted" },
+  start_practice: { event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
+  record_attempt: { event: { type: "record_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", outcome: "pending | partial | stuck | done", evidence: "actual learner evidence", causal_explanation: "optional string", transfer_evidence: "optional string" } },
+  record_consolidation: { event: { type: "record_consolidation", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", learner_evidence: "string", blocking_gaps: ["string"] } },
+  close_module: { event: { type: "close_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####" } },
+  grade_card: { event: { type: "grade_card", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", grade: "Again | Hard | Good | Easy", evidence: "actual answer evidence", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
+  preview_card_change: { event: { type: "preview_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "unique string", source_revision: "current revision", kind: "edit | reformulate | split", replacements: [{ cue: "string", answer: "string" }] }, rules: ["split has exactly two replacements; other kinds have one", "change_id is unique within the topic"] },
+  apply_card_change: { event: { type: "apply_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "string", interaction_id: "UUID" }, consent_subject: "exact stored card_changes entry with digest omitted" },
+  set_card_status: { event: { type: "set_card_status", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", status: "active | suspended | retired", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
+  set_fundamental_override: { event: { type: "set_fundamental_override", event_id: "EVENT_ID", date: "YYYY-MM-DD", concept_id: "K-####", enabled: "boolean", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", concept_id: "K-####" } },
+  add_language_unit: { event: { type: "add_language_unit", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", passive_at: "YYYY-MM-DD", next_due: "passive_at + 3 days", situation: "string", target_text: "string", native_text: "string" } },
+  record_language_attempt: { event: { type: "record_language_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", outcome: "needs-another-attempt | completed | input-only", evidence: "actual learner evidence", next_due: "required future YYYY-MM-DD only when another attempt is needed" } },
+  set_vocab_candidates: { event: { type: "set_vocab_candidates", event_id: "EVENT_ID", date: "YYYY-MM-DD", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "five semicolon-separated fields" }] } },
+  export_vocab: { event: { type: "export_vocab", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", candidate_ids: ["V-####"], batch_path: "anki/<name>.txt" }, consent_subject: { topic_slug: "TOPIC_SLUG", candidate_ids: ["V-####"] } },
+  adopt_gap: { event: { type: "adopt_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", interaction_id: "UUID", adoption: "drill | practice | declined" }, consent_subject: { topic_slug: "TOPIC_SLUG", gap_id: "G-####" } },
+  record_gap: { event: { type: "record_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", category: "string", synthetic_pattern: "string", occurrence_refs: ["opaque EVENT_ID"] } },
+  attach_artifact: { event: { type: "attach_artifact", event_id: "EVENT_ID", date: "YYYY-MM-DD", path: "approved relative artifact path", content: "exact writer content", source_revision: "current revision", job_id: "accepted child ID", module_id: "required for note/exercise", selected_card_ids: ["required exact module card IDs for note/exercise"] } },
+  complete_topic: { event: { type: "complete_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", evidence: "actual capstone evidence" } },
+}
 
 interface TopicState {
   schema_version: 1
@@ -255,15 +293,28 @@ function eventDigest(event: LearningEvent) {
   return digest(event)
 }
 
-function validateConsent(choice: Choice | undefined, purpose: Purpose, eventInteraction: string, selected: string[]) {
+function validateConsent(choice: Choice | undefined, purpose: Purpose, eventInteraction: string, selected: string[], subject: Record<string, unknown>) {
   if (!choice || choice.id !== eventInteraction || choice.status !== "answered" || !choice.requestID || !choice.selected) {
     throw new Error("verified_interaction_required")
   }
   if (choice.input.purpose !== purpose) throw new Error("interaction_purpose_mismatch")
+  const subjectDigest = digest(subject)
+  if (choice.input.subject_digest !== subjectDigest || choice.input.subject_json !== canonicalJSON(subject)) {
+    throw new Error("interaction_subject_mismatch")
+  }
   unique(selected, "selection")
   if (selected.length !== choice.selected.length || selected.some((id) => !choice.selected!.includes(id))) {
     throw new Error("interaction_selection_mismatch")
   }
+}
+
+function storedSubject<T extends { digest: string }>(value: T): Omit<T, "digest"> {
+  const { digest: _digest, ...subject } = value
+  return subject
+}
+
+function requireValidState(state: TopicState, slug: string) {
+  if (!validStoredState(state, slug)) throw new Error("resulting_state_malformed")
 }
 
 function initialState(slug: string, event: Extract<LearningEvent, { type: "create_topic" }>): TopicState {
@@ -328,6 +379,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     state.revision = 1
     state.applied_events[event.event_id] = eventDigest(event)
     state.views = { revision: state.revision, status: "pending" }
+    requireValidState(state, slug)
     return { state, result: { duplicate: false, revision: state.revision, event_id: event.event_id, views: "pending", changed: ["state", "mission", "path"] } }
   }
   if (current.schema_version !== STATE_VERSION || current.topic.slug !== slug || !Number.isSafeInteger(current.revision)) throw new Error("state_malformed")
@@ -383,8 +435,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       if (!module?.retention.preview || module.retention.preview.id !== event.preview_id) throw new Error("unknown_card_preview")
       requiredEnum(event.disposition, "retention_disposition", ["selected", "none", "deferred"] as const)
       event.proposal_ids = requiredArray<string>(event.proposal_ids, "proposal_ids", 2).map((id) => requiredString(id, "proposal_id", 100))
-      validateConsent(choice, "cards", event.interaction_id, event.disposition === "selected" ? event.proposal_ids : [event.disposition])
-      if (choice!.input.subject_digest !== module.retention.preview.digest) throw new Error("interaction_subject_mismatch")
+      validateConsent(choice, "cards", event.interaction_id, event.disposition === "selected" ? event.proposal_ids : [event.disposition], storedSubject(module.retention.preview))
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       unique(event.proposal_ids, "proposal_id")
       if (event.disposition === "selected" && !event.proposal_ids.length) throw new Error("selected_cards_required")
@@ -405,7 +456,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "start_practice": {
       if (!module || module.phase !== "class") throw new Error("practice_requires_class")
-      validateConsent(choice, "readiness", event.interaction_id, ["ready"])
+      validateConsent(choice, "readiness", event.interaction_id, ["ready"], { topic_slug: state.topic.slug, module_id: module.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       module.phase = "practice"
       state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
@@ -444,7 +495,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     case "grade_card": {
       if (!card || card.status !== "active") throw new Error("card_not_active")
       requiredEnum(event.grade, "grade", ["Again", "Hard", "Good", "Easy"] as const)
-      validateConsent(choice, "grade", event.interaction_id, [event.grade])
+      validateConsent(choice, "grade", event.interaction_id, [event.grade], { topic_slug: state.topic.slug, card_id: card.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       if (event.grade === "Again" && card.again_count === 2) throw new Error("third_again_requires_repair_choice")
       const transition = recallCalcContracts.applyGrade(event.grade, card.box, event.date)
@@ -460,6 +511,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     case "preview_card_change": {
       if (!card || card.status !== "active" || event.source_revision !== current.revision) throw new Error("invalid_or_stale_card_change")
       requiredString(event.change_id, "change_id", 100)
+      if (state.card_changes.some((item) => item.id === event.change_id && item.card_id !== card.id)) throw new Error("duplicate_card_change_id")
       requiredEnum(event.kind, "card_change_kind", ["edit", "reformulate", "split"] as const)
       event.replacements = requiredArray<Extract<LearningEvent, { type: "preview_card_change" }>["replacements"][number]>(event.replacements, "replacements", 2)
       if ((event.kind === "split" && event.replacements.length !== 2) || (event.kind !== "split" && event.replacements.length !== 1)) throw new Error("invalid_card_change_shape")
@@ -480,9 +532,8 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       const preview = state.card_changes.find((item) => item.id === event.change_id && item.card_id === card.id)
       if (!preview || preview.source_revision + 1 !== current.revision) throw new Error("unknown_or_stale_card_change")
       const purpose = preview.kind === "edit" ? "cards" : "reformulation"
-      validateConsent(choice, purpose, event.interaction_id, [preview.id])
+      validateConsent(choice, purpose, event.interaction_id, [preview.id], storedSubject(preview))
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      if (choice!.input.subject_digest !== preview.digest) throw new Error("interaction_subject_mismatch")
       card.status = "retired"
       if (preview.kind !== "edit") {
         card.again_count = 3
@@ -503,7 +554,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     case "set_card_status": {
       if (!card) throw new Error("unknown_card")
       requiredEnum(event.status, "card_status", ["active", "suspended", "retired"] as const)
-      validateConsent(choice, "retirement", event.interaction_id, [event.status])
+      validateConsent(choice, "retirement", event.interaction_id, [event.status], { topic_slug: state.topic.slug, card_id: card.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       card.status = event.status
       state.card_changes = state.card_changes.filter((item) => item.card_id !== card.id)
@@ -515,7 +566,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       const concept = state.concepts.find((item) => item.id === event.concept_id)
       if (!concept?.taught) throw new Error("taught_concept_required")
       requiredBoolean(event.enabled, "override_enabled")
-      validateConsent(choice, "override", event.interaction_id, [event.enabled ? "enable" : "disable"])
+      validateConsent(choice, "override", event.interaction_id, [event.enabled ? "enable" : "disable"], { topic_slug: state.topic.slug, concept_id: concept.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       concept.fundamental = event.enabled
       concept.learner_override = true
@@ -577,7 +628,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "export_vocab": {
       event.candidate_ids = requiredArray<string>(event.candidate_ids, "candidate_ids").map((id) => requiredID(id, "V"))
-      validateConsent(choice, "export", event.interaction_id, event.candidate_ids)
+      validateConsent(choice, "export", event.interaction_id, event.candidate_ids, { topic_slug: state.topic.slug, candidate_ids: event.candidate_ids })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       unique(event.candidate_ids, "candidate_id")
       if (!/^anki\/[a-z0-9][a-z0-9._-]*\.txt$/.test(event.batch_path)) throw new Error("invalid_batch_path")
@@ -597,7 +648,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       const gap = state.gaps.find((item) => item.id === event.gap_id)
       if (!gap) throw new Error("unknown_gap")
       requiredEnum(event.adoption, "gap_adoption", ["drill", "practice", "declined"] as const)
-      validateConsent(choice, "gap", event.interaction_id, [event.adoption])
+      validateConsent(choice, "gap", event.interaction_id, [event.adoption], { topic_slug: state.topic.slug, gap_id: gap.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       gap.adoption = event.adoption
       state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
@@ -662,6 +713,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
   state.revision = current.revision + 1
   state.applied_events[event.event_id] = eventDigest(event)
   state.views = { revision: state.revision, status: "pending" }
+  requireValidState(state, slug)
   return { state, result: { duplicate: false, revision: state.revision, event_id: event.event_id, views: "pending", changed: [...changed] } }
 }
 
@@ -690,13 +742,15 @@ function createInteractions() {
     requireTeacher(context)
     boundedText(input.question, MAX_INPUT_CHARS)
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new Error("invalid_revision")
-    if ((input.subject_digest === undefined) !== (input.subject_json === undefined)) throw new Error("subject_digest_and_json_required")
-    if (input.subject_digest !== undefined) {
-      if (!/^[a-f0-9]{64}$/.test(input.subject_digest)) throw new Error("invalid_subject_digest")
-      if (typeof input.subject_json !== "string" || input.subject_json.length > MAX_INPUT_CHARS) throw new Error("invalid_subject_json")
+    if (input.subject_json === undefined && input.subject_digest !== undefined) throw new Error("subject_json_required")
+    if (input.subject_json !== undefined) {
+      if (input.subject_json.length > MAX_INPUT_CHARS) throw new Error("invalid_subject_json")
       let subject: unknown
       try { subject = JSON.parse(input.subject_json) } catch { throw new Error("invalid_subject_json") }
-      if (!subject || typeof subject !== "object" || Array.isArray(subject) || digest(subject) !== input.subject_digest) throw new Error("subject_digest_mismatch")
+      if (!subject || typeof subject !== "object" || Array.isArray(subject)) throw new Error("invalid_subject_json")
+      const computed = digest(subject)
+      if (input.subject_digest !== undefined && input.subject_digest !== computed) throw new Error("subject_digest_mismatch")
+      input.subject_digest = computed
       input.subject_json = canonicalJSON(subject)
     }
     const ids = new Set(input.options.map((option) => option.id))
@@ -710,7 +764,8 @@ function createInteractions() {
       if (previous.status === "pending" && previous.digest === digest(input)) return previous
       if (previous.status === "pending") previous.status = "invalidated"
     }
-    if (choices.size >= MAX_RECORDS) throw new Error("interaction_limit_reached")
+    const pending = [...choices.values()].filter((item) => item.status === "pending").length
+    if (pending >= MAX_RECORDS) throw new Error("interaction_limit_reached")
     const choice: Choice = {
       id: randomUUID(), sessionID: context.sessionID, sourceMessageID: context.messageID,
       input: structuredClone(input), digest: digest(input), status: "pending",
@@ -750,6 +805,8 @@ function createInteractions() {
     if (!choice || choice.sessionID !== data.sessionID || choice.status !== "pending") return
     if (event.type === "question.rejected") {
       choice.status = "dismissed"
+      active.delete(choice.sessionID)
+      requests.delete(data.requestID)
       return choice
     }
     if (!Array.isArray(data.answers) || data.answers.length !== 1 || !Array.isArray(data.answers[0])) return
@@ -758,6 +815,8 @@ function createInteractions() {
     if (selected.length !== answers.length || new Set(answers).size !== answers.length || (!choice.input.multiple && selected.length !== 1)) return
     choice.selected = selected
     choice.status = "answered"
+    active.delete(choice.sessionID)
+    requests.delete(data.requestID)
     return choice
   }
 
@@ -767,7 +826,20 @@ function createInteractions() {
     return structuredClone(choice)
   }
 
-  return { stage, prepare, onEvent, get }
+  function find(sessionID: string, id: string) {
+    const choice = choices.get(id)
+    return choice?.sessionID === sessionID ? structuredClone(choice) : undefined
+  }
+
+  function consume(sessionID: string, id: string) {
+    const choice = choices.get(id)
+    if (!choice || choice.sessionID !== sessionID) return
+    choices.delete(id)
+    if (choice.requestID) requests.delete(choice.requestID)
+    if (active.get(sessionID) === id) active.delete(sessionID)
+  }
+
+  return { stage, prepare, onEvent, get, find, consume }
 }
 
 function markdown(value: string) {
@@ -848,10 +920,9 @@ function createStateStore(directory: string) {
     const root = await topicRoot(slug)
     if (!root) return undefined
     const path = join(root, ".state.json")
-    let source: string
+    let canonical: string
     try {
-      if ((await stat(path)).size > MAX_STATE_BYTES) throw new Error("state_too_large")
-      source = await readFile(path, "utf8")
+      canonical = await realpath(path)
     } catch (error: any) {
       if (error?.code === "ENOENT") {
         const entries = (await readdir(root)).filter((entry) => entry !== ".state.lock")
@@ -859,6 +930,21 @@ function createStateStore(directory: string) {
         return undefined
       }
       throw error
+    }
+    const part = relative(root, canonical)
+    if (part !== ".state.json" || isAbsolute(part)) throw new Error("state_file_outside_topic")
+    let source: string
+    const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW).catch((error: any) => {
+      if (error?.code === "ELOOP") throw new Error("state_file_symlink")
+      throw error
+    })
+    try {
+      const metadata = await handle.stat()
+      if (!metadata.isFile()) throw new Error("state_file_not_regular")
+      if (metadata.size > MAX_STATE_BYTES) throw new Error("state_too_large")
+      source = await handle.readFile("utf8")
+    } finally {
+      await handle.close()
     }
     let state: TopicState
     try { state = JSON.parse(source) } catch { throw new Error("state_malformed_json") }
@@ -883,13 +969,30 @@ function createStateStore(directory: string) {
         }
       } catch (error: any) {
         if (error?.code !== "EEXIST" || attempt > 0) throw new Error("topic_busy")
-        let stale = false
+        let stored: { pid: number; token: string }
         try {
-          const stored = JSON.parse(await readFile(lockPath, "utf8"))
-          stale = Number.isInteger(stored.pid) && !(await processIsAlive(stored.pid))
+          stored = JSON.parse(await readFile(lockPath, "utf8"))
+          if (!Number.isInteger(stored.pid) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored.token)) throw new Error("invalid_lock")
         } catch { throw new Error("ambiguous_topic_lock") }
-        if (!stale) throw new Error("topic_busy")
-        await unlink(lockPath)
+        if (await processIsAlive(stored.pid)) throw new Error("topic_busy")
+        const claimPath = `${lockPath}.reclaim-${stored.token}`
+        let claim: Awaited<ReturnType<typeof open>>
+        try {
+          claim = await open(claimPath, "wx", 0o600)
+        } catch (claimError: any) {
+          if (claimError?.code === "EEXIST") throw new Error("topic_busy")
+          throw claimError
+        }
+        try {
+          await claim.writeFile(JSON.stringify({ pid: process.pid, stale_token: stored.token }), "utf8")
+          await claim.sync()
+          const current = JSON.parse(await readFile(lockPath, "utf8"))
+          if (current.pid !== stored.pid || current.token !== stored.token || await processIsAlive(current.pid)) throw new Error("topic_busy")
+          await unlink(lockPath)
+        } finally {
+          await claim.close().catch(() => undefined)
+          await unlink(claimPath).catch(() => undefined)
+        }
       }
     }
     throw new Error("topic_busy")
@@ -989,7 +1092,13 @@ function createStateStore(directory: string) {
 
 function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job) => Promise<void> = async () => undefined) {
   const jobs = new Map<string, Job>()
+  const launching = new Set<string>()
   const available = ["create", "promptAsync", "messages", "status", "abort"].every((name) => typeof (client.session as any)?.[name] === "function")
+
+  function ownerKey(parentID: string, worker: Worker, scope: string) {
+    const topicScoped = TOPIC_SLUG.test(scope) && scope !== "summaries"
+    return topicScoped ? `topic:${scope}:${worker}` : `parent:${parentID}:${scope}:${worker}`
+  }
 
   async function sync(job: Job) {
     const priorSyncError = job.error === "job_state_sync_failed; inspect the accepted child before replacement"
@@ -1019,7 +1128,8 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
     requireTeacher(context)
     if (!available) throw new Error("async_session_api_unavailable")
     boundedText(input.prompt, MAX_INPUT_CHARS)
-    const existing = [...jobs.values()].find((job) => job.parentID === context.sessionID && job.scope === input.scope && job.worker === input.worker && ["starting", "running", "cancelling"].includes(job.status))
+    const key = ownerKey(context.sessionID, input.worker, input.scope)
+    const existing = [...jobs.values()].find((job) => ownerKey(job.parentID, job.worker, job.scope) === key && ["starting", "running", "cancelling"].includes(job.status))
     if (existing) {
       if (input.revision > existing.revision) {
         existing.supersededRevision = Math.max(existing.supersededRevision ?? input.revision, input.revision)
@@ -1028,34 +1138,40 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
       }
       throw new Error(`learning_job_pending:${existing.id}`)
     }
+    if (launching.has(key)) throw new Error("learning_job_starting")
     if (jobs.size >= MAX_RECORDS) throw new Error("job_limit_reached")
-    const agents = await client.app.agents({ throwOnError: true })
-    const worker = agents.data?.find((agent) => agent.name === input.worker)
-    if (!worker) throw new Error(`learning_worker_unavailable:${input.worker}`)
-    const parentMessage = await client.session.message({ path: { id: context.sessionID, messageID: context.messageID }, throwOnError: true })
-    const parent = parentMessage.data?.info
-    if (!parent || parent.role !== "assistant") throw new Error("assistant_context_required")
-    const body = {
-      parentID: context.sessionID, title: `${input.worker}: ${input.scope}`,
-      permission: [{ permission: "edit", pattern: "*", action: "deny" }, { permission: "bash", pattern: "*", action: "deny" }, { permission: "task", pattern: "*", action: "deny" }],
-    }
-    const created = await client.session.create({ body, throwOnError: true })
-    if (!created.data?.id) throw new Error("child_session_not_created")
-    const job: Job = { id: created.data.id, parentID: context.sessionID, worker: input.worker, scope: input.scope, revision: input.revision, status: "starting", notified: false }
-    jobs.set(job.id, job)
+    launching.add(key)
     try {
-      await client.session.promptAsync({ path: { id: job.id }, body: {
-        agent: input.worker,
-        model: worker.model ?? { providerID: parent.providerID, modelID: parent.modelID },
-        parts: [{ type: "text", text: input.prompt }],
-      }, throwOnError: true })
-      if (job.status === "starting") job.status = "running"
-    } catch {
-      // A lost HTTP response does not prove that the prompt was rejected.
-      job.error = "launch_observation_failed; inspect the existing child before replacement"
+      const agents = await client.app.agents({ throwOnError: true })
+      const worker = agents.data?.find((agent) => agent.name === input.worker)
+      if (!worker) throw new Error(`learning_worker_unavailable:${input.worker}`)
+      const parentMessage = await client.session.message({ path: { id: context.sessionID, messageID: context.messageID }, throwOnError: true })
+      const parent = parentMessage.data?.info
+      if (!parent || parent.role !== "assistant") throw new Error("assistant_context_required")
+      const body = {
+        parentID: context.sessionID, title: `${input.worker}: ${input.scope}`,
+        permission: [{ permission: "edit", pattern: "*", action: "deny" }, { permission: "bash", pattern: "*", action: "deny" }, { permission: "task", pattern: "*", action: "deny" }],
+      }
+      const created = await client.session.create({ body, throwOnError: true })
+      if (!created.data?.id) throw new Error("child_session_not_created")
+      const job: Job = { id: created.data.id, parentID: context.sessionID, worker: input.worker, scope: input.scope, revision: input.revision, status: "starting", notified: false }
+      jobs.set(job.id, job)
+      try {
+        await client.session.promptAsync({ path: { id: job.id }, body: {
+          agent: input.worker,
+          model: worker.model ?? { providerID: parent.providerID, modelID: parent.modelID },
+          parts: [{ type: "text", text: input.prompt }],
+        }, throwOnError: true })
+        if (job.status === "starting") job.status = "running"
+      } catch {
+        // A lost HTTP response does not prove that the prompt was rejected.
+        job.error = "launch_observation_failed; inspect the existing child before replacement"
+      }
+      await sync(job)
+      return structuredClone(job)
+    } finally {
+      launching.delete(key)
     }
-    await sync(job)
-    return structuredClone(job)
   }
 
   async function inspect(job: Job) {
@@ -1142,6 +1258,17 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
           return JSON.stringify({ today: recallCalcContracts.localToday(), calculator: true, async_sessions: jobs.available, interactions: "host_question_events", durable_state: true, state_schema: STATE_VERSION, existing_markdown_supported: false })
         },
       }),
+      learning_event_reference: tool({
+        description: "Return the complete validated payload and exact consent-subject contract for one Learning event, or the full event catalog when omitted. Read-only.",
+        args: { event_type: schema.enum(EVENT_TYPES).optional() },
+        async execute({ event_type }, context) {
+          requireTeacher(context)
+          return JSON.stringify({
+            base_rules: ["Every event requires type, unique EVENT_ID event_id, and local YYYY-MM-DD date.", "Use the current state revision as expected_revision.", "For consent events, fill the consent_subject placeholders with exact current IDs and pass it as subject_json to learning_choice. The runtime canonicalizes it and returns its SHA-256; when state already supplies a digest, pass that digest too."],
+            events: event_type ? { [event_type]: EVENT_REFERENCE[event_type] } : EVENT_REFERENCE,
+          }, null, 2)
+        },
+      }),
       learning_state_read: tool({
         description: "Read the authoritative versioned state for one Learning topic. Existing Markdown without state is unsupported.",
         args: { topic_slug: schema.string().regex(TOPIC_SLUG) },
@@ -1151,7 +1278,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_commit: tool({
-        description: "Apply one validated idempotent Learning event at an expected revision, atomically replace state, then regenerate views.",
+        description: "Apply one event from learning_event_reference at an expected revision, validate the resulting snapshot, atomically replace state, then regenerate views.",
         args: {
           topic_slug: schema.string().regex(TOPIC_SLUG),
           expected_revision: schema.number().int().nonnegative(),
@@ -1161,7 +1288,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
           requireTeacher(context)
           const parsed = parseEvent(event)
           const interactionID = "interaction_id" in parsed ? parsed.interaction_id : undefined
-          const choice = interactionID ? interactions.get(context.sessionID, interactionID) : undefined
+          const choice = interactionID ? interactions.find(context.sessionID, interactionID) : undefined
           if (parsed.type === "attach_artifact") {
             const snapshot = await state.read(topic_slug)
             const record = snapshot.jobs.find((item) => item.id === parsed.job_id)
@@ -1181,7 +1308,9 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
               if (!parsed.selected_card_ids || !sameStrings(outputCards, parsed.selected_card_ids)) throw new Error("writer_retention_mismatch")
             } else if (output.selected_card_ids !== undefined) throw new Error("unexpected_writer_retention")
           }
-          return JSON.stringify(await state.commit(topic_slug, expected_revision, parsed, choice), null, 2)
+          const result = await state.commit(topic_slug, expected_revision, parsed, choice)
+          if (interactionID && !result.duplicate) interactions.consume(context.sessionID, interactionID)
+          return JSON.stringify(result, null, 2)
         },
       }),
       learning_recover: tool({
@@ -1209,8 +1338,8 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         description: "Stage an exact closed choice. Call question with the returned question; only its host reply supplies selection. No files change.",
         args: {
           purpose: schema.enum(PURPOSES), revision: schema.number().int().nonnegative(),
-          subject_digest: schema.string().regex(/^[a-f0-9]{64}$/).optional().describe("Digest of the exact structured preview being confirmed"),
-          subject_json: schema.string().max(MAX_INPUT_CHARS).optional().describe("JSON of that exact stored preview; required together with subject_digest"),
+          subject_digest: schema.string().regex(/^[a-f0-9]{64}$/).optional().describe("Optional asserted digest; required only when the stored subject already supplies one"),
+          subject_json: schema.string().max(MAX_INPUT_CHARS).optional().describe("Exact structured subject displayed and bound to the choice; the runtime canonicalizes and hashes it"),
           question: schema.string().min(1).max(MAX_INPUT_CHARS),
           options: schema.array(schema.object({ id: schema.string().min(1).max(80), label: schema.string().min(1).max(80), description: schema.string().max(1000) })).min(1).max(MAX_CHOICES),
           multiple: schema.boolean().default(false),
@@ -1274,30 +1403,34 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
           requireTeacher(context)
           if (consumedSummaries.has(interaction_id)) throw new Error("summary_interaction_already_used")
           const choice = interactions.get(context.sessionID, interaction_id)
-          validateConsent(choice, "summary", interaction_id, ["save"])
-          const job = await jobs.inspect(context.sessionID, job_id)
-          if (job.worker !== "learning-summarizer" || job.scope !== "summaries" || job.status !== "completed" || !job.result) throw new Error("settled_summary_job_required")
-          let output: any
-          try { output = JSON.parse(job.result) } catch { throw new Error("malformed_summary_result") }
-          if (output.kind !== "summary") throw new Error("invalid_summary_kind")
-          const title = requiredString(output.title, "summary_title", 200)
-          requiredString(output.language, "summary_language", 80)
-          const content = requiredString(output.markdown, "summary_markdown", MAX_RESULT_CHARS)
-          const root = await state.root()
-          const summariesPath = join(root, "summaries")
-          await mkdir(summariesPath, { recursive: true, mode: 0o700 })
-          const summaries = await realpath(summariesPath)
-          const summariesPart = relative(root, summaries)
-          if (!summariesPart || summariesPart === ".." || summariesPart.startsWith(`..${sep}`) || isAbsolute(summariesPart)) throw new Error("summary_root_outside_learning")
-          const now = new Date()
-          const timestamp = `${recallCalcContracts.localToday(now)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`
-          const filename = `${timestamp}-${slugText(title)}-${randomUUID().slice(0, 8)}.md`
+          validateConsent(choice, "summary", interaction_id, ["save"], { scope: "summaries" })
           consumedSummaries.add(interaction_id)
+          let target: string | undefined
           try {
-            const handle = await open(join(summaries, filename), "wx", 0o600)
+            const job = await jobs.inspect(context.sessionID, job_id)
+            if (job.worker !== "learning-summarizer" || job.scope !== "summaries" || job.status !== "completed" || !job.result) throw new Error("settled_summary_job_required")
+            let output: any
+            try { output = JSON.parse(job.result) } catch { throw new Error("malformed_summary_result") }
+            if (output.kind !== "summary") throw new Error("invalid_summary_kind")
+            const title = requiredString(output.title, "summary_title", 200)
+            requiredString(output.language, "summary_language", 80)
+            const content = requiredString(output.markdown, "summary_markdown", MAX_RESULT_CHARS)
+            const root = await state.root()
+            const summariesPath = join(root, "summaries")
+            await mkdir(summariesPath, { recursive: true, mode: 0o700 })
+            const summaries = await realpath(summariesPath)
+            const summariesPart = relative(root, summaries)
+            if (!summariesPart || summariesPart === ".." || summariesPart.startsWith(`..${sep}`) || isAbsolute(summariesPart)) throw new Error("summary_root_outside_learning")
+            const now = new Date()
+            const timestamp = `${recallCalcContracts.localToday(now)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`
+            const filename = `${timestamp}-${slugText(title)}-${randomUUID().slice(0, 8)}.md`
+            target = join(summaries, filename)
+            const handle = await open(target, "wx", 0o600)
             try { await handle.writeFile(content, "utf8"); await handle.sync() } finally { await handle.close() }
+            interactions.consume(context.sessionID, interaction_id)
             return JSON.stringify({ status: "created", path: `.ai/learning/summaries/${filename}`, interaction_id, job_id })
           } catch (error) {
+            if (target) await unlink(target).catch(() => undefined)
             consumedSummaries.delete(interaction_id)
             throw error
           }

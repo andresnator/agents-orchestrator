@@ -63,7 +63,7 @@ Non-language modules follow this sequence:
 
 The mission defines stable concept IDs and prerequisites. The default fundamental shortlist is at most `floor(concept_count / 5)`; fewer than five concepts can yield zero. A learner can explicitly override the shortlist for a shown, taught concept. Cornell questions remain useful retrieval prompts even when no card is saved.
 
-Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day maintenance until the learner explicitly suspends or retires it. For card selection and replacement, the runtime verifies the stored preview JSON against its digest and renders that exact structure in the native choice. A third cumulative `Again` requires a confirmed reformulate/split decision; replacements get new IDs and preserve lineage.
+Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day maintenance until the learner explicitly suspends or retires it. Every durable choice includes an exact topic/entity subject and canonical digest; card selection and replacement use the stored preview itself. A third cumulative `Again` requires a confirmed reformulate/split decision; replacements get new IDs and preserve lineage.
 
 ## Background work
 
@@ -92,7 +92,7 @@ Vocabulary phrases begin as candidates. After a native selection, one state even
 | Worker | `learning-summarizer` | One explicit independent summary |
 | Command | `/learn` | Thin session/path/mode dispatch |
 | Command | `/english` | Thin explicit English dispatch |
-| Plugin | `learning-runtime` | Host-correlated choices, async jobs, versioned state, recovery, and exclusive summary creation |
+| Plugin | `learning-runtime` | Event reference, host-correlated choices, async jobs, versioned state, recovery, and exclusive summary creation |
 | Plugin | `recall-calc` | Bounded queue parsing and deterministic dates |
 | Skills | nine Learning-owned directories | Independent teaching and transformation methods |
 

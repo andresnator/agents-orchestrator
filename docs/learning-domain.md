@@ -51,7 +51,7 @@ Configure a provider only inside the disposable target. A scripted loopback prov
 Inspect `mentor`, `english-tutor`, `learning-researcher`, `learning-writer`, and `learning-summarizer`. Inspect the same server's `/doc` and `/experimental/tool?provider=<id>&model=<id>`. The installed target must expose:
 
 - `recall_due` and `recall_schedule`
-- `learning_context`, `learning_state_read`, `learning_commit`, and `learning_recover`
+- `learning_context`, `learning_event_reference`, `learning_state_read`, `learning_commit`, and `learning_recover`
 - `learning_due`, `learning_choice`, and `learning_choice_result`
 - `learning_job_start`, `learning_job_result`, and `learning_summary_create`
 
@@ -121,9 +121,9 @@ Every topic has one semantic authority:
 5. regenerates views for that revision; and
 6. marks views current only after generation succeeds.
 
-An identical event ID and body is idempotent. Reusing the ID with another body fails. Two commits at one expected revision cannot both win. If view generation is interrupted, committed state remains authoritative and `learning_recover` regenerates views without applying the event again.
+`learning_event_reference` publishes every supported discriminated event payload and its exact consent subject on demand. An identical event ID and body is idempotent. Reusing the ID with another body fails. Two commits at one expected revision cannot both win, duplicate change IDs are rejected, and the complete resulting snapshot is validated before replacement. If view generation is interrupted, committed state remains authoritative and `learning_recover` regenerates views without applying the event again.
 
-A lock records PID and token. Only a provably dead owner is recovered automatically. A live or malformed lock stops the mutation. Topic and artifact paths are canonicalized under the active project's `.ai/learning/`; traversal and symlink escape fail.
+A lock records PID and token. Recovery first claims that exact stale token with an exclusive file, rechecks the owner, and only then removes it; another process cannot delete a replacement lock. A live, malformed, or already-claimed lock stops the mutation. Topic, state-file, and artifact paths are canonicalized under the active project's `.ai/learning/`; traversal and symlink escape fail before content is read.
 
 ## Durable teaching
 
@@ -148,7 +148,7 @@ Clarification can expand Class or unfinished Practice within the module's win. A
 
 The mission's default fundamental shortlist contains reusable prerequisites, decision rules, and costly recurring misconceptions. Its maximum is `floor(concept_count / 5)`. The denominator is the distinct mission concept inventory; fewer than five concepts can produce zero candidates. A learner may explicitly override this for a shown, taught concept.
 
-After Class, Mentor proposes at most two eligible cards with exact cue, expected answer, concept/source revision, and short rationale. The runtime stores a canonical digest of that preview. Mentor passes both the stored structure and digest to `learning_choice`; the tool verifies the hash and renders the exact structure itself. The runtime then binds native `question.asked` and `question.replied` events to the session, tool call, request ID, revision, and preview. Edits, reformulations, and splits use the same two-step rule: store the proposed replacement, then render and confirm its exact structure, change ID, and digest. A model-authored `approved: true` has no authority.
+After Class, Mentor proposes at most two eligible cards with exact cue, expected answer, concept/source revision, and short rationale. The runtime stores a canonical digest of that preview. Mentor passes both the stored structure and digest to `learning_choice`; the tool verifies the hash and renders the exact structure itself. For other entity choices, Mentor passes the exact subject JSON specified by `learning_event_reference`, and the runtime canonicalizes and hashes it. The runtime then binds native `question.asked` and `question.replied` events to the session, tool call, request ID, revision, topic, and target entity. Edits, reformulations, and splits use the same two-step rule: store the proposed replacement, then render and confirm its exact structure, change ID, and digest. A consent shown for one entity cannot mutate another. A model-authored `approved: true` has no authority.
 
 Only the exact selected proposals receive final IDs at commit. Partial, extra, replayed, unrelated, or stale selections fail. Editing a scheduled card requires another meaningful choice; the former card is retired and the replacement receives a new ID with lineage. `none` and `deferred` create no card and do not block learning.
 
@@ -180,7 +180,7 @@ The researcher receives a question and source scope, returns at most five source
 
 Mentor can continue an independent explanation or learner question while a child is busy. A claim that depends on unfinished research remains pending. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
 
-Topic job metadata is stored with authoritative state. Same-worker work for one topic is not duplicated. A newer revision coalesces behind the active job and makes the old result ineligible. A completed child result can be recovered through its host session after OpenCode restarts. Before attachment, the runtime checks topic ownership, worker kind, exact source revision, destination, and content.
+Topic job metadata is stored with authoritative state. Same-worker work for one topic is not duplicated across parent sessions or simultaneous starts. A newer revision coalesces behind the active job and makes the old result ineligible. A completed child result can be recovered through its host session after OpenCode restarts. Before attachment, the runtime checks topic ownership, worker kind, exact source revision, destination, and content.
 
 ## Language progression
 

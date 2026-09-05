@@ -106,7 +106,11 @@ function parseQueue(markdown: string): ParsedQueue {
       continue
     }
     if (!activeSection) continue
-    if (!line.startsWith("|") || !line.endsWith("|")) continue
+    if (!line.startsWith("|")) continue
+    if (!line.endsWith("|")) {
+      malformed.push(`${line} — missing trailing |`)
+      continue
+    }
     const cells = splitMarkdownRow(line)
     if (cells.length === 0) continue
     if (cells[0] === HEADER_ID_CELL || cells.every((cell) => SEPARATOR_CELL.test(cell))) continue
