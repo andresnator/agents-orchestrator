@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # Cornell Notes
@@ -28,35 +28,22 @@ Do not use for book-chapter synthesis — that is the `summarize` skill. Select 
 
 ### Staged Non-Language Module Profile
 
-Use this staged profile, including `assets/cornell-template.md`, only when `learning-loop` is running its Class → Practice → Consolidation flow for a durable non-language module.
+Use `assets/cornell-template.md` only for staged durable non-language modules. `learning-loop` owns phase transitions, concept scope, resume, and Close; this profile owns the note format.
 
-- At **Class**, Notes cells are self-contained and mentor-authored; at least one row explains the central model and how its concepts relate.
-- Decide whether the concept is load-bearing. Render the template header as exactly `> Teach-back: required` or `> Teach-back: not-required`; never leave the choice placeholder in a persisted note.
-- Write the `Map`, cues, and `Notes`, then leave the template's exact pending `Summary` and `Recall hand-off` markers. Do not ask for a summary, schedule cards, or expose these cues to quiz mode at this checkpoint.
-- Finalize only after the linked exercise reports meaningful practice as `Result: done` and the learner demonstrates the concepts in a 2–3 sentence summary. State what is correct before any gap; reteach a material gap and ask for a revised summary. If the learner pauses or remains incomplete, keep the pending markers and return to consolidation later.
-- The finalized **Summary is the learner's voice**: record what they say, lightly cleaned up, but never add a concept or wording they did not express. Replace the pending recall marker only after every cue has been scheduled via `spaced-recall` and actual card IDs are available.
-- Once finalized, every cue is a scheduled card, the note's `Recall hand-off` lists the actual card IDs, and those cues enter the topic's quiz bank. A note whose hand-off remains pending is never a quiz source.
-- When Teach-back is `required`, replace that exact value with the created relative `teachbacks/NNNN-<concept>.md` path only after the teach-back artifact exists. Its Verdict remains authoritative: gaps keep the module open, and a later gap-free teach-back replaces the header with its own path. `not-required` is already a final state.
-
-#### Staged Format
-
-See `assets/cornell-template.md`. Structure:
-
-1. `# NNNN — {Lesson title}` + header quote block (topic, module, date, sources, exact Teach-back state).
-2. `## Map` — Mermaid diagram of the lesson's concepts.
-3. `## Notes (Cornell)` — two-column table `| Cue (question) | Notes |`.
-4. `## Summary` — the exact pending marker until practice and consolidation finish; then 2–3 sentences in the learner's own words.
-5. `## Recall hand-off` — the exact pending marker until consolidation; then card IDs added to `review-queue.md`.
+- **Class:** write the Mermaid `Map` and self-contained, Mentor-authored `Notes`, including one row explaining the central model and its relationships. Set `> Teach-back: required` for a load-bearing concept, otherwise `> Teach-back: not-required`; never persist the choice placeholder.
+- **Pending state:** keep the template's exact `Summary` and `Recall hand-off` markers. Do not request a Summary, schedule cards, or use these cues in quizzes at Class.
+- **Summary:** finalize only after the linked exercise has `Result: done` and the learner demonstrates the practiced concepts in 2–3 sentences. Follow `learning-loop`'s correct-first feedback and revision loop; pauses or unresolved gaps keep the markers pending. Record only the learner's wording, lightly cleaned without adding concepts.
+- **Recall:** schedule every cue via `spaced-recall`, then replace the pending hand-off with actual card IDs matching the exercise. Only then do cues enter the quiz bank.
+- **Teach-back:** `not-required` is final. Replace `required` with `teachbacks/NNNN-<concept>.md` only after that artifact exists. A Verdict with gaps keeps the module open until a later gap-free teach-back replaces the header path.
 
 #### Staged Output Contract
 
-At the Class checkpoint, return the note path, staged cue questions, and `consolidation pending`; never claim that cards were scheduled. At finalization, return the note path, new cues, and confirmation that each cue was scheduled via `spaced-recall`. Flag unresolved concepts so `learning-loop` can keep the module 🔄 and reinforce them.
+At Class, return the note path, cue questions, and `consolidation pending`; do not claim scheduled cards. At finalization, return the path, cues, and scheduling confirmation. Flag unresolved concepts to `learning-loop`.
 
 ### Other Route Lessons and Compatibility
 
-- A route lesson outside the staged non-language `learning-loop` module keeps the original one-pass contract: metadata, Mermaid `Map`, and 3–7 cue/Notes rows; ask for a 2–3 sentence learner Summary, record it lightly cleaned without inventing it, and reteach before closing if the learner cannot produce it; then schedule the cues and record actual recall card IDs. It does not gain pending markers, the scoped-gap state machine, a Practice prerequisite, or a Teach-back header.
-- `language-loop` continues to replace the non-language module flow; never apply this staged profile to its dialogue units or route state.
-- Existing route notes without staged markers or a Teach-back header stay unchanged. A legacy note with a real learner Summary and actual recall card IDs remains finalized; do not migrate it or require the new staged fields.
+- Other route lessons keep one-pass capture: metadata, Mermaid `Map`, 3–7 cue/Notes rows, a 2–3 sentence learner Summary, and scheduled recall IDs. Reteach when needed; never invent the Summary. No staged markers, Practice prerequisite, scoped-gap rules, or Teach-back header apply.
+- `language-loop` keeps its two-wave flow. Finalized legacy notes with learner Summary and actual recall IDs remain unchanged; do not migrate them.
 
 #### Output Contract
 

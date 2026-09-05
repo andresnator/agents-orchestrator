@@ -67,30 +67,18 @@ Failure, timeout, cancellation, `BLOCK`, or `FAIL` does not retry, resume, poll,
 
 ### Durable persistence
 
-Durable non-language modules follow `Due-check → Class → Practice → Consolidation → Close`. Language topics keep `language-loop`; one-off sessions keep the non-durable lifecycle above.
+Durable modes offer due reviews first. Non-language modules then follow:
 
-| Phase | Learner experience | Persisted result |
-|---|---|---|
-| Due-check | Mentor offers overdue reviews before new material. | Keep the existing review state. |
-| Class | Mentor explains the objective, concepts, relationships, one non-solving example, and a recap. | Save `Map` and Mentor-authored `Notes`; leave `Summary`, recall, and exercise pending. |
-| Practice | After a later readiness message, the learner completes one coached exercise. | Link the exercise and record its real result. |
-| Consolidation | The learner summarizes in 2–3 sentences; Mentor confirms, explains gaps, and requests revisions. | Save only the learner's wording, then schedule cues and matching card IDs. |
-| Close | Complete the debrief and any required Feynman teach-back. | Mark the module complete only when every gate below passes. |
+| Phase | Outcome |
+|---|---|
+| Class | Mentor explains, saves `Map` and `Notes`, asks one readiness/clarification question, and stops. |
+| Practice | A later readiness message starts one learner-owned exercise. Clarification repeats the Class boundary. |
+| Consolidation | After `Result: done`, the learner summarizes in 2–3 sentences; Mentor explains gaps, accepts revisions, and schedules cues. |
+| Close | Require learner Summary, matching note/exercise card IDs, completed practice and debrief, no blocking gaps, and any required gap-free teach-back. |
 
-**Class always ends at a turn boundary.** Mentor persists the note, reports module `🔄`, asks exactly one readiness-or-clarification question, and stops. A clarification repeats this boundary; only a later readiness message creates Practice. Pending cues are neither cards nor quiz-bank entries.
+Pending cues never enter quizzes. Supporting concepts can join Class or unfinished Practice; after `Result: done`, new concepts become separate reinforcement in `path.md`. Resume from that file's artifact links. Language topics keep `language-loop`, and finalized legacy notes remain unmigrated.
 
-The active `path.md` row is the artifact index. A `—` means create and link the artifact; a link with no target means recreate that exact path. Resume incomplete Practice or Consolidation from those links. Finalized legacy notes remain unmigrated, and completed legacy modules are never reopened.
-
-Supporting concepts that still fit the module join its class, note, exercise, and learner Summary. Other gaps get one recommended choice: address now or defer to `path.md`. Deferred material stays out of current artifacts; a blocking gap keeps the module `🔄`.
-
-Close requires:
-
-- `Summary` contains the learner's real explanation.
-- The note contains actual recall card IDs, and `Cues sent to review queue` contains the same IDs.
-- The exercise has `Result: done` and a completed debrief.
-- Teach-back is explicitly `not-required`, or `Teach-back: required` has been replaced by a `teachbacks/...` evidence path whose `## Verdict` is `gap-free`.
-
-A Feynman verdict with gaps keeps the module `🔄` until a later gap-free teach-back replaces it. Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Automatic task notifications never advance an open cue. See the [operator guide](../../docs/learning-domain.md) for exact markers, resume states, and fallback details.
+Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Notifications never advance an open cue. See the [operator guide](../../docs/learning-domain.md#general-non-language-module) for markers, resume rules, and persistence details.
 
 After changing this domain, run the affected [Learning manual tests](manual-tests.md).
 

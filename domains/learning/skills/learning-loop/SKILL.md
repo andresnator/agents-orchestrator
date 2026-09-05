@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 
 # Learning Loop
@@ -72,43 +72,46 @@ Route the raw `/learn` arguments:
 This flow applies only to durable non-language modules. When `mission.md` names a target language, `language-loop` replaces it completely.
 
 1. **Due-check** (`spaced-recall`) — offer overdue reviews before new material.
-2. **Class (10% formal)** — teach before asking the learner to retrieve or build. Give a visible, self-contained explanation with the module objective, the essential concepts, how they relate, one concrete example that does not solve the upcoming exercise, and a short mentor-authored recap of the central model.
-3. **Class checkpoint and turn boundary** — capture the teaching through `cornell-notes`. Decide whether its concept is load-bearing and persist the staged note with the exact header `> Teach-back: required` or `> Teach-back: not-required`, the Mermaid `Map`, 3–7 cue questions, and self-contained `Notes`; at least one Notes row must synthesize the section's central model. Leave the exact staged `Summary` and `Recall hand-off` markers from `assets/cornell-template.md`. In one foreground `learning-recorder` handoff, create the note and replace the active `path.md` row's `10% lesson` `—` with its backticked relative path. After persistence settles, show a compact recap, report the staged note path and module 🔄 checkpoint, ask exactly one localized readiness-or-clarification question directly in normal chat, and stop. Do not ask for the learner's Summary, schedule cards, create the exercise, or mark the module ✅ in this turn. A recorder receipt or automatic notification is not learner input.
-4. **Practice (70% doing)** — only a later learner response may enter this phase. If it requests clarification, answer it, update the staged teaching when needed, repeat the Class turn boundary, and stop again. Once the learner indicates readiness, create the real-repo exercise, or a self-contained kata when no repo fits, at `exercises/NNNN-<name>.md` from `assets/exercise-template.md`. In one foreground handoff, create it with `Attempted: pending` and `Result: pending` and replace the active path row's `70% exercise` `—` with its backticked relative path. The learner executes while the mentor coaches with escalating hints and never supplies the solution. Record the real attempt and keep `Result` as `partial` or `stuck at ...` until the single tangible win is actually `done`.
-5. **Consolidation** — only after meaningful practice reaches `Result: done`, ask the learner for a 2–3 sentence summary in their own words. Say what is correct first, then identify what is missing or incorrect. For a material gap, give one targeted explanation and ask for a revised summary, one question at a time. If the learner pauses or still cannot demonstrate the concept, preserve the pending Summary marker and keep the module 🔄.
-6. **Finalize the note** — once the summary demonstrates the module concepts, replace the pending Summary with the learner's words, lightly cleaned without adding concepts or wording they did not express. Schedule every cue through `spaced-recall`; in the same foreground checkpoint, replace the note's pending `Recall hand-off` and the exercise's pending `Cues sent to review queue` with the same actual card IDs.
-7. **20% social and close** — run the Socratic debrief (what did you learn, what surprised you, where would you use it) and replace the exercise's pending debrief with the actual outcome. If the note says `> Teach-back: required`, run `feynman-teachback` and replace that exact line with `> Teach-back: teachbacks/NNNN-<concept>.md` only after its artifact exists; `not-required` needs no teach-back. A referenced teach-back whose Verdict reports gaps keeps the module 🔄 until its return paths are resolved and a later gap-free teach-back path replaces the header. Mark the module ✅ and update its roadmap/log only when the staged Close predicate below is satisfied; then state the next module and due review date.
+2. **Class (10% formal)** — explain the objective, essential concepts and relationships, one example that does not solve the exercise, and a recap of the central model before asking for retrieval or practice.
+3. **Class checkpoint** — use the staged `cornell-notes` profile and its [template](../cornell-notes/assets/cornell-template.md). In one foreground `learning-recorder` handoff, persist the note and its backticked relative link in the active `path.md` row's `10% lesson` cell; follow the resume rules below for existing links. After persistence settles, show a compact recap, report the note path and module 🔄, ask exactly one localized readiness-or-clarification question in normal chat, and stop. Do not request a Summary, create Practice, schedule cards, or close. Recorder receipts and automatic notifications are not learner input.
+4. **Practice (70% doing)** — enter only after a later learner message signals readiness. For clarification, explain, update the staged teaching when needed, repeat the Class question, and stop again. On readiness, create `exercises/NNNN-<name>.md` from `assets/exercise-template.md`: a real-repo exercise, or a self-contained kata when no repo fits. Persist it and its `70% exercise` link in one foreground handoff. The learner executes; Mentor gives escalating hints without solving it. Record the actual attempt and `Result`: `pending`, `partial`, or `stuck at ...` until the tangible win is `done`.
+5. **Consolidation** — after `Result: done`, ask for a 2–3 sentence learner summary. Confirm what is correct first; explain each material gap and request a revision, one question at a time. A pause or unresolved gap leaves the Summary pending and the module 🔄.
+6. **Finalize the note** — accept only a summary that demonstrates the practiced concepts. Save the learner's words, lightly cleaned without adding concepts or wording. Schedule every cue through `spaced-recall`; in one foreground checkpoint, replace the note's `Recall hand-off` and exercise's `Cues sent to review queue` with the same actual card IDs.
+7. **Debrief and Close (20% social)** — ask what was learned, what surprised the learner, and where it applies, one question at a time; persist the actual debrief. Complete any required `feynman-teachback` under the resume rules below. Only after all Close gates pass, mark the module and roadmap ✅, update the path log, and report the next module and due review date.
 
 ## Scoped Concept Gaps (Non-Language Modules Only)
 
-These rules apply only inside the staged non-language module flow above; never impose them on `language-loop`, another route-note flow, a legacy note, or a standalone summary.
+Apply only to staged non-language modules:
 
-- When the learner asks about an auxiliary concept that still serves the same tangible win and keeps the note within 3–7 cues, explain it now. Incorporate it into the note's `Map`, `Notes`, cue set, and exercise, and later ask the learner to connect it in their Summary. Never supply that Summary wording for them.
-- When the mentor identifies the gap, or the requested concept would expand the module, use one localized closed `question` with two choices: address it now or defer it as reinforcement. Recommend addressing it now when it blocks the tangible win; otherwise recommend deferring it.
-- If addressed now, preserve the single-win and 3–7-cue limits by splitting out a targeted reinforcement step when necessary. If deferred, add it to the `path.md` log as reinforcement and exclude it from the current note, Summary, cues, and exercise. A deferred blocking gap leaves the module 🔄 until it is resolved.
+- Add concepts to the current module only during Class or unfinished Practice. After `Result: done`, record new concepts as separate reinforcement in `path.md`, whether addressed now or deferred; keep the current note, Summary requirement, cues, and exercise unchanged. Gaps in already-taught concepts still use Consolidation.
+- During Class or unfinished Practice, explain a learner-requested supporting concept immediately if it fits the tangible win and 3–7 cues. Include it in `Map`, `Notes`, cues, the exercise when created or updated, and the learner's eventual Summary requirement; never write their Summary for them.
+- For Mentor-detected gaps or scope expansion, offer one localized closed `question`: address now or defer. Recommend now for a blocking gap, otherwise defer. Preserve the single win and cue limit by using separate reinforcement when needed.
+- Log deferred reinforcement in `path.md`; exclude it from the current artifacts. Any unresolved blocking gap keeps the module 🔄.
 
 ## Deterministic Module Resume
 
-This state machine applies only to staged non-language modules created by the flow above. Start from the active 🔄 row in `path.md`; its `10% lesson` and `70% exercise` cells are the artifact index. Follow each recorded relative path exactly and never infer a resume target from directory contents.
+For staged non-language modules, follow the active 🔄 `path.md` row's `10% lesson` and `70% exercise` links exactly; never infer targets from directory contents. A `—` means create and link in one checkpoint. A link with an absent target means recreate that exact path without changing the cell. Use the first matching row below; preserve recorded outcomes and do not repeat completed phases.
 
-1. `10% lesson` is `—` → resume **Class**. Choose the next note path, then create the note and replace that exact `—` with its relative link in one checkpoint.
-2. `10% lesson` already contains a link but its target is absent → resume **Class** and recreate that exact linked target. Preserve the existing path cell; do not try to replace a `—` that is no longer there.
-3. The linked note has the exact pending Summary marker and `70% exercise` is `—` → after the Class turn boundary and a later learner response indicating readiness, resume **Practice** by creating the exercise and replacing that exact `—` with its link in the same checkpoint.
-4. `70% exercise` already contains a link but its target is absent → recreate that exact linked target before Practice. Preserve the existing path cell; `Result: pending`, `Result: partial`, or `Result: stuck at ...` resumes **Practice**.
-5. `Result: done` plus the exact pending Summary marker resumes **Consolidation** at the learner-summary request or its unresolved feedback loop.
-6. A real learner Summary plus a pending note `Recall hand-off`, pending exercise debrief, or pending exercise `Cues sent to review queue` resumes **Consolidation**; never close from this partial state.
-7. Once Summary, recall IDs, `Result: done`, debrief, and exercise cue IDs are final, `> Teach-back: required` resumes the required **Feynman teach-back**. A recorded `teachbacks/...` path must be followed: a Verdict with gaps resumes its return paths and another teach-back, while `> Teach-back: not-required` skips this step.
-8. **Close** only when the active row links both artifacts, the Summary is learner-authored, the note and exercise contain the same actual card IDs, `Result: done`, the debrief is captured, and Teach-back is either `not-required` or a recorded `teachbacks/...` path whose Verdict is `gap-free`.
+| Persisted state | Resume action |
+| --- | --- |
+| Lesson absent | Class, including its checkpoint and turn boundary. |
+| Staged note exists; exercise cell `—` | Wait for later learner readiness, then create Practice. A new session alone is not readiness. |
+| Exercise absent or `Result` is `pending`, `partial`, or `stuck at ...` | Create/recreate if absent; resume Practice. |
+| `Result: done`; Summary pending | Consolidation: request the summary or continue its feedback loop. |
+| Learner Summary exists; recall hand-off, exercise cue IDs, or debrief pending | Finish Consolidation and debrief; do not close. |
+| Summary, recall IDs, practice, and debrief final; `> Teach-back: required` | Run Feynman. Once its artifact exists, replace the header with `> Teach-back: teachbacks/NNNN-<concept>.md`. |
+| Referenced teach-back Verdict has gaps | Keep 🔄, resolve its return paths, run another teach-back, and replace the header path. |
+| All Close gates pass | Close the module. |
 
-Existing route notes with a learner Summary and actual recall card IDs but no staged markers or Teach-back header remain finalized under their original contract; do not migrate them or reopen already ✅ legacy modules. At every resume point, preserve recorded outcomes and do not repeat a completed phase.
+**Close gates:** both artifacts are linked; Summary is learner-authored; the note and exercise contain the same actual card IDs; `Result: done`; debrief is captured; no blocking gap remains; Teach-back is `not-required` or references an existing `teachbacks/...` artifact whose `## Verdict` is `gap-free`.
 
 ### Legacy Active-Module Resume
 
-When an active 🔄 row links a finalized legacy note (real learner Summary and actual recall card IDs, with no staged markers or Teach-back header), resume its original module contract:
+An active 🔄 row with a real learner Summary and actual recall IDs but no staged markers or Teach-back header keeps its original contract:
 
-- Exercise cell `—` → resume **Practice**, create the exercise, and replace only that `—` with its relative link. Existing exercise link with an absent target → recreate that exact target without editing the path cell.
-- Exercise `Result: pending`, `partial`, or `stuck at ...` → resume **Practice**. `Result: done` → finish the original 20% debrief and optional load-bearing Feynman flow.
-- Before Close, record the legacy note's actual card IDs in the exercise's `Cues sent to review queue`. Do not request another Summary, add staged markers, or require a Teach-back header. Do not reopen an already ✅ legacy module.
+- Resume absent or unfinished Practice using the same create/link rules above. After `Result: done`, finish the original 20% debrief and conditional load-bearing Feynman flow.
+- Before Close, copy the note's actual card IDs to the exercise's `Cues sent to review queue`.
+- Do not request another Summary, add staged fields, migrate finalized notes, or reopen an already ✅ legacy module.
 
 ## Topic Completion
 
