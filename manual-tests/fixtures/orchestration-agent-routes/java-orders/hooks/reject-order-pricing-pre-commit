@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+blocked_path='src/main/java/com/example/orders/OrderPricing.java'
+
+if git diff --cached --name-only -- "$blocked_path" | grep -Fqx "$blocked_path"; then
+  echo "manual fixture: rejecting OrderPricing.java commit" >&2
+  exit 1
+fi

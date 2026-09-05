@@ -8,6 +8,19 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 2. Run the affected IDs from the catalog summary in fresh sessions.
 3. Inspect the single discovery or plan and confirm source files are unchanged.
 
+### MT-PLAN-DELIVERY
+
+- **Title:** Emit delivery only from explicit intent
+- **Coverage key:** `plan/delivery/explicit-control`
+- **Applies to:** `domains/plan/skills/execution-plan/**`
+- **Preconditions:** Prepare fresh Git-backed copies of the Java fixture with the same clean baseline and no `.ai/deep-planner/` state.
+- **Steps:**
+  1. In separate copies, request the same executable plan with no Git language, with no commits, with commits per cohesive unit, and with TCR.
+  2. Inspect each title boundary, `Delivery` occurrence, work-group skills, source diff, index, `HEAD`, and final response.
+- **Expected result:** The neutral request has no `Delivery` line; the other plans contain exactly one matching `Delivery: working-tree`, `Delivery: commit-per-unit`, or `Delivery: tcr` line immediately after the title; no delivery skill appears under a work group; and planning changes only its plan artifact without staging, committing, or pushing.
+- **Essential negative variant:** Request two contradictory delivery modes and confirm planning blocks for resolution before writing a plan or mutating Git.
+- **Cleanup:** Remove every `.ai/deep-planner/` artifact and delete the disposable copies.
+
 ### MT-PLAN-CLEAR-REQUEST
 
 - **Title:** Create one plan for a clear request
