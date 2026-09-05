@@ -1,57 +1,35 @@
 ---
 name: language-loop
-description: "Trigger: language-learning topics inside /learn (learn english, aprender ingles, language path, target language in mission). Input-first two-wave session flow: bilingual dialogue units, delayed retranslation, gap-inbox adoption."
+description: "Trigger: language lesson, learn english, aprender ingles, language path. Independent bilingual input and dated active practice from supplied context."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "1.0.1"
+  version: "2.0.0"
 ---
 
 # Language Loop
 
-## Activation Contract
+## Activation
 
-Use for language-learning topics inside `/learn`: any topic whose `mission.md` names a target language. `learning-loop` remains the outer contract (mission grounding, path, due-check, ZPD pacing, output contract, hard rules); this skill **replaces its 70-20-10 module flow** with a language-acquisition session flow.
+Teach a contextual language lesson from explicit inputs, independently or within a caller's learning path. On-demand text correction and vocabulary export are separate methods, not mandatory dependencies.
 
-Do not use for non-language topics, for on-demand corrections outside `/learn` (`english-tutor` skill), or for standalone vocabulary export (`anki-vocab` handles the batch mechanics either way).
+## Inputs
 
-## Hard Rules
+Target and native languages, level, relevant situation, and learner preference for input/production. Optional: bilingual prior units with dates and outcomes, supplied current date/due units, known phrases, synthetic gaps, mission production criteria, and materials language.
 
-- **Input first**: sessions are mostly comprehension. Production is invited, never forced early — a learner who prefers to only read/listen for the first units is on track, not behind (silent period).
-- **Comprehensible i+1**: every dialogue unit is ~90% understandable for this learner — built preferentially from `vocabulary.md` units and review-queue cards (reinforcement), with a small number of new items. Too hard means shrink, not annotate everything.
-- **Compelling content**: dialogues come from the learner's `mission.md` situations and interests, never generic textbook scenes. Interesting input keeps the affective filter low.
-- **Tolerate ambiguity**: unknown items are captured in context, not exhaustively explained. A meaning that emerges from the situation needs no grammar lecture.
-- **Two waves per session**: one new passive unit (comprehension) plus, once ≥5 units exist, one active retranslation of unit N−5 per `bidirectional-translation`. The waves run in parallel lanes, Assimil-style — the active wave always trails the passive wave.
-- **No double SRS**: captured vocabulary units go to `anki-vocab` batches (Anki is their review system); noticed grammar/structure patterns become `spaced-recall` cards. One item, one system.
-- **Gaps inbox**: adopt pending `gaps.md` rows (produced by `english-tutor` sessions) at session start — each becomes a `spaced-recall` card or a targeted `bidirectional-translation` drill, and the row flips to `adopted`. Adoption is the mentor's duty; rows are never silently dropped.
-- All `learning-loop` hard rules still apply. Dialogue content is target language + native translation — the artifact framing stays English.
+## Method
 
-## Session Flow
+Create a short compelling dialogue in the target language with a natural native translation. Reuse known phrases and introduce a few useful chunks. Ask for a brief gist check; adjust text length and new-item count from the observed response. Never invent comprehension percentages.
 
-1. **Due-check** (`spaced-recall`) — overdue cards first, as always.
-2. **Gaps inbox** — scan `gaps.md` for `pending` rows; offer adopting them (card or drill), flip accepted rows to `adopted`.
-3. **Passive wave** — one new bilingual dialogue unit → `dialogues/NNNN-<slug>.md` from `assets/dialogue-template.md`: target-language text, native translation, units list. The learner reads for comprehension; unknowns get captured, not lectured.
-4. **Active wave** — once ≥5 units exist: retranslate unit N−5 per `bidirectional-translation` (its Phase B); log the result in that unit's file.
-5. **Capture** — new vocabulary units → `anki-vocab` batch candidates (registered in `vocabulary.md`); noticed structure patterns → `spaced-recall` cards.
-6. **Close** — per the `learning-loop` Output Contract: update `path.md`, schedule cards, report the next due review and the next unit due for retranslation.
+Invite production without forcing it. For supplied due units, hide the original and ask the learner to reconstruct meaning from the native text. Compare with the original afterward; accept natural equivalent wording. Give focused feedback on meaning-changing omissions or structural errors and invite another attempt.
 
-## State Additions
+Use dates, never unit counts, for delayed practice. The initial policy is three days after passive exposure, configurable by the learner. The caller supplies/validates due dates. Same-day units do not become due because more units exist. When new units end, continue remaining due active units until the finite course is drained; show future dates honestly.
 
-Inside the standard `learning-loop` topic layout:
+A completed active unit needs observed comprehension and meaning-preserving production. Material unresolved differences mean `needs-another-attempt`. Input-only remains valid; a production-requiring mission keeps those criteria pending until demonstrated.
 
-```
-.ai/learning/<topic-slug>/
-  dialogues/NNNN-<slug>.md          # bilingual units + retranslation log
-  gaps.md                           # gap inbox from english-tutor (assets/gaps-template.md)
-```
+Keep phrase candidates distinct from exported vocabulary. Propose foundational grammar retention only after teaching, with exact cue/answer previews and learner selection. Neither a gap's adoption nor a candidate implies scheduled cards. One item has one review system unless the learner explicitly requests an exception.
 
-The mentor seeds `gaps.md` from `assets/gaps-template.md` when the language topic is created. For language topics, `path.md` modules are situation clusters drawn from `mission.md`; each session's dialogue unit serves the active module, and a module is ✅ when its situations are covered by units that survived the active wave.
+## Output
 
-## Output Contract
-
-The `learning-loop` session report, plus: dialogue unit created (path), retranslation run and its noticing summary, gaps adopted (count), and the next unit entering the active wave.
-
-## Attribution
-
-Session flow absorbed from published language-learning methodology: Assimil's two-wave structure (passive lessons + delayed active retranslation), Luca Lampariello's bidirectional translation, Steve Kaufmann's input-first content-driven acquisition, and Stephen Krashen's comprehensible-input hypothesis (i+1, silent period, affective filter).
+Return the bilingual lesson, actual gist/production evidence, proposed unit status, next due information if supplied, and optional vocabulary/grammar/gap proposals inline. Use this directory's assets when useful. No sibling invocation, queue/registry mutation, directory discovery, or implicit saving.

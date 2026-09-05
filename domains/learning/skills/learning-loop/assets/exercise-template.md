@@ -1,25 +1,32 @@
-# Exercise {NNNN} — {Name}
+# Exercise — {Name}
 
-> Module: {NN} · Date: {YYYY-MM-DD} · 70% (learning by doing)
-> Where: {repo/path, or "self-contained kata"}
+> Module: {ID or standalone} · Date: {supplied date or unknown}
+> Where: {supplied repository scope or self-contained task}
 
 ## Brief
 
-{What to build or change — one single tangible win.}
+{One new application with a tangible win, distinct from the worked example.}
 
-## Constraints
+## Constraints and rubric
 
-- {constraint that keeps the exercise inside the module's concept}
+- {scope constraint}
+- {observable criterion}
 
-## Hints (escalating — reveal one at a time, on request)
+## Hints
 
-1. {nudge}
-2. {stronger hint}
-3. {direction toward the approach — never the solution}
+{Reveal one hint at a time on request. Never include the complete solution.}
 
-## Outcome log
+## Outcome
 
-- Attempted: pending
+- Attempt: pending
 - Result: pending
-- Debrief (20%): pending until consolidation
-- Cues sent to review queue: pending until consolidation
+- Learner evidence: pending
+- Consolidation: pending; reuse qualifying explanation/transfer evidence
+- Blocking gaps: not assessed
+
+## Retention
+
+- Disposition: pending
+- Selected card IDs: []
+
+A resolved none/deferred disposition keeps IDs empty; it does not fail the exercise.
