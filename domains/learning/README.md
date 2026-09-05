@@ -67,7 +67,18 @@ Failure, timeout, cancellation, `BLOCK`, or `FAIL` does not retry, resume, poll,
 
 ### Durable persistence
 
-Durable modes still offer due reviews before new material. Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Automatic task notifications correlate by ID and never advance an open cue. See the operator guide for capability flags and fallback details.
+Durable modes offer due reviews first. Non-language modules then follow:
+
+| Phase | Outcome |
+|---|---|
+| Class | Mentor explains, saves `Map` and `Notes`, asks one readiness/clarification question, and stops. |
+| Practice | A later readiness message starts one learner-owned exercise. Clarification repeats the Class boundary. |
+| Consolidation | After `Result: done`, the learner summarizes in 2–3 sentences; Mentor explains gaps, accepts revisions, and schedules cues. |
+| Close | Require learner Summary, matching note/exercise card IDs, completed practice and debrief, no blocking gaps, and any required gap-free teach-back. |
+
+Pending cues never enter quizzes. Supporting concepts can join Class or unfinished Practice; after `Result: done`, new concepts become separate reinforcement in `path.md`. Resume from that file's artifact links. Language topics keep `language-loop`, and finalized legacy notes remain unmigrated.
+
+Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Notifications never advance an open cue. See the [operator guide](../../docs/learning-domain.md#general-non-language-module) for markers, resume rules, and persistence details.
 
 After changing this domain, run the affected [Learning manual tests](manual-tests.md).
 

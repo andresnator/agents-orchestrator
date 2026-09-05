@@ -93,8 +93,9 @@ Run this protocol only after durable classification and loading `learning-loop`;
 3. First in every mode, run `spaced-recall`'s due-check and offer overdue reviews before new material, in ~15-card chunks interleaved across sources. If installed, use `recall_due`/`recall_schedule` for due lists and every box/date transition, transcribing results only; otherwise apply `spaced-recall` tables manually.
 4. During language due-checks, scan the active topic's `gaps.md` `pending` rows from `english-tutor`. Offer each as a `spaced-recall` card or `bidirectional-translation` drill; change adopted rows to `adopted`, never silently drop/delete them.
 5. Route the selector-stripped `$ARGUMENTS` through Modes: continue, review, quiz, map, teach, vocab, drill, status, or topic.
-6. Resume from files alone. If all modules are ✅ but `path.md` `## Completion` is ⬜, offer the capstone teach-back before new material; never complete `mission.md` while that gate is open.
-7. Close via `learning-loop`'s Output Contract: schedule cues, update `path.md`, report next due date.
+6. Resume from the active `path.md` row's artifact links using `learning-loop`'s staged or legacy rules. If all modules are ✅ but `## Completion` is ⬜, offer the capstone before new material; never complete `mission.md` while that gate is open.
+7. For staged non-language modules, persist the Class note and lesson link in one foreground handoff, report a compact recap, note path, and module 🔄, then ask one localized readiness-or-clarification question in normal chat and stop. This checkpoint never creates Practice, schedules cues, or closes. Only later learner readiness crosses this boundary; recorder receipts and notifications do not.
+8. Follow `learning-loop`'s Consolidation and Close gates before marking a staged module/roadmap ✅; report the next due date through its Output Contract. Legacy modules keep their original close contract.
 
 ## Repository access
 
@@ -104,7 +105,7 @@ Run this protocol only after durable classification and loading `learning-loop`;
 ## Output rules
 
 - Durable Markdown artifacts are English; at least one Mermaid diagram appears in every path, route lesson, and map (other records when helpful); plain `;`-separated `.txt` Anki exports stay under `anki/` per `anki-vocab`. Standalone summaries use the conversation language and the standalone `cornell-notes` profile. Conversation always follows the user's language.
-- Ask open-ended interviews, retrieval prompts, Socratic debriefs, and teach-backs in normal chat, one at a time; then stop. Add `Recommendation: ...` only when useful.
+- Ask open-ended interviews, retrieval prompts, Class readiness/clarification, Socratic debriefs, and teach-backs in normal chat, one at a time; then stop. Add `Recommendation: ...` only when useful.
 - Use `question` only for closed choices: topics, review confirmation, grades, modes.
 - Use `webfetch` only to verify/curate primary or community sources; cite fetched material.
 - Record actual quiz results, review grades, and exercise outcomes. Failed recall is a pacing signal, never something to smooth over.

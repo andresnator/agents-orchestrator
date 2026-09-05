@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.1"
+  version: "2.0.1"
 ---
 
 # Cornell Notes
@@ -21,27 +21,33 @@ Do not use for book-chapter synthesis — that is the `summarize` skill. Select 
 
 ## Route Lesson Profile
 
-- Follow `assets/cornell-template.md`: metadata header, Mermaid map, cue/notes table, summary, recall hand-off.
 - **Cues are retrieval questions**, never topic labels: "What does the filter chain decide per request?" not "Filter chain". Each cue must be answerable from its Notes cell alone.
-- 3–7 cues per note; notes cells stay concise (2–4 lines each). If a lesson needs more, it is two lessons.
-- The **Summary is the learner's voice**: ask them to state it in 2–3 sentences and record what they say (lightly cleaned up); never invent it. If they can't, that is a signal — reteach before closing.
+- 3–7 cues per note; Notes cells stay concise (2–4 lines each). If a lesson needs more cues, it is two lessons.
 - Every note embeds at least one Mermaid diagram (`mindmap` for concept overviews, `graph TD` for processes, `sequenceDiagram` for interactions) and cites at least one primary source in the header.
-- Every cue is handed to `spaced-recall` as a new card, and the note's `Recall hand-off` line lists the card IDs. Cues are also the topic's quiz bank.
 - Notes are Markdown in English; never HTML.
 
-### Format
+### Staged Non-Language Module Profile
 
-See `assets/cornell-template.md`. Structure:
+Use `assets/cornell-template.md` only for staged durable non-language modules. `learning-loop` owns phase transitions, concept scope, resume, and Close; this profile owns the note format.
 
-1. `# NNNN — {Lesson title}` + header quote block (topic, module, date, sources).
-2. `## Map` — Mermaid diagram of the lesson's concepts.
-3. `## Notes (Cornell)` — two-column table `| Cue (question) | Notes |`.
-4. `## Summary` — 2–3 sentences in the learner's own words.
-5. `## Recall hand-off` — card IDs added to `review-queue.md`.
+- **Class:** write the Mermaid `Map` and self-contained, Mentor-authored `Notes`, including one row explaining the central model and its relationships. Set `> Teach-back: required` for a load-bearing concept, otherwise `> Teach-back: not-required`; never persist the choice placeholder.
+- **Pending state:** keep the template's exact `Summary` and `Recall hand-off` markers. Do not request a Summary, schedule cards, or use these cues in quizzes at Class.
+- **Summary:** finalize only after the linked exercise has `Result: done` and the learner demonstrates the practiced concepts in 2–3 sentences. Follow `learning-loop`'s correct-first feedback and revision loop; pauses or unresolved gaps keep the markers pending. Record only the learner's wording, lightly cleaned without adding concepts.
+- **Recall:** schedule every cue via `spaced-recall`, then replace the pending hand-off with actual card IDs matching the exercise. Only then do cues enter the quiz bank.
+- **Teach-back:** `not-required` is final. Replace `required` with `teachbacks/NNNN-<concept>.md` only after that artifact exists. A Verdict with gaps keeps the module open until a later gap-free teach-back replaces the header path.
 
-### Output Contract
+#### Staged Output Contract
 
-Return the note path, the list of new cues (as questions), and confirmation that each cue was scheduled via `spaced-recall`. Flag any cue the learner could not answer during capture so the loop can reinforce it.
+At Class, return the note path, cue questions, and `consolidation pending`; do not claim scheduled cards. At finalization, return the path, cues, and scheduling confirmation. Flag unresolved concepts to `learning-loop`.
+
+### Other Route Lessons and Compatibility
+
+- Other route lessons keep one-pass capture: metadata, Mermaid `Map`, 3–7 cue/Notes rows, a 2–3 sentence learner Summary, and scheduled recall IDs. Reteach when needed; never invent the Summary. No staged markers, Practice prerequisite, scoped-gap rules, or Teach-back header apply.
+- `language-loop` keeps its two-wave flow. Finalized legacy notes with learner Summary and actual recall IDs remain unchanged; do not migrate them.
+
+#### Output Contract
+
+Return the note path, the list of new cues as questions, and confirmation that each cue was scheduled via `spaced-recall`. Flag any cue the learner could not answer during capture so the calling flow can reinforce it.
 
 ## Standalone Summary Profile
 

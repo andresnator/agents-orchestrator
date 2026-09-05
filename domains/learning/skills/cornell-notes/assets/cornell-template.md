@@ -2,6 +2,7 @@
 
 > Topic: {topic-slug} · Module: {NN} · Date: {YYYY-MM-DD}
 > Sources: {primary source link(s)}
+> Teach-back: {required | not-required}
 
 ## Map
 
@@ -19,13 +20,14 @@ mindmap
 
 | Cue (question) | Notes |
 | --- | --- |
-| {retrieval question} | {concise answer / explanation, 2–4 lines} |
+| {retrieval question about the central model} | {mentor-authored explanation of the central model and how its concepts relate, 2–4 lines} |
+| {retrieval question} | {...} |
 | {retrieval question} | {...} |
 
 ## Summary
 
-{2–3 sentences IN THE LEARNER'S OWN WORDS — captured from them, never invented.}
+_Pending learner summary after practice._
 
 ## Recall hand-off
 
-Cues added to `review-queue.md`: {C-NNNN, C-NNNN, ...}
+Cues added to `review-queue.md`: pending until consolidation.
