@@ -32,7 +32,7 @@ interface ChoiceInput {
   subject_json?: string
   question: string
   options: { id: string; label: string; description: string }[]
-  multiple: boolean
+  multiple?: boolean
 }
 interface Choice {
   id: string
@@ -101,7 +101,7 @@ interface EventReference {
 const EVENT_REFERENCE: Record<EventType, EventReference> = {
   create_topic: { event: { type: "create_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
   record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
-  preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts"] },
+  preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts", "selected retention requires the explicit card-change workflow; it cannot be previewed or selected again"] },
   select_cards: { event: { type: "select_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", interaction_id: "UUID", disposition: "selected | none | deferred", proposal_ids: ["proposal_id"] }, consent_subject: "exact stored module.retention.preview with digest omitted" },
   start_practice: { event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
   record_attempt: { event: { type: "record_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", outcome: "pending | partial | stuck | done", evidence: "actual learner evidence", causal_explanation: "optional string", transfer_evidence: "optional string" } },
@@ -114,18 +114,18 @@ const EVENT_REFERENCE: Record<EventType, EventReference> = {
   set_fundamental_override: { event: { type: "set_fundamental_override", event_id: "EVENT_ID", date: "YYYY-MM-DD", concept_id: "K-####", enabled: "boolean", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", concept_id: "K-####" } },
   add_language_unit: { event: { type: "add_language_unit", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", passive_at: "YYYY-MM-DD", next_due: "passive_at + 3 days", situation: "string", target_text: "string", native_text: "string" } },
   record_language_attempt: { event: { type: "record_language_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", outcome: "needs-another-attempt | completed | input-only", evidence: "actual learner evidence", next_due: "required future YYYY-MM-DD only when another attempt is needed" } },
-  set_vocab_candidates: { event: { type: "set_vocab_candidates", event_id: "EVENT_ID", date: "YYYY-MM-DD", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "five semicolon-separated fields" }] } },
-  export_vocab: { event: { type: "export_vocab", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", candidate_ids: ["V-####"], batch_path: "anki/<name>.txt" }, consent_subject: { topic_slug: "TOPIC_SLUG", candidate_ids: ["V-####"] } },
+  set_vocab_candidates: { event: { type: "set_vocab_candidates", event_id: "EVENT_ID", date: "YYYY-MM-DD", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "five semicolon-separated fields" }] }, rules: ["reuse the existing candidate ID to edit an unexported row at the current revision, then preview and confirm again", "exported candidates are immutable; a new ID with an existing normalized key is skipped"] },
+  export_vocab: { event: { type: "export_vocab", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", candidate_ids: ["selected V-####"], batch_path: "anki/<name>.txt" }, consent_subject: { topic_slug: "TOPIC_SLUG", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "exact stored row" }] }, rules: ["subject candidates include the full preview in choice-option order, not just the selected subset", "candidate option IDs are their V-#### IDs; optional edit/none choices do not export", "candidate_ids must match the host-selected subset exactly"] },
   adopt_gap: { event: { type: "adopt_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", interaction_id: "UUID", adoption: "drill | practice | declined" }, consent_subject: { topic_slug: "TOPIC_SLUG", gap_id: "G-####" } },
   record_gap: { event: { type: "record_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", category: "string", synthetic_pattern: "string", occurrence_refs: ["opaque EVENT_ID"] } },
   attach_artifact: { event: { type: "attach_artifact", event_id: "EVENT_ID", date: "YYYY-MM-DD", path: "approved relative artifact path", content: "exact writer content", source_revision: "current revision", job_id: "accepted child ID", module_id: "required for note/exercise", selected_card_ids: ["required exact module card IDs for note/exercise"] } },
-  complete_topic: { event: { type: "complete_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", evidence: "actual capstone evidence" } },
+  complete_topic: { event: { type: "complete_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", evidence: "actual capstone evidence" }, rules: ["completion evidence, date, and event ID are stored in topic.completion and rendered in mission.md", "completed topics cannot be completed again with a different event"] },
 }
 
 interface TopicState {
   schema_version: 1
   revision: number
-  topic: { slug: string; title: string; materials_language: string; goal: string; status: "active" | "completed"; target_language?: string; native_language?: string; production_required?: boolean }
+  topic: { slug: string; title: string; materials_language: string; goal: string; status: "active" | "completed"; completion?: { date: string; event_id: string; evidence: string }; target_language?: string; native_language?: string; production_required?: boolean }
   concepts: Array<{ id: string; title: string; prerequisites: string[]; fundamental: boolean; learner_override: boolean; taught: boolean }>
   modules: Array<{
     id: string; title: string; win: string; phase: LearningPhase; taught_concept_ids: string[]; class_evidence?: string
@@ -170,6 +170,10 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
   if (!["concepts", "modules", "cards", "card_changes", "review_events", "language_units", "gaps", "jobs", "consents"].every((key) => Array.isArray(state[key]))) return false
   if (!record(state.vocabulary) || !Array.isArray(state.vocabulary.candidates) || !Array.isArray(state.vocabulary.exports)) return false
   if (!record(state.artifacts) || !record(state.applied_events) || !record(state.views)) return false
+  if (state.topic.status === "completed") {
+    const completion = state.topic.completion
+    if (!record(completion) || !recallCalcContracts.isIsoDate(completion.date) || !EVENT_ID.test(completion.event_id) || !state.applied_events[completion.event_id] || typeof completion.evidence !== "string" || !completion.evidence.trim() || completion.evidence.length > MAX_INPUT_CHARS) return false
+  } else if (state.topic.completion !== undefined) return false
   if (state.views.revision !== state.revision || !["pending", "current"].includes(state.views.status)) return false
   if (!uniqueIDs(state.concepts) || !uniqueIDs(state.modules) || !uniqueIDs(state.cards) || !uniqueIDs(state.card_changes) || !uniqueIDs(state.language_units) || !uniqueIDs(state.vocabulary.candidates) || !uniqueIDs(state.gaps) || !uniqueIDs(state.jobs)) return false
   const conceptIDs = new Set(state.concepts.map((item: any) => item.id))
@@ -414,6 +418,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "preview_cards": {
       if (!module || module.phase !== "class") throw new Error("preview_requires_class")
+      if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
       requiredString(event.preview_id, "preview_id", 100)
       event.cards = requiredArray<Extract<LearningEvent, { type: "preview_cards" }>["cards"][number]>(event.cards, "card_preview", 2)
       if (event.source_revision !== current.revision) throw new Error("stale_source_revision")
@@ -433,6 +438,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "select_cards": {
       if (!module?.retention.preview || module.retention.preview.id !== event.preview_id) throw new Error("unknown_card_preview")
+      if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
       requiredEnum(event.disposition, "retention_disposition", ["selected", "none", "deferred"] as const)
       event.proposal_ids = requiredArray<string>(event.proposal_ids, "proposal_ids", 2).map((id) => requiredString(id, "proposal_id", 100))
       validateConsent(choice, "cards", event.interaction_id, event.disposition === "selected" ? event.proposal_ids : [event.disposition], storedSubject(module.retention.preview))
@@ -606,29 +612,38 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       event.candidates = requiredArray<Extract<LearningEvent, { type: "set_vocab_candidates" }>["candidates"][number]>(event.candidates, "vocab_candidates")
       for (const candidate of event.candidates) requiredRecord(candidate, "vocab_candidate")
       unique(event.candidates.map((item) => item.id), "candidate_id")
-      const known = new Set(state.vocabulary.candidates.map((item) => item.duplicate_key))
-      const knownIDs = new Set(state.vocabulary.candidates.map((item) => item.id))
       for (const candidate of event.candidates) {
         requiredID(candidate.id, "V")
-        if (knownIDs.has(candidate.id)) throw new Error("duplicate_candidate_id")
+        const existing = state.vocabulary.candidates.find((item) => item.id === candidate.id)
+        if (existing?.status === "exported") throw new Error("exported_candidate_immutable")
         const language = requiredString(candidate.target_language, "target_language", 80)
         const unit = requiredString(candidate.unit, "unit", 500)
         if (normalizeVocabKey(language, "") !== normalizeVocabKey(state.topic.target_language, "")) throw new Error("candidate_language_mismatch")
         const key = normalizeVocabKey(language, unit)
-        if (known.has(key)) continue
         const fields = requiredString(candidate.row, "vocab_row", 4000).split(";")
         if (fields.length !== 5 || fields.some((field) => !field || field.includes('"') || field.includes("\n"))) throw new Error("invalid_vocab_row")
         if (normalizeVocabKey(language, fields[0]) !== key) throw new Error("vocab_anchor_mismatch")
-        known.add(key)
-        knownIDs.add(candidate.id)
-        state.vocabulary.candidates.push({ ...structuredClone(candidate), duplicate_key: key, status: "candidate" })
+        const duplicate = state.vocabulary.candidates.find((item) => item.duplicate_key === key && item.id !== candidate.id)
+        if (duplicate) {
+          if (existing) throw new Error("candidate_key_conflict")
+          continue
+        }
+        const updated = { id: candidate.id, target_language: language, unit, row: candidate.row, duplicate_key: key, status: "candidate" as const }
+        if (existing) Object.assign(existing, updated)
+        else state.vocabulary.candidates.push(updated)
       }
       changed.add("vocabulary")
       break
     }
     case "export_vocab": {
       event.candidate_ids = requiredArray<string>(event.candidate_ids, "candidate_ids").map((id) => requiredID(id, "V"))
-      validateConsent(choice, "export", event.interaction_id, event.candidate_ids, { topic_slug: state.topic.slug, candidate_ids: event.candidate_ids })
+      const preview = (choice?.input.options ?? []).filter((option) => /^V-\d{4}$/.test(option.id)).map((option) => {
+        const candidate = state.vocabulary.candidates.find((item) => item.id === option.id && item.status === "candidate")
+        if (!candidate) throw new Error("unknown_or_exported_candidate")
+        const { id, target_language, unit, row } = candidate
+        return { id, target_language, unit, row }
+      })
+      validateConsent(choice, "export", event.interaction_id, event.candidate_ids, { topic_slug: state.topic.slug, candidates: preview })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       unique(event.candidate_ids, "candidate_id")
       if (!/^anki\/[a-z0-9][a-z0-9._-]*\.txt$/.test(event.batch_path)) throw new Error("invalid_batch_path")
@@ -700,9 +715,10 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       break
     }
     case "complete_topic": {
+      if (state.topic.status === "completed") throw new Error("topic_already_completed")
       if (state.modules.some((item) => item.phase !== "closed")) throw new Error("topic_has_open_modules")
       if (state.topic.production_required && state.language_units.some((item) => item.status !== "completed")) throw new Error("language_production_criteria_pending")
-      requiredString(event.evidence, "completion_evidence")
+      state.topic.completion = { date: event.date, event_id: event.event_id, evidence: requiredString(event.evidence, "completion_evidence") }
       state.topic.status = "completed"
       changed.add("mission")
       break
@@ -726,7 +742,7 @@ function questionFor(choice: Choice) {
       header: `Learning ${choice.id.slice(0, 8)}`,
       question: `${choice.input.question}${exactSubject}`,
       options: choice.input.options.map(({ label, description }) => ({ label, description })),
-      multiple: choice.input.multiple,
+      multiple: choice.input.multiple ?? false,
     }],
   }
 }
@@ -740,6 +756,8 @@ function createInteractions() {
 
   function stage(context: ToolContext, input: ChoiceInput): Choice {
     requireTeacher(context)
+    // The host validates plugin schemas without applying Zod defaults.
+    input = { ...input, multiple: input.multiple ?? false }
     boundedText(input.question, MAX_INPUT_CHARS)
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new Error("invalid_revision")
     if (input.subject_json === undefined && input.subject_digest !== undefined) throw new Error("subject_json_required")
@@ -842,6 +860,18 @@ function createInteractions() {
   return { stage, prepare, onEvent, get, find, consume }
 }
 
+function choiceResponse(choice: Choice) {
+  if (choice.status !== "pending") return choice
+  if (choice.requestID) return { ...choice, next_action: "Wait for the displayed native question to be answered or dismissed. Do not poll." }
+  return {
+    id: choice.id, revision: choice.input.revision, digest: choice.digest, subject_digest: choice.input.subject_digest,
+    status: "not_shown",
+    next_action: "Call question now with next_args to open the native UI. Staging did not show a question. Do not poll learning_choice_result or ask the learner to click an interface that is not open.",
+    next_tool: "question",
+    next_args: questionFor(choice),
+  }
+}
+
 function markdown(value: string) {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ")
 }
@@ -854,8 +884,10 @@ function renderViews(state: TopicState): Record<string, string> {
   const candidates = state.vocabulary.candidates.map((item) => `| ${markdown(item.target_language)} | ${markdown(item.duplicate_key)} | ${markdown(item.unit)} | ${item.status} |`).join("\n")
   const gaps = state.gaps.map((item) => `| ${item.id} | ${markdown(item.category)} | ${markdown(item.synthetic_pattern)} | ${item.occurrence_refs.length} | ${item.adoption} |`).join("\n")
   const language = state.language_units.map((item) => `| ${item.id} | ${item.passive_at} | ${item.next_due} | ${item.status} | ${markdown(item.situation)} |`).join("\n")
+  const completion = state.topic.completion
+  const completionRecord = completion ? `\n## Completion\n\nDate: ${completion.date} · Event: ${completion.event_id}\n\n${completion.evidence}\n` : ""
   return {
-    "mission.md": `# Mission — ${state.topic.title}\n\n> Status: ${state.topic.status} · Materials language: ${state.topic.materials_language}\n\n## Observable goal\n\n${state.topic.goal}\n\n## Concepts\n\n| ID | Concept | Prerequisites | Fundamental | Learner override | Taught |\n| --- | --- | --- | --- | --- | --- |\n${concepts}\n`,
+    "mission.md": `# Mission — ${state.topic.title}\n\n> Status: ${state.topic.status} · Materials language: ${state.topic.materials_language}\n\n## Observable goal\n\n${state.topic.goal}\n\n## Concepts\n\n| ID | Concept | Prerequisites | Fundamental | Learner override | Taught |\n| --- | --- | --- | --- | --- | --- |\n${concepts}\n${completionRecord}`,
     "path.md": `# Learning Path — ${state.topic.title}\n\n> State revision: ${state.revision}\n\n## Modules\n\n| ID | Module | Tangible win | Phase | Note | Exercise | Retention | Selected cards |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n${modules}\n${language ? `\n## Language units\n\n| ID | Passive at | Next due | Status | Situation |\n| --- | --- | --- | --- | --- |\n${language}\n` : ""}`,
     "review-queue.md": `# Review Queue — ${state.topic.title}\n\n> State revision: ${state.revision}. Box 5 remains on 30-day maintenance until explicit suspension or retirement.\n\n## Queue\n\n| ID | Cue | Box | Last | Next | Source |\n| --- | --- | --- | --- | --- | --- |\n${active}\n\n## Suspended / retired\n\n| ID | Cue | Status | Last | Lineage |\n| --- | --- | --- | --- | --- |\n${inactive}\n`,
     "vocabulary.md": `# Vocabulary — ${state.topic.title}\n\n> Candidates and exports are distinct. Export status does not prove Anki import.\n\n| Target language | Duplicate key | Unit | Status |\n| --- | --- | --- | --- |\n${candidates}\n`,
@@ -1335,7 +1367,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_choice: tool({
-        description: "Stage an exact closed choice. Call question with the returned question; only its host reply supplies selection. No files change.",
+        description: "Prepare a closed choice; this does NOT open any UI. Immediately call the native question tool using returned next_args, then read learning_choice_result after it returns. No files change.",
         args: {
           purpose: schema.enum(PURPOSES), revision: schema.number().int().nonnegative(),
           subject_digest: schema.string().regex(/^[a-f0-9]{64}$/).optional().describe("Optional asserted digest; required only when the stored subject already supplies one"),
@@ -1346,15 +1378,15 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
         async execute(input, context) {
           const choice = interactions.stage(context, input)
-          return JSON.stringify({ id: choice.id, revision: choice.input.revision, digest: choice.digest, ...questionFor(choice) })
+          return JSON.stringify(choiceResponse(choice))
         },
       }),
       learning_choice_result: tool({
-        description: "Read the host-correlated selection for this session. A claimed approval is never accepted as input.",
+        description: "Read the host-correlated selection after question returns. If not_shown, call question with next_args immediately; polling cannot open the UI or record chat replies.",
         args: { id: schema.string().uuid() },
         async execute({ id }, context) {
           requireTeacher(context)
-          return JSON.stringify(interactions.get(context.sessionID, id))
+          return JSON.stringify(choiceResponse(interactions.get(context.sessionID, id)))
         },
       }),
       learning_job_start: tool({

@@ -64,11 +64,13 @@ Mentor classifies the raw request before loading a skill, reading the date, or a
 | Request | Route |
 | --- | --- |
 | `/learn session <request>` or a clearly bounded explanation | `learning-session` |
-| `/learn path <topic>`, continuation, review, repetition, progress, or another durable mode | `learning-loop` and the matching independent method |
+| `/learn path <topic>`, natural-language requests such as “créame un path”, continuation, review, repetition, progress, or another durable mode | `learning-loop` and the matching independent method |
 | A genuinely ambiguous topic such as `/learn pizza` | Localized native session/path choice first |
 | `/english <text>` | `english-tutor` only |
 
-Existing topics never decide an ambiguous route. The host-correlated choice does.
+Existing topics never decide an ambiguous route. The learner can select a native option or state an explicit route in chat. Route selection does not require durable consent.
+
+For a closed choice, `learning_choice` prepares data and returns `not_shown`, `next_tool: question`, and exact `next_args`. Mentor must call `question` to open the UI, then read `learning_choice_result` after it returns. Reading a staged choice also returns these instructions; polling never shows an interface or turns chat text into mutation consent.
 
 ## One-off sessions
 
@@ -144,6 +146,8 @@ Actual evidence may satisfy more than one consolidation purpose. Do not demand a
 
 Clarification can expand Class or unfinished Practice within the module's win. After Practice is done, a new concept becomes separate reinforcement so the completed scope is not rewritten.
 
+Completion stores the validated capstone evidence, date, and event ID in `topic.completion`. The generated `mission.md` includes this completion record, including after restart or view recovery.
+
 ### Fundamental recall
 
 The mission's default fundamental shortlist contains reusable prerequisites, decision rules, and costly recurring misconceptions. Its maximum is `floor(concept_count / 5)`. The denominator is the distinct mission concept inventory; fewer than five concepts can produce zero candidates. A learner may explicitly override this for a shown, taught concept.
@@ -196,6 +200,8 @@ Anki work has two states:
 
 1. candidates contain natural phrase units and proposed five-field semicolon rows;
 2. one host-correlated export choice selects exact candidate IDs.
+
+Consent includes the complete preview rows in choice-option order; exported IDs must match the learner-selected subset exactly. Reuse an unexported candidate ID to correct its row at the current revision, then preview and confirm again. Exported rows are immutable.
 
 The export event validates every row, atomically updates the registry, and writes the selected batch once. Duplicate keys are target language plus NFKC/lowercase/whitespace-normalized unit. The first field must normalize to the candidate unit. Quotes, embedded newlines, wrong field counts, and reused exported candidates fail the whole event.
 

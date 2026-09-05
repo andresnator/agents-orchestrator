@@ -69,7 +69,7 @@ Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day 
 
 `learning_job_start` creates an actual child session for bounded research or composition and immediately returns its accepted ID. Mentor may continue an independent explanation or learner question. The runtime observes the same child, never treats silence as completion, and attaches one status notice to a later real learner message.
 
-Topic jobs carry a source revision. Same-topic work is serialized, a newer request coalesces behind an active worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. The runtime verifies worker kind, destination, source revision, and exact content before writing.
+Topic jobs carry a source revision. Same-topic work is serialized, a newer request coalesces behind an active worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. Loading `cornell-notes` supplies its full inline lesson template. The runtime verifies worker kind, destination, source revision, and exact content before writing.
 
 ## Language learning
 
@@ -77,7 +77,7 @@ Language units store passive exposure date, active due date, attempt outcome, an
 
 Input-only practice is valid. If the mission requires production, input-only evidence keeps that criterion pending and the unit remains eligible for later productive practice. Completion requires observed comprehension and meaning-preserving production.
 
-Vocabulary phrases begin as candidates. After a native selection, one state event marks the exact rows exported and creates the semicolon batch. Duplicate keys normalize target language plus NFKC/lowercase/whitespace-normalized unit. Export does not prove Anki import or mastery and does not create a second Leitner card.
+Vocabulary phrases begin as candidates and can be corrected under the same ID until export. Each edit requires a fresh preview and confirmation. Consent binds the full displayed rows; only the selected subset is exported, and exported rows remain immutable. After a native selection, one state event marks the exact rows exported and creates the semicolon batch. Duplicate keys normalize target language plus NFKC/lowercase/whitespace-normalized unit. Export does not prove Anki import or mastery and does not create a second Leitner card.
 
 `/english` runs only when explicitly invoked. With a separate learner choice it may record a synthetic gap category and invented pattern. Raw corrections, private text, and correction history never enter durable state; adopting a gap does not admit a review card.
 
