@@ -1,33 +1,30 @@
-# {NNNN} — {Lesson title}
+# {Lesson title}
 
-> Topic: {topic-slug} · Module: {NN} · Date: {YYYY-MM-DD}
-> Sources: {primary source link(s)}
-> Teach-back: {required | not-required}
+> Module: {supplied ID or standalone} · Date: {supplied date or unknown}
+> Sources: {actually used sources, or None}
+> Concept revision: {supplied revision or standalone}
 
-## Map
+## Central model
 
-```mermaid
-mindmap
-  root(({Lesson}))
-    {Branch A}
-      {detail}
-      {detail}
-    {Branch B}
-      {detail}
-```
+{Explain the key concepts and their causal relationships. Add a diagram only if useful.}
 
 ## Notes (Cornell)
 
-| Cue (question) | Notes |
+| Cue (question) | Notes / expected answer |
 | --- | --- |
-| {retrieval question about the central model} | {mentor-authored explanation of the central model and how its concepts relate, 2–4 lines} |
-| {retrieval question} | {...} |
-| {retrieval question} | {...} |
+| {retrieval question} | {self-contained explanation grounded in taught material} |
 
-## Summary
+## Worked example
 
-_Pending learner summary after practice._
+{A small example distinct from the learner's task.}
 
-## Recall hand-off
+## Learner Summary
 
-Cues added to `review-queue.md`: pending until consolidation.
+_Pending learner explanation or equivalent supplied evidence._
+
+## Retention
+
+- Disposition: pending
+- Selected card IDs: []
+
+Questions remain available for practice without scheduling. Replace pending only with the supplied selected/none/deferred decision. Never create card IDs while formatting a note.

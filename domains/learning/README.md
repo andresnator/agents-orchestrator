@@ -1,107 +1,101 @@
 # Learning Domain
 
-`mentor` chooses between a one-off session and a durable path before it reads learning state. One-off teaching stays in the conversation unless the learner explicitly saves a standalone summary; durable learning keeps missions, reviews, exercises, and progress under `.ai/learning/`.
+Learning provides one-off teaching, durable learning paths, explicit English coaching, dated review, and optional Anki exports. The domain is self-contained: installing `learning` provides its agents, commands, nine skills, deterministic state runtime, and recall calculator.
 
-## Quick path
+## Quick start
 
-1. Install the `learning,common` domains.
-2. Use `/learn session <request>` for an explanation now, or `/learn path <topic>` for multi-session learning.
-3. If `/learn <topic>` is ambiguous, choose the localized one-off or durable option before Mentor accesses state.
+```bash
+installers/opencode.sh install --domain learning
+```
 
-Examples:
+Use an explicit route when you know what you want:
 
 ```text
 /learn session explícame por qué HTTP es stateless con un ejemplo
-/learn path arquitectura hexagonal para migrar un monolito Java
+/learn path validación de caché HTTP para decidir reutilizar, revalidar o descargar
+/english I have worked here since three years
 ```
 
-Return with `/learn` to continue a durable path. See the [operator guide](../../docs/learning-domain.md) for setup, state, background persistence, and troubleshooting.
+A one-off session stays in conversation unless the learner explicitly approves a standalone summary. A path stores authoritative state and generated views under the active project's `.ai/learning/` directory. A genuinely ambiguous request such as `/learn pizza` presents a localized session/path choice before reading state.
 
-## Entry points
+See the [operator guide](../../docs/learning-domain.md) for isolated setup, runtime boundaries, state recovery, and verification.
 
-Both `/learn` and direct messages to `mentor` use the same classification. Both choice labels and summary notices follow the conversation language; the internal routes remain `learning-session` and `learning-loop`. `/english` remains a separate explicit coaching flow.
-
-### Flow
+## Flow
 
 ```mermaid
 flowchart TD
-    U["/learn request or direct Mentor message"] --> C{"Classify before skill or state access"}
-    C -->|"Clearly bounded or session"| S["learning-session: teach now"]
-    C -->|"Route, follow-up, existing mode, or path"| D["learning-loop: durable learning"]
-    C -->|"Ambiguous topic"| Q{"Localized one-off or durable choice?"}
-    Q --> S
-    Q --> D
-
-    S --> SAVE{"Explicit save request?"}
-    SAVE -->|"No"| CHAT["Conversation only"]
-    SAVE -->|"Yes"| SUM["Fresh learning-summarizer in background"]
-    SUM --> FILE["New summaries/timestamp-slug.md"]
-
-    D --> STATE["Discover topics and run due-check"]
-    STATE --> MODE["Continue, review, quiz, map, teach, vocab, drill, or status"]
-    MODE --> REC["learning-recorder persists durable checkpoints"]
-
-    E["/english text"] --> ET["Explicit correction and optional synthetic gap"]
+    U["Learner request"] --> R{"Route before state access"}
+    R -->|"One-off"| S["learning-session: teach inline"]
+    R -->|"Durable"| M["Mentor + learning-loop"]
+    R -->|"Explicit English"| E["english-tutor"]
+    S --> Q{"Explicit summary save?"}
+    Q -->|"No"| C["Conversation only"]
+    Q -->|"Yes"| SUM["Bounded summarizer"]
+    SUM --> RT["Learning runtime"]
+    M --> K["Independent method skill"]
+    M --> W["Optional researcher or writer"]
+    M --> RT
+    RT --> ST["Versioned state + generated views"]
 ```
 
-### Which route to use
+Mentor owns teaching, the rubric, learner questions, and progression. Skills accept explicit inputs and return useful results inline; they do not discover state, invoke siblings, or write files. Researcher, writer, and summarizer children return bounded results. The runtime alone validates durable events and writes Learning state.
 
-| Intent | Example | Result |
-|---|---|---|
-| Learn one bounded concept now | `/learn session diferencia entre proceso e hilo` | Teaches in the user's language; no due-check or durable state. |
-| Build a durable route | `/learn path concurrencia en Java` | Proposes a mission, cadence, path, and resources. |
-| Resolve an ambiguous topic | `/learn pizza` | Asks a localized one-off or durable choice before reading `.ai/learning/`. |
-| Continue or inspect durable work | `/learn`, `/learn status` | Runs due-check first, then resumes or reports progress. |
-| Use an existing durable mode | `/learn review`, `/learn quiz`, `/learn map`, `/learn teach`, `/learn vocab`, `/learn drill` | Preserves the existing learning-loop behavior. |
-| Request explicit English coaching | `/english I have worked here since three years` | Corrects and practices; stores only synthetic gaps after opt-in. |
+## One-off learning
 
-### One-off summary lifecycle
+`/learn session <request>` teaches answer-first in the conversation language and asks at most one focused question at a time. It performs no due-check and creates no state.
 
-A one-off session is not saved automatically. After an explicit positive save request, Mentor sends only the pertinent session segment and sources actually used to a fresh `learning-summarizer` with `background: true` and no reused task ID. Teaching continues immediately.
+An explicit summary request uses a native host choice. After approval, a fresh `learning-summarizer` composes one bounded JSON result while teaching can continue. `learning_summary_create` writes one collision-resistant file exclusively under `.ai/learning/summaries/`. The same approval cannot be reused, completion does not create an unsolicited parent turn, and no route or review card is implied.
 
-The summarizer creates one new standalone Cornell file under `.ai/learning/summaries/`. Its notification never interrupts or advances the conversation. The next normal response appends exactly one brief parenthetical notice in the conversation language: success says the summary was saved and includes `.ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>.md`; failure says it could not be saved. Internal `OK summary=<path>`, `BLOCK`, and `FAIL` receipts remain unchanged.
+## Durable learning
 
-Failure, timeout, cancellation, `BLOCK`, or `FAIL` does not retry, resume, poll, or fall back to foreground writing.
+Durable topics use `.ai/learning/<topic>/.state.json` as their single semantic authority. `mission.md`, `path.md`, `review-queue.md`, `vocabulary.md`, `gaps.md`, and approved artifacts are generated views of a committed revision.
 
-`summaries` is reserved infrastructure, never a durable topic slug. Topic discovery excludes that directory and resumes only directories containing `mission.md`; a learning topic named “summaries” therefore uses a distinct confirmed slug such as `summaries-topic`.
+Non-language modules follow this sequence:
 
-### Durable persistence
+| Phase | Learner-visible result |
+| --- | --- |
+| Class | Explain the objective and central relationships, show a distinct worked example, then ask one focused question. |
+| Retention preview | Show zero to two eligible fundamental cards with exact cue, answer, and rationale. Selected, none, and deferred are all valid. |
+| Practice readiness | Ask separately. Only a later learner readiness answer starts a new application exercise. |
+| Practice | Record the learner's actual attempt and fade hints from observed performance. |
+| Consolidation | Reuse sufficient causal explanation and transfer evidence; otherwise explain a specific gap and invite another attempt. |
+| Close | Require completed practice, essential learner explanation, no blocking gap, and a resolved retention disposition. Selected card IDs may be empty. |
 
-Durable modes offer due reviews first. Non-language modules then follow:
+The mission defines stable concept IDs and prerequisites. The default fundamental shortlist is at most `floor(concept_count / 5)`; fewer than five concepts can yield zero. A learner can explicitly override the shortlist for a shown, taught concept. Cornell questions remain useful retrieval prompts even when no card is saved.
 
-| Phase | Outcome |
-|---|---|
-| Class | Mentor explains, saves `Map` and `Notes`, asks one readiness/clarification question, and stops. |
-| Practice | A later readiness message starts one learner-owned exercise. Clarification repeats the Class boundary. |
-| Consolidation | After `Result: done`, the learner summarizes in 2–3 sentences; Mentor explains gaps, accepts revisions, and schedules cues. |
-| Close | Require learner Summary, matching note/exercise card IDs, completed practice and debrief, no blocking gaps, and any required gap-free teach-back. |
+Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day maintenance until the learner explicitly suspends or retires it. For card selection and replacement, the runtime verifies the stored preview JSON against its digest and renders that exact structure in the native choice. A third cumulative `Again` requires a confirmed reformulate/split decision; replacements get new IDs and preserve lineage.
 
-Pending cues never enter quizzes. Supporting concepts can join Class or unfinished Practice; after `Result: done`, new concepts become separate reinforcement in `path.md`. Resume from that file's artifact links. Language topics keep `language-loop`, and finalized legacy notes remain unmigrated.
+## Background work
 
-Each review grade uses a fresh background `learning-recorder`; other checkpoints use foreground handoffs. Notifications never advance an open cue. See the [operator guide](../../docs/learning-domain.md#general-non-language-module) for markers, resume rules, and persistence details.
+`learning_job_start` creates an actual child session for bounded research or composition and immediately returns its accepted ID. Mentor may continue an independent explanation or learner question. The runtime observes the same child, never treats silence as completion, and attaches one status notice to a later real learner message.
 
-After changing this domain, run the affected [Learning manual tests](manual-tests.md).
+Topic jobs carry a source revision. Same-topic work is serialized, a newer request coalesces behind an active worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. The runtime verifies worker kind, destination, source revision, and exact content before writing.
+
+## Language learning
+
+Language units store passive exposure date, active due date, attempt outcome, and status. The initial pilot interval is three days. Counts never make a unit due, and the final active units of a finite course remain available until completed.
+
+Input-only practice is valid. If the mission requires production, input-only evidence keeps that criterion pending and the unit remains eligible for later productive practice. Completion requires observed comprehension and meaning-preserving production.
+
+Vocabulary phrases begin as candidates. After a native selection, one state event marks the exact rows exported and creates the semicolon batch. Duplicate keys normalize target language plus NFKC/lowercase/whitespace-normalized unit. Export does not prove Anki import or mastery and does not create a second Leitner card.
+
+`/english` runs only when explicitly invoked. With a separate learner choice it may record a synthetic gap category and invented pattern. Raw corrections, private text, and correction history never enter durable state; adopting a gap does not admit a review card.
 
 ## Components
 
-| Type | Name | Purpose |
-|---|---|---|
-| Agent (primary) | `mentor` | Classifies and coordinates one-off or durable learning |
-| Agent (subagent) | `english-tutor` | Provides explicit English coaching |
-| Agent (subagent) | `learning-recorder` | Persists exact learning-state mutations |
-| Agent (subagent) | `learning-summarizer` | Creates isolated one-off summaries |
-| Command | `/learn` | Routes one-off sessions and durable modes |
-| Command | `/english` | Routes English correction and practice |
-| Plugin | `recall-calc` | Calculates Leitner dates read-only |
-| Skill | `learning-session` | Teaches one bounded request without automatic state |
-| Skill | `learning-loop` | Runs mission-grounded durable learning |
-| Skill | `cornell-notes` | Defines route-note and standalone-summary profiles |
-| Skill | `spaced-recall` | Schedules Leitner-style Markdown reviews |
-| Skill | `language-loop` | Runs input-first language sessions |
-| Skill | `bidirectional-translation` | Runs delayed retranslation drills |
-| Skill | `feynman-teachback` | Runs learner-led concept teach-backs |
-| Skill | `anki-vocab` | Creates situation-driven vocabulary batches |
-| Skill | `english-tutor` | Improves English and records synthetic gaps |
-| Skill | `cognitive-doc-design` | Keeps standalone summaries easy to scan |
+| Type | Name | Responsibility |
+| --- | --- | --- |
+| Primary agent | `mentor` | Route, teach, assess, and coordinate validated state |
+| Specialist | `english-tutor` | Explicit English correction and practice |
+| Worker | `learning-researcher` | Bounded source-grounded findings |
+| Worker | `learning-writer` | Complete artifact composition from approved inputs |
+| Worker | `learning-summarizer` | One explicit independent summary |
+| Command | `/learn` | Thin session/path/mode dispatch |
+| Command | `/english` | Thin explicit English dispatch |
+| Plugin | `learning-runtime` | Host-correlated choices, async jobs, versioned state, recovery, and exclusive summary creation |
+| Plugin | `recall-calc` | Bounded queue parsing and deterministic dates |
+| Skills | nine Learning-owned directories | Independent teaching and transformation methods |
 
-Mentor may inspect a learner repository and verify a durable exercise with an announced test command, but never edits or solves that repository work. `learning-recorder` remains the mechanical writer for durable state. OpenCode's scoped `edit` permission exposes the summarizer's file tools only under `summaries/**`; its contract permits one new file and forbids editing or overwriting existing files.
+Mentor can read a learner repository for teaching. Raw edits and broad shell writes are denied. A known test/build command must be announced and accepted through its separate host permission prompt.
+
+After changing runtime behavior or an instruction contract, run the affected [Learning manual tests](manual-tests.md).

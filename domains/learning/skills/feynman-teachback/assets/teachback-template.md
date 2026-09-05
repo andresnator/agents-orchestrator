@@ -1,25 +1,27 @@
-# Teach-Back {NNNN} — {Concept}
+# Teach-Back — {Concept}
 
-> Topic: {topic-slug} · Date: {YYYY-MM-DD} · Source note: `notes/{NNNN}-{lesson}.md`
+> Date: {supplied date or unknown} · Reference: {supplied answer or source}
 
-## Explanation (learner's words, condensed)
+## Learner explanation
 
-{2–6 lines faithfully condensing what the learner said — their words, not the mentor's.}
+{Faithful actual wording; pending when no attempt exists.}
 
-## Naive questions asked
+## Questions and observations
 
-- {question} → {held up | exposed a gap}
+| Question | Observed response | Rubric result |
+| --- | --- | --- |
+| {causal probe} | {actual response} | {supported or gap} |
 
 ## Gaps
 
-| Gap | Type | Return path | Queue action |
+| Gap | Type | Return path | Optional review proposal |
 | --- | --- | --- | --- |
-| {what was missing/wrong} | missing piece / hand-waved / wrong claim / jargon crutch | {source or note to revisit} | {C-NNNN → box 1, or none} |
+| {evidenced gap} | {missing piece / hand-waved step / wrong claim / jargon crutch} | {focused next attempt or source} | {existing card reference or none; never an automatic grade} |
 
-## Analogy (verbatim)
+## Application
 
-> {the learner's closing analogy, in their own words}
+{An actual example, counterexample, or analogy if elicited; otherwise omit.}
 
 ## Verdict
 
-{gap-free | N gaps — pacing decision recorded in path.md}
+{Current evidence supports the explanation / material gaps remain / no attempt yet. No claim of delayed retention.}
