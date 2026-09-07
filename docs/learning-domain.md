@@ -86,6 +86,8 @@ Saving requires an explicit positive native choice. Mentor sends only the pertin
 .ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>-<random>.md
 ```
 
+The summary segment is frozen at the save request. Mentor obtains native approval before launching the summarizer and saves its completed result on a later real learner turn, without requiring another request. Subsequent conversation does not extend or invalidate that segment.
+
 One approval can create one file. Another explicit save, even with the same title during the same second, receives another path and cannot overwrite the first. Malformed output creates no file. The summary remains independent: it creates no topic, cards, progress, or recall handoff.
 
 Child completion never creates an unsolicited parent response. One status notice is attached to a later real learner message. The notice is operational context; it does not answer an open question, advance a phase, or claim a saved path.
@@ -129,6 +131,10 @@ A lock records PID and token. Recovery first claims that exact stale token with 
 
 ## Durable teaching
 
+After a durable route is resolved, Mentor reads the identified topic and resumes its current module and phase. Only `unknown_topic` allows initialization; legacy or malformed state stops mutation.
+
+`create_topic` requires native `mission` consent at revision 0 with option `create`, bound to topic slug and the exact title, materials language, goal (including scope and cadence), concepts, modules, and supplied optional language fields. The reference publishes `create`, `revise`, and `cancel`; revision of the proposal requires a new choice. Missing or mismatched consent fails before creating the topic directory. Initial state records consent; schema version 1 and existing topics remain unchanged.
+
 New topics define an observable mission, stable concept IDs, prerequisite relationships, and modules with one tangible win. Mentor proposes an effort and cadence for correction rather than asking for an ungrounded time budget.
 
 Non-language modules follow `Class → Practice → Consolidation`:
@@ -140,11 +146,13 @@ Non-language modules follow `Class → Practice → Consolidation`:
 | Readiness | Separate later learner answer before Practice |
 | Practice | Actual attempt on a new application, with hints faded from observed performance |
 | Consolidation | Learner explanation of essential decisions and transfer, with no unresolved conceptual gap |
-| Close | Completed practice, sufficient explanation, no blocking gap, and resolved retention disposition |
+| Close | Completed practice, sufficient explanation, no blocking gap, resolved retention, and valid module note and exercise |
 
 Actual evidence may satisfy more than one consolidation purpose. Do not demand a redundant Summary, debrief, or teach-back when the learner's causal explanation and transfer already meet the rubric. Use teach-back selectively for a foundational or uncertain concept. Confidence and worker output are not learner evidence.
 
 Clarification can expand Class or unfinished Practice within the module's win. After Practice is done, a new concept becomes separate reinforcement so the completed scope is not rewritten.
+
+After Consolidation, Mentor prepares missing materials automatically: commission a `cornell-notes` note, attach its exact result, then commission a `learning-loop` exercise at the new revision. These jobs run in series. Close requires both valid materials and the existing evidence conditions. Pending delivery resumes on real learner turns without another materials request.
 
 Completion stores the validated capstone evidence, date, and event ID in `topic.completion`. The generated `mission.md` includes this completion record, including after restart or view recovery.
 
@@ -174,11 +182,15 @@ Active cards use deterministic intervals:
 
 Mentor recommends a grade from the actual answer and rubric; the learner still selects the grade through a native choice. Each grade is one deterministic state commit, so review does not launch a model writer per card. Good or Easy at box 5 keeps the card on 30-day maintenance. Suspension and retirement require explicit choices.
 
+`apply_card_change` publishes a `choice` contract: purpose `cards` for edit or `reformulation` for reformulate/split, single selection, options `<stored change.id>` and `cancel`. Staging validates these exact IDs; labels may be localized. The positive ID is never `accept`.
+
 The failure count is cumulative since creation or the last agreed repair. A third `Again` cannot be recorded as an ordinary grade. The learner chooses reformulate or split; the old card retires and replacements receive new IDs with history preserved in lineage.
 
 ## Research and artifact composition
 
 Mentor may start one bounded researcher and one composition worker for a topic. `learning_job_start` creates a real child session and returns its accepted ID immediately. It uses the host session create, asynchronous prompt, messages, status, and abort APIs; it does not depend on Task exposing a background flag.
+
+`learning_job_start.artifact` is required only for `learning-writer`: `kind`, `method`, `destination_hint`, `materials_language`, and, for notes/exercises, `module_id` and exact `selected_card_ids` (including `[]`). Destinations are lowercase paths relative to the topic, such as `notes/m-0001.md`; omit `.ai/learning/<topic>/`. Invalid destination, method, ownership or selection fails before child creation. Mentor may correct these rejected arguments; an accepted failed model job still never retries automatically. `prompt` supplies the bounded outline and evidence; the runtime constructs the assignment with `source_revision` from `revision`. The writer loads only the specified method and returns `{kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}`.
 
 The researcher receives a question and source scope, returns at most five source-grounded findings, and cannot write or delegate. The writer receives one artifact kind, destination, source revision, materials language, approved outline, real learner evidence, and necessary verified sources. It composes the complete body and has no file, shell, question, research, or delegation access.
 

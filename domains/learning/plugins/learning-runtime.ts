@@ -18,6 +18,9 @@ const EVENT_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/
 const ARTIFACT_PATH = /^(?:resources\.md|(?:notes|exercises|quizzes|teachbacks|dialogues|maps|anki)\/[a-z0-9][a-z0-9._-]*\.(?:md|txt))$/
 const WRITER_ARTIFACT_PATH = /^(?:resources\.md|(?:notes|exercises|quizzes|teachbacks|dialogues|maps)\/[a-z0-9][a-z0-9._-]*\.md)$/
 const WORKERS = ["learning-researcher", "learning-writer", "learning-summarizer"] as const
+const MISSION_OPTIONS = ["create", "revise", "cancel"]
+const CARD_CHANGE_CANCEL = "cancel"
+const MODULE_ARTIFACT_METHODS = { note: "cornell-notes", exercise: "learning-loop" } as const
 const PURPOSES = ["cards", "readiness", "grade", "summary", "export", "retirement", "reformulation", "override", "gap", "mission"] as const
 type Worker = (typeof WORKERS)[number]
 type Purpose = (typeof PURPOSES)[number]
@@ -63,7 +66,7 @@ type LearningPhase = "mission" | "class" | "practice" | "consolidation" | "close
 type RetentionDisposition = "pending" | "selected" | "none" | "deferred"
 type CardStatus = "active" | "suspended" | "retired"
 type LearningEvent =
-  | { type: "create_topic"; event_id: string; date: string; title: string; materials_language: string; goal: string; target_language?: string; native_language?: string; production_required?: boolean; concepts: Array<{ id: string; title: string; prerequisites: string[]; fundamental: boolean }>; modules: Array<{ id: string; title: string; win: string }> }
+  | { type: "create_topic"; interaction_id: string; event_id: string; date: string; title: string; materials_language: string; goal: string; target_language?: string; native_language?: string; production_required?: boolean; concepts: Array<{ id: string; title: string; prerequisites: string[]; fundamental: boolean }>; modules: Array<{ id: string; title: string; win: string }> }
   | { type: "record_class"; event_id: string; date: string; module_id: string; taught_concept_ids: string[]; evidence: string }
   | { type: "preview_cards"; event_id: string; date: string; module_id: string; preview_id: string; source_revision: number; cards: Array<{ proposal_id: string; cue: string; answer: string; concept_id: string; reason: string }> }
   | { type: "select_cards"; event_id: string; date: string; module_id: string; preview_id: string; interaction_id: string; disposition: Exclude<RetentionDisposition, "pending">; proposal_ids: string[] }
@@ -94,12 +97,13 @@ const EVENT_TYPES = [
 
 interface EventReference {
   event: Record<string, unknown>
+  choice?: { purpose: Purpose | { edit: Purpose; reformulate: Purpose; split: Purpose }; options: string[]; multiple: boolean; revision?: number }
   consent_subject?: Record<string, unknown> | string
   rules?: string[]
 }
 
 const EVENT_REFERENCE: Record<EventType, EventReference> = {
-  create_topic: { event: { type: "create_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
+  create_topic: { choice: { purpose: "mission", revision: 0, options: MISSION_OPTIONS, multiple: false }, consent_subject: "{topic_slug, title, materials_language, goal, concepts, modules, and only supplied target_language/native_language/production_required}; exact proposed values; omit type, event_id, date, interaction_id", event: { type: "create_topic", interaction_id: "UUID", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
   record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
   preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts", "selected retention requires the explicit card-change workflow; it cannot be previewed or selected again"] },
   select_cards: { event: { type: "select_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", interaction_id: "UUID", disposition: "selected | none | deferred", proposal_ids: ["proposal_id"] }, consent_subject: "exact stored module.retention.preview with digest omitted" },
@@ -109,7 +113,7 @@ const EVENT_REFERENCE: Record<EventType, EventReference> = {
   close_module: { event: { type: "close_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####" } },
   grade_card: { event: { type: "grade_card", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", grade: "Again | Hard | Good | Easy", evidence: "actual answer evidence", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
   preview_card_change: { event: { type: "preview_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "unique string", source_revision: "current revision", kind: "edit | reformulate | split", replacements: [{ cue: "string", answer: "string" }] }, rules: ["split has exactly two replacements; other kinds have one", "change_id is unique within the topic"] },
-  apply_card_change: { event: { type: "apply_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "string", interaction_id: "UUID" }, consent_subject: "exact stored card_changes entry with digest omitted" },
+  apply_card_change: { choice: { purpose: { edit: "cards", reformulate: "reformulation", split: "reformulation" }, options: ["<stored change.id>", CARD_CHANGE_CANCEL], multiple: false }, event: { type: "apply_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "string", interaction_id: "UUID" }, consent_subject: "exact stored card_changes entry with digest omitted" },
   set_card_status: { event: { type: "set_card_status", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", status: "active | suspended | retired", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
   set_fundamental_override: { event: { type: "set_fundamental_override", event_id: "EVENT_ID", date: "YYYY-MM-DD", concept_id: "K-####", enabled: "boolean", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", concept_id: "K-####" } },
   add_language_unit: { event: { type: "add_language_unit", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", passive_at: "YYYY-MM-DD", next_due: "passive_at + 3 days", situation: "string", target_text: "string", native_text: "string" } },
@@ -321,6 +325,14 @@ function requireValidState(state: TopicState, slug: string) {
   if (!validStoredState(state, slug)) throw new Error("resulting_state_malformed")
 }
 
+function missionSubject(slug: string, event: Extract<LearningEvent, { type: "create_topic" }>) {
+  const { title, materials_language, goal, concepts, modules, target_language, native_language, production_required } = event
+  return { topic_slug: slug, title, materials_language, goal, concepts, modules,
+    ...(target_language === undefined ? {} : { target_language }),
+    ...(native_language === undefined ? {} : { native_language }),
+    ...(production_required === undefined ? {} : { production_required }) }
+}
+
 function initialState(slug: string, event: Extract<LearningEvent, { type: "create_topic" }>): TopicState {
   if (!TOPIC_SLUG.test(slug) || slug === "summaries") throw new Error("invalid_topic_slug")
   requiredDate(event.date)
@@ -379,7 +391,10 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
   const event = parseEvent(rawEvent)
   if (!current) {
     if (event.type !== "create_topic") throw new Error("topic_not_initialized")
+    validateConsent(choice, "mission", event.interaction_id, ["create"], missionSubject(slug, event))
+    if (choice!.input.revision !== 0) throw new Error("stale_interaction_revision")
     const state = initialState(slug, event)
+    state.consents.push({ interaction_id: choice!.id, purpose: "mission", request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
     state.revision = 1
     state.applied_events[event.event_id] = eventDigest(event)
     state.views = { revision: state.revision, status: "pending" }
@@ -776,6 +791,13 @@ function createInteractions() {
     if (input.options.length < 1 || input.options.length > MAX_CHOICES || ids.size !== input.options.length || labels.size !== ids.size) {
       throw new Error("invalid_choice_options")
     }
+    const stagedSubject = input.subject_json ? JSON.parse(input.subject_json) : undefined
+    if (input.purpose === "mission" || input.purpose === "reformulation" || (input.purpose === "cards" && stagedSubject?.kind === "edit")) {
+      if (!input.subject_json) throw new Error("subject_json_required")
+      const expected = input.purpose === "mission" ? MISSION_OPTIONS : [requiredString(stagedSubject.id, "change_id", 80), CARD_CHANGE_CANCEL]
+      if (input.multiple || !sameStrings([...ids], expected)) throw new Error("invalid_choice_options")
+      if (input.purpose === "mission" && input.revision !== 0) throw new Error("stale_interaction_revision")
+    }
     const existing = active.get(context.sessionID)
     if (existing) {
       const previous = choices.get(existing)!
@@ -1053,6 +1075,12 @@ function createStateStore(directory: string) {
   }
 
   async function commit(slug: string, expectedRevision: number, rawEvent: unknown, choice?: Choice): Promise<CommitResult> {
+    // Validate new-topic consent before creating its directory; recheck under the lock.
+    const before = await readState(slug)
+    if (!before) {
+      if (expectedRevision !== 0) throw new Error(`revision_conflict:expected=${expectedRevision}:actual=0`)
+      applyLearningEvent(undefined, slug, rawEvent, choice)
+    }
     const root = await topicRoot(slug, true)
     if (!root) throw new Error("topic_directory_unavailable")
     const release = await acquire(root)
@@ -1277,6 +1305,12 @@ export const learningRuntimeContracts = { createInteractions, createJobs, applyL
 export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
   const tool = await recallCalcHost.loadTool(directory)
   const schema = tool.schema
+  const writerArtifactSchema = schema.object({
+    kind: schema.enum(["note", "exercise", "resources", "quiz", "teachback", "dialogue", "map"]),
+    method: schema.enum(["learning-session", "learning-loop", "cornell-notes", "spaced-recall", "feynman-teachback", "language-loop", "bidirectional-translation", "anki-vocab", "english-tutor"]),
+    destination_hint: schema.string().regex(WRITER_ARTIFACT_PATH).describe("Topic-relative lowercase path, e.g. notes/m-0001.md or exercises/m-0001.md; never include .ai/learning/<topic>/"), materials_language: schema.string().min(1).max(80),
+    module_id: schema.string().optional(), selected_card_ids: schema.array(schema.string()).optional(),
+  }).strict()
   const interactions = createInteractions()
   const state = createStateStore(directory)
   const jobs = createJobs(client, (job) => state.syncJob(job))
@@ -1393,9 +1427,12 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         description: "Launch bounded independent research or composition. Returns the accepted child ID immediately; no synthetic parent turn on completion.",
         args: {
           worker: schema.enum(WORKERS), scope: schema.string().min(1).max(100), revision: schema.number().int().nonnegative(),
+          artifact: writerArtifactSchema.optional().describe("Required only for learning-writer: exactly one artifact; note uses cornell-notes, exercise uses learning-loop"),
           prompt: schema.string().min(1).max(MAX_INPUT_CHARS),
         },
         async execute(input, context) {
+          requireTeacher(context)
+          if ((input.worker === "learning-writer") !== (input.artifact !== undefined)) throw new Error("writer_artifact_required_only_for_writer")
           if (input.worker === "learning-summarizer" && input.scope !== "summaries") throw new Error("summarizer_scope_required")
           if (input.worker === "learning-writer" && (!TOPIC_SLUG.test(input.scope) || input.scope === "summaries")) throw new Error("writer_topic_scope_required")
           if (input.worker === "learning-researcher" && input.scope === "summaries") throw new Error("researcher_scope_invalid")
@@ -1403,6 +1440,20 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
           if (TOPIC_SLUG.test(input.scope) && input.scope !== "summaries") {
             const snapshot = await state.read(input.scope)
             if (snapshot.revision !== input.revision) throw new Error("stale_worker_source_revision")
+            if (input.worker === "learning-writer") {
+              const artifact = writerArtifactSchema.parse(input.artifact)
+              if (!WRITER_ARTIFACT_PATH.test(artifact.destination_hint) || artifactKind(artifact.destination_hint) !== artifact.kind) throw new Error("invalid_writer_destination: use a topic-relative lowercase path matching kind, e.g. notes/m-0001.md; omit .ai/learning/<topic>/")
+              if (artifact.materials_language !== snapshot.topic.materials_language) throw new Error("writer_materials_language_mismatch")
+              const module = snapshot.modules.find((item) => item.id === artifact.module_id)
+              if (artifact.kind === "note" || artifact.kind === "exercise") {
+                if (!module) throw new Error("module_artifact_owner_required")
+                if (!artifact.selected_card_ids || !sameStrings(artifact.selected_card_ids, module.retention.selected_card_ids)) throw new Error("artifact_retention_mismatch")
+                const method = MODULE_ARTIFACT_METHODS[artifact.kind]
+                if (artifact.method !== method) throw new Error("writer_method_mismatch")
+              } else if (artifact.selected_card_ids !== undefined || (artifact.module_id !== undefined && (artifact.kind !== "teachback" || !module))) throw new Error("unexpected_artifact_ownership")
+              input = { ...input, prompt: JSON.stringify({ ...artifact, source_revision: input.revision, approved_outline_and_evidence: input.prompt,
+                output_contract: "Return only JSON: {kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}. Compose one complete artifact; load exclusively method. Preserve supplied ownership fields." }) }
+            }
             const recorded = snapshot.jobs.find((item) => item.worker === input.worker && ["starting", "running", "cancelling"].includes(item.status))
             if (recorded) {
               const restored = jobs.restore(recorded, input.scope)
