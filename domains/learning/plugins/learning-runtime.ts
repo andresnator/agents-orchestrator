@@ -7,6 +7,7 @@ import { recallCalcContracts, recallCalcHost } from "./recall-calc.ts"
 
 const PLUGIN_ID = "learning-runtime"
 const MAX_INPUT_CHARS = 24_000
+const MAX_CHOICE_QUESTION_CHARS = 300
 const MAX_RESULT_CHARS = 24_000
 const MAX_STATE_BYTES = 1_000_000
 const MAX_CHOICES = 12
@@ -834,13 +835,10 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
 }
 
 function questionFor(choice: Choice) {
-  const exactSubject = choice.input.subject_json === undefined
-    ? ""
-    : `\n\nExact stored preview:\n${JSON.stringify(JSON.parse(choice.input.subject_json), null, 2)}`
   return {
     questions: [{
       header: `Learning ${choice.id.slice(0, 8)}`,
-      question: `${choice.input.question}${exactSubject}`,
+      question: choice.input.question,
       options: choice.input.options.map(({ label, description }) => ({ label, description })),
       multiple: choice.input.multiple ?? false,
     }],
@@ -858,7 +856,7 @@ function createInteractions() {
     requireTeacher(context)
     // The host validates plugin schemas without applying Zod defaults.
     input = { ...input, multiple: input.multiple ?? false }
-    boundedText(input.question, MAX_INPUT_CHARS)
+    boundedText(input.question, MAX_CHOICE_QUESTION_CHARS)
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new Error("invalid_revision")
     if (input.subject_json === undefined && input.subject_digest !== undefined) throw new Error("subject_json_required")
     if (input.subject_json !== undefined) {
@@ -1532,12 +1530,12 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_choice: tool({
-        description: "Prepare a closed choice; this does NOT open any UI. Immediately call the native question tool using returned next_args, then read learning_choice_result after it returns. No files change.",
+        description: "Present the full proposal in chat first, then prepare a confirmation of at most 300 characters with brief options; this does NOT open any UI. Overlong questions are rejected, never truncated. Immediately call the native question tool using returned next_args, then read learning_choice_result after it returns. No files change.",
         args: {
           purpose: schema.enum(PURPOSES), revision: schema.number().int().nonnegative(),
           subject_digest: schema.string().regex(/^[a-f0-9]{64}$/).optional().describe("Optional asserted digest; required only when the stored subject already supplies one"),
-          subject_json: schema.string().max(MAX_INPUT_CHARS).optional().describe("Exact structured subject displayed and bound to the choice; the runtime canonicalizes and hashes it"),
-          question: schema.string().min(1).max(MAX_INPUT_CHARS),
+          subject_json: schema.string().max(MAX_INPUT_CHARS).optional().describe("Exact structured subject presented in chat and bound to the choice; the runtime canonicalizes and hashes it"),
+          question: schema.string().min(1).max(MAX_CHOICE_QUESTION_CHARS).describe("Brief confirmation after the full proposal in chat; at most 300 characters"),
           options: schema.array(schema.object({ id: schema.string().min(1).max(80), label: schema.string().min(1).max(80), description: schema.string().max(1000) })).min(1).max(MAX_CHOICES),
           multiple: schema.boolean().default(false),
         },
