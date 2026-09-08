@@ -1,28 +1,38 @@
 # Mission — {Topic}
 
-> Started: {YYYY-MM-DD} · Status: active
-> Materials language: English
-> Native language: {learner's native language; for language topics, the translation target — Spanish if omitted}
+> Started: {supplied date or unknown} · Status: active
+> Materials language: {learner choice; default conversation language}
+> Target language: {for language missions; otherwise omit}
+> Native language: {supplied language; for language missions}
 
-## Why (the mission)
+## Why
 
-{1–3 sentences in the learner's own words: why this topic, why now.}
+{The learner's purpose, without invented personal context.}
 
 ## Observable goal
 
-{What the learner will be able to DO when done — concrete and verifiable, e.g. "add JWT auth to project X without copying a tutorial".}
+{A concrete practical outcome.}
 
 ## Success criteria
 
-- [ ] {criterion 1}
-- [ ] {criterion 2}
+- [ ] {practical criterion and evidence needed}
+- [ ] {explanation of an essential decision}
 
-## Time budget
+## Cadence
 
-- Estimated total effort: {mentor's estimate to reach the observable goal, e.g. ~20 h}
-- Recommended cadence: {mentor's recommendation, e.g. 3 × 30 min/week ≈ ~3 months}
-- Agreed cadence: {learner's decision — cadence and horizon, e.g. 3 sessions/week × 30 min, review by {YYYY-MM-DD}}
+- Estimated effort: {bounded estimate and assumptions}
+- Recommended cadence: {proposal}
+- Agreed cadence: pending
 
 ## Prior knowledge
 
-{What the learner already knows that anchors the zone of proximal development.}
+{Observed knowledge; label unverified assumptions.}
+
+## Concepts
+
+| ID | Distinct concept | Prerequisites | Fundamental rationale | Taught |
+| --- | --- | --- | --- | --- |
+| K-0001 | {concept} | {IDs or none} | {reusable decision, prerequisite, costly misconception, or not shortlisted} | no |
+
+Default shortlist budget: floor(distinct concept count / 5). No denominator padding.
+Explicit learner exceptions: none.

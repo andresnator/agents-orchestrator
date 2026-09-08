@@ -1,52 +1,37 @@
 ---
 name: anki-vocab
-description: "Trigger: anki, vocab, vocabulary cards, vocabulario, tarjetas anki, learn vocab. Anki-importable vocabulary batches for any target language: situation-driven natural phrases built preferentially from already-learned vocabulary, translated into the learner's native language (Spanish by default), exported as ;-separated txt."
+description: "Trigger: anki, vocab, vocabulary cards, vocabulario, tarjetas anki, learn vocab. Preview and export selected natural phrases for supplied target/native languages."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.1.2"
+  version: "2.0.0"
 ---
 
 # Anki Vocab
 
-## Activation Contract
+## Activation
 
-Use for the `vocab` mode of `/learn` on **language-learning topics** — any target language (the language named in `mission.md`), translated into the learner's native language (the `Native language:` line in `mission.md`, defaulting to Spanish when absent): generating a batch of Anki-importable vocabulary cards from words, phrases, or a situation/theme. Owns `vocabulary.md` (the learned-unit registry, from `assets/vocabulary-template.md`) and `anki/` (batch exports, format fixture for an English-topic batch in `assets/batch-format.txt`) under each `.ai/learning/<topic-slug>/`.
+Prepare a selectable vocabulary batch for any supplied target/native language pair. A learning path, registry, named agent, and sibling skills are optional, never required.
 
-Do not use for non-language topics: if `mission.md` shows the topic is not a language, say vocab mode only applies to language topics and use the `question` tool for the closed choice between picking a language topic or running another mode — never generate anyway. Do not create Leitner cards for exported units: Anki is their spaced-repetition system; `review-queue.md` stays for conceptual cues (add a vocab unit there only on explicit learner request).
+## Inputs
 
-## Hard Rules
+Words, natural phrases, or a situation; target and native languages; optional known units and exported inventory. Ask for missing languages rather than infer a project. An explicit destination permits saving selected output; otherwise return it inline.
 
-- **Phrase as unit**: every row anchors a common, natural phrase or chunk of the target language as native speakers use it — never an isolated dictionary word with a synthetic sentence.
-- **Situation-driven**: sentences come from real situations relevant to the learner — the theme they passed, or contexts drawn from `mission.md`/`path.md` when they passed none.
-- **Reinforcement (i+1)**: build each sentence preferentially from units already in `vocabulary.md` and cues in `review-queue.md`, so one new element rides on known material. Due or recently demoted cards are preferred filler.
-- **No duplicates**: a unit already in `vocabulary.md` is never re-exported as a new row's anchor (it may still appear inside other rows' sentences). Report skipped duplicates.
-- **Registry stays in sync**: every generated batch appends its new units to `vocabulary.md` in the same session — an exported unit that is not registered breaks future reinforcement.
-- Batch files are the one non-Markdown artifact in the learning state: plain UTF-8 `.txt`, exactly per the Output Format below.
+## Method
 
-## Input Handling
+Use common natural phrases/chunks as anchors and full situational sentences, reusing supplied familiar material when useful. For a theme, propose a small batch (up to 12 initially); explicit user scope wins.
 
-| Input after `vocab` | Behavior |
-| --- | --- |
-| words or phrases | One row per given unit, normalized into a natural chunk; sentences situation-grounded and reinforcement-built. |
-| a situation/theme (e.g. "at the airport") | Select the most useful natural phrases for that situation; default batch size 12, confirmed through the `question` tool. |
-| empty | Propose a batch from `mission.md`/`path.md` plus reinforcement of due/weak `review-queue.md` cards; use the `question` tool to confirm before generating. |
+Separate candidates from exported rows. Compare duplicate keys using target-language tag plus Unicode NFKC normalization, lowercase, and collapsed whitespace. Preserve natural display text. Only already exported anchors in the supplied inventory are duplicates; unexported candidates remain eligible. Report the limits of an absent inventory.
 
-## Output Format
+Preview exact five-field rows before export. Let the learner select a subset, edit/reconfirm, postpone, or save none. Export only their unchanged selection. A candidate list is not approval. Never create a second spaced-repetition card for an exported phrase without an explicit learner exception.
 
-One row per card, no header line, no quoting, separator `;`, five fields:
+Format plain UTF-8, one row per card, no header or quoting:
 
 `unit;meaning;part of speech;example;native translation`
 
-- `unit`: the phrase/word anchor, in the target language.
-- `meaning`: short gloss of the unit, in simple target-language terms.
-- `part of speech`: of the unit (phrase, phrasal verb, verb, noun, idiom, ...).
-- `example`: one full natural target-language sentence using the unit in the situation.
-- `native translation`: full-sentence translation of the example into the learner's native language from `mission.md` (Spanish by default; the fixture in `assets/batch-format.txt` shows the Spanish default).
-- No `;` and no double quotes inside any field — rephrase instead.
-- File: `.ai/learning/<topic-slug>/anki/NNNN-<batch-slug>.txt`, `NNNN` sequential from `0001` within `anki/`, `<batch-slug>` from the theme or first unit.
+The unit, gloss, and example use the target language. The last field translates the full example into the native language. Forbid semicolons, double quotes, and newlines inside fields; rephrase and preview again when meaning changes. The example must naturally contain its anchor. `assets/batch-format.txt` is a format example, not a language default.
 
-## Output Contract
+## Output
 
-End every batch by reporting: batch file path, row count, new units registered in `vocabulary.md`, duplicates skipped, a reinforcement summary (which known units were reused), and the Anki import reminder (File > Import, separator `;`).
+Return the selected batch inline or at the authorized destination, with row count, skipped exported duplicates, and proposed registry entries. The caller commits export and registry together; do not claim either from a draft. Export is separate from learner import into Anki (File > Import, separator `;`) and proves no mastery. No directory discovery, sibling calls, automatic registry writes, or Anki import.

@@ -1,23 +1,28 @@
-# BDT drill — unit NNNN ({slug})
+# Translation drill — {Unit or supplied text title}
 
-> Topic: {topic-slug} · Date: {YYYY-MM-DD} · Passive wave date: {YYYY-MM-DD}
+> passive_at: {supplied date} · Attempt date: {supplied date}
+> next_due: {caller-calculated date or unscheduled}
 
-## Learner's retranslation
+## Learner retranslation
 
-{What the learner produced, verbatim.}
+{Actual practice produced in this explicitly started drill; pending before an attempt.}
 
 ## Differences
 
-| # | Original said | Learner said | Category | Material? |
-|---|---|---|---|---|
-| 1 | {chunk} | {chunk} | {word choice \| structure/order \| missing chunk \| grammar pattern} | yes/no |
+| Original meaning | Learner rendering | Category | Material difference |
+| --- | --- | --- | --- |
+| {source chunk} | {actual attempt} | {word choice / structure-order / missing chunk / grammar pattern} | {meaning change or natural equivalent} |
 
-## Follow-ups
+## Feedback and next attempt
 
-- Cards created: {<topic-slug>/C-NNNN … or none}
-- Vocab candidates: {units registered in vocabulary.md, or none}
-- Gaps rows: {appended/reinforced categories, or none}
+{Specific correction and the learner's subsequent response when one exists.}
 
-## Verdict
+## Proposals
 
-{Re-drill after next interval | retired from drilling} — {one line of noticing worth remembering}
+- Vocabulary candidates: {phrases or none; not exported}
+- Grammar/gap proposals: {categories and synthetic patterns or none; not scheduled}
+- Selected card references: {caller-confirmed IDs or []}
+
+## Outcome
+
+{completed / needs-another-attempt / input-only / pending}: {observed comprehension and meaning-preservation evidence, or missing evidence}.

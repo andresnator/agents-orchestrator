@@ -1,8 +1,8 @@
-# Vocabulary — {Topic}
+# Vocabulary exports — {Topic or language pair}
 
-> Registry of every unit already exported to Anki. Feeds reinforcement (new sentences
-> reuse these) and duplicate prevention. Reviews happen in Anki, not in the Leitner queue.
+Exported rows only. Unselected candidates remain in their lesson/drill proposals. This registry proves an export, not Anki import or mastery. The caller commits each exact selected batch and its registry entries once.
 
-| Unit | Meaning | POS | Batch | Added |
-| --- | --- | --- | --- | --- |
-| {phrase or word} | {short gloss} | {phrase/verb/noun/idiom} | `anki/0001-{batch-slug}.txt` | {YYYY-MM-DD} |
+| Target language | Duplicate key | Unit | Meaning | POS | Batch | Exported at |
+| --- | --- | --- | --- | --- | --- | --- |
+
+Duplicate key = target-language tag + NFKC/lowercase/collapsed-whitespace anchor. Preserve the natural display phrase. A candidate with no prior export is eligible.

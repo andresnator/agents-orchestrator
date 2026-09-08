@@ -1,19 +1,15 @@
 # Resources — {Topic}
 
-> Curated, never dumped: every entry states why it earned its place.
+Only sources actually verified or supplied as references. Mark unresolved verification pending.
 
-## Primary sources (feeds the 10%)
+## Primary sources
 
-| Resource | Type | Why this one |
+| Resource | Relevant claim or section | Why useful |
 | --- | --- | --- |
-| {link} | docs / book / spec / talk | {reason} |
+| {source} | {bounded teaching claim} | {reason} |
 
-## Community (feeds the 20%)
+## Optional practice and discussion
 
-| Where | What for |
-| --- | --- |
-| {forum / Discord / subreddit / meetup} | {what to ask or follow there} |
-
-## People & talks
-
-- {person / talk / post} — {why worth the learner's time}
+| Resource | Purpose | Limitation |
+| --- | --- | --- |
+| {resource} | {learner need} | {qualification} |

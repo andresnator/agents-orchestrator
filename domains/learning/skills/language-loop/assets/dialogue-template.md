@@ -1,27 +1,37 @@
-# Dialogue NNNN — {situation slug}
+# Dialogue — {Situation}
 
-> Topic: {topic-slug} · Created: {YYYY-MM-DD} · Wave: passive
-> Retranslation due: after unit NNNN+5 (active wave)
+> Unit: {supplied ID or standalone}
+> passive_at: {actual exposure date or pending}
+> next_due: {caller-calculated date or unscheduled}
+> active_status: pending
 
 ## Situation
 
-{One line: the mission situation or interest this dialogue serves.}
+{The learner's requested context.}
 
 ## {Target language}
 
-{Dialogue or short text in the target language, ~90% comprehensible for this learner.}
+{Short natural dialogue matched to observed level.}
 
 ## {Native language}
 
-{Natural-equivalence translation — meaning-for-meaning, not word-for-word.}
+{Meaning-preserving translation.}
 
-## Units
+## Gist check
 
-| Unit | Meaning | Known/New | Sent to Anki batch |
-|---|---|---|---|
-| {phrase or chunk} | {meaning} | new | — |
+- Prompt: {one short comprehension question}
+- Learner response: pending
+- Observed comprehension: pending
 
-## Retranslation log (active wave)
+## Vocabulary candidates
 
-| Date | Differences noticed (category: detail) | Follow-up (card / vocab / gaps.md) |
-|---|---|---|
+| Unit | Meaning | Known/new | Disposition | Export reference |
+| --- | --- | --- | --- | --- |
+| {natural phrase} | {meaning} | {supplied known/new status} | candidate | — |
+
+## Active attempts
+
+| Event | Date | Actual evidence | Material differences | Outcome | Next due |
+| --- | --- | --- | --- | --- | --- |
+
+Production outcome is completed only from meaning-preserving learner production. Input-only does not prove production criteria. Candidate/gap discovery never schedules a card.

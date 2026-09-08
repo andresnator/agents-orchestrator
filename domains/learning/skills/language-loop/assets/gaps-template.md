@@ -1,8 +1,8 @@
-# Gaps inbox — {topic-slug}
+# Synthetic gaps — {Topic}
 
-Producer: `english-tutor` sessions append `pending` rows (categories + synthetic patterns only — never learner raw text).
-Consumer: the mentor adopts rows at session start (card or drill) and flips them to `adopted`.
+Only categories and invented generic examples. No raw corrections, identifiers, or correction history. A replayed occurrence does not increase frequency. Adoption and card admission are separate learner decisions.
 
-| Date | Category | Synthetic example pattern | Status |
-|---|---|---|---|
-| {YYYY-MM-DD} | {tense \| articles \| prepositions \| word order \| register \| idiom \| word choice \| structure pattern} | {invented wording illustrating the mistake shape} | pending |
+| ID | Category | Synthetic pattern | Distinct occurrences | Status | Adoption | Selected card IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+
+Status: proposed / pending / adopted / declined. Missing learner consent remains proposed. An adopted drill may legitimately have no selected cards.
