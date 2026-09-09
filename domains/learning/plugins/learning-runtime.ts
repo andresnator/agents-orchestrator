@@ -517,7 +517,11 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       break
     }
     case "preview_cards": {
-      if (!module || module.phase !== "class") throw new Error("preview_requires_class")
+      const recoveringMissingPreview = module
+        && ["practice", "consolidation"].includes(module.phase)
+        && module.retention.disposition === "pending"
+        && !module.retention.preview
+      if (!module || module.phase !== "class" && !recoveringMissingPreview) throw new Error("preview_requires_class")
       if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
       requiredString(event.preview_id, "preview_id", 100)
       event.cards = requiredArray<Extract<LearningEvent, { type: "preview_cards" }>["cards"][number]>(event.cards, "card_preview", 2)
