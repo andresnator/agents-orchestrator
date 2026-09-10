@@ -12,6 +12,8 @@ const MAX_RESULT_CHARS = 24_000
 const MAX_STATE_BYTES = 1_000_000
 const MAX_CHOICES = 12
 const MAX_RECORDS = 200
+const JOB_POLL_MS = 250
+const READINESS_OPTIONS = ["ready", "skip"]
 const STATE_VERSION = 1
 const TOPIC_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/
 const SESSION_SCOPE = /^session:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/
@@ -69,7 +71,6 @@ interface Job {
   promptMessageID?: string
   result?: string
   error?: string
-  notified: boolean
   supersededRevision?: number
 }
 
@@ -81,6 +82,7 @@ type LearningEvent =
   | { type: "record_class"; event_id: string; date: string; module_id: string; taught_concept_ids: string[]; evidence: string }
   | { type: "preview_cards"; event_id: string; date: string; module_id: string; preview_id: string; source_revision: number; cards: Array<{ proposal_id: string; cue: string; answer: string; concept_id: string; reason: string }> }
   | { type: "select_cards"; event_id: string; date: string; module_id: string; preview_id: string; interaction_id: string; disposition: Exclude<RetentionDisposition, "pending">; proposal_ids: string[] }
+  | { type: "skip_practice"; event_id: string; date: string; module_id: string; interaction_id: string }
   | { type: "start_practice"; event_id: string; date: string; module_id: string; interaction_id: string }
   | { type: "record_attempt"; event_id: string; date: string; module_id: string; outcome: "pending" | "partial" | "stuck" | "done"; evidence_refs?: EvidenceReference[]; evidence: string; causal_explanation?: string; transfer_evidence?: string }
   | { type: "record_consolidation"; event_id: string; date: string; module_id: string; evidence_refs: EvidenceReference[]; learner_evidence: string; blocking_gaps: string[] }
@@ -101,7 +103,7 @@ type LearningEvent =
 
 type EventType = LearningEvent["type"]
 const EVENT_TYPES = [
-  "create_topic", "record_class", "preview_cards", "select_cards", "start_practice", "record_attempt", "record_consolidation", "close_module",
+  "create_topic", "record_class", "preview_cards", "select_cards", "start_practice", "skip_practice", "record_attempt", "record_consolidation", "close_module",
   "grade_card", "preview_card_change", "apply_card_change", "set_card_status", "set_fundamental_override", "add_language_unit", "record_language_attempt",
   "set_vocab_candidates", "export_vocab", "adopt_gap", "record_gap", "attach_artifact", "complete_topic",
 ] as const satisfies readonly EventType[]
@@ -120,7 +122,8 @@ const EVENT_REFERENCE: Record<EventType, EventReference> = {
   record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
   preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts", "selected retention requires the explicit card-change workflow; it cannot be previewed or selected again"] },
   select_cards: { choice: { purpose: "cards", options: ["<stored proposal_id>", ...CARD_DISPOSITIONS], multiple: true }, event: { type: "select_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", interaction_id: "UUID", disposition: "selected | none | deferred", proposal_ids: ["proposal_id"] }, consent_subject: "exact stored module.retention.preview with digest omitted", rules: ["Copy current proposal IDs plus none and deferred; never use selected as an option ID.", "none and deferred are exclusive: select either one alone, or one or more proposal IDs."] },
-  start_practice: { event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
+  skip_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "skip_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" }, rules: ["Only selected skip permits omission from Class or unfinished Practice; preserve existing attempts."] },
+  start_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
   record_attempt: { event: { type: "record_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", outcome: "pending | partial | stuck | done", evidence_refs: [EVIDENCE_REFERENCE], evidence: "teacher assessment", causal_explanation: "optional string", transfer_evidence: "optional string" }, rules: ["evidence_refs are required for outcome done and verified whenever supplied; copy literal references from learning_evidence or the same topic state.", "evidence and causal/transfer commentary are teacher assessment, separate from learner quotes."] },
   record_consolidation: { event: { type: "record_consolidation", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", evidence_refs: [EVIDENCE_REFERENCE], learner_evidence: "teacher assessment", blocking_gaps: ["string"] }, rules: ["Copy evidence_refs from learning_evidence or the same topic state; authorship alone does not prove correctness."] },
   close_module: { event: { type: "close_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####" } },
@@ -146,6 +149,7 @@ interface TopicState {
   concepts: Array<{ id: string; title: string; prerequisites: string[]; fundamental: boolean; learner_override: boolean; taught: boolean }>
   modules: Array<{
     id: string; title: string; win: string; phase: LearningPhase; taught_concept_ids: string[]; class_evidence?: string
+    practice_skipped?: boolean
     attempt?: { revision: number; outcome: "pending" | "partial" | "stuck" | "done"; evidence_refs?: EvidenceReference[]; evidence: string; causal_explanation?: string; transfer_evidence?: string }
     consolidation?: { revision: number; evidence_refs?: EvidenceReference[]; learner_evidence: string; blocking_gaps: string[] }
     retention: { disposition: RetentionDisposition; preview?: { topic_slug: string; module_id: string; id: string; source_revision: number; digest: string; cards: Array<{ proposal_id: string; cue: string; answer: string; concept_id: string; reason: string }> }; selected_card_ids: string[] }
@@ -210,6 +214,7 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
       if (new Set(preview.cards.map((card: any) => card.proposal_id)).size !== preview.cards.length) return false
       if (preview.digest !== digest({ topic_slug: preview.topic_slug, module_id: preview.module_id, id: preview.id, source_revision: preview.source_revision, cards: preview.cards })) return false
     }
+    if (item.practice_skipped !== undefined && typeof item.practice_skipped !== "boolean") return false
     if (item.attempt !== undefined && (!record(item.attempt) || !Number.isSafeInteger(item.attempt.revision) || item.attempt.revision > state.revision || !["pending", "partial", "stuck", "done"].includes(item.attempt.outcome) || typeof item.attempt.evidence !== "string")) return false
     if (item.consolidation !== undefined && (!record(item.consolidation) || !Number.isSafeInteger(item.consolidation.revision) || item.consolidation.revision > state.revision || typeof item.consolidation.learner_evidence !== "string" || !strings(item.consolidation.blocking_gaps))) return false
     return true
@@ -565,11 +570,14 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       changed.add("path"); changed.add("review-queue")
       break
     }
+    case "skip_practice":
     case "start_practice": {
-      if (!module || module.phase !== "class") throw new Error("practice_requires_class")
-      validateConsent(choice, "readiness", event.interaction_id, ["ready"], { topic_slug: state.topic.slug, module_id: module.id })
+      const skipping = event.type === "skip_practice"
+      if (!module || !(module.phase === "class" || skipping && module.phase === "practice" && module.attempt?.outcome !== "done")) throw new Error("practice_requires_class_or_unfinished_practice")
+      validateConsent(choice, "readiness", event.interaction_id, [skipping ? "skip" : "ready"], { topic_slug: state.topic.slug, module_id: module.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      module.phase = "practice"
+      module.phase = skipping ? "consolidation" : "practice"
+      if (skipping) module.practice_skipped = true
       state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
       changed.add("path")
       break
@@ -585,14 +593,14 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       break
     }
     case "record_consolidation": {
-      if (!module || module.phase !== "consolidation" || module.attempt?.outcome !== "done") throw new Error("consolidation_requires_completed_practice")
+      if (!module || module.phase !== "consolidation" || (module.attempt?.outcome !== "done" && !module.practice_skipped)) throw new Error("consolidation_requires_completed_or_skipped_practice")
       event.blocking_gaps = requiredArray<string>(event.blocking_gaps, "blocking_gaps")
       module.consolidation = { evidence_refs: structuredClone(event.evidence_refs), revision: current.revision + 1, learner_evidence: requiredString(event.learner_evidence, "learner_evidence"), blocking_gaps: event.blocking_gaps.map((gap) => requiredString(gap, "gap", 1000)) }
       changed.add("path")
       break
     }
     case "close_module": {
-      if (!module || module.phase !== "consolidation" || module.attempt?.outcome !== "done" || !module.consolidation || module.consolidation.blocking_gaps.length || module.retention.disposition === "pending") throw new Error("module_close_requirements_not_met")
+      if (!module || module.phase !== "consolidation" || (module.attempt?.outcome !== "done" && !module.practice_skipped) || !module.consolidation || module.consolidation.blocking_gaps.length || module.retention.disposition === "pending") throw new Error("module_close_requirements_not_met")
       if (!state.topic.target_language) {
         const records = [module.artifacts.note, module.artifacts.exercise].map((path) => path ? state.artifacts[path] : undefined)
         if (records.some((record) => !record || record.source_revision < module.consolidation!.revision || record.module_id !== module.id || !record.selected_card_ids || !sameStrings(record.selected_card_ids, module.retention.selected_card_ids))) {
@@ -885,6 +893,7 @@ function createInteractions() {
       if (input.multiple || !sameStrings([...ids], expected)) throw new Error("invalid_choice_options")
       if (input.purpose === "mission" && input.revision !== 0) throw new Error("stale_interaction_revision")
     }
+    if (input.purpose === "readiness" && (!stagedSubject?.topic_slug || !stagedSubject?.module_id || input.multiple || !sameStrings([...ids], READINESS_OPTIONS))) throw new Error("invalid_choice_options")
     if (input.purpose === "grade") {
       if (!stagedSubject?.topic_slug || !stagedSubject?.card_id || input.multiple || !sameStrings([...ids], GRADES)) throw new Error("invalid_choice_options")
     }
@@ -995,7 +1004,7 @@ function markdown(value: string) {
 
 function renderViews(state: TopicState): Record<string, string> {
   const concepts = state.concepts.map((item) => `| ${item.id} | ${markdown(item.title)} | ${item.prerequisites.join(", ") || "none"} | ${item.fundamental ? "yes" : "no"} | ${item.learner_override ? "yes" : "no"} | ${item.taught ? "yes" : "no"} |`).join("\n")
-  const modules = state.modules.map((item) => `| ${item.id} | ${markdown(item.title)} | ${markdown(item.win)} | ${item.phase} | ${item.artifacts.note ?? "—"} | ${item.artifacts.exercise ?? "—"} | ${item.retention.disposition} | ${item.retention.selected_card_ids.join(", ") || "[]"} |`).join("\n")
+  const modules = state.modules.map((item) => `| ${item.id} | ${markdown(item.title)} | ${markdown(item.win)} | ${item.phase}${item.practice_skipped ? " (practice skipped)" : ""} | ${item.artifacts.note ?? "—"} | ${item.artifacts.exercise ?? "—"} | ${item.retention.disposition} | ${item.retention.selected_card_ids.join(", ") || "[]"} |`).join("\n")
   const active = state.cards.filter((item) => item.status === "active").map((item) => `| ${item.id} | ${markdown(item.cue)} | ${item.box} | ${item.last} | ${item.next} | ${item.concept_id}@r${item.source_revision} |`).join("\n")
   const inactive = state.cards.filter((item) => item.status !== "active").map((item) => `| ${item.id} | ${markdown(item.cue)} | ${item.status} | ${item.last} | ${item.lineage.join(", ") || "—"} |`).join("\n")
   const candidates = state.vocabulary.candidates.map((item) => `| ${markdown(item.target_language)} | ${markdown(item.duplicate_key)} | ${markdown(item.unit)} | ${item.status} |`).join("\n")
@@ -1249,12 +1258,7 @@ function createStateStore(directory: string) {
 function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job) => Promise<void> = async () => undefined) {
   const jobs = new Map<string, Job>()
   const launching = new Set<string>()
-  const available = ["create", "promptAsync", "messages", "status", "abort"].every((name) => typeof (client.session as any)?.[name] === "function")
-
-  function ownerKey(parentID: string, worker: Worker, scope: string) {
-    const topicScoped = TOPIC_SLUG.test(scope) && scope !== "summaries"
-    return topicScoped ? `topic:${scope}:${worker}` : `parent:${parentID}:${scope}:${worker}`
-  }
+  const available = ["create", "prompt", "messages", "status", "abort"].every((name) => typeof (client.session as any)?.[name] === "function")
 
   async function sync(job: Job) {
     const priorSyncError = job.error === "job_state_sync_failed; inspect the accepted child before replacement"
@@ -1275,29 +1279,30 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
   function restore(record: TopicState["jobs"][number], scope: string) {
     const existing = jobs.get(record.id)
     if (existing) return existing
-    const job: Job = { id: record.id, parentID: record.parent_id, worker: record.worker, scope, revision: record.source_revision, status: record.status, notified: false, ...(record.error ? { error: record.error } : {}), ...(record.superseded_revision !== undefined ? { supersededRevision: record.superseded_revision } : {}) }
+    const job: Job = { id: record.id, parentID: record.parent_id, worker: record.worker, scope, revision: record.source_revision, status: record.status, ...(record.error ? { error: record.error } : {}), ...(record.superseded_revision !== undefined ? { supersededRevision: record.superseded_revision } : {}) }
     jobs.set(job.id, job)
     return job
   }
 
   async function launch(context: ToolContext, input: { worker: Worker; scope: string; revision: number; prompt: string }) {
     requireTeacher(context)
-    if (!available) throw new Error("async_session_api_unavailable")
+    if (!available) throw new Error("sequential_session_api_unavailable")
     boundedText(input.prompt, MAX_INPUT_CHARS)
-    const key = ownerKey(context.sessionID, input.worker, input.scope)
-    const existing = [...jobs.values()].find((job) => ownerKey(job.parentID, job.worker, job.scope) === key && ["starting", "running", "cancelling"].includes(job.status))
+    const topicScoped = TOPIC_SLUG.test(input.scope) && input.scope !== "summaries"
+    const keys = [`parent:${context.sessionID}`, ...(topicScoped ? [`topic:${input.scope}:${input.worker}`] : [])]
+    const existing = [...jobs.values()].find((job) => (job.parentID === context.sessionID || topicScoped && job.scope === input.scope && job.worker === input.worker) && ["starting", "running", "cancelling"].includes(job.status))
     if (existing) {
-      if (input.revision > existing.revision) {
+      if (input.scope === existing.scope && input.revision > existing.revision) {
         existing.supersededRevision = Math.max(existing.supersededRevision ?? input.revision, input.revision)
         await sync(existing)
-        return structuredClone(existing)
       }
       throw new Error(`learning_job_pending:${existing.id}`)
     }
-    if (launching.has(key)) throw new Error("learning_job_starting")
+    if (keys.some((key) => launching.has(key))) throw new Error("learning_job_starting")
     if (jobs.size >= MAX_RECORDS) throw new Error("job_limit_reached")
-    launching.add(key)
+    for (const key of keys) launching.add(key)
     try {
+      context.abort.throwIfAborted()
       const agents = await client.app.agents({ throwOnError: true })
       const worker = agents.data?.find((agent) => agent.name === input.worker)
       if (!worker) throw new Error(`learning_worker_unavailable:${input.worker}`)
@@ -1310,23 +1315,48 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
       }
       const created = await client.session.create({ body, throwOnError: true })
       if (!created.data?.id) throw new Error("child_session_not_created")
-      const job: Job = { id: created.data.id, parentID: context.sessionID, worker: input.worker, scope: input.scope, revision: input.revision, status: "starting", notified: false }
+      const job: Job = { id: created.data.id, parentID: context.sessionID, worker: input.worker, scope: input.scope, revision: input.revision, status: "starting" }
       jobs.set(job.id, job)
-      try {
-        await client.session.promptAsync({ path: { id: job.id }, body: {
-          agent: input.worker,
-          model: worker.model ?? { providerID: parent.providerID, modelID: parent.modelID },
-          parts: [{ type: "text", text: input.prompt }],
-        }, throwOnError: true })
-        if (job.status === "starting") job.status = "running"
-      } catch {
-        // A lost HTTP response does not prove that the prompt was rejected.
-        job.error = "launch_observation_failed; inspect the existing child before replacement"
-      }
       await sync(job)
-      return structuredClone(job)
+      let cancellation: Promise<Job | void> | undefined
+      const abortChild = () => cancellation ??= cancel(context.sessionID, job.id).catch(async () => {
+        job.error = "cancel_observation_failed; inspect the existing child before replacement"
+        await sync(job)
+      })
+      context.abort.addEventListener("abort", abortChild, { once: true })
+      try {
+        if (context.abort.aborted) {
+          await abortChild()
+          return structuredClone(job)
+        }
+        try {
+          await client.session.prompt({ path: { id: job.id }, body: {
+            agent: input.worker,
+            model: worker.model ?? { providerID: parent.providerID, modelID: parent.modelID },
+            parts: [{ type: "text", text: input.prompt }],
+          }, signal: context.abort, throwOnError: true })
+          if (job.status === "starting") job.status = "running"
+        } catch {
+          if (context.abort.aborted) {
+            await abortChild()
+            return structuredClone(job)
+          }
+          // A lost HTTP response does not prove that the prompt was rejected.
+          job.error = "launch_observation_failed; inspect the existing child before replacement"
+          await sync(job)
+          try { return await inspect(job) } catch { return structuredClone(job) }
+        }
+        context.abort.removeEventListener("abort", abortChild)
+        try { return await wait(job, context.abort) } catch {
+          job.error = "result_observation_failed; inspect the existing child before replacement"
+          await sync(job)
+          return structuredClone(job)
+        }
+      } finally {
+        context.abort.removeEventListener("abort", abortChild)
+      }
     } finally {
-      launching.delete(key)
+      for (const key of keys) launching.delete(key)
     }
   }
 
@@ -1355,12 +1385,12 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
     return structuredClone(job)
   }
 
-  async function cancel(parentID: string, id: string) {
+  async function cancel(parentID: string, id: string): Promise<Job> {
     const job = get(parentID, id)
     if (["completed", "failed", "cancelled"].includes(job.status)) return structuredClone(job)
     job.status = "cancelling"
     await client.session.abort({ path: { id: job.id }, throwOnError: true })
-    return inspect(job)
+    return wait(job)
   }
 
   async function onEvent(event: { type: string; properties: any }) {
@@ -1372,10 +1402,22 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
     } catch { /* An observation error leaves the accepted child pending. */ }
   }
 
-  function notices(parentID: string) {
-    const settled = [...jobs.values()].filter((job) => job.parentID === parentID && !job.notified && ["completed", "failed", "cancelled"].includes(job.status))
-    for (const job of settled) job.notified = true
-    return settled.map((job) => ({ id: job.id, worker: job.worker, scope: job.scope, revision: job.revision, status: job.status }))
+  async function wait(job: Job, signal?: AbortSignal): Promise<Job> {
+    let onAbort: () => void = () => undefined
+    const aborted = new Promise<Job>((resolve, reject) => {
+      onAbort = () => { void cancel(job.parentID, job.id).then(resolve, reject) }
+    })
+    signal?.addEventListener("abort", onAbort, { once: true })
+    try {
+      if (signal?.aborted) onAbort()
+      while (true) {
+        const result = await Promise.race([inspect(job), aborted])
+        if (["completed", "failed", "cancelled"].includes(result.status)) return result
+        await Promise.race([new Promise((resolve) => setTimeout(resolve, JOB_POLL_MS)), aborted])
+      }
+    } finally {
+      signal?.removeEventListener("abort", onAbort)
+    }
   }
 
   return {
@@ -1392,7 +1434,13 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
       if (!job) throw new Error("unknown_learning_job")
       return cancel(job.parentID, id)
     },
-    onEvent, notices, restore,
+    wait: (parentID: string, id: string, signal?: AbortSignal) => wait(get(parentID, id), signal),
+    waitAny: (id: string, signal?: AbortSignal) => {
+      const job = jobs.get(id)
+      if (!job) throw new Error("unknown_learning_job")
+      return wait(job, signal)
+    },
+    onEvent, restore,
   }
 }
 
@@ -1418,7 +1466,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         description: "Learning date and installed deterministic capabilities.",
         args: {},
         async execute() {
-          return JSON.stringify({ today: recallCalcContracts.localToday(), calculator: true, async_sessions: jobs.available, interactions: "host_question_events", durable_state: true, state_schema: STATE_VERSION, existing_markdown_supported: false })
+          return JSON.stringify({ today: recallCalcContracts.localToday(), calculator: true, sequential_jobs: jobs.available, interactions: "host_question_events", durable_state: true, state_schema: STATE_VERSION, existing_markdown_supported: false })
         },
       }),
       learning_event_reference: tool({
@@ -1578,7 +1626,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_job_start: tool({
-        description: "Launch bounded independent research or composition. Returns the accepted child ID immediately; no synthetic parent turn on completion.",
+        description: "Run one bounded worker per Mentor session and wait for its verified terminal result. Commit valid output and continue in this turn. Transport failures retain the accepted child ID for recovery.",
         args: {
           worker: schema.enum(WORKERS), scope: schema.string().min(1).max(100), revision: schema.number().int().nonnegative(),
           artifact: writerArtifactSchema.optional().describe("Required only for learning-writer: exactly one artifact; note uses cornell-notes, exercise uses learning-loop"),
@@ -1608,7 +1656,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
               input = { ...input, prompt: JSON.stringify({ ...artifact, source_revision: input.revision, approved_outline_and_evidence: input.prompt,
                 output_contract: "Return only JSON: {kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}. Compose one complete artifact; load exclusively method. Preserve supplied ownership fields." }) }
             }
-            const recorded = snapshot.jobs.find((item) => item.worker === input.worker && ["starting", "running", "cancelling"].includes(item.status))
+            const recorded = snapshot.jobs.find((item) => (item.parent_id === context.sessionID || item.worker === input.worker) && ["starting", "running", "cancelling"].includes(item.status))
             if (recorded) {
               const restored = jobs.restore(recorded, input.scope)
               const inspected = await jobs.inspectAny(restored.id)
@@ -1619,7 +1667,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_job_result: tool({
-        description: "Read one accepted worker on a normal learner turn, or cancel it and verify settlement. Observation failure never permits replacement.",
+        description: "Recover the same accepted worker, waiting inside this call if still active, or cancel it and verify settlement. Observation failure never permits replacement.",
         args: { id: schema.string(), action: schema.enum(["inspect", "cancel"]), topic_slug: schema.string().regex(TOPIC_SLUG).optional() },
         async execute({ id, action, topic_slug }, context) {
           requireTeacher(context)
@@ -1628,9 +1676,9 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
             const record = snapshot.jobs.find((item) => item.id === id)
             if (!record) throw new Error("job_not_owned_by_topic")
             jobs.restore(record, topic_slug)
-            return JSON.stringify(await (action === "cancel" ? jobs.cancelAny(id) : jobs.inspectAny(id)))
+            return JSON.stringify(await (action === "cancel" ? jobs.cancelAny(id) : jobs.waitAny(id, context.abort)))
           }
-          return JSON.stringify(await (action === "cancel" ? jobs.cancel(context.sessionID, id) : jobs.inspect(context.sessionID, id)))
+          return JSON.stringify(await (action === "cancel" ? jobs.cancel(context.sessionID, id) : jobs.wait(context.sessionID, id, context.abort)))
         },
       }),
       learning_summary_create: tool({
@@ -1680,17 +1728,6 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
     event: async ({ event }) => {
       interactions.onEvent(event)
       await jobs.onEvent(event)
-    },
-    "chat.message": async (input, output) => {
-      if (!output.parts.some((part) => part.type === "text" && !part.synthetic && !part.ignored)) return
-      const notices = jobs.notices(input.sessionID)
-      if (!notices.length) return
-      const first = output.parts[0]
-      output.parts.push({
-        id: `prt_${randomUUID().replaceAll("-", "")}`, sessionID: input.sessionID, messageID: first.messageID,
-        type: "text", synthetic: true,
-        text: `Learning worker state (not a learner answer; no progression or saved-artifact claim): ${JSON.stringify(notices)}`,
-      })
     },
   }
 }
