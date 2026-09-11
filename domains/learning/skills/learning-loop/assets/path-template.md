@@ -13,7 +13,7 @@
 
 | Gate | Status | Evidence |
 | --- | --- | --- |
-| Practical capstone and explanation against mission criteria | ⬜ | — |
+| Verified evidence and explanation against agreed mission criteria | ⬜ | — |
 
 ## Reinforcement
 

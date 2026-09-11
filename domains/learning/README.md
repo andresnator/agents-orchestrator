@@ -44,7 +44,7 @@ Mentor owns teaching, the rubric, learner questions, and progression. Skills acc
 
 `/learn session <request>` teaches answer-first in the conversation language and asks at most one focused question at a time. It performs no due-check and creates no state.
 
-An explicit summary request uses a native host choice. After approval, a fresh `learning-summarizer` composes one bounded JSON result while teaching can continue. `learning_summary_create` writes one collision-resistant file exclusively under `.ai/learning/summaries/`. The same approval cannot be reused, completion does not create an unsolicited parent turn, and no route or review card is implied.
+An explicit summary request uses a native host choice. After approval, a fresh `learning-summarizer` composes one bounded JSON result; Mentor waits and saves it in the same turn. `learning_summary_create` writes one collision-resistant file exclusively under `.ai/learning/summaries/`. The same approval cannot be reused, completion does not create an unsolicited parent turn, and no route or review card is implied.
 
 ## Durable learning
 
@@ -56,20 +56,22 @@ Non-language modules follow this sequence:
 | --- | --- |
 | Class | Explain the objective and central relationships, show a distinct worked example, then ask one focused question. |
 | Retention preview | Show zero to two eligible fundamental cards with exact cue, answer, and rationale. Selected, none, and deferred are all valid. |
-| Practice readiness | Ask separately. Only a later learner readiness answer starts a new application exercise. |
-| Practice | Record the learner's actual attempt and fade hints from observed performance. |
+| Practice readiness | Offer Practicar / Omitir separately once; reuse the recorded choice on resume. Clarification or dismissal does not advance the phase. |
+| Practice | Record actual attempts and fade hints; explicit omission preserves any partial attempt. |
 | Consolidation | Reuse sufficient causal explanation and transfer evidence; otherwise explain a specific gap and invite another attempt. |
-| Close | Require completed practice, essential learner explanation, no blocking gap, and a resolved retention disposition. Selected card IDs may be empty. |
+| Close | Require completed or explicitly omitted practice, essential learner explanation, no blocking gap, and a resolved retention disposition. Selected card IDs may be empty. |
+
+Both the note and exercise are generated when practice is omitted, with omission in existing document fields. Existing paths, sections, tables, and templates stay intact. `practice_skipped` is optional in `schema_version: 1`; old states need no migration. A brief verified learner explanation, resolved retention, materials, and no blocking gaps remain required. Topic completion assesses agreed criteria from real evidence; there is no default mandatory capstone, and omission does not prove practical competence.
 
 The mission defines stable concept IDs and prerequisites. The default fundamental shortlist is at most `floor(concept_count / 5)`; fewer than five concepts can yield zero. A learner can explicitly override the shortlist for a shown, taught concept. Cornell questions remain useful retrieval prompts even when no card is saved.
 
 Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day maintenance until the learner explicitly suspends or retires it. Every durable choice includes an exact topic/entity subject and canonical digest; card selection and replacement use the stored preview itself. A third cumulative `Again` requires a confirmed reformulate/split decision; replacements get new IDs and preserve lineage.
 
-## Background work
+## Sequential work
 
-`learning_job_start` creates an actual child session for bounded research or composition and immediately returns its accepted ID. Mentor may continue an independent explanation or learner question. The runtime observes the same child, never treats silence as completion, and attaches one status notice to a later real learner message.
+`learning_job_start` creates one actual child session for bounded research or composition and waits for a verified terminal result. Only one job runs per Mentor session. Mentor completes note → save → exercise → save → Close, or an approved summary save, in the same turn without “continue” messages. `learning_job_result` waits for recovery of the same child or cancels it; parent cancellation propagates to the child. Transport failure retains the accepted ID and never permits an unchecked replacement.
 
-Topic jobs carry a source revision. Same-topic work is serialized, a newer request coalesces behind an active worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. Loading `cornell-notes` supplies its full inline lesson template. The runtime verifies worker kind, destination, source revision, and exact content before writing.
+Topic jobs carry a source revision. Same-topic work is serialized, a newer request remains blocked behind the accepted worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. Loading `cornell-notes` supplies its full inline lesson template. The runtime verifies worker kind, destination, source revision, and exact content before writing.
 
 ## Language learning
 
@@ -92,7 +94,7 @@ Vocabulary phrases begin as candidates and can be corrected under the same ID un
 | Worker | `learning-summarizer` | One explicit independent summary |
 | Command | `/learn` | Thin session/path/mode dispatch |
 | Command | `/english` | Thin explicit English dispatch |
-| Plugin | `learning-runtime` | Event reference, host-correlated choices, async jobs, versioned state, recovery, and exclusive summary creation |
+| Plugin | `learning-runtime` | Event reference, host-correlated choices, sequential jobs, versioned state, recovery, and exclusive summary creation |
 | Plugin | `recall-calc` | Bounded queue parsing and deterministic dates |
 | Skills | nine Learning-owned directories | Independent teaching and transformation methods |
 

@@ -88,11 +88,11 @@ Saving requires an explicit positive native choice. Mentor sends only the pertin
 .ai/learning/summaries/<YYYY-MM-DD>-<HHMMSS>-<slug>-<random>.md
 ```
 
-The summary segment is frozen at the save request. Mentor obtains native approval before launching the summarizer and saves its completed result on a later real learner turn, without requiring another request. Subsequent conversation does not extend or invalidate that segment.
+The summary segment is frozen at the save request. Mentor obtains native approval before launching the summarizer and awaits and saves its completed result in the same turn, without requiring another request. Subsequent conversation does not extend or invalidate that segment.
 
 One approval can create one file. Another explicit save, even with the same title during the same second, receives another path and cannot overwrite the first. Malformed output creates no file. The summary remains independent: it creates no topic, cards, progress, or recall handoff.
 
-Child completion never creates an unsolicited parent response. One status notice is attached to a later real learner message. The notice is operational context; it does not answer an open question, advance a phase, or claim a saved path.
+The awaited result returns to the current tool call; no deferred notice or extra learner turn is needed. A saved path is reported only after successful creation.
 
 ## Durable state
 
@@ -139,18 +139,20 @@ After a durable route is resolved, Mentor reads the identified topic and resumes
 
 New topics define an observable mission, stable concept IDs, prerequisite relationships, and modules with one tangible win. Mentor proposes an effort and cadence for correction rather than asking for an ungrounded time budget.
 
-Non-language modules follow `Class → Practice → Consolidation`:
+Non-language modules follow `Class → optional Practice → Consolidation`:
 
 | Boundary | Required evidence |
 | --- | --- |
 | Class | Objective, central relationships, a worked example different from the target exercise, and one focused learner response |
 | Retention | Zero to two exact eligible card previews; selected, none, or deferred disposition |
-| Readiness | Separate later learner answer before Practice |
+| Readiness | Separate native Practicar / Omitir choice (`readiness`: `ready` / `skip`), offered once and reused on resume |
 | Practice | Actual attempt on a new application, with hints faded from observed performance |
 | Consolidation | Learner explanation of essential decisions and transfer, with no unresolved conceptual gap |
-| Close | Completed practice, sufficient explanation, no blocking gap, resolved retention, and valid module note and exercise |
+| Close | Completed or explicitly omitted practice, sufficient explanation, no blocking gap, resolved retention, and valid module note and exercise |
 
 Actual evidence may satisfy more than one consolidation purpose. Do not demand a redundant Summary, debrief, or teach-back when the learner's causal explanation and transfer already meet the rubric. Use teach-back selectively for a foundational or uncertain concept. Confidence and worker output are not learner evidence.
+
+`skip_practice` requires native `readiness` consent selecting `skip`, bound to the current revision and exact `{topic_slug, module_id}`. It is valid from Class or unfinished Practice, sets optional `practice_skipped: true`, preserves attempts, and enters Consolidation. Clarification or dismissal leaves the phase unchanged. Old `schema_version: 1` states remain readable without migration. Both materials are still generated; omission is shown in existing fields without changing paths, folders, sections, columns, or templates. A brief verified learner explanation remains required; omission does not prove practical competence. There is no mandatory capstone by default: topic completion still requires evidence against the agreed criteria.
 
 Clarification can expand Class or unfinished Practice within the module's win. After Practice is done, a new concept becomes separate reinforcement so the completed scope is not rewritten.
 
@@ -194,15 +196,15 @@ The failure count is cumulative since creation or the last agreed repair. A thir
 
 ## Research and artifact composition
 
-Mentor may start one bounded researcher and one composition worker for a topic. `learning_job_start` creates a real child session and returns its accepted ID immediately. It uses the host session create, asynchronous prompt, messages, status, and abort APIs; it does not depend on Task exposing a background flag.
+Mentor runs one bounded worker at a time per parent session. `learning_job_start` creates a real child through `client.session.create`, awaits `client.session.prompt`, and verifies terminal messages and status before returning the complete result. `learning_context.sequential_jobs` reports availability. Note → save → exercise → save → Close and approved summary composition/save complete in the same turn, using each commit's new revision, without learner “continue” messages.
 
 `learning_job_start.artifact` is required only for `learning-writer`: `kind`, `method`, `destination_hint`, `materials_language`, and, for notes/exercises, `module_id` and exact `selected_card_ids` (including `[]`). Destinations are lowercase paths relative to the topic, such as `notes/m-0001.md`; omit `.ai/learning/<topic>/`. Invalid destination, method, ownership or selection fails before child creation. Mentor may correct these rejected arguments; an accepted failed model job still never retries automatically. `prompt` supplies the bounded outline and evidence; the runtime constructs the assignment with `source_revision` from `revision`. The writer loads only the specified method and returns `{kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}`.
 
 The researcher receives a question and source scope, returns at most five source-grounded findings, and cannot write or delegate. The writer receives one artifact kind, destination, source revision, materials language, approved outline, real learner evidence, and necessary verified sources. It composes the complete body and has no file, shell, question, research, or delegation access.
 
-Mentor can continue an independent explanation or learner question while a child is busy. A claim that depends on unfinished research remains pending. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
+`learning_job_result` is for cancellation or recovery of the same accepted child; recovery waits inside the call while it remains active. Parent cancellation propagates to the child. Transport errors retain the accepted ID and do not authorize a replacement without inspecting its state. Deferred notifications are not emitted. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
 
-Topic job metadata is stored with authoritative state. Same-worker work for one topic is not duplicated across parent sessions or simultaneous starts. A newer revision coalesces behind the active job and makes the old result ineligible. A completed child result can be recovered through its host session after OpenCode restarts. Before attachment, the runtime checks topic ownership, worker kind, exact source revision, destination, and content.
+Topic job metadata is stored with authoritative state. Same-worker work for one topic is not duplicated across parent sessions or simultaneous starts. A newer revision stays blocked behind the accepted job and makes the old result ineligible. A completed child result can be recovered through its host session after OpenCode restarts. Before attachment, the runtime checks topic ownership, worker kind, exact source revision, destination, and content.
 
 ## Language progression
 
@@ -246,7 +248,7 @@ Model-backed cases require explicit credit authorization and record the exact mo
 ## Troubleshooting
 
 - `learning_tool_helper_unavailable`: install `@opencode-ai/plugin` in the selected OpenCode config target and re-inspect installed tools.
-- `async_session_api_unavailable`: the host lacks one of the required session APIs; no synchronous fallback is used.
+- `sequential_session_api_unavailable`: the host lacks one of the required synchronous session APIs; no model job is launched.
 - `unsupported_existing_topic_without_state`: choose a new topic slug or deliberately recreate the topic under schema version 1.
 - `revision_conflict`: read current state and form a new event from that revision; do not replay a different event body.
 - `topic_busy` or `ambiguous_topic_lock`: inspect the owner; do not remove a lock unless its dead PID is proven.
