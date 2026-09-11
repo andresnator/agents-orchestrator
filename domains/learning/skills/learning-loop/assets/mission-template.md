@@ -11,11 +11,11 @@
 
 ## Observable goal
 
-{A concrete practical outcome.}
+{An observable explanation, decision, or practical outcome matching the agreed scope.}
 
 ## Success criteria
 
-- [ ] {practical criterion and evidence needed}
+- [ ] {agreed criterion and evidence needed; practical only when included in scope}
 - [ ] {explanation of an essential decision}
 
 ## Cadence

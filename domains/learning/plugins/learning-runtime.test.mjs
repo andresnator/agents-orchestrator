@@ -491,3 +491,292 @@ test("shouldCancelRecoveredChildAndKeepNewerRequestsFromRelaunching", async () =
   assert.equal(result.supersededRevision, 2)
   assert.deepEqual(fixture.counts(), { created: 1, aborted: 1 })
 })
+
+const NEXT_MODULE_ID = "M-0002"
+const SCOPE_PROPOSAL = {
+  goal: "Explain plugins theoretically and coordinate local and remote work.",
+  modules: [
+    { id: MODULE_ID, title: "Plugin theory", win: "Explain the plugin contract and safe activation decisions." },
+    { id: NEXT_MODULE_ID, title: "Integration", win: "Coordinate local and remote work without a plugin implementation." },
+  ],
+  reason: "The learner explicitly wants plugins to be theoretical only.",
+  retired_requirements: ["Implement, activate, diagnose and disable a real plugin.", "Incorporate a personal plugin in the integration project."],
+}
+
+function flexibleTopic() {
+  const initial = topicState("consolidation", "none")
+  initial.topic.goal = "Implement a plugin and integrate it with local and remote work."
+  initial.modules[0].win = "Implement and operate a plugin."
+  initial.modules[0].practice_skipped = true
+  delete initial.modules[0].attempt
+  initial.modules[0].consolidation = { revision: 6, learner_evidence: "Sound theoretical security decisions; no operation observed.", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: ["No implemented plugin."] }
+  initial.modules.push({ id: NEXT_MODULE_ID, title: "Integration", win: "Incorporate your plugin.", phase: "mission", taught_concept_ids: [], retention: { disposition: "pending", selected_card_ids: [] }, artifacts: {} })
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  for (const path of ["notes/m-0001.md", "exercises/m-0001.md"]) initial.artifacts[path] = { content: "# Prior material\n\nPractice omitted, but required by the original goal.", source_revision: 6, module_id: MODULE_ID, selected_card_ids: [] }
+  return initial
+}
+
+async function scopeChoice(fixture, initial, selection = "apply") {
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug: initial.topic.slug, proposal_json: JSON.stringify(SCOPE_PROPOSAL) })
+  const interaction_id = await fixture.choose(resolved.choice.purpose, resolved.consent_subject, resolved.revision, resolved.choice.options, selection)
+  return { type: "revise_scope", event_id: "REVISE-SCOPE", date: "2026-09-11", interaction_id, ...SCOPE_PROPOSAL }
+}
+
+async function selectModule(fixture, initial, module_id, event_id) {
+  const topic_slug = initial.topic.slug
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "select_module", topic_slug, module_id, reason: "The learner needs this module now." })
+  const interaction_id = await fixture.choose(resolved.choice.purpose, resolved.consent_subject, resolved.revision, resolved.choice.options, "select")
+  return fixture.call("learning_commit", { topic_slug, expected_revision: resolved.revision, event: { type: "select_module", event_id, date: "2026-09-11", interaction_id, module_id, reason: resolved.consent_subject.reason } })
+}
+
+test("shouldReviseTheoryScopeAndCloseWithReusedEvidenceAfterRefreshingMaterials", async (t) => {
+  // Given
+  const initial = flexibleTopic()
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const event = await scopeChoice(fixture, initial)
+  let revision = initial.revision
+  const commit = async (event) => {
+    const result = await fixture.call("learning_commit", { topic_slug, expected_revision: revision, event: { date: "2026-09-11", ...event } })
+    revision = result.revision
+    return result
+  }
+
+  // When
+  await commit(event)
+  const revised = await fixture.call("learning_state_read", { topic_slug })
+  assert.deepEqual(revised.modules.map(({ id, title, win }) => ({ id, title, win })), SCOPE_PROPOSAL.modules)
+  assert.equal(revised.topic.goal, SCOPE_PROPOSAL.goal)
+  assert.deepEqual(revised.scope_revisions, [{ ...SCOPE_PROPOSAL, before: { goal: initial.topic.goal, modules: initial.modules.map(({ id, title, win, consolidation }) => ({ id, title, win, ...(consolidation ? { consolidation } : {}) })) }, revision, event_id: event.event_id, date: event.date, interaction_id: event.interaction_id }])
+  assert.deepEqual(revised.modules[0].consolidation, initial.modules[0].consolidation)
+  const close = { type: "close_module", event_id: "CLOSE-REVISED", module_id: MODULE_ID }
+  await assert.rejects(commit(close), /module_close_requirements_not_met/)
+  assert.equal((await commit(event)).duplicate, true)
+  await commit({ type: "record_consolidation", event_id: "REASSESS", module_id: MODULE_ID, evidence_refs: [LEARNER_REFERENCE], learner_evidence: "The theoretical goal is met. Practical competence is not assessed; its requirement was retired by consent.", blocking_gaps: [] })
+  await assert.rejects(commit(close), /module_artifacts_not_current/)
+  for (const kind of ["note", "exercise"]) {
+    const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID, selected_card_ids: [] }, prompt: "Revised theoretical goal. Practice omitted and no longer required, not demonstrated. Retention none. Reuse verified evidence." })
+    const output = JSON.parse(job.result)
+    await commit({ type: "attach_artifact", event_id: `REVISED-${kind}`, module_id: MODULE_ID, selected_card_ids: [], path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id })
+  }
+  await commit(close)
+  const resumed = await LearningRuntimePlugin({ client: fixture.client, directory: fixture.directory })
+  const state = JSON.parse(await resumed.tool.learning_state_read.execute({ topic_slug }, CONTEXT))
+  await resumed.tool.learning_recover.execute({ topic_slug }, CONTEXT)
+
+  // Then
+  assert.deepEqual(state.verified_evidence, initial.verified_evidence)
+  assert.deepEqual(state.modules[0].consolidation.evidence_refs, [LEARNER_REFERENCE])
+  assert.equal(state.modules[0].phase, "closed")
+  assert.equal(state.modules[0].practice_skipped, true)
+  assert.equal(state.modules[0].attempt, undefined)
+  assert.equal(state.modules[1].phase, "mission")
+  assert.equal(state.topic.status, "active")
+  assert.equal(state.current_module_id, NEXT_MODULE_ID)
+  assert.deepEqual(state.scope_revisions, revised.scope_revisions)
+  const mission = await readFile(join(fixture.directory, ".ai/learning", topic_slug, "mission.md"), "utf8")
+  assert.match(mission, /Scope revisions/)
+  assert.match(mission, /Retired requirements \(not demonstrated\)/)
+  assert.match(mission, /Implement a plugin and integrate it/)
+})
+
+for (const invalid of ["cancel", "revise", "altered-goal", "altered-module", "altered-reason", "altered-retirements", "wrong-interaction", "stale"]) {
+  test(`shouldPreserveStateWhenScopeConsentIs${invalid}`, async (t) => {
+    // Given
+    const initial = flexibleTopic()
+    const fixture = await pluginFixture(t, initial)
+    const event = await scopeChoice(fixture, initial, ["cancel", "revise"].includes(invalid) ? invalid : "apply")
+    const root = join(fixture.directory, ".ai/learning", initial.topic.slug, ".state.json")
+    if (invalid === "altered-goal") event.goal = "Another goal"
+    if (invalid === "altered-module") event.modules = [{ ...SCOPE_PROPOSAL.modules[0], win: "Different requirement" }]
+    if (invalid === "altered-reason") event.reason = "Another reason"
+    if (invalid === "altered-retirements") event.retired_requirements = []
+    if (invalid === "wrong-interaction") event.interaction_id = "unknown"
+    if (invalid === "stale") await fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: initial.revision, event: { type: "record_consolidation", event_id: "NEW-ASSESSMENT", date: "2026-09-11", module_id: MODULE_ID, evidence_refs: [LEARNER_REFERENCE], learner_evidence: "Same theory, implementation still absent.", blocking_gaps: ["No implemented plugin."] } })
+    const before = await readFile(root, "utf8")
+    const current = JSON.parse(before)
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: current.revision, event }), /interaction/)
+    assert.equal(await readFile(root, "utf8"), before)
+  })
+}
+
+test("shouldRequireReassessmentEvenWhenOldConsolidationHasNoGaps", async (t) => {
+  // Given
+  const initial = flexibleTopic()
+  initial.modules[0].consolidation.blocking_gaps = []
+  const fixture = await pluginFixture(t, initial)
+  const event = await scopeChoice(fixture, initial)
+
+  // When
+  const revised = await fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: initial.revision, event })
+
+  // Then
+  await assert.rejects(fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: revised.revision, event: { type: "close_module", event_id: "CLOSE", date: "2026-09-11", module_id: MODULE_ID } }), /scope_requires_reassessment/)
+})
+
+test("shouldDeferResumeAndPreservePendingWorkAcrossRestart", async (t) => {
+  // Given
+  const initial = flexibleTopic()
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+
+  // When
+  await selectModule(fixture, initial, NEXT_MODULE_ID, "MOVE")
+  const resumed = await LearningRuntimePlugin({ client: fixture.client, directory: fixture.directory })
+  const state = JSON.parse(await resumed.tool.learning_state_read.execute({ topic_slug }, CONTEXT))
+  const path = await readFile(join(fixture.directory, ".ai/learning", topic_slug, "path.md"), "utf8")
+  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: state.revision, event: { type: "complete_topic", event_id: "COMPLETE", date: "2026-09-11", evidence_refs: [LEARNER_REFERENCE] } }), /topic_has_open_modules/)
+  await selectModule(fixture, initial, MODULE_ID, "RETURN")
+  const returned = await fixture.call("learning_state_read", { topic_slug })
+
+  // Then
+  assert.equal(state.current_module_id, NEXT_MODULE_ID)
+  assert.deepEqual({ ...state.modules[0], deferred: undefined }, { ...initial.modules[0], deferred: undefined })
+  assert.equal(state.modules[0].deferred.reason, "The learner needs this module now.")
+  assert.deepEqual(state.modules[1], initial.modules[1])
+  assert.deepEqual(state.topic, initial.topic)
+  assert.deepEqual(state.artifacts, initial.artifacts)
+  assert.match(path, /Current module: M-0002/)
+  assert.match(path, /deferred: The learner needs this module now/)
+  assert.equal(returned.current_module_id, MODULE_ID)
+  assert.deepEqual(returned.modules[0], initial.modules[0])
+  assert.equal(returned.modules[1].deferred.reason, "The learner needs this module now.")
+})
+
+for (const invalid of ["cancel", "altered-reason", "wrong-module", "unshown", "stale"]) {
+  test(`shouldPreserveStateWhenModuleSelectionIs${invalid}`, async (t) => {
+    // Given
+    const initial = flexibleTopic()
+    const fixture = await pluginFixture(t, initial)
+    const topic_slug = initial.topic.slug
+    const { resolved } = await fixture.call("learning_event_reference", { event_type: "select_module", topic_slug, module_id: NEXT_MODULE_ID, reason: "Urgent priority" })
+    let interaction_id
+    if (invalid === "unshown") interaction_id = (await fixture.call("learning_choice", { purpose: resolved.choice.purpose, revision: resolved.revision, subject_json: resolved.subject_json, question: "¿Avanzar?", options: resolved.choice.options.map((id) => ({ id, label: id, description: id })) })).id
+    else interaction_id = await fixture.choose(resolved.choice.purpose, resolved.consent_subject, resolved.revision, resolved.choice.options, invalid === "cancel" ? "cancel" : "select")
+    const event = { type: "select_module", event_id: "MOVE", date: "2026-09-11", module_id: NEXT_MODULE_ID, reason: "Urgent priority", interaction_id }
+    if (invalid === "altered-reason") event.reason = "Different reason"
+    if (invalid === "wrong-module") event.module_id = "M-9999"
+    const root = join(fixture.directory, ".ai/learning", topic_slug, ".state.json")
+    const before = await readFile(root, "utf8")
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: initial.revision + (invalid === "stale" ? 1 : 0), event }), /interaction|unknown_module|revision_conflict/)
+    assert.equal(await readFile(root, "utf8"), before)
+  })
+}
+
+test("shouldAssessPriorKnowledgeWithoutInventingClassOrPractice", () => {
+  // Given
+  const initial = topicState("mission")
+  delete initial.modules[0].attempt
+  delete initial.modules[0].consolidation
+  delete initial.modules[0].class_evidence
+  initial.modules[0].taught_concept_ids = []
+  initial.concepts[0].taught = false
+  const choice = answeredReadiness(initial)
+
+  // When
+  let state = learningRuntimeContracts.applyLearningEvent(initial, initial.topic.slug, skipEvent(choice), choice).state
+  const consolidation = { type: "record_consolidation", event_id: "KNOWN", date: "2026-09-11", module_id: MODULE_ID, evidence_refs: [LEARNER_REFERENCE], learner_evidence: "Prior explanation meets the goal.", blocking_gaps: [] }
+  assert.throws(() => learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, consolidation), /unverified_evidence_reference/)
+  state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, consolidation, undefined, [LEARNER_REFERENCE]).state
+  state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { ...previewEvent(), source_revision: state.revision }).state
+
+  // Then
+  assert.equal(state.modules[0].phase, "consolidation")
+  assert.equal(state.modules[0].class_evidence, undefined)
+  assert.equal(state.modules[0].attempt, undefined)
+  assert.equal(state.concepts[0].taught, false)
+  assert.deepEqual(state.modules[0].taught_concept_ids, [])
+  assert.deepEqual(state.modules[0].retention.preview.cards, [])
+  assert.throws(() => learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { type: "close_module", event_id: "CLOSE", date: "2026-09-11", module_id: MODULE_ID }), /module_close_requirements_not_met/)
+})
+
+for (const invalid of ["unknown-module", "closed-module", "duplicate-module", "empty-modules", "empty-goal", "completed-topic"]) {
+  test(`shouldRejectScopeProposalWhen${invalid}`, async (t) => {
+    // Given
+    const initial = flexibleTopic()
+    const proposal = structuredClone(SCOPE_PROPOSAL)
+    if (invalid === "closed-module") initial.modules[1].phase = "closed"
+    if (invalid === "unknown-module") proposal.modules[1].id = "M-9999"
+    if (invalid === "duplicate-module") proposal.modules.push(proposal.modules[0])
+    if (invalid === "empty-modules") proposal.modules = []
+    if (invalid === "empty-goal") proposal.goal = " "
+    if (invalid === "completed-topic") {
+      initial.modules.forEach((module) => { module.phase = "closed" })
+      initial.topic.status = "completed"
+      initial.topic.completion = { date: "2026-09-11", event_id: "OLD-COMPLETE", evidence: LEARNER_REFERENCE.quote, evidence_refs: [LEARNER_REFERENCE] }
+      initial.applied_events["OLD-COMPLETE"] = "0".repeat(64)
+    }
+    const fixture = await pluginFixture(t, initial)
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug: initial.topic.slug, proposal_json: JSON.stringify(proposal) }), /unknown_module|closed_module_scope_immutable|duplicate_module_id|affected_modules_required|invalid_goal|topic_already_completed/)
+    assert.deepEqual(await fixture.call("learning_state_read", { topic_slug: initial.topic.slug }), initial)
+  })
+}
+
+test("shouldOfferDeferredWorkAfterClosingTheSelectedModule", async (t) => {
+  // Given
+  const initial = flexibleTopic()
+  initial.modules[1] = { ...structuredClone(initial.modules[0]), id: NEXT_MODULE_ID, consolidation: { ...initial.modules[0].consolidation, blocking_gaps: [] }, artifacts: { note: "notes/m-0002.md", exercise: "exercises/m-0002.md" } }
+  for (const path of ["notes/m-0002.md", "exercises/m-0002.md"]) initial.artifacts[path] = { content: "# Current material", source_revision: 6, module_id: NEXT_MODULE_ID, selected_card_ids: [] }
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+
+  // When
+  const selected = await selectModule(fixture, initial, NEXT_MODULE_ID, "SELECT")
+  await fixture.call("learning_commit", { topic_slug, expected_revision: selected.revision, event: { type: "close_module", event_id: "CLOSE-SELECTED", date: "2026-09-11", module_id: NEXT_MODULE_ID } })
+  const state = await fixture.call("learning_state_read", { topic_slug })
+  const path = await readFile(join(fixture.directory, ".ai/learning", topic_slug, "path.md"), "utf8")
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "select_module", topic_slug, module_id: MODULE_ID, reason: "Return to pending work" })
+
+  // Then
+  assert.equal(state.current_module_id, undefined)
+  assert.equal(state.modules[0].phase, "consolidation")
+  assert.ok(state.modules[0].deferred)
+  assert.equal(state.modules[1].phase, "closed")
+  assert.equal(state.modules[1].deferred, undefined)
+  assert.match(path, /none; choose a deferred module/)
+  assert.equal(resolved.consent_subject.from_module_id, null)
+})
+
+test("shouldReplayNavigationWithoutDuplicatingConsentAndRejectChangedReplay", async (t) => {
+  // Given
+  const initial = flexibleTopic()
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "select_module", topic_slug, module_id: NEXT_MODULE_ID, reason: "Priority" })
+  const interaction_id = await fixture.choose(resolved.choice.purpose, resolved.consent_subject, resolved.revision, resolved.choice.options, "select")
+  const event = { type: "select_module", event_id: "MOVE", date: "2026-09-11", module_id: NEXT_MODULE_ID, reason: "Priority", interaction_id }
+  const args = { topic_slug, expected_revision: initial.revision, event }
+
+  // When
+  await fixture.call("learning_commit", args)
+  const before = await fixture.call("learning_state_read", { topic_slug })
+  const replay = await fixture.call("learning_commit", args)
+
+  // Then
+  assert.equal(replay.duplicate, true)
+  assert.deepEqual(await fixture.call("learning_state_read", { topic_slug }), before)
+  await assert.rejects(fixture.call("learning_commit", { ...args, event: { ...event, reason: "Changed" } }), /event_id_conflict/)
+})
+
+for (const mutation of ["history-shape", "history-entry", "history-module", "current-closed", "deferred-shape", "scope-revision"]) {
+  test(`shouldRejectMalformedOptionalProgressStateWhen${mutation}`, async (t) => {
+    // Given
+    const initial = flexibleTopic()
+    if (mutation === "history-shape") initial.scope_revisions = {}
+    if (mutation === "history-entry") initial.scope_revisions = [null]
+    if (mutation === "history-module") { initial.scope_revisions = [{ revision: 7, modules: {} }]; initial.modules[0].scope_revision = 7 }
+    if (mutation === "current-closed") { initial.current_module_id = NEXT_MODULE_ID; initial.modules[1].phase = "closed" }
+    if (mutation === "deferred-shape") initial.modules[0].deferred = true
+    if (mutation === "scope-revision") initial.modules[0].scope_revision = initial.revision + 1
+    const fixture = await pluginFixture(t, initial)
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_state_read", { topic_slug: initial.topic.slug }), /state_malformed/)
+  })
+}

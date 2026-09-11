@@ -69,6 +69,21 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 - **Essential negative variant:** Submit fake message/part IDs, altered quotes, synthetic text, worker text and unstored foreign-session references; every rejection leaves state unchanged. Restart and complete with references already verified in the same topic, even with original history unavailable; replay the identical event without another write. Read old schema-1 states without migration, promoting historical narrative, or changing prior completion. Reject stale, wrong-module, unshown, dismissed, or wrong-option skip consent, and reject Close without sufficient verified Consolidation. Delay the writer, advance state with a valid learner event, then return the old output. The old artifact is rejected; teaching already supported by committed state may continue. A current-revision writer can later commit the artifact.
 - **Cleanup:** Remove the disposable topic and project.
 
+### MT-LEARNING-FLEXIBLE-PATH
+
+- **Title:** Revise scope and defer modules without crediting unobserved competence
+- **Coverage key:** `learning/progression/flexible-path`
+- **Applies to:** `domains/learning/agents/mentor.md`, `domains/learning/plugins/learning-runtime.ts`, `domains/learning/plugins/learning-runtime.test.mjs`, `domains/learning/skills/learning-loop/**`
+- **Preconditions:** Use an isolated project with an active schema-1 topic. One module has skipped practice, verified theoretical explanations, resolved retention, materials, and a practical blocking gap; a later module also requires the practical deliverable. Do not use a real learner topic.
+- **Steps:**
+  1. Say `Quiero plugins únicamente teóricos; retira también la obligación de incorporarlos en el módulo siguiente.` Inspect the complete scope proposal and approve the native choice.
+  2. Let Mentor reuse the verified explanations, reassess the revised win, refresh both materials, and close the module without inventing practical evidence. Restart and inspect scope history and regenerated views.
+  3. In another unfinished module, say `Necesito pasar al siguiente ahora; deja este aplazado.` Approve navigation before completing practice or materials, restart, and later request the deferred module.
+  4. In a module still in Mission, supply a sufficient explanation and ask to omit redundant teaching and practice. Approve omission; resolve retention and deliver materials before closure.
+- **Expected result:** Scope revision updates the goal and affected wins atomically with exact native consent. Old goals, wins, assessments, citations and retired requirements remain traceable. Retired practice is not described as mastered or still mandatory. Reassessment and current materials remain necessary for Close. Navigation persists the selected module, preserves deferred phases and evidence, and does not impose prerequisite gates or require materials. Resume honors the selection. Prior knowledge can reach Consolidation without a fictitious Class or practice; only actual verified learner evidence supports closure. Legacy snapshots remain readable.
+- **Essential negative variant:** Cancel or alter either proposal, replay it against a newer revision, or substitute another module; state does not change. A changed scope with an old gap-free assessment still cannot close. A remaining conceptual gap blocks Close. Deferred modules block topic completion. A stale writer result cannot overwrite current material. Do not retry an already recorded omission or require repeated explanations merely after restart.
+- **Cleanup:** Remove only the isolated project and target.
+
 ### MT-LEARNING-AMBIGUOUS-ROUTE
 
 - **Title:** Choose a learning route before state access
