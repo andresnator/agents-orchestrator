@@ -11,6 +11,9 @@ const MAX_INPUT_CHARS = 24_000
 const MAX_CHOICE_QUESTION_CHARS = 300
 const MAX_RESULT_CHARS = 24_000
 const MAX_STATE_BYTES = 1_000_000
+// State-derived fields fit the persisted snapshot; JSON can escape each outline
+// character to six characters. Reserve another input-sized envelope for metadata.
+const MAX_WRITER_ASSIGNMENT_CHARS = MAX_STATE_BYTES + 7 * MAX_INPUT_CHARS
 const MAX_CHOICES = 12
 const MAX_RECORDS = 200
 const JOB_POLL_MS = 250
@@ -222,6 +225,7 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
   if (!state.concepts.every((item: any) => record(item) && /^K-\d{4}$/.test(item.id) && typeof item.title === "string" && strings(item.prerequisites) && item.prerequisites.every((id: string) => conceptIDs.has(id) && id !== item.id) && (item.fundamental === undefined || typeof item.fundamental === "boolean") && (item.learner_override === undefined || typeof item.learner_override === "boolean") && typeof item.taught === "boolean")) return false
   if (!state.modules.every((item: any) => {
     if (!record(item) || !/^M-\d{4}$/.test(item.id) || typeof item.title !== "string" || typeof item.win !== "string" || !["mission", "class", "practice", "consolidation", "closed"].includes(item.phase)) return false
+    if (!strings(item.taught_concept_ids) || !item.taught_concept_ids.every((id: string) => conceptIDs.has(id))) return false
     if (item.retention !== undefined) {
       if (!record(item.retention) || !["pending", "selected", "none", "deferred"].includes(item.retention.disposition)) return false
       if (!strings(item.retention.selected_card_ids) || !item.retention.selected_card_ids.every((id: string) => cardIDs.has(id))) return false
@@ -1290,7 +1294,7 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
   async function launch(context: ToolContext, input: { worker: Worker; scope: string; revision: number; prompt: string }) {
     requireTeacher(context)
     if (!available) throw new Error("sequential_session_api_unavailable")
-    boundedText(input.prompt, MAX_INPUT_CHARS)
+    boundedText(input.prompt, input.worker === "learning-writer" ? MAX_WRITER_ASSIGNMENT_CHARS : MAX_INPUT_CHARS)
     const topicScoped = TOPIC_SLUG.test(input.scope) && input.scope !== "summaries"
     const keys = [`parent:${context.sessionID}`, ...(topicScoped ? [`topic:${input.scope}:${input.worker}`] : [])]
     const existing = [...jobs.values()].find((job) => (job.parentID === context.sessionID || topicScoped && job.scope === input.scope && job.worker === input.worker) && ["starting", "running", "cancelling"].includes(job.status))
@@ -1457,6 +1461,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
     method: schema.enum(["learning-session", "learning-loop", "cornell-notes", "feynman-teachback", "language-loop", "bidirectional-translation", "anki-vocab", "english-tutor"]),
     destination_hint: schema.string().regex(WRITER_ARTIFACT_PATH).describe("Topic-relative lowercase path, e.g. notes/m-0001.md or exercises/m-0001.md; never include .ai/learning/<topic>/"), materials_language: schema.string().min(1).max(80),
     module_id: schema.string().optional(),
+    evidence_module_id: schema.string().optional().describe("For artifacts without module ownership, select verified learner evidence from this topic module; does not assign ownership"),
   }).strict()
   const evidence = createEvidence(client)
   const interactions = createInteractions()
@@ -1603,6 +1608,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         async execute(input, context) {
           requireTeacher(context)
           if ((input.worker === "learning-writer") !== (input.artifact !== undefined)) throw new Error("writer_artifact_required_only_for_writer")
+          boundedText(input.prompt, MAX_INPUT_CHARS)
           if (input.worker === "learning-summarizer" && input.scope !== "summaries") throw new Error("summarizer_scope_required")
           if (input.worker === "learning-writer" && (!TOPIC_SLUG.test(input.scope) || input.scope === "summaries")) throw new Error("writer_topic_scope_required")
           if (input.worker === "learning-researcher" && input.scope === "summaries") throw new Error("researcher_scope_invalid")
@@ -1625,9 +1631,11 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
               // committed module evidence supplies learner quotes; Mentor's prompt
               // text is instructions, never proof of learner words.
               const owner = module && (artifact.kind === "note" || artifact.kind === "exercise" || artifact.kind === "teachback") ? module : undefined
+              const evidenceModule = artifact.evidence_module_id === undefined ? owner : snapshot.modules.find((item) => item.id === artifact.evidence_module_id)
+              if (artifact.evidence_module_id !== undefined && (!evidenceModule || owner && owner.id !== evidenceModule.id)) throw new Error("invalid_evidence_module")
               const verified = new Set((snapshot.verified_evidence ?? []).map(canonicalJSON))
-              const learnerEvidence = owner
-                ? [...new Map([...(owner.attempt?.evidence_refs ?? []), ...(owner.consolidation?.evidence_refs ?? [])]
+              const learnerEvidence = evidenceModule
+                ? [...new Map([...(evidenceModule.attempt?.evidence_refs ?? []), ...(evidenceModule.consolidation?.evidence_refs ?? [])]
                   .filter((ref) => verified.has(canonicalJSON(ref)))
                   .map((ref) => [canonicalJSON(ref), ref])).values()]
                 : []

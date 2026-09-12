@@ -362,6 +362,59 @@ test("shouldSeparateOutlineAssessmentAndLearnerEvidenceInWriterAssignment", asyn
   assert.match(assignment.output_contract, /never learner quotes/)
 })
 
+test("shouldPreserveLargeAssessmentsAndLiteralEvidenceWhenLaunchingWriter", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  const assessment = "a".repeat(13_000)
+  initial.modules[0].attempt.evidence = assessment
+  initial.modules[0].consolidation.learner_evidence = assessment
+  initial.modules[0].attempt.evidence_refs = [LEARNER_REFERENCE]
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID }, prompt: "Compose." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+
+  // Then
+  assert.equal(job.status, "completed")
+  assert.ok(fixture.prompts.at(-1).length > 24_000)
+  assert.deepEqual(assignment.learner_evidence, [LEARNER_REFERENCE])
+  assert.deepEqual(assignment.teaching_assessment, { class_evidence: "Class completed", attempt_assessment: assessment, consolidation_assessment: assessment })
+})
+
+for (const kind of ["dialogue", "quiz"]) {
+  test(`shouldSelectVerifiedEvidenceWithoutOwnershipFor${kind}`, async (t) => {
+    // Given
+    const initial = topicState("consolidation")
+    initial.verified_evidence = [LEARNER_REFERENCE]
+    initial.modules[0].attempt.evidence_refs = [LEARNER_REFERENCE, UNVERIFIED_REFERENCE]
+    const fixture = await pluginFixture(t, initial)
+    const artifact = { kind, method: "learning-loop", destination_hint: `${kind === "quiz" ? "quizzes" : "dialogues"}/practice.md`, materials_language: "English", evidence_module_id: MODULE_ID }
+
+    // When
+    await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact, prompt: "Compose." })
+    const assignment = JSON.parse(fixture.prompts.at(-1))
+
+    // Then
+    assert.deepEqual(assignment.learner_evidence, [LEARNER_REFERENCE])
+    assert.equal(assignment.module_id, undefined)
+    await assert.rejects(fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { ...artifact, evidence_module_id: "M-9999" }, prompt: "Compose." }), /invalid_evidence_module/)
+  })
+}
+
+for (const taughtConcepts of [undefined, 42, [42], ["K-9999"]]) {
+  test(`shouldRejectMalformedTaughtConceptsWhenReadingState${JSON.stringify(taughtConcepts)}`, async (t) => {
+    // Given
+    const initial = topicState("class")
+    initial.modules[0].taught_concept_ids = taughtConcepts
+    const fixture = await pluginFixture(t, initial)
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_state_read", { topic_slug: initial.topic.slug }), /state_malformed/)
+  })
+}
+
 test("shouldKeepLearnerEvidencePendingWhenModuleHasNoReferences", async (t) => {
   // Given
   const initial = topicState("consolidation")
