@@ -165,7 +165,7 @@ Teacher assessment remains separate from learner quotes. Authorship verification
 - `approved_outline`: Mentor's composition instructions;
 - `teaching_assessment`: teacher-authored evaluation stored in the module (class evidence, attempt assessment, consolidation assessment);
 - `practice_status`: whether practice was skipped and the recorded attempt outcome;
-- `learner_evidence`: literal references with exact `session_id`, `message_id`, `part_id`, and `quote`, built from the module's attempt and consolidation, checked against the topic's `verified_evidence`, deduplicated, and restricted to that module.
+- `learner_evidence`: literal references with exact `session_id`, `message_id`, `part_id`, and `quote`; an explicit `artifact.evidence_refs` selection takes priority, while omitted selection falls back to verified references from the owning or selected module.
 
 The writer must quote the learner only from `learner_evidence`; outline and assessment text is teacher authorship and never presented as learner words. Empty `learner_evidence` stays pending. Notes use `cornell-notes` and exercises use `learning-loop`; the loaded skills carry the full inline templates.
 
