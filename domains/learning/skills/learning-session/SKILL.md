@@ -30,4 +30,4 @@ Use only needed, actually available evidence; name uncertainty and sources hones
 
 Return useful teaching inline. On explicit request, also return a summary draft grounded in the supplied session, with used sources. A teacher's synthesis is not learner evidence.
 
-No state discovery, due-check, file write, card admission, or automatic saving. This method needs no named agent, sibling skill, or project directory. A caller may separately save an explicitly requested draft without creating a route or scheduling cards.
+No state discovery, due-check, file write, or automatic saving. This method needs no named agent, sibling skill, or project directory. A caller may separately save an explicitly requested draft without creating a route or durable state.

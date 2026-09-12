@@ -7,4 +7,4 @@ Handle this explicit learning request as Mentor, preserving the raw selectors:
 
 `$ARGUMENTS`
 
-Classify intent before state access. A natural-language request to create a path or learning route selects `learning-loop` directly, just like `path <topic>`. Ask session/path only if the learner's intent is ambiguous. Follow the selected method and runtime capabilities.
+Classify intent before state access. A natural-language request to create a path or learning route selects `learning-loop` directly, just like `path <topic>`. `review` is a one-off, learner-requested retrieval pass with no calendar, due dates, or grades. Ask session/path only if the learner's intent is ambiguous. Follow the selected method and runtime capabilities.

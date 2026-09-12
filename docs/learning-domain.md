@@ -1,11 +1,10 @@
 # Use the Learning Domain
 
-Choose a one-off session to learn something now, a durable path for repeated practice and review, or `/english` for explicit English coaching.
+Choose a one-off session to learn something now, a durable path for repeated practice and on-demand review, or `/english` for explicit English coaching.
 
 ```text
 /learn session explícame el event loop con un ejemplo
 /learn path validación de caché HTTP para decidir reutilizar, revalidar o descargar
-/learn review cache-http
 /english I have worked here since three years
 ```
 
@@ -13,13 +12,13 @@ One-off teaching creates no files unless the learner explicitly approves an inde
 
 ## Install
 
-Learning owns all of its required agents, commands, skills, templates, and runtime plugins. Install it without a sibling domain:
+Learning owns all of its required agents, commands, skills, templates, and the runtime plugin. Install it without a sibling domain:
 
 ```bash
 installers/opencode.sh install --domain learning
 ```
 
-Filtered installation synchronizes the selected target. Use a fresh target for verification or include every domain that should remain in an existing target.
+Filtered installation synchronizes the selected target. Use a fresh target for verification or include every domain that should remain in an existing target. Re-running the installer after upgrading from an older checkout also removes previously managed spaced-repetition files (the `recall-calc` plugin and `spaced-recall` skill); existing topic directories keep their files as historical data.
 
 ## Verify an isolated target
 
@@ -50,12 +49,11 @@ Configure a provider only inside the disposable target. A scripted loopback prov
 
 Inspect `mentor`, `english-tutor`, `learning-researcher`, `learning-writer`, and `learning-summarizer`. Inspect the same server's `/doc` and `/experimental/tool?provider=<id>&model=<id>`. The installed target must expose:
 
-- `recall_due` and `recall_schedule`
 - `learning_context`, `learning_event_reference`, `learning_state_read`, `learning_commit`, and `learning_recover`
-- `learning_due`, `learning_choice`, and `learning_choice_result`
+- `learning_choice`, `learning_choice_result`, and `learning_evidence`
 - `learning_job_start`, `learning_job_result`, and `learning_summary_create`
 
-A direct source import does not establish installed availability. A missing host helper fails explicitly with `learning_tool_helper_unavailable`.
+`recall_due`, `recall_schedule`, and `learning_due` must be absent. A direct source import does not establish installed availability. A missing host helper fails explicitly with `learning_tool_helper_unavailable`.
 
 ## Choose the route
 
@@ -64,19 +62,19 @@ Mentor classifies the raw request before loading a skill, reading the date, or a
 | Request | Route |
 | --- | --- |
 | `/learn session <request>` or a clearly bounded explanation | `learning-session` |
-| `/learn path <topic>`, natural-language requests such as “créame un path”, continuation, review, repetition, progress, or another durable mode | `learning-loop` and the matching independent method |
+| `/learn path <topic>`, natural-language requests such as “créame un path”, continuation, on-demand review, repetition, progress, or another durable mode | `learning-loop` and the matching independent method |
 | A genuinely ambiguous topic such as `/learn pizza` | Localized native session/path choice first |
 | `/english <text>` | `english-tutor` only |
 
 Existing topics never decide an ambiguous route. The learner can select a native option or state an explicit route in chat. Route selection does not require durable consent.
 
-Present the complete proposal in chat with short paragraphs, lists, or tables; card cues and answers, including replacements, appear in full. Only `learning_choice.question` is limited to 300 characters, with brief options. Longer questions are rejected before UI and must be rewritten, never automatically truncated; structured subjects retain their existing limit and digest validation.
+Present the complete proposal in chat with short paragraphs, lists, or tables. Only `learning_choice.question` is limited to 300 characters, with brief options. Longer questions are rejected before UI and must be rewritten, never automatically truncated; structured subjects retain their existing limit and digest validation.
 
 For a closed choice, `learning_choice` prepares data and returns `not_shown`, `next_tool: question`, and exact `next_args`. Mentor must call `question` to open the UI, then read `learning_choice_result` after it returns. Reading a staged choice also returns these instructions; polling never shows an interface or turns chat text into mutation consent.
 
 ## One-off sessions
 
-One-off teaching answers first, uses progressive disclosure, and asks one focused learner question at a time. It performs no due-check and creates no mission, path, note, queue, or card.
+One-off teaching answers first, uses progressive disclosure, and asks one focused learner question at a time. It performs no due-check and creates no mission, path, note, or queue.
 
 ### Save an independent summary
 
@@ -90,7 +88,7 @@ Saving requires an explicit positive native choice. Mentor sends only the pertin
 
 The summary segment is frozen at the save request. Mentor obtains native approval before launching the summarizer and awaits and saves its completed result in the same turn, without requiring another request. Subsequent conversation does not extend or invalidate that segment.
 
-One approval can create one file. Another explicit save, even with the same title during the same second, receives another path and cannot overwrite the first. Malformed output creates no file. The summary remains independent: it creates no topic, cards, progress, or recall handoff.
+One approval can create one file. Another explicit save, even with the same title during the same second, receives another path and cannot overwrite the first. Malformed output creates no file. The summary remains independent: it creates no topic, progress, or handoff.
 
 The awaited result returns to the current tool call; no deferred notice or extra learner turn is needed. A saved path is reported only after successful creation.
 
@@ -105,7 +103,6 @@ Every topic has one semantic authority:
     .state.json
     mission.md
     path.md
-    review-queue.md
     vocabulary.md
     gaps.md
     resources.md                 # when composed
@@ -127,7 +124,7 @@ Every topic has one semantic authority:
 5. regenerates views for that revision; and
 6. marks views current only after generation succeeds.
 
-`learning_event_reference` publishes every supported discriminated event payload and its exact consent subject on demand. An identical event ID and body is idempotent. Reusing the ID with another body fails. Two commits at one expected revision cannot both win, duplicate change IDs are rejected, and the complete resulting snapshot is validated before replacement. If view generation is interrupted, committed state remains authoritative and `learning_recover` regenerates views without applying the event again.
+`learning_event_reference` publishes every supported discriminated event payload and its exact consent subject on demand. An identical event ID and body is idempotent. Reusing the ID with another body fails. Two commits at one expected revision cannot both win, and the complete resulting snapshot is validated before replacement. If view generation is interrupted, committed state remains authoritative and `learning_recover` regenerates views without applying the event again. `review-queue.md` is no longer generated; an existing file from an older version is left untouched as history.
 
 A lock records PID and token. Recovery first claims that exact stale token with an exclusive file, rechecks the owner, and only then removes it; another process cannot delete a replacement lock. A live, malformed, or already-claimed lock stops the mutation. Topic, state-file, and artifact paths are canonicalized under the active project's `.ai/learning/`; traversal and symlink escape fail before content is read.
 
@@ -144,11 +141,10 @@ Non-language modules follow `Class → optional Practice → Consolidation`:
 | Boundary | Required evidence |
 | --- | --- |
 | Class | Objective, central relationships, a worked example different from the target exercise, and one focused learner response |
-| Retention | Zero to two exact eligible card previews; selected, none, or deferred disposition |
-| Readiness | Separate native Practicar / Omitir choice (`readiness`: `ready` / `skip`), offered once and reused on resume |
+| Readiness | Separate native Practicar / Omitir choice (`readiness`: `ready` / `skip`), offered once directly after Class and reused on resume |
 | Practice | Actual attempt on a new application, with hints faded from observed performance |
 | Consolidation | Learner explanation of essential decisions and transfer, with no unresolved conceptual gap |
-| Close | Completed or explicitly omitted practice, sufficient explanation, no blocking gap, resolved retention, and valid module note and exercise |
+| Close | Completed or explicitly omitted practice, sufficient explanation, no blocking gap, and valid module note and exercise |
 
 Actual evidence may satisfy more than one consolidation purpose. Do not demand a redundant Summary, debrief, or teach-back when the learner's causal explanation and transfer already meet the rubric. Use teach-back selectively for a foundational or uncertain concept. Confidence and worker output are not learner evidence.
 
@@ -156,51 +152,36 @@ Actual evidence may satisfy more than one consolidation purpose. Do not demand a
 
 Clarification can expand Class or unfinished Practice within the module's win. After Practice is done, a new concept becomes separate reinforcement so the completed scope is not rewritten.
 
-After Consolidation, Mentor prepares missing materials automatically: commission a `cornell-notes` note, attach its exact result, then commission a `learning-loop` exercise at the new revision. These jobs run in series. Close requires both valid materials and the existing evidence conditions. Pending delivery resumes on real learner turns without another materials request.
+After Consolidation, Mentor prepares missing materials automatically: commission a `cornell-notes` note, attach its exact result, then commission a `learning-loop` exercise at the new revision. These jobs run in series. Close requires both valid materials and the existing evidence conditions. Pending delivery resumes on real learner turns without another materials request. On resume, only missing or invalidated materials are regenerated.
 
 `learning_evidence` finds literal excerpts only in real learner text parts of the current parent session. It excludes assistant/tool/worker messages and synthetic or ignored text. Practice completion and Consolidation require `evidence_refs` with session, message, part, and exact quote. The runtime verifies new references under the topic lock and stores them in the module and topic's `verified_evidence`; a foreign-session reference is reusable only when already verified in this same topic.
 
 Teacher assessment remains separate from learner quotes. Authorship verification does not prove correctness: Mentor evaluates mission criteria, reuses sufficient evidence, and asks only for a missing criterion. `complete_topic` accepts references and constructs its evidence from their quotes, preserving provenance, date, and event ID in `topic.completion`. The generated `mission.md` includes this completion record, including after restart or view recovery. Schema version remains 1; added fields are optional when reading old state. Existing completions are unchanged and historical narrative is not promoted to verified evidence. Identical committed events remain idempotent even when the original session history is unavailable.
 
-### Fundamental recall
+### Writer assignments
 
-The mission's default fundamental shortlist contains reusable prerequisites, decision rules, and costly recurring misconceptions. Its maximum is `floor(concept_count / 5)`. The denominator is the distinct mission concept inventory; fewer than five concepts can produce zero candidates. A learner may explicitly override this for a shown, taught concept.
+`learning_job_start` builds the writer assignment from committed state, not from Mentor's prose. It separates:
 
-After Class, Mentor proposes at most two eligible cards with exact cue, expected answer, concept/source revision, and short rationale. The runtime stores a canonical digest of that preview. Mentor passes both the stored structure and digest to `learning_choice`; the tool verifies the hash and binds the complete structure without adding JSON to the native question. For other entity choices, Mentor passes the exact subject JSON specified by `learning_event_reference`, and the runtime canonicalizes and hashes it. The runtime then binds native `question.asked` and `question.replied` events to the session, tool call, request ID, revision, topic, and target entity. Edits, reformulations, and splits use the same two-step rule: store the proposed replacement, then show the complete replacement in chat and obtain a brief native confirmation bound to its exact structure, change ID, and digest. A consent shown for one entity cannot mutate another. A model-authored `approved: true` has no authority.
+- `approved_outline`: Mentor's composition instructions;
+- `teaching_assessment`: teacher-authored evaluation stored in the module (class evidence, attempt assessment, consolidation assessment);
+- `practice_status`: whether practice was skipped and the recorded attempt outcome;
+- `learner_evidence`: literal references with exact `session_id`, `message_id`, `part_id`, and `quote`; an explicit `artifact.evidence_refs` selection takes priority, while omitted selection falls back to verified references from the owning or selected module.
 
-Resolve `learning_event_reference` with topic and module/card IDs before selecting cards or grading. It returns the current revision, exact subject JSON/digest and choice contract. Card options are stored proposal IDs plus exclusive `none`/`deferred` choices (`multiple: true`); grade options are exactly `Again`, `Hard`, `Good`, `Easy` (`multiple: false`). Labels may be translated; machine values are copied. Invalid options fail before the interface opens, and incompatible selections cannot authorize a mutation. Retain the staged choice ID, open its exact `next_args`, and apply only the result for that ID. Current unchanged content needs one confirmation; a real content change requires a new one.
+The writer must quote the learner only from `learner_evidence`; outline and assessment text is teacher authorship and never presented as learner words. Empty `learner_evidence` stays pending. Notes use `cornell-notes` and exercises use `learning-loop`; the loaded skills carry the full inline templates.
 
-Only the exact selected proposals receive final IDs at commit. Partial, extra, replayed, unrelated, or stale selections fail. Editing a scheduled card requires another meaningful choice; the former card is retired and the replacement receives a new ID with lineage. `none` and `deferred` create no card and do not block learning.
+## Practice on demand
 
-Cornell cues remain available as ordinary retrieval questions independently of SRS admission.
+There is no internal card system, no spaced-repetition calendar, and no grades. Cornell questions, quizzes, teach-backs, and drills remain ordinary practice resources that Mentor or a method skill can run whenever the learner asks. Each `review` request is one self-contained retrieval pass over supplied material; nothing is scheduled and no outcome is recorded as a durable grade.
 
-## Review
-
-Active cards use deterministic intervals:
-
-| Box | Next interval |
-| --- | --- |
-| 1 | 1 day |
-| 2 | 3 days |
-| 3 | 7 days |
-| 4 | 14 days |
-| 5 | 30 days |
-
-`recall_due` parses only the active `## Queue` table. It supports escaped Markdown pipes and reports duplicate IDs, invalid boxes, invalid dates, impossible Last/Next relations, and malformed rows. It never converts malformed data into a misleading empty queue. File reads are bounded and remain inside the current Learning root.
-
-Mentor recommends a grade from the actual answer and rubric; the learner still selects the grade through a native choice. Each grade is one deterministic state commit, so review does not launch a model writer per card. Good or Easy at box 5 keeps the card on 30-day maintenance. Suspension and retirement require explicit choices.
-
-`apply_card_change` publishes a `choice` contract: purpose `cards` for edit or `reformulation` for reformulate/split, single selection, options `<stored change.id>` and `cancel`. Staging validates these exact IDs; labels may be localized. The positive ID is never `accept`.
-
-The failure count is cumulative since creation or the last agreed repair. A third `Again` cannot be recorded as an ordinary grade. The learner chooses reformulate or split; the old card retires and replacements receive new IDs with history preserved in lineage.
+Older `schema_version: 1` topics may still carry historical card, retention, preview, and scheduling fields. The runtime reads and preserves them, never uses them to gate teaching, materials, closure, or completion, and rejects retired card operations (`preview_cards`, `select_cards`, `grade_card`, `preview_card_change`, `apply_card_change`, `set_card_status`, `set_fundamental_override`) if an old client invokes them. New states simply omit those fields.
 
 ## Research and artifact composition
 
 Mentor runs one bounded worker at a time per parent session. `learning_job_start` creates a real child through `client.session.create`, awaits `client.session.prompt`, and verifies terminal messages and status before returning the complete result. `learning_context.sequential_jobs` reports availability. Note → save → exercise → save → Close and approved summary composition/save complete in the same turn, using each commit's new revision, without learner “continue” messages.
 
-`learning_job_start.artifact` is required only for `learning-writer`: `kind`, `method`, `destination_hint`, `materials_language`, and, for notes/exercises, `module_id` and exact `selected_card_ids` (including `[]`). Destinations are lowercase paths relative to the topic, such as `notes/m-0001.md`; omit `.ai/learning/<topic>/`. Invalid destination, method, ownership or selection fails before child creation. Mentor may correct these rejected arguments; an accepted failed model job still never retries automatically. `prompt` supplies the bounded outline and evidence; the runtime constructs the assignment with `source_revision` from `revision`. The writer loads only the specified method and returns `{kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}`.
+`learning_job_start.artifact` is required only for `learning-writer`: `kind`, `method`, `destination_hint`, `materials_language`, and, for notes/exercises, `module_id`. Destinations are lowercase paths relative to the topic, such as `notes/m-0001.md`; omit `.ai/learning/<topic>/`. Invalid destination, method, or ownership fails before child creation. Mentor may correct these rejected arguments; an accepted failed model job still never retries automatically. `prompt` supplies the approved outline only; the runtime constructs the assignment with `source_revision` from `revision` plus the separated evidence fields. The writer loads only the specified method and returns `{kind, source_revision, destination_hint, content, module_id?}`.
 
-The researcher receives a question and source scope, returns at most five source-grounded findings, and cannot write or delegate. The writer receives one artifact kind, destination, source revision, materials language, approved outline, real learner evidence, and necessary verified sources. It composes the complete body and has no file, shell, question, research, or delegation access.
+The researcher receives a question and source scope, returns at most five source-grounded findings, and cannot write or delegate. The writer receives one artifact kind, destination, source revision, materials language, approved outline, teacher assessment, practice status, and literal learner evidence. It composes the complete body and has no file, shell, question, research, or delegation access.
 
 `learning_job_result` is for cancellation or recovery of the same accepted child; recovery waits inside the call while it remains active. Parent cancellation propagates to the child. Transport errors retain the accepted ID and do not authorize a replacement without inspecting its state. Deferred notifications are not emitted. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
 
@@ -208,11 +189,11 @@ Topic job metadata is stored with authoritative state. Same-worker work for one 
 
 ## Language progression
 
-Each language unit records passive exposure date, active due date, situation, bilingual text, status, and actual evidence. The initial pilot policy makes active practice due three days after passive exposure; the learner may change the policy in a future configured flow. Unit count never determines due work.
+Each language unit records the passive exposure date, situation, bilingual text, status, and actual evidence. Unit dates are historical records, never a calendar: a unit the learner selects is available for practice immediately, including units recorded with errors or as input-only. The default proposal follows unit order, and unit count never determines what is offered.
 
-On the due date, the learner reconstructs meaning from the native side. Natural equivalents are valid. Meaning-changing omissions or structural errors produce focused feedback and `needs-another-attempt` with a future date. Completion requires observed gist and meaning-preserving production.
+When the learner practices a unit, they reconstruct meaning from the native side. Natural equivalents are valid. Meaning-changing omissions or structural errors produce focused feedback and `needs-another-attempt`; the record notes the error without scheduling a future date. Completion requires observed gist and meaning-preserving production.
 
-Input-only remains a valid choice. If the mission requires production, it leaves that criterion pending and stays eligible for later productive practice. When no passive units remain, due active units continue until the finite course is drained; one-, five-, and six-unit courses need no buffer or invented unit.
+Input-only remains a valid choice. If the mission requires production, it leaves that criterion pending and stays eligible for later productive practice. Unfinished units remain available in unit order until the finite course is drained; one-, five-, and six-unit courses need no buffer or invented unit.
 
 ### Vocabulary export
 
@@ -225,13 +206,13 @@ Consent includes the complete preview rows in choice-option order; exported IDs 
 
 The export event validates every row, atomically updates the registry, and writes the selected batch once. Duplicate keys are target language plus NFKC/lowercase/whitespace-normalized unit. The first field must normalize to the candidate unit. Quotes, embedded newlines, wrong field counts, and reused exported candidates fail the whole event.
 
-An export does not prove import into Anki or learner mastery. It creates no second Leitner schedule unless the learner separately requests and confirms a conceptual card.
+An export does not prove import into Anki or learner mastery. It creates no internal review item or review date; any further study of the phrase is an explicit, separate learner activity.
 
 ## English privacy
 
 `/english` is explicit; the specialist never monitors unrelated conversation. It returns correction, reason, natural alternatives, and a focused retry. With another learner choice, a repeated issue may become a synthetic gap containing category, invented generic pattern, and distinct occurrence references. Raw user sentences, private examples, and correction history are never stored or handed to another agent.
 
-Gap adoption and review-card admission are separate interactions.
+Gap adoption schedules nothing; it only marks how the learner wants to use the gap.
 
 ## Permissions
 
@@ -255,3 +236,4 @@ Model-backed cases require explicit credit authorization and record the exact mo
 - `invalid_or_stale_artifact` or `unsettled_or_stale_writer`: inspect the accepted child and current revision; launch current work only after prior settlement is known.
 - A summary was not created: confirm a positive native save choice, completed summarizer JSON, and unused interaction ID.
 - A language topic will not complete: inspect input-only or retry-needed units when production is required.
+- `unsupported_event_type` for a card or scheduling event: the operation was retired; use the current `learning_event_reference` catalog.

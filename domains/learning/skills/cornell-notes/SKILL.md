@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # Cornell Notes
@@ -16,15 +16,15 @@ Format supplied teaching material into an inline Cornell lesson or standalone su
 
 ## Inputs
 
-Required: source material and profile (`lesson` or `summary`). Optional: title, supplied date, used sources, language, learner explanation, concept IDs, and already selected card IDs. Default language to the conversation. Distinguish teacher statements from actual learner words; mark missing learner evidence pending.
+Required: source material and profile (`lesson` or `summary`). Optional: title, supplied date, used sources, language, learner explanation, concept IDs, and literal learner evidence references. Default language to the conversation. Distinguish teacher statements from actual learner words; mark missing learner evidence pending.
 
 ## Method
 
-For a lesson, use the inline template below; no asset read is required. Write self-contained retrieval questions with explanatory Notes: each expected answer must be available in that row's taught material. Include the central model and relationships. Prefer a small useful set; split an overloaded lesson rather than fill a quota. Questions are available for practice whether or not selected for scheduling.
+For a lesson, use the inline template below; no asset read is required. Write self-contained retrieval questions with explanatory Notes: each expected answer must be available in that row's taught material. Include the central model and relationships. Prefer a small useful set; split an overloaded lesson rather than fill a quota. Questions remain available as ordinary retrieval practice for any later learner-requested review; there is no scheduling or calendar.
 
-Keep the learner Summary pending until their own explanation is supplied. Lightly clean their wording without adding understanding they did not demonstrate. Record retention disposition and only supplied selected IDs, including an empty list. Never infer consent from cues, a Summary, or a note.
+Keep the learner Summary pending until the learner's own explanation is supplied. Lightly clean their wording without adding understanding they did not demonstrate. Authorship separation is strict: supplied literal quotes (with their provenance) are the only learner words; teacher synthesis, outlines, and assessments are never presented as learner words, and a paraphrase is never quoted as literal. Record practice omission when supplied, without inventing completed practice.
 
-For a summary, lead with a synthesis, then a question/Notes table, a session-grounded example when available, and sources actually used (or the localized equivalent of `None`). Translate headings into the requested language. Do not add route metadata, progress, retention, or an invented learner Summary.
+For a summary, lead with a synthesis, then a question/Notes table, a session-grounded example when available, and sources actually used (or the localized equivalent of `None`). Translate headings into the requested language. Do not add route metadata, progress, or an invented learner Summary.
 
 A diagram is optional when it clarifies the material. Do not invent citations or claim that formatting improves measured comprehension.
 
@@ -60,11 +60,6 @@ Translate headings into the materials language and fill placeholders from suppli
 ## Learner Summary
 
 _Pending learner explanation or equivalent supplied evidence._
-
-## Retention
-
-- Disposition: pending
-- Selected card IDs: []
 ```
 
-Replace pending only with supplied evidence or the supplied selected/none/deferred decision. Never create card IDs while formatting a note.
+Replace the pending Summary only with supplied learner evidence, quoted literally when references are provided. Never invent or alter learner words while formatting a note.

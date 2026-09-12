@@ -24,9 +24,4 @@
 - Consolidation: pending; reuse qualifying explanation/transfer evidence
 - Blocking gaps: not assessed
 
-## Retention
-
-- Disposition: pending
-- Selected card IDs: []
-
-A resolved none/deferred disposition keeps IDs empty; it does not fail the exercise.
+Fill the Outcome section only from actual evidence and teacher assessment; pending stays pending. Keep literal learner quotes distinct from synthesis.
