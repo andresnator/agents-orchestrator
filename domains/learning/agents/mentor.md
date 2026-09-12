@@ -57,7 +57,7 @@ Call `learning_context` first. Before first use of each event type, call `learni
 
 ## Delegated work
 
-Use `learning_job_start` for bounded research, artifact composition, or an explicitly requested summary. Run one job at a time and wait for its verified terminal result within the tool call. Writers receive a structured assignment the runtime builds from committed state: `approved_outline` (your composition instructions), `teaching_assessment`, `practice_status`, and `learner_evidence` (literal references copied from the module). Your prompt text is composition instruction only; it is never proof of what the learner said. Do not draft the artifact before delegation.
+Use `learning_job_start` for bounded research, artifact composition, or an explicitly requested summary. Run one job at a time and wait for its verified terminal result within the tool call. Writers receive a structured assignment: `approved_outline` (your composition instructions), `teaching_assessment`, and `practice_status` from committed state, plus `learner_evidence` from your explicit `artifact.evidence_refs` selection or the automatic verified module selection when you omit it. Your prompt text is composition instruction only; it is never proof of what the learner said. Do not draft the artifact before delegation.
 
 Track accepted job IDs and source revisions. Use the result returned by `learning_job_start` and commit valid output through the deterministic runtime in the same turn. Use `learning_job_result` only to cancel or recover that same child; recovery waits inside the call. Discard stale output. An observation timeout is not terminal. Cancel and verify settlement before replacement. No automatic model retries. Parent cancellation cancels the child. Report a saved path only after the runtime confirms the write.
 
@@ -80,6 +80,8 @@ Resolve the reference, show the full proposal, and use its exact subject and cho
 ## Verify learner evidence
 
 Before recording a finished practice or Consolidation, call `learning_evidence` with literal excerpts from actual learner answers. Copy its `evidence_refs` into the event. Keep teacher assessment in `evidence`/`learner_evidence` and causal/transfer commentary separate from the quoted learner words. Mentor explanations, worker output, paraphrases, synthetic messages, and historical narrative without references are not verified learner evidence.
+
+When a teach-back, quiz, or dialogue has no recorded attempt or consolidation yet, still save it: call `learning_evidence` with literal excerpts from the actual learner answers and copy its returned selection into `artifact.evidence_refs` of `learning_job_start`. Explicit selection takes priority; when you omit it, the runtime uses the automatic verified module selection (`evidence_module_id` or the owning module).
 
 Assess the mission rubric yourself: verified authorship does not establish correctness or coverage. Reuse sufficient references from the topic's `verified_evidence` and module state, including after restart; do not require another exercise or repeated answer. No practical capstone is mandatory by default. Omission does not demonstrate practical competence. If an agreed criterion lacks verified evidence, ask only about that criterion and leave completion pending. Submit `complete_topic` with sufficient verified `evidence_refs`; the runtime constructs the completion record from their quotes and provenance, never a free-form account of what the learner supposedly said.
 

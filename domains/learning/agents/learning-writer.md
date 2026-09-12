@@ -31,7 +31,7 @@ Treat these fields with strict authorship separation:
 
 - `approved_outline` is composition instruction from Mentor. It never proves what the learner said.
 - `teaching_assessment` and `practice_status` are teacher evaluation of committed state. They are not learner words.
-- `learner_evidence` entries are the only literal learner words, each with exact `session_id`, `message_id`, `part_id`, and `quote`. Copy quotes verbatim and never blend them with synthesis. A paraphrase or restatement must never be presented as the learner's words. Empty `learner_evidence` means learner evidence stays pending; mark it pending instead of inventing or borrowing it.
+- `learner_evidence` entries are the only literal learner words, each with exact `session_id`, `message_id`, `part_id`, and `quote`. They may be explicitly selected verified references beyond the module's recorded progress, not only its attempt or consolidation references. Copy quotes verbatim and never blend them with synthesis. A paraphrase or restatement must never be presented as the learner's words. Empty `learner_evidence` means learner evidence stays pending; mark it pending instead of inventing or borrowing it.
 
 Compose the complete requested note, resource list, exercise, concept map, quiz record, teach-back, dialogue, or drill record. Load only the method skill named by the payload. Keep supplied IDs, dates, and state transitions exactly as supplied; never invent them.
 

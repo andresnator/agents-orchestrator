@@ -317,17 +317,28 @@ function learnerParts(messages: any[], sessionID: string): EvidenceReference[] {
   })
 }
 
-function createEvidence(client: Parameters<Plugin>[0]["client"]) {
-  async function parts(sessionID: string) {
-    const session = await client.session.get({ path: { id: sessionID }, throwOnError: true })
-    if (!session.data || session.data.parentID) throw new Error("learner_session_required")
-    const response = await client.session.messages({ path: { id: sessionID }, throwOnError: true })
-    if (!Array.isArray(response.data)) throw new Error("learner_history_unavailable")
-    return learnerParts(response.data, sessionID)
+async function learnerSource(client: Parameters<Plugin>[0]["client"], sessionID: string): Promise<EvidenceReference[]> {
+  const session = await client.session.get({ path: { id: sessionID }, throwOnError: true })
+  if (!session.data || session.data.parentID) throw new Error("learner_session_required")
+  const response = await client.session.messages({ path: { id: sessionID }, throwOnError: true })
+  if (!Array.isArray(response.data)) throw new Error("learner_history_unavailable")
+  return learnerParts(response.data, sessionID)
+}
+
+async function verifyReferences(client: Parameters<Plugin>[0]["client"], sessionID: string, refs: EvidenceReference[], stored: EvidenceReference[] = []): Promise<EvidenceReference[]> {
+  const fresh = refs.filter((ref) => !stored.some((known) => canonicalJSON(known) === canonicalJSON(ref)))
+  if (fresh.some((ref) => ref.session_id !== sessionID)) throw new Error("foreign_evidence_reference")
+  if (fresh.length) {
+    const source = await learnerSource(client, sessionID)
+    if (fresh.some((ref) => !source.some((part) => part.session_id === ref.session_id && part.message_id === ref.message_id && part.part_id === ref.part_id && part.quote.includes(ref.quote)))) throw new Error("unverified_evidence_reference")
   }
+  return refs
+}
+
+function createEvidence(client: Parameters<Plugin>[0]["client"]) {
   return {
     async locate(sessionID: string, excerpts: string[]) {
-      const source = await parts(sessionID)
+      const source = await learnerSource(client, sessionID)
       return excerpts.flatMap((quote) => {
         requiredString(quote, "evidence_quote")
         const matches = source.filter((part) => part.quote.includes(quote)).map((part) => ({ ...part, quote }))
@@ -338,14 +349,7 @@ function createEvidence(client: Parameters<Plugin>[0]["client"]) {
     async verify(sessionID: string, event: LearningEvent, current?: TopicState) {
       if (event.type !== "complete_topic" && event.type !== "record_consolidation" && !(event.type === "record_attempt" && event.outcome === "done") && !("evidence_refs" in event)) return []
       const refs = evidenceReferences("evidence_refs" in event ? event.evidence_refs : undefined)
-      const stored = current?.verified_evidence ?? []
-      const fresh = refs.filter((ref) => !stored.some((known) => canonicalJSON(known) === canonicalJSON(ref)))
-      if (fresh.some((ref) => ref.session_id !== sessionID)) throw new Error("foreign_evidence_reference")
-      if (fresh.length) {
-        const source = await parts(sessionID)
-        if (fresh.some((ref) => !source.some((part) => part.session_id === ref.session_id && part.message_id === ref.message_id && part.part_id === ref.part_id && part.quote.includes(ref.quote)))) throw new Error("unverified_evidence_reference")
-      }
-      return refs
+      return verifyReferences(client, sessionID, refs, current?.verified_evidence ?? [])
     },
   }
 }
@@ -1462,6 +1466,12 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
     destination_hint: schema.string().regex(WRITER_ARTIFACT_PATH).describe("Topic-relative lowercase path, e.g. notes/m-0001.md or exercises/m-0001.md; never include .ai/learning/<topic>/"), materials_language: schema.string().min(1).max(80),
     module_id: schema.string().optional(),
     evidence_module_id: schema.string().optional().describe("For artifacts without module ownership, select verified learner evidence from this topic module; does not assign ownership"),
+    evidence_refs: schema.array(schema.object({
+      session_id: schema.string(),
+      message_id: schema.string(),
+      part_id: schema.string(),
+      quote: schema.string(),
+    })).optional().describe("Explicit literal learner references; when present the writer receives exactly these, verified against the current parent session or the topic's stored references"),
   }).strict()
   const evidence = createEvidence(client)
   const interactions = createInteractions()
@@ -1627,18 +1637,21 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
                 if (artifact.method !== method) throw new Error("writer_method_mismatch")
               } else if (artifact.module_id !== undefined && (artifact.kind !== "teachback" || !module)) throw new Error("unexpected_artifact_ownership")
               // The writer assignment separates composition instructions, teacher
-              // assessment, practice status, and literal learner references. Only
-              // committed module evidence supplies learner quotes; Mentor's prompt
-              // text is instructions, never proof of learner words.
+              // assessment, practice status, and literal learner references.
+              // learner_evidence comes from explicitly verified references or the
+              // automatic verified module selection; Mentor's prompt text is
+              // instructions, never proof of learner words.
               const owner = module && (artifact.kind === "note" || artifact.kind === "exercise" || artifact.kind === "teachback") ? module : undefined
               const evidenceModule = artifact.evidence_module_id === undefined ? owner : snapshot.modules.find((item) => item.id === artifact.evidence_module_id)
               if (artifact.evidence_module_id !== undefined && (!evidenceModule || owner && owner.id !== evidenceModule.id)) throw new Error("invalid_evidence_module")
               const verified = new Set((snapshot.verified_evidence ?? []).map(canonicalJSON))
-              const learnerEvidence = evidenceModule
-                ? [...new Map([...(evidenceModule.attempt?.evidence_refs ?? []), ...(evidenceModule.consolidation?.evidence_refs ?? [])]
-                  .filter((ref) => verified.has(canonicalJSON(ref)))
-                  .map((ref) => [canonicalJSON(ref), ref])).values()]
-                : []
+              const learnerEvidence = artifact.evidence_refs !== undefined
+                ? await verifyReferences(client, context.sessionID, evidenceReferences(artifact.evidence_refs), snapshot.verified_evidence ?? [])
+                : evidenceModule
+                  ? [...new Map([...(evidenceModule.attempt?.evidence_refs ?? []), ...(evidenceModule.consolidation?.evidence_refs ?? [])]
+                    .filter((ref) => verified.has(canonicalJSON(ref)))
+                    .map((ref) => [canonicalJSON(ref), ref])).values()]
+                  : []
               const teachingAssessment = owner
                 ? {
                   ...(owner.class_evidence ? { class_evidence: owner.class_evidence } : {}),

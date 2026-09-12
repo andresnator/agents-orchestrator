@@ -42,6 +42,8 @@ function topicState(phase) {
 
 const LEARNER_REFERENCE = { session_id: "parent", message_id: "learner", part_id: "text", quote: "A stale response must be revalidated before reuse." }
 const UNVERIFIED_REFERENCE = { session_id: "parent", message_id: "learner", part_id: "text-late", quote: "Later unverified remark." }
+const PARENT_LEARNER_QUOTE = "A stale read must be revalidated before it is reused."
+const PARENT_REFERENCE = { session_id: "parent", message_id: "learner-msg-1", part_id: "part-1", quote: PARENT_LEARNER_QUOTE }
 const CONTEXT = { agent: "mentor", sessionID: "parent", messageID: "assistant", abort: new AbortController().signal }
 
 function answeredReadiness(current, selected = "skip") {
@@ -143,18 +145,28 @@ function workerFixture() {
   const started = deferred()
   const response = deferred()
   const records = new Map()
+  records.set("parent", {
+    busy: false,
+    messages: [
+      { info: { role: "user", id: "learner-msg-1", sessionID: "parent" }, parts: [{ type: "text", id: "part-1", sessionID: "parent", messageID: "learner-msg-1", text: PARENT_LEARNER_QUOTE }] },
+      { info: { role: "assistant", id: "assistant-msg", sessionID: "parent" }, parts: [{ type: "text", id: "assistant-part", sessionID: "parent", messageID: "assistant-msg", text: "Assistant guidance is not learner evidence." }] },
+      { info: { role: "user", id: "learner-msg-2", sessionID: "parent" }, parts: [{ type: "text", id: "synthetic-part", sessionID: "parent", messageID: "learner-msg-2", synthetic: true, text: "Synthetic reminder is not learner evidence." }] },
+    ],
+  })
   let created = 0
   let aborted = 0
+  let parentHistoryReads = 0
   const client = {
     app: { agents: async () => ({ data: ["learning-researcher", "learning-writer", "learning-summarizer"].map((name) => ({ name })) }) },
     session: {
       message: async () => ({ data: { info: { role: "assistant", providerID: "fixture", modelID: "scripted" } } }),
       create: async () => { const id = `child-${++created}`; records.set(id, { busy: true, messages: [{ info: { role: "user", id: "prompt" }, parts: [] }] }); return { data: { id } } },
+      get: async ({ path }) => ({ data: { id: path.id } }),
       prompt: async ({ path, signal }) => {
         started.resolve(path.id)
         return Promise.race([response.promise, new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true }))])
       },
-      messages: async ({ path }) => ({ data: records.get(path.id).messages }),
+      messages: async ({ path }) => { if (path.id === "parent") parentHistoryReads++; return { data: records.get(path.id).messages } },
       status: async () => ({ data: Object.fromEntries([...records].map(([id, record]) => [id, { type: record.busy ? "busy" : "idle" }])) }),
       abort: async ({ path }) => { aborted++; records.get(path.id).busy = false; return { data: true } },
     },
@@ -165,7 +177,7 @@ function workerFixture() {
     record.messages.push({ info: { role: "assistant", parentID: "prompt", time: { completed: 1 }, finish: "stop", ...(error ? { error: { name: error } } : {}) }, parts: [{ type: "text", text }] })
     response.resolve({ data: record.messages.at(-1) })
   }
-  return { client, started, response, records, finish, counts: () => ({ created, aborted }) }
+  return { client, started, response, records, finish, counts: () => ({ created, aborted }), parentHistoryReads: () => parentHistoryReads }
 }
 
 const RESEARCH_JOB = { worker: "learning-researcher", scope: "session:test", revision: 0, prompt: "One bounded question" }
@@ -430,6 +442,127 @@ test("shouldKeepLearnerEvidencePendingWhenModuleHasNoReferences", async (t) => {
   assert.deepEqual(assignment.learner_evidence, [])
   assert.deepEqual(assignment.practice_status, { skipped: false, outcome: null })
   assert.deepEqual(assignment.teaching_assessment, { class_evidence: "Class completed" })
+})
+
+test("shouldSaveTeachbackFromClassPhaseWithFreshExplicitEvidenceWithoutAutoAdding", async (t) => {
+  // Given: class phase, no attempt, no consolidation, and no stored evidence.
+  const initial = topicState("class")
+  delete initial.modules[0].attempt
+  delete initial.modules[0].consolidation
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+
+  // When: a teach-back with a module owner selects a fresh parent quote.
+  const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision: REVISION, artifact: { kind: "teachback", method: "feynman-teachback", destination_hint: "teachbacks/m-0001.md", materials_language: "English", module_id: MODULE_ID, evidence_refs: [PARENT_REFERENCE] }, prompt: "Compose the teach-back from the selected quote." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+  const output = JSON.parse(job.result)
+  await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: { type: "attach_artifact", event_id: "TEACHBACK", date: "2026-09-10", module_id: MODULE_ID, path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id } })
+
+  // Then: exactly the selected reference reaches the writer and saving adds nothing else.
+  assert.deepEqual(assignment.learner_evidence, [PARENT_REFERENCE])
+  assert.equal(fixture.parentHistoryReads(), 1)
+  const state = await fixture.call("learning_state_read", { topic_slug })
+  assert.equal(state.modules[0].phase, "class")
+  assert.equal(state.modules[0].attempt, undefined)
+  assert.equal(state.modules[0].consolidation, undefined)
+  assert.equal(state.verified_evidence, undefined)
+  assert.equal(state.modules[0].artifacts.teachback, "teachbacks/m-0001.md")
+})
+
+for (const [kind, destination_hint, method] of [["teachback", "teachbacks/goal.md", "feynman-teachback"], ["quiz", "quizzes/practice.md", "learning-loop"], ["dialogue", "dialogues/practice.md", "learning-loop"]]) {
+  test(`shouldSaveUnowned${kind[0].toUpperCase() + kind.slice(1)}WithExplicitEvidence`, async (t) => {
+    // Given: class phase without module ownership and without stored evidence.
+    const initial = topicState("class")
+    delete initial.modules[0].attempt
+    delete initial.modules[0].consolidation
+    const fixture = await pluginFixture(t, initial)
+    const topic_slug = initial.topic.slug
+
+    // When
+    const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision: REVISION, artifact: { kind, method, destination_hint, materials_language: "English", evidence_refs: [PARENT_REFERENCE] }, prompt: "Compose without an owner." })
+    const assignment = JSON.parse(fixture.prompts.at(-1))
+    const output = JSON.parse(job.result)
+    await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: { type: "attach_artifact", event_id: `SAVE-${kind}`, date: "2026-09-10", path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id } })
+
+    // Then
+    assert.deepEqual(assignment.learner_evidence, [PARENT_REFERENCE])
+    assert.equal(assignment.module_id, undefined)
+    const state = await fixture.call("learning_state_read", { topic_slug })
+    assert.ok(state.artifacts[destination_hint])
+    assert.equal(state.verified_evidence, undefined)
+  })
+}
+
+test("shouldPreferExplicitEvidenceOverAutomaticModuleSelection", async (t) => {
+  // Given: the module already has verified automatic evidence.
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  initial.modules[0].attempt.evidence_refs = [LEARNER_REFERENCE]
+  initial.modules[0].consolidation.evidence_refs = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, initial)
+
+  // When: a different quote is selected explicitly.
+  await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID, evidence_refs: [PARENT_REFERENCE] }, prompt: "Compose from the selected quote." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+
+  // Then: only the selected reference reaches the writer.
+  assert.deepEqual(assignment.learner_evidence, [PARENT_REFERENCE])
+  assert.equal(assignment.learner_evidence.some((ref) => ref.quote === LEARNER_REFERENCE.quote), false)
+})
+
+const INVALID_EXPLICIT_EVIDENCE = [
+  ["AlteredQuote", [{ ...PARENT_REFERENCE, quote: "A sentence the learner never wrote." }], /unverified_evidence_reference/],
+  ["SyntheticPart", [{ session_id: "parent", message_id: "learner-msg-2", part_id: "synthetic-part", quote: "Synthetic reminder is not learner evidence." }], /unverified_evidence_reference/],
+  ["AssistantText", [{ session_id: "parent", message_id: "assistant-msg", part_id: "assistant-part", quote: "Assistant guidance is not learner evidence." }], /unverified_evidence_reference/],
+  ["ExternalSession", [{ ...PARENT_REFERENCE, session_id: "other" }], /foreign_evidence_reference/],
+  ["DuplicateRefs", [PARENT_REFERENCE, PARENT_REFERENCE], /duplicate_evidence_ref/],
+  ["EmptyList", [], /verified_evidence_required/],
+  ["OversizedList", Array.from({ length: 201 }, (_, index) => ({ ...PARENT_REFERENCE, part_id: `part-${index}` })), /invalid_evidence_refs/],
+]
+
+for (const [label, evidence_refs, pattern] of INVALID_EXPLICIT_EVIDENCE) {
+  test(`shouldRejectExplicitEvidenceBeforeCreatingWorkerWhen${label}`, async (t) => {
+    // Given
+    const initial = topicState("class")
+    delete initial.modules[0].attempt
+    delete initial.modules[0].consolidation
+    const fixture = await pluginFixture(t, initial)
+
+    // When / Then: rejection leaves jobs and state untouched and starts no worker.
+    await assert.rejects(fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "teachback", method: "feynman-teachback", destination_hint: "teachbacks/m-0001.md", materials_language: "English", module_id: MODULE_ID, evidence_refs }, prompt: "Compose." }), pattern)
+    assert.equal(fixture.prompts.length, 0)
+    assert.deepEqual(await fixture.call("learning_state_read", { topic_slug: initial.topic.slug }), initial)
+  })
+}
+
+test("shouldReuseStoredExplicitEvidenceWithoutRefetchingParentHistory", async (t) => {
+  // Given: the selected reference is already stored and its message is gone from history.
+  const stored = { session_id: "parent", message_id: "gone", part_id: "gone-part", quote: "Stored quote that no longer appears in history." }
+  const initial = topicState("class")
+  delete initial.modules[0].attempt
+  delete initial.modules[0].consolidation
+  initial.verified_evidence = [stored]
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "teachback", method: "feynman-teachback", destination_hint: "teachbacks/m-0001.md", materials_language: "English", module_id: MODULE_ID, evidence_refs: [stored] }, prompt: "Compose from the stored quote." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+
+  // Then
+  assert.deepEqual(assignment.learner_evidence, [stored])
+  assert.equal(fixture.parentHistoryReads(), 0)
+})
+
+test("shouldStillRejectUnverifiedFreshEventReferenceThroughVerifyReferences", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  const fixture = await pluginFixture(t, initial)
+  const root = join(fixture.directory, ".ai/learning", initial.topic.slug, ".state.json")
+  const before = await readFile(root, "utf8")
+
+  // When / Then: the event path still rejects a fresh, unverifiable reference.
+  await assert.rejects(fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: REVISION, event: { type: "record_consolidation", event_id: "FRESH", date: "2026-09-10", module_id: MODULE_ID, learner_evidence: "Assessment", evidence_refs: [{ ...PARENT_REFERENCE, quote: "A sentence the learner never wrote." }], blocking_gaps: [] } }), /unverified_evidence_reference/)
+  assert.equal(await readFile(root, "utf8"), before)
 })
 
 test("shouldRejectWriterResultsCarryingRetiredCardFields", async (t) => {

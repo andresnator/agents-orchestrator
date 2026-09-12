@@ -71,6 +71,22 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 - **Essential negative variant:** Submit fake message/part IDs, altered quotes, synthetic text, worker text and unstored foreign-session references; every rejection leaves state unchanged. Restart and complete with references already verified in the same topic, even with original history unavailable; replay the identical event without another write. Read old schema-1 states without migration, promoting historical narrative, or changing prior completion. Reject stale, wrong-module, unshown, dismissed, or wrong-option skip consent. Delay the writer, advance state with a valid learner event, then return the old output. The old artifact is rejected; teaching already supported by committed state may continue. A current-revision writer can later commit the artifact. A writer result that still carries `selected_card_ids` is rejected with `unexpected_writer_retention`.
 - **Cleanup:** Remove the disposable topic and project.
 
+### MT-LEARNING-INDEPENDENT-EVIDENCE
+
+- **Title:** Save independent learner evidence without an attempt or consolidation
+- **Coverage key:** `learning/runtime/independent-evidence`
+- **Applies to:** `domains/learning/plugins/learning-runtime.ts`, `domains/learning/agents/mentor.md`
+- **Preconditions:** Install only `learning` into a fresh disposable project and use the scripted loopback provider for protocol evidence; record real-model runs separately with their versions. Start a durable topic and reach Class without recording an attempt or consolidation.
+- **Steps:**
+  1. Create or resume the durable topic, reach Class, and have the learner produce a real answer to the Class question.
+  2. Call `learning_evidence` with one literal excerpt from that answer and inspect the returned `evidence_refs`.
+  3. Start a teach-back writer job through `learning_job_start`, passing the returned selection as `artifact.evidence_refs`; include one variant without `module_id` and one with the module owner.
+  4. Attach the writer result through the normal save and `attach_artifact` protocol.
+  5. Inspect the writer assignment, `.ai/learning/<topic>/.state.json`, and the saved teach-back file.
+- **Expected result:** The writer assignment's `learner_evidence` equals exactly the selected references. Phase, attempts, consolidation, and competency assessment are unchanged, and `verified_evidence` is unchanged with no auto-add. The save follows the normal writer result and `attach_artifact` protocol. Scripted-provider labels distinguish protocol evidence from model behavior.
+- **Essential negative variant:** Submit altered quotes, synthetic text, assistant text, foreign-session references, duplicates, and an empty list. Every rejection occurs before worker creation with state and jobs unchanged. With `evidence_refs` omitted, the automatic module selection still applies, and a module without available evidence stays pending.
+- **Cleanup:** Remove the disposable topic and project.
+
 ### MT-LEARNING-FLEXIBLE-PATH
 
 - **Title:** Revise scope and defer modules without crediting unobserved competence
