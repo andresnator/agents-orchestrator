@@ -12,7 +12,7 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 ### MT-LEARNING-RUNTIME
 
 - **Title:** Verify installed runtime and removed operations
-- **Coverage key:** `learning/runtime/absence-compatibility`
+- **Coverage key:** `learning/runtime/host-capabilities`
 - **Applies to:** `domains/learning/plugins/learning-runtime.ts`, `domains/learning/agents/mentor.md`, `.ai/atl/skill-registry.md`
 - **Preconditions:** Install only `learning` into a fresh target with isolated `OPENCODE_CONFIG_DIR` and XDG directories. Disable project, external and Claude configuration. Use a scripted provider with no credentials.
 - **Steps:**
@@ -56,7 +56,7 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 ### MT-LEARNING-MODULE-DELIVERY
 
 - **Title:** Deliver materials and close a module in one turn
-- **Coverage key:** `learning/module/sequential-delivery`
+- **Coverage key:** `learning/module/explanation-progression`
 - **Applies to:** `domains/learning/agents/mentor.md`, `domains/learning/agents/learning-writer.md`, `domains/learning/plugins/learning-runtime.ts`, `domains/learning/skills/learning-loop/**`, `domains/learning/skills/cornell-notes/**`
 - **Preconditions:** Use a disposable topic with one open module and verified learner text references. The fixture has no new card or retention fields.
 - **Steps:**
@@ -127,7 +127,7 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 ### MT-LEARNING-LANGUAGE-PROGRESSION
 
 - **Title:** Practice language units on the exposure day
-- **Coverage key:** `learning/language/same-day-practice`
+- **Coverage key:** `learning/language/date-progression`
 - **Applies to:** `domains/learning/plugins/learning-runtime.ts`, `domains/learning/skills/language-loop/**`, `domains/learning/skills/bidirectional-translation/**`
 - **Preconditions:** Create a disposable target/native language topic with units exposed on the current date and production required.
 - **Steps:**
