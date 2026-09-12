@@ -1,6 +1,6 @@
 # Learning Domain
 
-Learning provides one-off teaching, durable learning paths, explicit English coaching, dated review, and optional Anki exports. The domain is self-contained: installing `learning` provides its agents, commands, nine skills, deterministic state runtime, and recall calculator.
+Learning provides one-off teaching, durable learning paths, explicit English coaching and optional Anki vocabulary export. The domain is self-contained: installing `learning` provides its agents, commands, eight skills and deterministic state runtime.
 
 ## Quick start
 
@@ -8,106 +8,79 @@ Learning provides one-off teaching, durable learning paths, explicit English coa
 installers/opencode.sh install --domain learning
 ```
 
-Use an explicit route when you know what you want:
-
 ```text
 /learn session explícame por qué HTTP es stateless con un ejemplo
 /learn path validación de caché HTTP para decidir reutilizar, revalidar o descargar
+/learn review cache-http
 /english I have worked here since three years
 ```
 
-A one-off session stays in conversation unless the learner explicitly approves a standalone summary. A path stores authoritative state and generated views under the active project's `.ai/learning/` directory. A genuinely ambiguous request such as `/learn pizza` presents a localized session/path choice before reading state.
-
-See the [operator guide](../../docs/learning-domain.md) for isolated setup, runtime boundaries, state recovery, and verification.
+One-off sessions stay in conversation unless the learner explicitly approves a standalone summary. A durable path stores authoritative state and generated views under `.ai/learning/`. See the [operator guide](../../docs/learning-domain.md) for setup, recovery and verification.
 
 ## Flow
 
 ```mermaid
 flowchart TD
     U["Learner request"] --> R{"Route before state access"}
-    R -->|"One-off"| S["learning-session: teach inline"]
+    R -->|"One-off"| S["learning-session"]
     R -->|"Durable"| M["Mentor + learning-loop"]
     R -->|"Explicit English"| E["english-tutor"]
-    S --> Q{"Explicit summary save?"}
-    Q -->|"No"| C["Conversation only"]
-    Q -->|"Yes"| SUM["Bounded summarizer"]
-    SUM --> RT["Learning runtime"]
-    M --> K["Independent method skill"]
-    M --> W["Optional researcher or writer"]
-    M --> RT
-    RT --> ST["Versioned state + generated views"]
+    M --> C["Class"] --> P{"Practice?"}
+    P -->|"Practicar"| A["Practice"]
+    P -->|"Omitir"| K["Consolidation"]
+    A --> K --> W["Materials"] --> X["Close"]
 ```
 
-Mentor owns teaching, the rubric, learner questions, and progression. Skills accept explicit inputs and return useful results inline; they do not discover state, invoke siblings, or write files. Researcher, writer, and summarizer children return bounded results. The runtime alone validates durable events and writes Learning state.
-
-## One-off learning
-
-`/learn session <request>` teaches answer-first in the conversation language and asks at most one focused question at a time. It performs no due-check and creates no state.
-
-An explicit summary request uses a native host choice. After approval, a fresh `learning-summarizer` composes one bounded JSON result; Mentor waits and saves it in the same turn. `learning_summary_create` writes one collision-resistant file exclusively under `.ai/learning/summaries/`. The same approval cannot be reused, completion does not create an unsolicited parent turn, and no route or review card is implied.
+Mentor owns teaching, assessment and progression. Skills accept explicit inputs and return useful results inline; they do not discover state, invoke siblings or write files. The runtime alone validates durable events and writes state.
 
 ## Durable learning
 
-Durable topics use `.ai/learning/<topic>/.state.json` as their single semantic authority. `mission.md`, `path.md`, `review-queue.md`, `vocabulary.md`, `gaps.md`, and approved artifacts are generated views of a committed revision.
+Durable topics use `.ai/learning/<topic>/.state.json` as their semantic authority. New views are `mission.md`, `path.md`, `vocabulary.md`, `gaps.md` and approved artifacts. Existing `review-queue.md` files remain readable historical files but are no longer generated.
 
-Non-language modules normally follow this sequence:
+Non-language modules follow this sequence:
 
 | Phase | Learner-visible result |
 | --- | --- |
-| Class | Explain the objective and central relationships, show a distinct worked example, then ask one focused question. |
-| Retention preview | Show zero to two eligible fundamental cards with exact cue, answer, and rationale. Selected, none, and deferred are all valid. |
-| Practice readiness | Offer Practicar / Omitir separately once; reuse the recorded choice on resume. Clarification or dismissal does not advance the phase. |
-| Practice | Record actual attempts and fade hints; explicit omission preserves any partial attempt. |
-| Consolidation | Reuse sufficient causal explanation and transfer evidence; otherwise explain a specific gap and invite another attempt. |
-| Close | Require completed or explicitly omitted practice, essential learner explanation, no blocking gap, and a resolved retention disposition. Selected card IDs may be empty. |
+| Class | Objective, central relationships, a distinct worked example and one focused response. |
+| Practice readiness | One native **Practicar / Omitir** choice. The recorded decision is reused on resume. |
+| Practice | An actual attempt on a new application, with hints faded from observed performance. |
+| Consolidation | Learner explanation of essential decisions and transfer, with no blocking gap. |
+| Materials | Cornell note, then exercise, each generated and saved in sequence. |
+| Close | Current materials, sufficient verified evidence and completed or explicitly omitted practice. |
 
-Both the note and exercise are generated when practice is omitted, with omission in existing document fields. Existing paths, sections, tables, and templates stay intact. `practice_skipped` is optional in `schema_version: 1`; old states need no migration. A brief verified learner explanation, resolved retention, materials, and no blocking gaps remain required. Topic completion assesses agreed criteria from real evidence; there is no default mandatory capstone, and omission does not prove practical competence.
+Omission preserves any partial attempt and never proves competence. Closing never depends on an internal card, a schedule or a delayed observation. Existing schema-1 states may retain historical fields; new events do not create or consult them.
 
-Learners can adapt the path without losing evidence:
+Learners can adapt a path without losing evidence:
 
-| Need | Durable operation | What stays pending |
+| Need | Operation | What stays pending |
 | --- | --- | --- |
-| Change the goal | `revise_scope`, with native approval of the exact goal and affected module wins | Reassessment and updated materials before closing; retired requirements are not credited as learned. |
-| Already know the material | `skip_practice` also accepts Mission; reuse verified explanations in Consolidation | Any uncovered criterion, retention decision, and materials; no fictitious teaching or practice. |
-| Study another module now | `select_module`, with native approval of destination and reason | The previous module is deferred at its actual phase, with all requirements preserved. |
+| Change the goal | `revise_scope` with native approval of the exact goal and wins | Reassessment and current materials; retired requirements are not credited. |
+| Already know the material | `skip_practice` from Class or unfinished Practice | Any uncovered criterion and materials; no teaching or practice is invented. |
+| Study another module now | `select_module` with native approval of destination and reason | The previous module is deferred at its actual phase. |
 
-Resolve scope and navigation subjects through `learning_event_reference`. `current_module_id`, module `deferred`/`scope_revision`, and `scope_revisions` are optional schema-1 fields. Scope history retains before/after goals and wins, prior assessments, reasons, retired requirements, and consent references. Existing snapshots need no migration. On resume, use the selected module; otherwise the first open non-deferred module. If only deferred work remains, choose what to resume. Navigation needs neither materials nor closure; topic completion still requires all modules closed and evidence against the agreed goal.
+The mission defines stable concept IDs and prerequisites. Cornell questions, quizzes, teach-backs and drills are practice resources, not scheduled obligations. `/learn review <topic>` is a point-in-time practice request chosen by the learner.
 
-The mission defines stable concept IDs and prerequisites. The default fundamental shortlist is at most `floor(concept_count / 5)`; fewer than five concepts can yield zero. A learner can explicitly override the shortlist for a shown, taught concept. Cornell questions remain useful retrieval prompts even when no card is saved.
+## Evidence and materials
 
-Review cards use intervals of 1, 3, 7, 14, and 30 days. Box 5 remains on 30-day maintenance until the learner explicitly suspends or retires it. Every durable choice includes an exact topic/entity subject and canonical digest; card selection and replacement use the stored preview itself. A third cumulative `Again` requires a confirmed reformulate/split decision; replacements get new IDs and preserve lineage.
+Practice and Consolidation store literal learner references with `session_id`, `message_id`, `part_id` and exact `quote`. The runtime verifies them against the learner session and deduplicates references within the module. Mentor assessment and composition instructions are separate fields; prose supplied by Mentor is never treated as a learner quote.
 
-## Sequential work
-
-`learning_job_start` creates one actual child session for bounded research or composition and waits for a verified terminal result. Only one job runs per Mentor session. Mentor completes note → save → exercise → save → Close, or an approved summary save, in the same turn without “continue” messages. `learning_job_result` waits for recovery of the same child or cancels it; parent cancellation propagates to the child. Transport failure retains the accepted ID and never permits an unchecked replacement.
-
-Topic jobs carry a source revision. Same-topic work is serialized, a newer request remains blocked behind the accepted worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer composes complete artifacts but has no file, shell, question, or delegation access. Loading `cornell-notes` supplies its full inline lesson template. The runtime verifies worker kind, destination, source revision, and exact content before writing.
+After Consolidation, Mentor commissions the Cornell note, saves it, then commissions and saves the exercise at the new revision. On resume, only missing or invalidated materials are generated. The writer receives the complete loaded exercise template and returns exact content; the runtime checks owner, source revision, destination and content before saving.
 
 ## Language learning
 
-Language units store passive exposure date, active due date, attempt outcome, and status. The initial pilot interval is three days. Counts never make a unit due, and the final active units of a finite course remain available until completed.
+Language practice is available on the same day as exposure. Units remain available in learner order when pending, unfinished, erroneous or `input-only`; there is no wait period, due date or grade. `input-only` leaves production criteria pending when the mission requires production. Completion requires observed comprehension and meaning-preserving production.
 
-Input-only practice is valid. If the mission requires production, input-only evidence keeps that criterion pending and the unit remains eligible for later productive practice. Completion requires observed comprehension and meaning-preserving production.
-
-Vocabulary phrases begin as candidates and can be corrected under the same ID until export. Each edit requires a fresh preview and confirmation. Consent binds the full displayed rows; only the selected subset is exported, and exported rows remain immutable. After a native selection, one state event marks the exact rows exported and creates the semicolon batch. Duplicate keys normalize target language plus NFKC/lowercase/whitespace-normalized unit. Export does not prove Anki import or mastery and does not create a second Leitner card.
-
-`/english` runs only when explicitly invoked. With a separate learner choice it may record a synthetic gap category and invented pattern. Raw corrections, private text, and correction history never enter durable state; adopting a gap does not admit a review card.
+Vocabulary candidates can be corrected before export. Anki export previews exact five-field rows, exports only the learner-selected subset, prevents duplicate keys and does not prove import or mastery. Export creates no internal learning cards or review dates.
 
 ## Components
 
 | Type | Name | Responsibility |
 | --- | --- | --- |
-| Primary agent | `mentor` | Route, teach, assess, and coordinate validated state |
+| Primary agent | `mentor` | Route, teach, assess and coordinate validated state |
 | Specialist | `english-tutor` | Explicit English correction and practice |
-| Worker | `learning-researcher` | Bounded source-grounded findings |
-| Worker | `learning-writer` | Complete artifact composition from approved inputs |
-| Worker | `learning-summarizer` | One explicit independent summary |
-| Command | `/learn` | Thin session/path/mode dispatch |
-| Command | `/english` | Thin explicit English dispatch |
-| Plugin | `learning-runtime` | Event reference, host-correlated choices, sequential jobs, versioned state, recovery, and exclusive summary creation |
-| Plugin | `recall-calc` | Bounded queue parsing and deterministic dates |
-| Skills | nine Learning-owned directories | Independent teaching and transformation methods |
-
-Mentor can read a learner repository for teaching. Raw edits and broad shell writes are denied. A known test/build command must be announced and accepted through its separate host permission prompt.
+| Workers | `learning-researcher`, `learning-writer`, `learning-summarizer` | Bounded research, composition and summaries |
+| Commands | `/learn`, `/english` | Thin route dispatch |
+| Plugin | `learning-runtime` | Choices, sequential jobs, versioned state, recovery and views |
+| Skills | eight Learning-owned directories | Independent teaching and transformation methods |
 
 After changing runtime behavior or an instruction contract, run the affected [Learning manual tests](manual-tests.md).

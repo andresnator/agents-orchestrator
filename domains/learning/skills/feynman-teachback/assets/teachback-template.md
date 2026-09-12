@@ -14,9 +14,9 @@
 
 ## Gaps
 
-| Gap | Type | Return path | Optional review proposal |
-| --- | --- | --- | --- |
-| {evidenced gap} | {missing piece / hand-waved step / wrong claim / jargon crutch} | {focused next attempt or source} | {existing card reference or none; never an automatic grade} |
+| Gap | Type | Return path |
+| --- | --- | --- |
+| {evidenced gap} | {missing piece / hand-waved step / wrong claim / jargon crutch} | {focused next attempt or source} |
 
 ## Application
 
@@ -24,4 +24,4 @@
 
 ## Verdict
 
-{Current evidence supports the explanation / material gaps remain / no attempt yet. No claim of delayed retention.}
+{Current evidence supports the explanation / material gaps remain / no attempt yet. Do not claim unobserved future mastery.}

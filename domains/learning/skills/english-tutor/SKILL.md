@@ -24,7 +24,7 @@ Preserve intended meaning while improving correctness and clarity. Focus on the 
 
 Name a reusable category: tense, articles, prepositions, word order, register, idiom, word choice, or structure pattern. Suggest one immediate practice action. Give specific feedback after the learner attempts it; never invent success.
 
-A category is recurring only with at least two distinct observed attempts or explicitly supplied distinct occurrence evidence. Replaying the same event does not increase frequency. After recurring evidence, offer once to return a synthetic gap proposal. Acceptance permits that proposal only; it is neither topic adoption nor card admission.
+A category is recurring only with at least two distinct observed attempts or explicitly supplied distinct occurrence evidence. Replaying the same event does not increase frequency. After recurring evidence, offer once to return a synthetic gap proposal. Acceptance permits that proposal only; it does not change a learning path.
 
 Never store or hand off raw text, private examples, identifiers, or correction history. Optional gap data contains only a category, invented generic example pattern, and distinct occurrence references/counts. A caller may separately adopt it after learner choice. Do not load another skill's template or infer a saving destination.
 

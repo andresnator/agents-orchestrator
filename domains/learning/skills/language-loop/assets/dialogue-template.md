@@ -2,7 +2,6 @@
 
 > Unit: {supplied ID or standalone}
 > passive_at: {actual exposure date or pending}
-> next_due: {caller-calculated date or unscheduled}
 > active_status: pending
 
 ## Situation
@@ -31,7 +30,7 @@
 
 ## Active attempts
 
-| Event | Date | Actual evidence | Material differences | Outcome | Next due |
-| --- | --- | --- | --- | --- | --- |
+| Event | Date | Actual evidence | Material differences | Outcome |
+| --- | --- | --- | --- | --- |
 
-Production outcome is completed only from meaning-preserving learner production. Input-only does not prove production criteria. Candidate/gap discovery never schedules a card.
+Production outcome is completed only from meaning-preserving learner production. Input-only does not prove production criteria. Candidate/gap discovery never creates scheduled state.

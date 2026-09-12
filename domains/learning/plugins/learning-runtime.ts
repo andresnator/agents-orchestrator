@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto"
 import { constants } from "node:fs"
 import { mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises"
+import { homedir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { pathToFileURL } from "node:url"
 import type { Plugin, ToolContext } from "@opencode-ai/plugin"
-import { recallCalcContracts, recallCalcHost } from "./recall-calc.ts"
 
 const PLUGIN_ID = "learning-runtime"
 const MAX_INPUT_CHARS = 24_000
@@ -24,12 +25,10 @@ const WORKERS = ["learning-researcher", "learning-writer", "learning-summarizer"
 const MISSION_OPTIONS = ["create", "revise", "cancel"]
 const SCOPE_OPTIONS = ["apply", "revise", "cancel"]
 const MODULE_OPTIONS = ["select", "cancel"]
-const CARD_CHANGE_CANCEL = "cancel"
-const CARD_DISPOSITIONS = ["none", "deferred"]
-const GRADES = ["Again", "Hard", "Good", "Easy"]
-const RESERVED_PROPOSAL_IDS = ["selected", ...CARD_DISPOSITIONS]
-const MODULE_ARTIFACT_METHODS = { note: "cornell-notes", exercise: "learning-loop" } as const
-const PURPOSES = ["cards", "readiness", "grade", "summary", "export", "retirement", "reformulation", "override", "gap", "mission", "scope_revision", "module_selection"] as const
+const PURPOSES = ["readiness", "summary", "export", "gap", "mission", "scope_revision", "module_selection"] as const
+// Accepted only when reading schema-1 states written by older runtimes; never offered for new choices.
+const LEGACY_PURPOSES = ["cards", "grade", "retirement", "reformulation", "override"] as const
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 type Worker = (typeof WORKERS)[number]
 type Purpose = (typeof PURPOSES)[number]
 type JobStatus = "starting" | "running" | "completed" | "failed" | "cancelled" | "cancelling"
@@ -77,38 +76,29 @@ interface Job {
 }
 
 type LearningPhase = "mission" | "class" | "practice" | "consolidation" | "closed"
-type RetentionDisposition = "pending" | "selected" | "none" | "deferred"
-type CardStatus = "active" | "suspended" | "retired"
 type LearningEvent =
   | { type: "create_topic"; interaction_id: string; event_id: string; date: string; title: string; materials_language: string; goal: string; target_language?: string; native_language?: string; production_required?: boolean; concepts: Array<{ id: string; title: string; prerequisites: string[]; fundamental: boolean }>; modules: Array<{ id: string; title: string; win: string }> }
   | ({ type: "revise_scope"; interaction_id: string; event_id: string; date: string } & ScopeProposal)
   | { type: "select_module"; interaction_id: string; event_id: string; date: string; module_id: string; reason: string }
   | { type: "record_class"; event_id: string; date: string; module_id: string; taught_concept_ids: string[]; evidence: string }
-  | { type: "preview_cards"; event_id: string; date: string; module_id: string; preview_id: string; source_revision: number; cards: Array<{ proposal_id: string; cue: string; answer: string; concept_id: string; reason: string }> }
-  | { type: "select_cards"; event_id: string; date: string; module_id: string; preview_id: string; interaction_id: string; disposition: Exclude<RetentionDisposition, "pending">; proposal_ids: string[] }
   | { type: "skip_practice"; event_id: string; date: string; module_id: string; interaction_id: string }
   | { type: "start_practice"; event_id: string; date: string; module_id: string; interaction_id: string }
   | { type: "record_attempt"; event_id: string; date: string; module_id: string; outcome: "pending" | "partial" | "stuck" | "done"; evidence_refs?: EvidenceReference[]; evidence: string; causal_explanation?: string; transfer_evidence?: string }
   | { type: "record_consolidation"; event_id: string; date: string; module_id: string; evidence_refs: EvidenceReference[]; learner_evidence: string; blocking_gaps: string[] }
   | { type: "close_module"; event_id: string; date: string; module_id: string }
-  | { type: "grade_card"; event_id: string; date: string; card_id: string; grade: "Again" | "Hard" | "Good" | "Easy"; evidence: string; interaction_id: string }
-  | { type: "preview_card_change"; event_id: string; date: string; card_id: string; change_id: string; source_revision: number; kind: "edit" | "reformulate" | "split"; replacements: Array<{ cue: string; answer: string }> }
-  | { type: "apply_card_change"; event_id: string; date: string; card_id: string; change_id: string; interaction_id: string }
-  | { type: "set_card_status"; event_id: string; date: string; card_id: string; status: "active" | "suspended" | "retired"; interaction_id: string }
-  | { type: "set_fundamental_override"; event_id: string; date: string; concept_id: string; enabled: boolean; interaction_id: string }
-  | { type: "add_language_unit"; event_id: string; date: string; unit_id: string; passive_at: string; next_due: string; situation: string; target_text: string; native_text: string }
-  | { type: "record_language_attempt"; event_id: string; date: string; unit_id: string; outcome: "needs-another-attempt" | "completed" | "input-only"; evidence: string; next_due?: string }
+  | { type: "add_language_unit"; event_id: string; date: string; unit_id: string; passive_at: string; situation: string; target_text: string; native_text: string }
+  | { type: "record_language_attempt"; event_id: string; date: string; unit_id: string; outcome: "needs-another-attempt" | "completed" | "input-only"; evidence: string }
   | { type: "set_vocab_candidates"; event_id: string; date: string; candidates: Array<{ id: string; target_language: string; unit: string; row: string }> }
   | { type: "export_vocab"; event_id: string; date: string; interaction_id: string; candidate_ids: string[]; batch_path: string }
   | { type: "adopt_gap"; event_id: string; date: string; gap_id: string; interaction_id: string; adoption: "drill" | "practice" | "declined" }
   | { type: "record_gap"; event_id: string; date: string; gap_id: string; category: string; synthetic_pattern: string; occurrence_refs: string[] }
-  | { type: "attach_artifact"; event_id: string; date: string; path: string; content: string; source_revision: number; job_id: string; module_id?: string; selected_card_ids?: string[] }
+  | { type: "attach_artifact"; event_id: string; date: string; path: string; content: string; source_revision: number; job_id: string; module_id?: string }
   | { type: "complete_topic"; event_id: string; date: string; evidence_refs: EvidenceReference[] }
 
 type EventType = LearningEvent["type"]
+const LEGACY_EVENT_TYPES = new Set(["preview_cards", "select_cards", "grade_card", "preview_card_change", "apply_card_change", "set_card_status", "set_fundamental_override"])
 const EVENT_TYPES = [
-  "create_topic", "revise_scope", "select_module", "record_class", "preview_cards", "select_cards", "start_practice", "skip_practice", "record_attempt", "record_consolidation", "close_module",
-  "grade_card", "preview_card_change", "apply_card_change", "set_card_status", "set_fundamental_override", "add_language_unit", "record_language_attempt",
+  "create_topic", "revise_scope", "select_module", "record_class", "start_practice", "skip_practice", "record_attempt", "record_consolidation", "close_module", "add_language_unit", "record_language_attempt",
   "set_vocab_candidates", "export_vocab", "adopt_gap", "record_gap", "attach_artifact", "complete_topic",
 ] as const satisfies readonly EventType[]
 
@@ -122,29 +112,22 @@ interface EventReference {
 const EVIDENCE_REFERENCE = { session_id: "session", message_id: "message", part_id: "part", quote: "literal learner excerpt" }
 
 const EVENT_REFERENCE: Record<EventType, EventReference> = {
-  create_topic: { choice: { purpose: "mission", revision: 0, options: MISSION_OPTIONS, multiple: false }, consent_subject: "{topic_slug, title, materials_language, goal, concepts, modules, and only supplied target_language/native_language/production_required}; exact proposed values; omit type, event_id, date, interaction_id", event: { type: "create_topic", interaction_id: "UUID", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
-  revise_scope: { choice: { purpose: "scope_revision", options: SCOPE_OPTIONS, multiple: false }, event: { type: "revise_scope", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", goal: "revised topic goal", modules: [{ id: "M-####", title: "revised title", win: "revised win" }], reason: "why the learner changes scope", retired_requirements: ["requirement no longer applicable"] }, consent_subject: "Resolve with topic_slug and proposal_json containing exactly goal, modules, reason, retired_requirements; copy resolved subject_json and choice. Copy resolved consent_subject.after and reason/retired_requirements into the event.", rules: ["List every affected open module, including downstream requirements. Preserve closed achievements and all evidence.", "Revision does not close modules or clear gaps. Reassess against the revised goal with record_consolidation, then refresh materials before closing."] },
-  select_module: { choice: { purpose: "module_selection", options: MODULE_OPTIONS, multiple: false }, event: { type: "select_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", module_id: "M-####", reason: "why to move or resume" }, consent_subject: "Resolve with topic_slug, module_id and reason; exact subject binds current module, destination and reason.", rules: ["Defer the current open module without changing its phase, evidence, retention or goal. Resume the selected module at its existing phase.", "Deferred modules remain required for topic completion; prerequisites inform the learner, not a navigation gate."] },
+  create_topic: { choice: { purpose: "mission", revision: 0, options: MISSION_OPTIONS, multiple: false }, consent_subject: "{topic_slug, title, materials_language, goal, concepts, modules, and only supplied target_language/native_language/production_required}; exact proposed values; omit type, event_id, date, interaction_id", event: { type: "create_topic", interaction_id: "UUID", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together"] },
+  revise_scope: { choice: { purpose: "scope_revision", options: SCOPE_OPTIONS, multiple: false }, event: { type: "revise_scope", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", goal: "revised topic goal", modules: [{ id: "M-####", title: "revised title", win: "revised win" }], reason: "why the learner changes scope", retired_requirements: ["requirement no longer applicable"] }, consent_subject: "Resolve with topic_slug and proposal_json containing exactly goal, modules, reason, retired_requirements; copy the resolved subject and choice.", rules: ["Preserve closed achievements and evidence; reassess open modules before closure."] },
+  select_module: { choice: { purpose: "module_selection", options: MODULE_OPTIONS, multiple: false }, event: { type: "select_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", module_id: "M-####", reason: "why to move or resume" }, consent_subject: "Resolve with topic_slug, module_id and reason; exact subject binds current module, destination and reason.", rules: ["Defer the current module at its actual phase and preserve all pending work."] },
   record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
-  preview_cards: { event: { type: "preview_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", source_revision: "current revision", cards: [{ proposal_id: "string", cue: "string", answer: "string", concept_id: "K-####", reason: "string" }] }, rules: ["zero to two taught fundamental concepts", "selected retention requires the explicit card-change workflow; it cannot be previewed or selected again"] },
-  select_cards: { choice: { purpose: "cards", options: ["<stored proposal_id>", ...CARD_DISPOSITIONS], multiple: true }, event: { type: "select_cards", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", preview_id: "string", interaction_id: "UUID", disposition: "selected | none | deferred", proposal_ids: ["proposal_id"] }, consent_subject: "exact stored module.retention.preview with digest omitted", rules: ["Copy current proposal IDs plus none and deferred; never use selected as an option ID.", "none and deferred are exclusive: select either one alone, or one or more proposal IDs."] },
-  skip_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "skip_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" }, rules: ["Only selected skip permits omission from Mission, Class or unfinished Practice; preserve existing attempts. From Mission, assess prior knowledge in Consolidation without inventing teaching or mastery."] },
+  skip_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "skip_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" }, rules: ["Only selected skip permits omission from Class or unfinished Practice; preserve existing attempts."] },
   start_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
   record_attempt: { event: { type: "record_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", outcome: "pending | partial | stuck | done", evidence_refs: [EVIDENCE_REFERENCE], evidence: "teacher assessment", causal_explanation: "optional string", transfer_evidence: "optional string" }, rules: ["evidence_refs are required for outcome done and verified whenever supplied; copy literal references from learning_evidence or the same topic state.", "evidence and causal/transfer commentary are teacher assessment, separate from learner quotes."] },
   record_consolidation: { event: { type: "record_consolidation", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", evidence_refs: [EVIDENCE_REFERENCE], learner_evidence: "teacher assessment", blocking_gaps: ["string"] }, rules: ["Copy evidence_refs from learning_evidence or the same topic state; authorship alone does not prove correctness."] },
   close_module: { event: { type: "close_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####" } },
-  grade_card: { choice: { purpose: "grade", options: GRADES, multiple: false }, event: { type: "grade_card", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", grade: "Again | Hard | Good | Easy", evidence: "actual answer evidence", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
-  preview_card_change: { event: { type: "preview_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "unique string", source_revision: "current revision", kind: "edit | reformulate | split", replacements: [{ cue: "string", answer: "string" }] }, rules: ["split has exactly two replacements; other kinds have one", "change_id is unique within the topic"] },
-  apply_card_change: { choice: { purpose: { edit: "cards", reformulate: "reformulation", split: "reformulation" }, options: ["<stored change.id>", CARD_CHANGE_CANCEL], multiple: false }, event: { type: "apply_card_change", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", change_id: "string", interaction_id: "UUID" }, consent_subject: "exact stored card_changes entry with digest omitted" },
-  set_card_status: { event: { type: "set_card_status", event_id: "EVENT_ID", date: "YYYY-MM-DD", card_id: "C-####", status: "active | suspended | retired", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", card_id: "C-####" } },
-  set_fundamental_override: { event: { type: "set_fundamental_override", event_id: "EVENT_ID", date: "YYYY-MM-DD", concept_id: "K-####", enabled: "boolean", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", concept_id: "K-####" } },
-  add_language_unit: { event: { type: "add_language_unit", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", passive_at: "YYYY-MM-DD", next_due: "passive_at + 3 days", situation: "string", target_text: "string", native_text: "string" } },
-  record_language_attempt: { event: { type: "record_language_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", outcome: "needs-another-attempt | completed | input-only", evidence: "actual learner evidence", next_due: "required future YYYY-MM-DD only when another attempt is needed" } },
+  add_language_unit: { event: { type: "add_language_unit", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", passive_at: "YYYY-MM-DD", situation: "string", target_text: "string", native_text: "string" } },
+  record_language_attempt: { event: { type: "record_language_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", unit_id: "L-####", outcome: "needs-another-attempt | completed | input-only", evidence: "actual learner evidence" } },
   set_vocab_candidates: { event: { type: "set_vocab_candidates", event_id: "EVENT_ID", date: "YYYY-MM-DD", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "five semicolon-separated fields" }] }, rules: ["reuse the existing candidate ID to edit an unexported row at the current revision, then preview and confirm again", "exported candidates are immutable; a new ID with an existing normalized key is skipped"] },
   export_vocab: { event: { type: "export_vocab", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", candidate_ids: ["selected V-####"], batch_path: "anki/<name>.txt" }, consent_subject: { topic_slug: "TOPIC_SLUG", candidates: [{ id: "V-####", target_language: "string", unit: "string", row: "exact stored row" }] }, rules: ["subject candidates include the full preview in choice-option order, not just the selected subset", "candidate option IDs are their V-#### IDs; optional edit/none choices do not export", "candidate_ids must match the host-selected subset exactly"] },
   adopt_gap: { event: { type: "adopt_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", interaction_id: "UUID", adoption: "drill | practice | declined" }, consent_subject: { topic_slug: "TOPIC_SLUG", gap_id: "G-####" } },
   record_gap: { event: { type: "record_gap", event_id: "EVENT_ID", date: "YYYY-MM-DD", gap_id: "G-####", category: "string", synthetic_pattern: "string", occurrence_refs: ["opaque EVENT_ID"] } },
-  attach_artifact: { event: { type: "attach_artifact", event_id: "EVENT_ID", date: "YYYY-MM-DD", path: "approved relative artifact path", content: "exact writer content", source_revision: "current revision", job_id: "accepted child ID", module_id: "required for note/exercise", selected_card_ids: ["required exact module card IDs for note/exercise"] } },
+  attach_artifact: { event: { type: "attach_artifact", event_id: "EVENT_ID", date: "YYYY-MM-DD", path: "approved relative artifact path", content: "exact writer content", source_revision: "current revision", job_id: "accepted child ID", module_id: "required for note/exercise" } },
   complete_topic: { event: { type: "complete_topic", event_id: "EVENT_ID", date: "YYYY-MM-DD", evidence_refs: [EVIDENCE_REFERENCE] }, rules: ["Copy sufficient verified evidence_refs; completion narrative is constructed by the runtime from their literal quotes.", "completion evidence, date, and event ID are stored in topic.completion and rendered in mission.md", "completed topics cannot be completed again with a different event"] },
 }
 
@@ -177,13 +160,15 @@ interface TopicState {
     scope_revision?: number
     attempt?: { revision: number; outcome: "pending" | "partial" | "stuck" | "done"; evidence_refs?: EvidenceReference[]; evidence: string; causal_explanation?: string; transfer_evidence?: string }
     consolidation?: { revision: number; evidence_refs?: EvidenceReference[]; learner_evidence: string; blocking_gaps: string[] }
-    retention: { disposition: RetentionDisposition; preview?: { topic_slug: string; module_id: string; id: string; source_revision: number; digest: string; cards: Array<{ proposal_id: string; cue: string; answer: string; concept_id: string; reason: string }> }; selected_card_ids: string[] }
+    /** Optional legacy retention data. New states do not create or consult it. */
+    retention?: { disposition: string; preview?: unknown; selected_card_ids?: string[] }
     artifacts: { note?: string; exercise?: string; teachback?: string }
   }>
-  cards: Array<{ id: string; cue: string; answer: string; concept_id: string; source_revision: number; box: number; last: string; next: string; status: CardStatus; again_count: number; lineage: string[] }>
-  card_changes: Array<{ topic_slug: string; id: string; card_id: string; source_revision: number; digest: string; kind: "edit" | "reformulate" | "split"; replacements: Array<{ cue: string; answer: string }> }>
-  review_events: Array<{ event_id: string; card_id: string; date: string; grade: string; evidence: string }>
-  language_units: Array<{ id: string; passive_at: string; next_due: string; situation: string; target_text: string; native_text: string; status: "pending" | "needs-another-attempt" | "completed" | "input-only"; evidence?: string }>
+  /** These arrays are optional legacy data and are never used by new progression. */
+  cards?: Array<Record<string, unknown>>
+  card_changes?: Array<Record<string, unknown>>
+  review_events?: Array<Record<string, unknown>>
+  language_units: Array<{ id: string; passive_at: string; next_due?: string; situation: string; target_text: string; native_text: string; status: "pending" | "needs-another-attempt" | "completed" | "input-only"; evidence?: string }>
   vocabulary: { candidates: Array<{ id: string; target_language: string; unit: string; duplicate_key: string; row: string; status: "candidate" | "exported" }>; exports: Array<{ event_id: string; path: string; candidate_ids: string[]; date: string }> }
   gaps: Array<{ id: string; category: string; synthetic_pattern: string; occurrence_refs: string[]; adoption: "pending" | "drill" | "practice" | "declined" }>
   jobs: Array<{ id: string; parent_id: string; worker: Worker; source_revision: number; status: JobStatus; result_digest?: string; error?: string; superseded_revision?: number }>
@@ -214,33 +199,35 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
   if ((state.topic.target_language === undefined) !== (state.topic.native_language === undefined)) return false
   if (state.topic.target_language !== undefined && (typeof state.topic.target_language !== "string" || typeof state.topic.native_language !== "string")) return false
   if (state.topic.production_required !== undefined && typeof state.topic.production_required !== "boolean") return false
-  if (!["concepts", "modules", "cards", "card_changes", "review_events", "language_units", "gaps", "jobs", "consents"].every((key) => Array.isArray(state[key]))) return false
+  if (!["concepts", "modules", "language_units", "gaps", "jobs", "consents"].every((key) => Array.isArray(state[key]))) return false
+  for (const key of ["cards", "card_changes", "review_events"] as const) if (state[key] !== undefined && !Array.isArray(state[key])) return false
   if (state.scope_revisions !== undefined && (!Array.isArray(state.scope_revisions) || state.scope_revisions.length > MAX_RECORDS)) return false
   if (!record(state.vocabulary) || !Array.isArray(state.vocabulary.candidates) || !Array.isArray(state.vocabulary.exports)) return false
   if (!record(state.artifacts) || !record(state.applied_events) || !record(state.views)) return false
   if (state.topic.status === "completed") {
     const completion = state.topic.completion
-    if (!record(completion) || !recallCalcContracts.isIsoDate(completion.date) || !EVENT_ID.test(completion.event_id) || !state.applied_events[completion.event_id] || typeof completion.evidence !== "string" || !completion.evidence.trim() || completion.evidence.length > MAX_INPUT_CHARS) return false
+    if (!record(completion) || !isIsoDate(completion.date) || !EVENT_ID.test(completion.event_id) || !state.applied_events[completion.event_id] || typeof completion.evidence !== "string" || !completion.evidence.trim() || completion.evidence.length > MAX_INPUT_CHARS) return false
   } else if (state.topic.completion !== undefined) return false
   if (state.views.revision !== state.revision || !["pending", "current"].includes(state.views.status)) return false
-  if (!uniqueIDs(state.concepts) || !uniqueIDs(state.modules) || !uniqueIDs(state.cards) || !uniqueIDs(state.card_changes) || !uniqueIDs(state.language_units) || !uniqueIDs(state.vocabulary.candidates) || !uniqueIDs(state.gaps) || !uniqueIDs(state.jobs)) return false
+  if (!uniqueIDs(state.concepts) || !uniqueIDs(state.modules) || (state.cards && !uniqueIDs(state.cards)) || (state.card_changes && !uniqueIDs(state.card_changes)) || !uniqueIDs(state.language_units) || !uniqueIDs(state.vocabulary.candidates) || !uniqueIDs(state.gaps) || !uniqueIDs(state.jobs)) return false
   const conceptIDs = new Set(state.concepts.map((item: any) => item.id))
   const moduleIDs = new Set(state.modules.map((item: any) => item.id))
-  const cardIDs = new Set(state.cards.map((item: any) => item.id))
+  const cardIDs = new Set((state.cards ?? []).map((item: any) => item.id))
   if (!state.concepts.every((item: any) => record(item) && /^K-\d{4}$/.test(item.id) && typeof item.title === "string" && strings(item.prerequisites) && item.prerequisites.every((id: string) => conceptIDs.has(id) && id !== item.id) && typeof item.fundamental === "boolean" && typeof item.learner_override === "boolean" && typeof item.taught === "boolean")) return false
   if (!state.modules.every((item: any) => {
     if (!record(item) || !/^M-\d{4}$/.test(item.id) || typeof item.title !== "string" || typeof item.win !== "string" || !["mission", "class", "practice", "consolidation", "closed"].includes(item.phase)) return false
-    if (!strings(item.taught_concept_ids) || !item.taught_concept_ids.every((id: string) => conceptIDs.has(id)) || !record(item.retention) || !["pending", "selected", "none", "deferred"].includes(item.retention.disposition)) return false
-    if (!strings(item.retention.selected_card_ids) || !item.retention.selected_card_ids.every((id: string) => cardIDs.has(id)) || !record(item.artifacts)) return false
+    if (!strings(item.taught_concept_ids) || !item.taught_concept_ids.every((id: string) => conceptIDs.has(id)) || (item.retention !== undefined && (!record(item.retention) || !["pending", "selected", "none", "deferred"].includes(item.retention.disposition)))) return false
+    if (item.retention?.selected_card_ids !== undefined && (!strings(item.retention.selected_card_ids) || !item.retention.selected_card_ids.every((id: string) => cardIDs.has(id)))) return false
+    if (!record(item.artifacts)) return false
     if (![item.artifacts.note, item.artifacts.exercise, item.artifacts.teachback].every((path) => path === undefined || typeof path === "string")) return false
-    if (item.retention.preview !== undefined) {
+    if (item.retention?.preview !== undefined) {
       const preview = item.retention.preview
       if (!record(preview) || preview.topic_slug !== slug || preview.module_id !== item.id || typeof preview.id !== "string" || !Number.isSafeInteger(preview.source_revision) || preview.source_revision > state.revision || !/^[a-f0-9]{64}$/.test(preview.digest) || !Array.isArray(preview.cards) || preview.cards.length > 2) return false
       if (!preview.cards.every((card: any) => record(card) && typeof card.proposal_id === "string" && typeof card.cue === "string" && card.cue.trim() && typeof card.answer === "string" && card.answer.trim() && conceptIDs.has(card.concept_id) && typeof card.reason === "string" && card.reason.trim())) return false
       if (new Set(preview.cards.map((card: any) => card.proposal_id)).size !== preview.cards.length) return false
       if (preview.digest !== digest({ topic_slug: preview.topic_slug, module_id: preview.module_id, id: preview.id, source_revision: preview.source_revision, cards: preview.cards })) return false
     }
-    if (item.deferred !== undefined && (!record(item.deferred) || item.phase === "closed" || !recallCalcContracts.isIsoDate(item.deferred.date) || typeof item.deferred.reason !== "string" || !item.deferred.reason.trim() || !state.consents.some((consent: any) => consent.interaction_id === item.deferred.interaction_id && consent.purpose === "module_selection"))) return false
+    if (item.deferred !== undefined && (!record(item.deferred) || item.phase === "closed" || !isIsoDate(item.deferred.date) || typeof item.deferred.reason !== "string" || !item.deferred.reason.trim() || !state.consents.some((consent: any) => consent.interaction_id === item.deferred.interaction_id && consent.purpose === "module_selection"))) return false
     if (item.scope_revision !== undefined && (!Number.isSafeInteger(item.scope_revision) || item.scope_revision < 1 || item.scope_revision > state.revision || !state.scope_revisions?.some((entry: any) => record(entry) && entry.revision === item.scope_revision && Array.isArray(entry.modules) && entry.modules.some((module: any) => record(module) && module.id === item.id)))) return false
     if (item.practice_skipped !== undefined && typeof item.practice_skipped !== "boolean") return false
     if (item.attempt !== undefined && (!record(item.attempt) || !Number.isSafeInteger(item.attempt.revision) || item.attempt.revision > state.revision || !["pending", "partial", "stuck", "done"].includes(item.attempt.outcome) || typeof item.attempt.evidence !== "string")) return false
@@ -253,7 +240,7 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
       let previousRevision = 0
       for (const entry of state.scope_revisions) {
         scopeProposal(entry)
-        if (!Number.isSafeInteger(entry.revision) || entry.revision <= previousRevision || entry.revision > state.revision || !EVENT_ID.test(entry.event_id) || !state.applied_events[entry.event_id] || !recallCalcContracts.isIsoDate(entry.date)) return false
+        if (!Number.isSafeInteger(entry.revision) || entry.revision <= previousRevision || entry.revision > state.revision || !EVENT_ID.test(entry.event_id) || !state.applied_events[entry.event_id] || !isIsoDate(entry.date)) return false
         if (!state.consents.some((consent: any) => consent.interaction_id === entry.interaction_id && consent.purpose === "scope_revision")) return false
         if (!record(entry.before) || typeof entry.before.goal !== "string" || !entry.before.goal.trim() || !Array.isArray(entry.before.modules) || !sameStrings(entry.before.modules.map((item: any) => item.id), entry.modules.map((item: any) => item.id))) return false
         for (const item of entry.before.modules) {
@@ -268,21 +255,21 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
       }
     } catch { return false }
   }
-  if (!state.cards.every((item: any) => record(item) && /^C-\d{4}$/.test(item.id) && typeof item.cue === "string" && item.cue.trim() && typeof item.answer === "string" && item.answer.trim() && conceptIDs.has(item.concept_id) && Number.isSafeInteger(item.source_revision) && item.source_revision <= state.revision && Number.isInteger(item.box) && item.box >= 1 && item.box <= 5 && recallCalcContracts.isIsoDate(item.last) && recallCalcContracts.isIsoDate(item.next) && ["active", "suspended", "retired"].includes(item.status) && Number.isInteger(item.again_count) && item.again_count >= 0 && strings(item.lineage) && new Set(item.lineage).size === item.lineage.length && item.lineage.every((id: string) => cardIDs.has(id) && id !== item.id))) return false
-  if (!state.card_changes.every((item: any) => {
-    if (!record(item) || item.topic_slug !== slug || typeof item.id !== "string" || !cardIDs.has(item.card_id) || state.cards.find((card: any) => card.id === item.card_id)?.status !== "active") return false
+  if (state.cards && !state.cards.every((item: any) => record(item) && /^C-\d{4}$/.test(item.id) && typeof item.cue === "string" && item.cue.trim() && typeof item.answer === "string" && item.answer.trim() && conceptIDs.has(item.concept_id) && Number.isSafeInteger(item.source_revision) && item.source_revision <= state.revision && Number.isInteger(item.box) && item.box >= 1 && item.box <= 5 && isIsoDate(item.last) && isIsoDate(item.next) && ["active", "suspended", "retired"].includes(item.status) && Number.isInteger(item.again_count) && item.again_count >= 0 && strings(item.lineage) && new Set(item.lineage).size === item.lineage.length && item.lineage.every((id: string) => cardIDs.has(id) && id !== item.id))) return false
+  if (state.card_changes && !state.card_changes.every((item: any) => {
+    if (!record(item) || item.topic_slug !== slug || typeof item.id !== "string" || !cardIDs.has(item.card_id) || (state.cards ?? []).find((card: any) => card.id === item.card_id)?.status !== "active") return false
     if (!Number.isSafeInteger(item.source_revision) || item.source_revision > state.revision || !/^[a-f0-9]{64}$/.test(item.digest) || !["edit", "reformulate", "split"].includes(item.kind) || !Array.isArray(item.replacements)) return false
     if ((item.kind === "split" && item.replacements.length !== 2) || (item.kind !== "split" && item.replacements.length !== 1)) return false
     if (!item.replacements.every((replacement: any) => record(replacement) && typeof replacement.cue === "string" && replacement.cue.trim() && typeof replacement.answer === "string" && replacement.answer.trim())) return false
     return item.digest === digest({ topic_slug: item.topic_slug, id: item.id, card_id: item.card_id, source_revision: item.source_revision, kind: item.kind, replacements: item.replacements })
   })) return false
-  if (!state.language_units.every((item: any) => record(item) && /^L-\d{4}$/.test(item.id) && recallCalcContracts.isIsoDate(item.passive_at) && recallCalcContracts.isIsoDate(item.next_due) && typeof item.situation === "string" && typeof item.target_text === "string" && typeof item.native_text === "string" && ["pending", "needs-another-attempt", "completed", "input-only"].includes(item.status))) return false
+  if (!state.language_units.every((item: any) => record(item) && /^L-\d{4}$/.test(item.id) && isIsoDate(item.passive_at) && (item.next_due === undefined || isIsoDate(item.next_due)) && typeof item.situation === "string" && typeof item.target_text === "string" && typeof item.native_text === "string" && ["pending", "needs-another-attempt", "completed", "input-only"].includes(item.status))) return false
   if (!state.vocabulary.candidates.every((item: any) => record(item) && /^V-\d{4}$/.test(item.id) && typeof item.target_language === "string" && typeof item.unit === "string" && typeof item.duplicate_key === "string" && typeof item.row === "string" && ["candidate", "exported"].includes(item.status))) return false
-  if (!state.vocabulary.exports.every((item: any) => record(item) && EVENT_ID.test(item.event_id) && /^anki\/[a-z0-9][a-z0-9._-]*\.txt$/.test(item.path) && strings(item.candidate_ids) && item.candidate_ids.length > 0 && item.candidate_ids.every((id: string) => state.vocabulary.candidates.some((candidate: any) => candidate.id === id && candidate.status === "exported")) && recallCalcContracts.isIsoDate(item.date)) || new Set(state.vocabulary.exports.map((item: any) => item.event_id)).size !== state.vocabulary.exports.length) return false
-  if (!state.review_events.every((item: any) => record(item) && EVENT_ID.test(item.event_id) && cardIDs.has(item.card_id) && recallCalcContracts.isIsoDate(item.date) && ["Again", "Hard", "Good", "Easy", "Again+reformulate", "Again+split"].includes(item.grade) && typeof item.evidence === "string" && item.evidence.trim()) || new Set(state.review_events.map((item: any) => item.event_id)).size !== state.review_events.length) return false
+  if (!state.vocabulary.exports.every((item: any) => record(item) && EVENT_ID.test(item.event_id) && /^anki\/[a-z0-9][a-z0-9._-]*\.txt$/.test(item.path) && strings(item.candidate_ids) && item.candidate_ids.length > 0 && item.candidate_ids.every((id: string) => state.vocabulary.candidates.some((candidate: any) => candidate.id === id && candidate.status === "exported")) && isIsoDate(item.date)) || new Set(state.vocabulary.exports.map((item: any) => item.event_id)).size !== state.vocabulary.exports.length) return false
+  if (state.review_events && (!state.review_events.every((item: any) => record(item) && EVENT_ID.test(item.event_id) && cardIDs.has(item.card_id) && isIsoDate(item.date) && ["Again", "Hard", "Good", "Easy", "Again+reformulate", "Again+split"].includes(item.grade) && typeof item.evidence === "string" && item.evidence.trim()) || new Set(state.review_events.map((item: any) => item.event_id)).size !== state.review_events.length)) return false
   if (!state.gaps.every((item: any) => record(item) && /^G-\d{4}$/.test(item.id) && typeof item.category === "string" && item.category.trim() && typeof item.synthetic_pattern === "string" && item.synthetic_pattern.trim() && strings(item.occurrence_refs) && item.occurrence_refs.length > 0 && item.occurrence_refs.every((reference: string) => EVENT_ID.test(reference)) && ["pending", "drill", "practice", "declined"].includes(item.adoption))) return false
   if (!state.jobs.every((item: any) => record(item) && typeof item.id === "string" && typeof item.parent_id === "string" && (WORKERS as readonly string[]).includes(item.worker) && Number.isSafeInteger(item.source_revision) && item.source_revision <= state.revision && ["starting", "running", "completed", "failed", "cancelled", "cancelling"].includes(item.status))) return false
-  if (!state.consents.every((item: any) => record(item) && typeof item.interaction_id === "string" && (PURPOSES as readonly string[]).includes(item.purpose) && typeof item.request_id === "string" && /^[a-f0-9]{64}$/.test(item.digest) && strings(item.selected)) || new Set(state.consents.map((item: any) => item.interaction_id)).size !== state.consents.length) return false
+  if (!state.consents.every((item: any) => record(item) && typeof item.interaction_id === "string" && ([...(PURPOSES as readonly string[]), ...LEGACY_PURPOSES].includes(item.purpose)) && typeof item.request_id === "string" && /^[a-f0-9]{64}$/.test(item.digest) && strings(item.selected)) || new Set(state.consents.map((item: any) => item.interaction_id)).size !== state.consents.length) return false
   if (!Object.entries(state.artifacts).every(([path, artifact]: [string, any]) => ARTIFACT_PATH.test(path) && record(artifact) && typeof artifact.content === "string" && Number.isSafeInteger(artifact.source_revision) && artifact.source_revision <= state.revision && (artifact.module_id === undefined || moduleIDs.has(artifact.module_id)) && (artifact.selected_card_ids === undefined || strings(artifact.selected_card_ids) && new Set(artifact.selected_card_ids).size === artifact.selected_card_ids.length && artifact.selected_card_ids.every((id: string) => cardIDs.has(id))))) return false
   if (!Object.entries(state.applied_events).every(([id, hash]) => EVENT_ID.test(id) && typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash))) return false
   try {
@@ -373,9 +360,37 @@ function requiredString(value: unknown, name: string, limit = MAX_INPUT_CHARS): 
   return value
 }
 
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== "string" || !ISO_DATE.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value
+}
+
+function localToday(now = new Date()) {
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+async function loadTool(directory: string): Promise<typeof import("@opencode-ai/plugin").tool> {
+  try { return (await import("@opencode-ai/plugin")).tool } catch { /* Resolve from the selected OpenCode target below. */ }
+  const roots = [process.env.OPENCODE_CONFIG_DIR, join(directory, ".opencode"), join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "opencode")].filter((root): root is string => Boolean(root))
+  for (const root of roots) {
+    try {
+      const packageRoot = join(root, "node_modules", "@opencode-ai/plugin")
+      const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"))
+      const entry = manifest.exports?.["./tool"]?.import
+      if (typeof entry !== "string" || !entry.startsWith("./") || entry.includes("..")) continue
+      return (await import(pathToFileURL(join(packageRoot, entry)).href)).tool
+    } catch { /* Try the next fixed host package root. */ }
+  }
+  throw new Error("learning_tool_helper_unavailable: install @opencode-ai/plugin in the OpenCode config directory")
+}
+
 function requiredDate(value: unknown, name = "date"): string {
   const date = requiredString(value, name, 10)
-  if (!recallCalcContracts.isIsoDate(date)) throw new Error(`invalid_${name}`)
+  if (!isIsoDate(date)) throw new Error(`invalid_${name}`)
   return date
 }
 
@@ -428,6 +443,30 @@ function artifactKind(path: string): string | undefined {
   return ({ notes: "note", exercises: "exercise", quizzes: "quiz", teachbacks: "teachback", dialogues: "dialogue", maps: "map" } as Record<string, string>)[path.split("/", 1)[0]]
 }
 
+function writerAssignment(state: TopicState, artifact: { kind: string; method: string; destination_hint: string; materials_language: string; module_id?: string }, outline: string) {
+  const module = artifact.module_id ? state.modules.find((item) => item.id === artifact.module_id) : undefined
+  if ((artifact.kind === "note" || artifact.kind === "exercise") && !module) throw new Error("module_artifact_owner_required")
+  const refs = module
+    ? [...(module.attempt?.evidence_refs ?? []), ...(module.consolidation?.evidence_refs ?? [])]
+    : []
+  const uniqueRefs = [...new Map(refs.map((ref) => [canonicalJSON(ref), ref])).values()]
+  const trusted = new Set((state.verified_evidence ?? []).map(canonicalJSON))
+  if (uniqueRefs.some((ref) => !trusted.has(canonicalJSON(ref)))) throw new Error("writer_evidence_not_verified")
+  return {
+    approved_outline: requiredString(outline, "approved_outline"),
+    teacher_assessment: module ? {
+      class_evidence: module.class_evidence ?? "",
+      consolidation: module.consolidation?.learner_evidence ?? "",
+      blocking_gaps: module.consolidation?.blocking_gaps ?? [],
+    } : {},
+    practice_state: module ? {
+      skipped: module.practice_skipped === true,
+      ...(module.attempt ? { attempt: { outcome: module.attempt.outcome, evidence: module.attempt.evidence, causal_explanation: module.attempt.causal_explanation, transfer_evidence: module.attempt.transfer_evidence } } : {}),
+    } : {},
+    learner_evidence_refs: uniqueRefs,
+  }
+}
+
 function eventDigest(event: LearningEvent) {
   return digest(event)
 }
@@ -445,11 +484,6 @@ function validateConsent(choice: Choice | undefined, purpose: Purpose, eventInte
   if (selected.length !== choice.selected.length || selected.some((id) => !choice.selected!.includes(id))) {
     throw new Error("interaction_selection_mismatch")
   }
-}
-
-function storedSubject<T extends { digest: string }>(value: T): Omit<T, "digest"> {
-  const { digest: _digest, ...subject } = value
-  return subject
 }
 
 function requireValidState(state: TopicState, slug: string) {
@@ -523,8 +557,6 @@ function initialState(slug: string, event: Extract<LearningEvent, { type: "creat
     unique(concept.prerequisites, "prerequisite")
     if (concept.prerequisites.some((id) => !conceptIDs.has(id) || id === concept.id)) throw new Error("invalid_prerequisite")
   }
-  const fundamental = concepts.filter((item) => item.fundamental).length
-  if (fundamental > Math.floor(concepts.length / 5)) throw new Error("fundamental_budget_exceeded")
   for (const module of modules) {
     requiredString(module.title, "module_title", 200)
     requiredString(module.win, "module_win", 500)
@@ -543,8 +575,8 @@ function initialState(slug: string, event: Extract<LearningEvent, { type: "creat
       ...(event.production_required !== undefined ? { production_required: event.production_required } : {}),
     },
     concepts: concepts.map((item) => ({ ...structuredClone(item), learner_override: false, taught: false })),
-    modules: modules.map((item) => ({ ...structuredClone(item), phase: "mission", taught_concept_ids: [], retention: { disposition: "pending", selected_card_ids: [] }, artifacts: {} })),
-    cards: [], card_changes: [], review_events: [], language_units: [], vocabulary: { candidates: [], exports: [] }, gaps: [], jobs: [], artifacts: {}, applied_events: {}, consents: [], views: { revision: 0, status: "pending" },
+    modules: modules.map((item) => ({ ...structuredClone(item), phase: "mission", taught_concept_ids: [], artifacts: {} })),
+    language_units: [], vocabulary: { candidates: [], exports: [] }, gaps: [], jobs: [], artifacts: {}, applied_events: {}, consents: [], views: { revision: 0, status: "pending" },
   }
 }
 
@@ -579,15 +611,16 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     return { state: structuredClone(current), result: { duplicate: true, revision: current.revision, event_id: event.event_id, views: current.views.status, changed: [] } }
   }
   if (event.type === "create_topic") throw new Error("topic_already_initialized")
+  if (LEGACY_EVENT_TYPES.has(event.type as string)) {
+    throw new Error("unsupported_event_type")
+  }
   const state = structuredClone(current)
   const changed = new Set<string>(["state"])
   const module = "module_id" in event ? state.modules.find((item) => item.id === event.module_id) : undefined
-  const card = "card_id" in event ? state.cards.find((item) => item.id === event.card_id) : undefined
   if ("module_id" in event && !module) throw new Error("unknown_module")
-  if ("card_id" in event && !card) throw new Error("unknown_card")
 
   const needsEvidence = event.type === "complete_topic" || event.type === "record_consolidation" || event.type === "record_attempt" && event.outcome === "done"
-  if (needsEvidence || "evidence_refs" in event) {
+  if (needsEvidence || ("evidence_refs" in event && event.evidence_refs !== undefined)) {
     const refs = evidenceReferences("evidence_refs" in event ? event.evidence_refs : undefined)
     const trusted = [...(current.verified_evidence ?? []), ...verifiedEvidence]
     if (refs.some((ref) => !trusted.some((known) => canonicalJSON(known) === canonicalJSON(ref)))) throw new Error("unverified_evidence_reference")
@@ -627,7 +660,6 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "record_class": {
       if (!module || !["mission", "class"].includes(module.phase)) throw new Error("invalid_phase_transition")
-      if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
       event.taught_concept_ids = requiredArray<string>(event.taught_concept_ids, "taught_concepts").map((id) => requiredID(id, "K"))
       unique(event.taught_concept_ids, "taught_concept")
       if (event.taught_concept_ids.some((id) => !state.concepts.some((concept) => concept.id === id))) throw new Error("unknown_taught_concept")
@@ -635,64 +667,14 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       module.taught_concept_ids = event.taught_concept_ids
       module.class_evidence = requiredString(event.evidence, "class_evidence")
       delete module.artifacts.note
-      if (module.retention.disposition === "pending") delete module.retention.preview
       for (const concept of state.concepts) if (event.taught_concept_ids.includes(concept.id)) concept.taught = true
       changed.add("mission"); changed.add("path")
-      break
-    }
-    case "preview_cards": {
-      const recoveringMissingPreview = module
-        && ["practice", "consolidation"].includes(module.phase)
-        && module.retention.disposition === "pending"
-        && !module.retention.preview
-      if (!module || module.phase !== "class" && !recoveringMissingPreview) throw new Error("preview_requires_class")
-      if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
-      requiredString(event.preview_id, "preview_id", 100)
-      event.cards = requiredArray<Extract<LearningEvent, { type: "preview_cards" }>["cards"][number]>(event.cards, "card_preview", 2)
-      if (event.source_revision !== current.revision) throw new Error("stale_source_revision")
-      for (const proposal of event.cards) requiredRecord(proposal, "card_proposal")
-      unique(event.cards.map((item) => item.proposal_id), "proposal_id")
-      for (const proposal of event.cards) {
-        requiredString(proposal.proposal_id, "proposal_id", 80)
-        if (RESERVED_PROPOSAL_IDS.includes(proposal.proposal_id)) throw new Error("reserved_proposal_id")
-        requiredString(proposal.cue, "cue", 1000); requiredString(proposal.answer, "answer", 4000); requiredString(proposal.reason, "reason", 500)
-        requiredID(proposal.concept_id, "K")
-        const concept = state.concepts.find((item) => item.id === proposal.concept_id)
-        if (!concept?.taught || !concept.fundamental || !module.taught_concept_ids.includes(concept.id)) throw new Error("ineligible_card_concept")
-      }
-      const preview = { topic_slug: state.topic.slug, module_id: module.id, id: event.preview_id, source_revision: event.source_revision, cards: event.cards }
-      module.retention = { disposition: "pending", preview: structuredClone({ ...preview, digest: digest(preview) }), selected_card_ids: [] }
-      changed.add("path")
-      break
-    }
-    case "select_cards": {
-      if (!module?.retention.preview || module.retention.preview.id !== event.preview_id) throw new Error("unknown_card_preview")
-      if (module.retention.disposition === "selected") throw new Error("selected_cards_require_explicit_edit")
-      requiredEnum(event.disposition, "retention_disposition", ["selected", "none", "deferred"] as const)
-      event.proposal_ids = requiredArray<string>(event.proposal_ids, "proposal_ids", 2).map((id) => requiredString(id, "proposal_id", 100))
-      validateConsent(choice, "cards", event.interaction_id, event.disposition === "selected" ? event.proposal_ids : [event.disposition], storedSubject(module.retention.preview))
-      if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      unique(event.proposal_ids, "proposal_id")
-      if (event.disposition === "selected" && !event.proposal_ids.length) throw new Error("selected_cards_required")
-      if (event.disposition !== "selected" && event.proposal_ids.length) throw new Error("unselected_cards_present")
-      const proposals = event.proposal_ids.map((id) => module.retention.preview!.cards.find((item) => item.proposal_id === id))
-      if (proposals.some((item) => !item)) throw new Error("unknown_card_proposal")
-      const selected: string[] = []
-      for (const proposal of proposals) {
-        const id = `C-${String(state.cards.length + 1).padStart(4, "0")}`
-        selected.push(id)
-        state.cards.push({ id, cue: proposal!.cue, answer: proposal!.answer, concept_id: proposal!.concept_id, source_revision: module.retention.preview.source_revision, box: 1, last: event.date, next: recallCalcContracts.addDays(event.date, 1), status: "active", again_count: 0, lineage: [] })
-      }
-      module.retention.disposition = event.disposition
-      module.retention.selected_card_ids = selected
-      state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
-      changed.add("path"); changed.add("review-queue")
       break
     }
     case "skip_practice":
     case "start_practice": {
       const skipping = event.type === "skip_practice"
-      if (!module || !(module.phase === "class" || skipping && (module.phase === "mission" || module.phase === "practice" && module.attempt?.outcome !== "done"))) throw new Error("practice_requires_class_or_unfinished_practice")
+      if (!module || !(module.phase === "class" || skipping && module.phase === "practice" && module.attempt?.outcome !== "done")) throw new Error("practice_requires_class_or_unfinished_practice")
       validateConsent(choice, "readiness", event.interaction_id, [skipping ? "skip" : "ready"], { topic_slug: state.topic.slug, module_id: module.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
       module.phase = skipping ? "consolidation" : "practice"
@@ -719,11 +701,11 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       break
     }
     case "close_module": {
-      if (!module || module.phase !== "consolidation" || (module.attempt?.outcome !== "done" && !module.practice_skipped) || !module.consolidation || module.consolidation.blocking_gaps.length || module.retention.disposition === "pending") throw new Error("module_close_requirements_not_met")
+      if (!module || module.phase !== "consolidation" || (module.attempt?.outcome !== "done" && !module.practice_skipped) || !module.consolidation || module.consolidation.blocking_gaps.length) throw new Error("module_close_requirements_not_met")
       if (module.scope_revision && module.consolidation.revision < module.scope_revision) throw new Error("scope_requires_reassessment")
       if (!state.topic.target_language) {
         const records = [module.artifacts.note, module.artifacts.exercise].map((path) => path ? state.artifacts[path] : undefined)
-        if (records.some((record) => !record || record.source_revision < module.consolidation!.revision || record.module_id !== module.id || !record.selected_card_ids || !sameStrings(record.selected_card_ids, module.retention.selected_card_ids))) {
+        if (records.some((record) => !record || record.source_revision < module.consolidation!.revision || record.module_id !== module.id)) {
           throw new Error("module_artifacts_not_current")
         }
       }
@@ -738,112 +720,23 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       changed.add("path")
       break
     }
-    case "grade_card": {
-      if (!card || card.status !== "active") throw new Error("card_not_active")
-      requiredEnum(event.grade, "grade", ["Again", "Hard", "Good", "Easy"] as const)
-      validateConsent(choice, "grade", event.interaction_id, [event.grade], { topic_slug: state.topic.slug, card_id: card.id })
-      if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      if (event.grade === "Again" && card.again_count === 2) throw new Error("third_again_requires_repair_choice")
-      const transition = recallCalcContracts.applyGrade(event.grade, card.box, event.date)
-      card.box = transition.to_box!
-      card.last = transition.last
-      card.next = transition.next!
-      if (event.grade === "Again") card.again_count += 1
-      state.review_events.push({ event_id: event.event_id, card_id: card.id, date: event.date, grade: event.grade, evidence: requiredString(event.evidence, "review_evidence") })
-      state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
-      changed.add("review-queue")
-      break
-    }
-    case "preview_card_change": {
-      if (!card || card.status !== "active" || event.source_revision !== current.revision) throw new Error("invalid_or_stale_card_change")
-      requiredString(event.change_id, "change_id", 100)
-      if (state.card_changes.some((item) => item.id === event.change_id && item.card_id !== card.id)) throw new Error("duplicate_card_change_id")
-      requiredEnum(event.kind, "card_change_kind", ["edit", "reformulate", "split"] as const)
-      event.replacements = requiredArray<Extract<LearningEvent, { type: "preview_card_change" }>["replacements"][number]>(event.replacements, "replacements", 2)
-      if ((event.kind === "split" && event.replacements.length !== 2) || (event.kind !== "split" && event.replacements.length !== 1)) throw new Error("invalid_card_change_shape")
-      if (event.kind !== "edit" && card.again_count !== 2) throw new Error("repair_requires_third_again")
-      for (const replacement of event.replacements) {
-        requiredRecord(replacement, "card_replacement")
-        requiredString(replacement.cue, "cue", 1000)
-        requiredString(replacement.answer, "answer", 4000)
-      }
-      const preview = { topic_slug: state.topic.slug, id: event.change_id, card_id: card.id, source_revision: event.source_revision, kind: event.kind, replacements: event.replacements }
-      state.card_changes = state.card_changes.filter((item) => item.card_id !== card.id)
-      state.card_changes.push(structuredClone({ ...preview, digest: digest(preview) }))
-      changed.add("review-queue")
-      break
-    }
-    case "apply_card_change": {
-      if (!card || card.status !== "active") throw new Error("card_not_active")
-      const preview = state.card_changes.find((item) => item.id === event.change_id && item.card_id === card.id)
-      if (!preview || preview.source_revision + 1 !== current.revision) throw new Error("unknown_or_stale_card_change")
-      const purpose = preview.kind === "edit" ? "cards" : "reformulation"
-      validateConsent(choice, purpose, event.interaction_id, [preview.id], storedSubject(preview))
-      if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      card.status = "retired"
-      if (preview.kind !== "edit") {
-        card.again_count = 3
-        state.review_events.push({ event_id: event.event_id, card_id: card.id, date: event.date, grade: `Again+${preview.kind}`, evidence: preview.kind })
-      }
-      const replacementIDs: string[] = []
-      for (const replacement of preview.replacements) {
-        const id = `C-${String(state.cards.length + 1).padStart(4, "0")}`
-        replacementIDs.push(id)
-        state.cards.push({ id, cue: replacement.cue, answer: replacement.answer, concept_id: card.concept_id, source_revision: current.revision, box: 1, last: event.date, next: recallCalcContracts.addDays(event.date, 1), status: "active", again_count: 0, lineage: [...card.lineage, card.id] })
-      }
-      for (const item of state.modules) item.retention.selected_card_ids = item.retention.selected_card_ids.flatMap((selected) => selected === card.id ? replacementIDs : [selected])
-      state.card_changes = state.card_changes.filter((item) => item.id !== preview.id)
-      state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
-      changed.add("path"); changed.add("review-queue")
-      break
-    }
-    case "set_card_status": {
-      if (!card) throw new Error("unknown_card")
-      requiredEnum(event.status, "card_status", ["active", "suspended", "retired"] as const)
-      validateConsent(choice, "retirement", event.interaction_id, [event.status], { topic_slug: state.topic.slug, card_id: card.id })
-      if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      card.status = event.status
-      state.card_changes = state.card_changes.filter((item) => item.card_id !== card.id)
-      state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
-      changed.add("review-queue")
-      break
-    }
-    case "set_fundamental_override": {
-      const concept = state.concepts.find((item) => item.id === event.concept_id)
-      if (!concept?.taught) throw new Error("taught_concept_required")
-      requiredBoolean(event.enabled, "override_enabled")
-      validateConsent(choice, "override", event.interaction_id, [event.enabled ? "enable" : "disable"], { topic_slug: state.topic.slug, concept_id: concept.id })
-      if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
-      concept.fundamental = event.enabled
-      concept.learner_override = true
-      for (const candidate of state.modules) {
-        if (candidate.retention.disposition === "pending" && candidate.retention.preview?.cards.some((card) => card.concept_id === concept.id)) delete candidate.retention.preview
-      }
-      state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
-      changed.add("mission")
-      break
-    }
     case "add_language_unit": {
       if (!state.topic.target_language || !state.topic.native_language) throw new Error("language_topic_required")
+      if ("next_due" in event) throw new Error("language_schedule_fields_removed")
       requiredID(event.unit_id, "L")
       if (state.language_units.some((item) => item.id === event.unit_id)) throw new Error("duplicate_language_unit")
-      requiredDate(event.passive_at, "passive_at"); requiredDate(event.next_due, "next_due")
-      if (event.next_due !== recallCalcContracts.addDays(event.passive_at, 3)) throw new Error("initial_language_due_must_be_three_days")
-      state.language_units.push({ id: event.unit_id, passive_at: event.passive_at, next_due: event.next_due, situation: requiredString(event.situation, "situation"), target_text: requiredString(event.target_text, "target_text"), native_text: requiredString(event.native_text, "native_text"), status: "pending" })
+      requiredDate(event.passive_at, "passive_at")
+      state.language_units.push({ id: event.unit_id, passive_at: event.passive_at, situation: requiredString(event.situation, "situation"), target_text: requiredString(event.target_text, "target_text"), native_text: requiredString(event.native_text, "native_text"), status: "pending" })
       changed.add("path")
       break
     }
     case "record_language_attempt": {
+      if ("next_due" in event) throw new Error("language_schedule_fields_removed")
       const unit = state.language_units.find((item) => item.id === event.unit_id)
       if (!unit) throw new Error("unknown_language_unit")
       requiredEnum(event.outcome, "language_outcome", ["needs-another-attempt", "completed", "input-only"] as const)
-      if (event.date < unit.next_due && event.outcome !== "input-only") throw new Error("language_unit_not_due")
       unit.status = event.outcome
       unit.evidence = requiredString(event.evidence, "language_evidence")
-      if (event.outcome === "needs-another-attempt") {
-        if (!event.next_due || event.next_due <= event.date) throw new Error("valid_next_due_required")
-        unit.next_due = requiredDate(event.next_due, "next_due")
-      } else if (event.next_due !== undefined) throw new Error("unexpected_next_due")
       changed.add("path")
       break
     }
@@ -931,23 +824,22 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       break
     }
     case "attach_artifact": {
+      if ("selected_card_ids" in event) throw new Error("writer_retention_fields_removed")
       const content = requiredString(event.content, "artifact_content", MAX_RESULT_CHARS)
       if (!WRITER_ARTIFACT_PATH.test(event.path) || event.source_revision !== current.revision) throw new Error("invalid_or_stale_artifact")
       requiredString(event.job_id, "job_id", 100)
       const kind = artifactKind(event.path)
-      let ownership: { module_id?: string; selected_card_ids?: string[] } = {}
+      let ownership: { module_id?: string } = {}
       if (kind === "note" || kind === "exercise") {
         if (!module) throw new Error("module_artifact_owner_required")
-        const selected = requiredArray<string>(event.selected_card_ids, "artifact_selected_card_ids").map((id) => requiredID(id, "C"))
-        if (!sameStrings(selected, module.retention.selected_card_ids)) throw new Error("artifact_retention_mismatch")
         module.artifacts[kind] = event.path
-        ownership = { module_id: module.id, selected_card_ids: selected }
+        ownership = { module_id: module.id }
         changed.add("path")
       } else if (kind === "teachback" && module) {
         module.artifacts.teachback = event.path
         ownership = { module_id: module.id }
         changed.add("path")
-      } else if (event.module_id !== undefined || event.selected_card_ids !== undefined) {
+      } else if (event.module_id !== undefined) {
         throw new Error("unexpected_artifact_ownership")
       }
       state.artifacts[event.path] = { content, source_revision: event.source_revision, job_id: event.job_id, ...ownership }
@@ -993,6 +885,7 @@ function createInteractions() {
 
   function stage(context: ToolContext, input: ChoiceInput): Choice {
     requireTeacher(context)
+    if (!(PURPOSES as readonly string[]).includes(input.purpose)) throw new Error("unsupported_consent_purpose")
     // The host validates plugin schemas without applying Zod defaults.
     input = { ...input, multiple: input.multiple ?? false }
     boundedText(input.question, MAX_CHOICE_QUESTION_CHARS)
@@ -1014,11 +907,11 @@ function createInteractions() {
       throw new Error("invalid_choice_options")
     }
     const stagedSubject = input.subject_json ? JSON.parse(input.subject_json) : undefined
-    if (input.purpose === "mission" || input.purpose === "reformulation" || (input.purpose === "cards" && stagedSubject?.kind === "edit")) {
+    if (input.purpose === "mission") {
       if (!input.subject_json) throw new Error("subject_json_required")
-      const expected = input.purpose === "mission" ? MISSION_OPTIONS : [requiredString(stagedSubject.id, "change_id", 80), CARD_CHANGE_CANCEL]
+      const expected = MISSION_OPTIONS
       if (input.multiple || !sameStrings([...ids], expected)) throw new Error("invalid_choice_options")
-      if (input.purpose === "mission" && input.revision !== 0) throw new Error("stale_interaction_revision")
+      if (input.revision !== 0) throw new Error("stale_interaction_revision")
     }
     if (["scope_revision", "module_selection"].includes(input.purpose)) {
       if (!stagedSubject?.topic_slug) throw new Error("subject_json_required")
@@ -1026,13 +919,6 @@ function createInteractions() {
       if (input.multiple || !sameStrings([...ids], expected)) throw new Error("invalid_choice_options")
     }
     if (input.purpose === "readiness" && (!stagedSubject?.topic_slug || !stagedSubject?.module_id || input.multiple || !sameStrings([...ids], READINESS_OPTIONS))) throw new Error("invalid_choice_options")
-    if (input.purpose === "grade") {
-      if (!stagedSubject?.topic_slug || !stagedSubject?.card_id || input.multiple || !sameStrings([...ids], GRADES)) throw new Error("invalid_choice_options")
-    }
-    if (input.purpose === "cards" && stagedSubject?.kind !== "edit") {
-      const proposals = requiredArray<{ proposal_id: string }>(stagedSubject?.cards, "card_preview", 2).map((card) => requiredString(card.proposal_id, "proposal_id", 80))
-      if (proposals.some((id) => RESERVED_PROPOSAL_IDS.includes(id)) || !input.multiple || !sameStrings([...ids], [...proposals, ...CARD_DISPOSITIONS])) throw new Error("invalid_choice_options")
-    }
     const existing = active.get(context.sessionID)
     if (existing) {
       const previous = choices.get(existing)!
@@ -1088,7 +974,6 @@ function createInteractions() {
     const answers: string[] = data.answers[0]
     const selected = choice.input.options.filter((option) => answers.includes(option.label)).map((option) => option.id)
     if (selected.length !== answers.length || new Set(answers).size !== answers.length || (!choice.input.multiple && selected.length !== 1)) return
-    if (choice.input.purpose === "cards" && choice.input.multiple && (!selected.length || selected.length > 1 && selected.some((id) => CARD_DISPOSITIONS.includes(id)))) return
     choice.selected = selected
     choice.status = "answered"
     active.delete(choice.sessionID)
@@ -1136,22 +1021,19 @@ function markdown(value: string) {
 
 function renderViews(state: TopicState): Record<string, string> {
   const concepts = state.concepts.map((item) => `| ${item.id} | ${markdown(item.title)} | ${item.prerequisites.join(", ") || "none"} | ${item.fundamental ? "yes" : "no"} | ${item.learner_override ? "yes" : "no"} | ${item.taught ? "yes" : "no"} |`).join("\n")
-  const modules = state.modules.map((item) => `| ${item.id} | ${markdown(item.title)} | ${markdown(item.win)} | ${item.phase}${item.practice_skipped ? " (practice skipped)" : ""}${item.deferred ? ` (deferred: ${markdown(item.deferred.reason)})` : ""} | ${item.artifacts.note ?? "—"} | ${item.artifacts.exercise ?? "—"} | ${item.retention.disposition} | ${item.retention.selected_card_ids.join(", ") || "[]"} |`).join("\n")
-  const active = state.cards.filter((item) => item.status === "active").map((item) => `| ${item.id} | ${markdown(item.cue)} | ${item.box} | ${item.last} | ${item.next} | ${item.concept_id}@r${item.source_revision} |`).join("\n")
-  const inactive = state.cards.filter((item) => item.status !== "active").map((item) => `| ${item.id} | ${markdown(item.cue)} | ${item.status} | ${item.last} | ${item.lineage.join(", ") || "—"} |`).join("\n")
+  const modules = state.modules.map((item) => `| ${item.id} | ${markdown(item.title)} | ${markdown(item.win)} | ${item.phase}${item.practice_skipped ? " (practice skipped)" : ""}${item.deferred ? ` (deferred: ${markdown(item.deferred.reason)})` : ""} | ${item.artifacts.note ?? "—"} | ${item.artifacts.exercise ?? "—"} |`).join("\n")
   const candidates = state.vocabulary.candidates.map((item) => `| ${markdown(item.target_language)} | ${markdown(item.duplicate_key)} | ${markdown(item.unit)} | ${item.status} |`).join("\n")
   const gaps = state.gaps.map((item) => `| ${item.id} | ${markdown(item.category)} | ${markdown(item.synthetic_pattern)} | ${item.occurrence_refs.length} | ${item.adoption} |`).join("\n")
-  const language = state.language_units.map((item) => `| ${item.id} | ${item.passive_at} | ${item.next_due} | ${item.status} | ${markdown(item.situation)} |`).join("\n")
+  const language = state.language_units.map((item) => `| ${item.id} | ${item.passive_at} | ${item.status} | ${markdown(item.situation)} |`).join("\n")
   const scopeHistory = state.scope_revisions?.length ? `\n## Scope revisions\n\n${state.scope_revisions.map((entry) => `- r${entry.revision} · ${entry.date} · ${entry.event_id}: ${markdown(entry.reason)}\n  Goal: ${markdown(entry.before.goal)} → ${markdown(entry.goal)}\n${entry.modules.map((item, index) => `  ${item.id}: ${markdown(entry.before.modules[index].title)} / ${markdown(entry.before.modules[index].win)} → ${markdown(item.title)} / ${markdown(item.win)}`).join("\n")}\n  Retired requirements (not demonstrated): ${entry.retired_requirements.map(markdown).join("; ") || "none"}`).join("\n")}\n` : ""
   const navigation = state.current_module_id || state.modules.some((item) => item.deferred) ? `\n> Current module: ${currentModule(state)?.id ?? "none; choose a deferred module"}\n` : ""
   const completion = state.topic.completion
   const completionRecord = completion ? `\n## Completion\n\nDate: ${completion.date} · Event: ${completion.event_id}\n\n${completion.evidence}\n${completion.evidence_refs ? `\nSources:\n${completion.evidence_refs.map((ref) => `- ${ref.session_id} / ${ref.message_id} / ${ref.part_id}: ${JSON.stringify(ref.quote)}`).join("\n")}\n` : ""}` : ""
   return {
     "mission.md": `# Mission — ${state.topic.title}\n\n> Status: ${state.topic.status} · Materials language: ${state.topic.materials_language}\n\n## Observable goal\n\n${state.topic.goal}\n\n## Concepts\n\n| ID | Concept | Prerequisites | Fundamental | Learner override | Taught |\n| --- | --- | --- | --- | --- | --- |\n${concepts}\n${scopeHistory}${completionRecord}`,
-    "path.md": `# Learning Path — ${state.topic.title}\n\n> State revision: ${state.revision}\n${navigation}\n## Modules\n\n| ID | Module | Tangible win | Phase | Note | Exercise | Retention | Selected cards |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n${modules}\n${language ? `\n## Language units\n\n| ID | Passive at | Next due | Status | Situation |\n| --- | --- | --- | --- | --- |\n${language}\n` : ""}`,
-    "review-queue.md": `# Review Queue — ${state.topic.title}\n\n> State revision: ${state.revision}. Box 5 remains on 30-day maintenance until explicit suspension or retirement.\n\n## Queue\n\n| ID | Cue | Box | Last | Next | Source |\n| --- | --- | --- | --- | --- | --- |\n${active}\n\n## Suspended / retired\n\n| ID | Cue | Status | Last | Lineage |\n| --- | --- | --- | --- | --- |\n${inactive}\n`,
+    "path.md": `# Learning Path — ${state.topic.title}\n\n> State revision: ${state.revision}\n${navigation}\n## Modules\n\n| ID | Module | Tangible win | Phase | Note | Exercise |\n| --- | --- | --- | --- | --- | --- |\n${modules}\n${language ? `\n## Language units\n\n| ID | Passive at | Status | Situation |\n| --- | --- | --- | --- |\n${language}\n` : ""}`,
     "vocabulary.md": `# Vocabulary — ${state.topic.title}\n\n> Candidates and exports are distinct. Export status does not prove Anki import.\n\n| Target language | Duplicate key | Unit | Status |\n| --- | --- | --- | --- |\n${candidates}\n`,
-    "gaps.md": `# Synthetic gaps — ${state.topic.title}\n\n> No raw corrections. Adoption and card admission are separate choices.\n\n| ID | Category | Synthetic pattern | Distinct occurrences | Adoption |\n| --- | --- | --- | --- | --- |\n${gaps}\n`,
+    "gaps.md": `# Synthetic gaps — ${state.topic.title}\n\n> No raw corrections. Gap adoption and practice remain separate choices.\n\n| ID | Category | Synthetic pattern | Distinct occurrences | Adoption |\n| --- | --- | --- | --- | --- |\n${gaps}\n`,
     ...Object.fromEntries(Object.entries(state.artifacts).map(([path, artifact]) => [path, artifact.content])),
   }
 }
@@ -1298,7 +1180,7 @@ function createStateStore(directory: string) {
 
   async function generate(root: string, state: TopicState) {
     for (const [relativePath, content] of Object.entries(renderViews(state))) {
-      if (!["mission.md", "path.md", "review-queue.md", "vocabulary.md", "gaps.md"].includes(relativePath) && !ARTIFACT_PATH.test(relativePath)) throw new Error("invalid_view_path")
+      if (!["mission.md", "path.md", "vocabulary.md", "gaps.md"].includes(relativePath) && !ARTIFACT_PATH.test(relativePath)) throw new Error("invalid_view_path")
       const target = resolve(root, relativePath)
       const part = relative(root, target)
       if (!part || part === ".." || part.startsWith(`..${sep}`) || isAbsolute(part)) throw new Error("view_outside_topic")
@@ -1578,16 +1460,16 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
   }
 }
 
-export const learningRuntimeContracts = { createInteractions, createJobs, createEvidence, applyLearningEvent, createStateStore, renderViews, normalizeVocabKey }
+export const learningRuntimeContracts = { createInteractions, createJobs, createEvidence, applyLearningEvent, createStateStore, renderViews, normalizeVocabKey, writerAssignment }
 
 export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
-  const tool = await recallCalcHost.loadTool(directory)
+  const tool = await loadTool(directory)
   const schema = tool.schema
   const writerArtifactSchema = schema.object({
     kind: schema.enum(["note", "exercise", "resources", "quiz", "teachback", "dialogue", "map"]),
-    method: schema.enum(["learning-session", "learning-loop", "cornell-notes", "spaced-recall", "feynman-teachback", "language-loop", "bidirectional-translation", "anki-vocab", "english-tutor"]),
+    method: schema.enum(["learning-session", "learning-loop", "cornell-notes", "feynman-teachback", "language-loop", "bidirectional-translation", "anki-vocab", "english-tutor"]),
     destination_hint: schema.string().regex(WRITER_ARTIFACT_PATH).describe("Topic-relative lowercase path, e.g. notes/m-0001.md or exercises/m-0001.md; never include .ai/learning/<topic>/"), materials_language: schema.string().min(1).max(80),
-    module_id: schema.string().optional(), selected_card_ids: schema.array(schema.string()).optional(),
+    module_id: schema.string().optional(),
   }).strict()
   const evidence = createEvidence(client)
   const interactions = createInteractions()
@@ -1600,13 +1482,13 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         description: "Learning date and installed deterministic capabilities.",
         args: {},
         async execute() {
-          return JSON.stringify({ today: recallCalcContracts.localToday(), calculator: true, sequential_jobs: jobs.available, interactions: "host_question_events", durable_state: true, state_schema: STATE_VERSION, existing_markdown_supported: false })
+          return JSON.stringify({ today: localToday(), sequential_jobs: jobs.available, interactions: "host_question_events", durable_state: true, state_schema: STATE_VERSION, existing_markdown_supported: false })
         },
       }),
       learning_event_reference: tool({
         description: "Return the complete validated payload and exact consent-subject contract for one Learning event, or the full event catalog when omitted. Read-only.",
-        args: { event_type: schema.enum(EVENT_TYPES).optional(), topic_slug: schema.string().regex(TOPIC_SLUG).optional().describe("Resolve select_cards, grade_card, apply_card_change, revise_scope or select_module against stored state; omit for other event types"), module_id: schema.string().optional(), card_id: schema.string().optional(), proposal_json: schema.string().max(MAX_INPUT_CHARS).optional(), reason: schema.string().max(1000).optional() },
-        async execute({ event_type, topic_slug, module_id, card_id, proposal_json, reason }, context) {
+        args: { event_type: schema.enum(EVENT_TYPES).optional(), topic_slug: schema.string().regex(TOPIC_SLUG).optional().describe("Resolve revise_scope or select_module against stored state; omit for other event types"), module_id: schema.string().optional(), proposal_json: schema.string().max(MAX_INPUT_CHARS).optional(), reason: schema.string().max(1000).optional() },
+        async execute({ event_type, topic_slug, module_id, proposal_json, reason }, context) {
           requireTeacher(context)
           let resolved: Record<string, unknown> | undefined
           if (topic_slug) {
@@ -1620,23 +1502,9 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
             } else if (event_type === "select_module") {
               subject = moduleSubject(snapshot, requiredID(module_id, "M"), requiredString(reason, "selection_reason", 1000)); options = MODULE_OPTIONS; purpose = "module_selection"; multiple = false
               resolved = { module_id }
-            } else if (event_type === "select_cards") {
-              const preview = snapshot.modules.find((item) => item.id === module_id)?.retention.preview
-              if (!preview) throw new Error("unknown_card_preview")
-              subject = storedSubject(preview); options = [...preview.cards.map((item) => item.proposal_id), ...CARD_DISPOSITIONS]; purpose = "cards"; multiple = true
-              resolved = { module_id, preview_id: preview.id }
-            } else if (event_type === "grade_card") {
-              if (!snapshot.cards.some((item) => item.id === card_id && item.status === "active")) throw new Error("card_not_active")
-              subject = { topic_slug, card_id }; options = GRADES; purpose = "grade"; multiple = false
-              resolved = { card_id }
-            } else if (event_type === "apply_card_change") {
-              const preview = snapshot.card_changes.find((item) => item.card_id === card_id)
-              if (!preview) throw new Error("unknown_or_stale_card_change")
-              subject = storedSubject(preview); options = [preview.id, CARD_CHANGE_CANCEL]; purpose = preview.kind === "edit" ? "cards" : "reformulation"; multiple = false
-              resolved = { card_id, change_id: preview.id }
             } else throw new Error("event_has_no_resolved_choice")
             resolved = { ...resolved, revision: snapshot.revision, consent_subject: subject, subject_json: canonicalJSON(subject), subject_digest: digest(subject), choice: { purpose, options, multiple } }
-          } else if (module_id || card_id) throw new Error("topic_slug_required")
+          } else if (module_id) throw new Error("topic_slug_required")
           return JSON.stringify({
             resolved,
             base_rules: ["Every event requires type, unique EVENT_ID event_id, and local YYYY-MM-DD date.", "Use the current state revision as expected_revision.", "For consent events, fill the consent_subject placeholders with exact current IDs and pass it as subject_json to learning_choice. The runtime canonicalizes it and returns its SHA-256; when state already supplies a digest, pass that digest too."],
@@ -1689,10 +1557,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
             const kind = artifactKind(parsed.path)
             if (output.kind !== kind || output.source_revision !== parsed.source_revision || destination !== parsed.path || content !== parsed.content) throw new Error("writer_result_mismatch")
             if (output.module_id !== parsed.module_id) throw new Error("writer_owner_mismatch")
-            if (kind === "note" || kind === "exercise") {
-              const outputCards = requiredArray<string>(output.selected_card_ids, "writer_selected_card_ids")
-              if (!parsed.selected_card_ids || !sameStrings(outputCards, parsed.selected_card_ids)) throw new Error("writer_retention_mismatch")
-            } else if (output.selected_card_ids !== undefined) throw new Error("unexpected_writer_retention")
+            if (output.selected_card_ids !== undefined) throw new Error("writer_retention_fields_removed")
           }
           const result = await state.commit(topic_slug, expected_revision, parsed, choice, (event, current) => evidence.verify(context.sessionID, event, current))
           if (interactionID && !result.duplicate) interactions.consume(context.sessionID, interactionID)
@@ -1705,19 +1570,6 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         async execute({ topic_slug }, context) {
           requireTeacher(context)
           return JSON.stringify(await state.recover(topic_slug), null, 2)
-        },
-      }),
-      learning_due: tool({
-        description: "Return active cards and language units due on a supplied date, including finite-course tail units. Read-only.",
-        args: { topic_slug: schema.string().regex(TOPIC_SLUG), today: schema.string() },
-        async execute({ topic_slug, today }, context) {
-          requireTeacher(context)
-          requiredDate(today, "today")
-          const snapshot = await state.read(topic_slug)
-          const cards = snapshot.cards.filter((item) => item.status === "active" && item.next <= today).sort((a, b) => a.next.localeCompare(b.next) || a.id.localeCompare(b.id))
-          const language_units = snapshot.language_units.filter((item) => ["pending", "needs-another-attempt", "input-only"].includes(item.status) && item.next_due <= today).sort((a, b) => a.next_due.localeCompare(b.next_due) || a.id.localeCompare(b.id))
-          const next_dates = [...snapshot.cards.filter((item) => item.status === "active").map((item) => item.next), ...snapshot.language_units.filter((item) => ["pending", "needs-another-attempt", "input-only"].includes(item.status)).map((item) => item.next_due)].filter((date) => date > today).sort()
-          return JSON.stringify({ revision: snapshot.revision, today, cards, language_units, next_upcoming: next_dates[0] ?? null }, null, 2)
         },
       }),
       learning_choice: tool({
@@ -1739,26 +1591,6 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
             const expected = input.purpose === "scope_revision"
               ? scopeSubject(snapshot, { ...requiredRecord(subject.after, "scope_after"), reason: subject.reason, retired_requirements: subject.retired_requirements })
               : moduleSubject(snapshot, requiredID(subject.module_id, "M"), requiredString(subject.reason, "selection_reason", 1000))
-            if (canonicalJSON(subject) !== canonicalJSON(expected)) throw new Error("interaction_subject_mismatch")
-          }
-          if (["cards", "grade", "reformulation"].includes(input.purpose)) {
-            const subject = requiredRecord(JSON.parse(input.subject_json ?? "null"), "choice_subject")
-            const snapshot = await state.read(requiredString(subject.topic_slug, "topic_slug"))
-            if (input.revision !== snapshot.revision) throw new Error("stale_interaction_revision")
-            let expected: Record<string, unknown>
-            if (input.purpose === "grade") {
-              if (!snapshot.cards.some((card) => card.id === subject.card_id && card.status === "active")) throw new Error("card_not_active")
-              expected = { topic_slug: snapshot.topic.slug, card_id: subject.card_id }
-            } else if (input.purpose === "reformulation" || subject.kind === "edit") {
-              const preview = snapshot.card_changes.find((item) => item.id === subject.id && item.card_id === subject.card_id)
-              if (!preview || preview.source_revision + 1 !== snapshot.revision) throw new Error("unknown_or_stale_card_change")
-              if (input.purpose !== (preview.kind === "edit" ? "cards" : "reformulation")) throw new Error("interaction_purpose_mismatch")
-              expected = storedSubject(preview)
-            } else {
-              const module = snapshot.modules.find((item) => item.id === subject.module_id)
-              if (!module?.retention.preview || module.retention.disposition === "selected") throw new Error("unknown_card_preview")
-              expected = storedSubject(module.retention.preview)
-            }
             if (canonicalJSON(subject) !== canonicalJSON(expected)) throw new Error("interaction_subject_mismatch")
           }
           const choice = interactions.stage(context, input)
@@ -1797,12 +1629,11 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
               const module = snapshot.modules.find((item) => item.id === artifact.module_id)
               if (artifact.kind === "note" || artifact.kind === "exercise") {
                 if (!module) throw new Error("module_artifact_owner_required")
-                if (!artifact.selected_card_ids || !sameStrings(artifact.selected_card_ids, module.retention.selected_card_ids)) throw new Error("artifact_retention_mismatch")
-                const method = MODULE_ARTIFACT_METHODS[artifact.kind]
+                const method = artifact.kind === "note" ? "cornell-notes" : "learning-loop"
                 if (artifact.method !== method) throw new Error("writer_method_mismatch")
-              } else if (artifact.selected_card_ids !== undefined || (artifact.module_id !== undefined && (artifact.kind !== "teachback" || !module))) throw new Error("unexpected_artifact_ownership")
-              input = { ...input, prompt: JSON.stringify({ ...artifact, source_revision: input.revision, approved_outline_and_evidence: input.prompt,
-                output_contract: "Return only JSON: {kind, source_revision, destination_hint, content, module_id?, selected_card_ids?}. Compose one complete artifact; load exclusively method. Preserve supplied ownership fields." }) }
+              } else if (artifact.module_id !== undefined && (artifact.kind !== "teachback" || !module)) throw new Error("unexpected_artifact_ownership")
+              input = { ...input, prompt: JSON.stringify({ ...artifact, source_revision: input.revision, assignment: writerAssignment(snapshot, artifact, input.prompt),
+                output_contract: "Return only JSON: {kind, source_revision, destination_hint, content, module_id?}. Compose one complete artifact; load exclusively method." }) }
             }
             const recorded = snapshot.jobs.find((item) => (item.parent_id === context.sessionID || item.worker === input.worker) && ["starting", "running", "cancelling"].includes(item.status))
             if (recorded) {
@@ -1855,7 +1686,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
             const summariesPart = relative(root, summaries)
             if (!summariesPart || summariesPart === ".." || summariesPart.startsWith(`..${sep}`) || isAbsolute(summariesPart)) throw new Error("summary_root_outside_learning")
             const now = new Date()
-            const timestamp = `${recallCalcContracts.localToday(now)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`
+            const timestamp = `${localToday(now)}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`
             const filename = `${timestamp}-${slugText(title)}-${randomUUID().slice(0, 8)}.md`
             target = join(summaries, filename)
             const handle = await open(target, "wx", 0o600)

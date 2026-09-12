@@ -30,9 +30,8 @@
 
 ## Concepts
 
-| ID | Distinct concept | Prerequisites | Fundamental rationale | Taught |
+| ID | Distinct concept | Prerequisites | Teaching rationale | Taught |
 | --- | --- | --- | --- | --- |
-| K-0001 | {concept} | {IDs or none} | {reusable decision, prerequisite, costly misconception, or not shortlisted} | no |
+| K-0001 | {concept} | {IDs or none} | {reusable decision, prerequisite, or costly misconception} | no |
 
-Default shortlist budget: floor(distinct concept count / 5). No denominator padding.
-Explicit learner exceptions: none.
+Concepts and prerequisites stay stable throughout the path; no automatic quota is applied.
