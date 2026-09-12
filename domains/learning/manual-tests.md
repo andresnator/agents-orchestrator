@@ -98,6 +98,32 @@ Run these cases in a disposable OpenCode project. Keep deterministic protocol ev
 - **Expected result:** References are deduplicated, module-scoped and byte-for-byte faithful. `teacher_assessment` contains synthesis only; a paraphrase is never presented as a quote. Unverified references fail with `writer_evidence_not_verified`.
 - **Cleanup:** Remove the disposable topic and child session.
 
+### MT-LEARNING-STANDALONE-WRITER-EVIDENCE
+
+- **Title:** Pass selected evidence to a standalone artifact
+- **Coverage key:** `learning/evidence/standalone-writer`
+- **Applies to:** `domains/learning/plugins/learning-runtime.ts`, `domains/learning/agents/learning-writer.md`
+- **Preconditions:** Prepare a topic with one reference already present in `verified_evidence` and no module ownership for the requested artifact.
+- **Steps:**
+  1. Start a quiz, map or dialogue writer with `artifact.evidence_refs` containing the exact verified reference.
+  2. Inspect the accepted child prompt.
+  3. Repeat with a foreign or unverified reference.
+- **Expected result:** The selected reference appears exactly in `assignment.learner_evidence_refs` even without `module_id`; the foreign or unverified selection is rejected before a child is created.
+- **Cleanup:** Remove the disposable topic and child session.
+
+### MT-LEARNING-WRITER-ASSIGNMENT-BUDGET
+
+- **Title:** Bound complete writer assignments
+- **Coverage key:** `learning/evidence/writer-budget`
+- **Applies to:** `domains/learning/plugins/learning-runtime.ts`, `domains/learning/agents/learning-writer.md`, `domains/learning/agents/mentor.md`
+- **Preconditions:** Prepare a module with individually valid but collectively oversized stored assessments, then prepare a second fixture whose exact learner references alone exceed the writer envelope.
+- **Steps:**
+  1. Start a note writer with the oversized assessments and a short outline.
+  2. Inspect the child prompt for the explicit `teacher_assessment.status: omitted` marker and the unchanged evidence references.
+  3. Start a writer whose literal references exceed the envelope.
+- **Expected result:** Oversized assessment guidance is omitted as a named fallback and the worker still starts. Oversized literal evidence fails before child creation with `writer_assignment_too_large`; the message directs the caller to shorten the outline or pass a bounded `artifact.evidence_refs` selection and promises that quotes are never truncated.
+- **Cleanup:** Remove the disposable topic and child session.
+
 ### MT-LEARNING-LANGUAGE-PROGRESSION
 
 - **Title:** Practice language units on the exposure day

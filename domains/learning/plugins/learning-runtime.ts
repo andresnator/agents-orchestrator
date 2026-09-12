@@ -10,6 +10,7 @@ const PLUGIN_ID = "learning-runtime"
 const MAX_INPUT_CHARS = 24_000
 const MAX_CHOICE_QUESTION_CHARS = 300
 const MAX_RESULT_CHARS = 24_000
+const WRITER_ASSESSMENT_OMITTED_REASON = "Stored teacher assessment omitted to keep the writer assignment within the bounded prompt envelope; use the approved outline and learner evidence references."
 const MAX_STATE_BYTES = 1_000_000
 const MAX_CHOICES = 12
 const MAX_RECORDS = 200
@@ -313,6 +314,17 @@ function createEvidence(client: Parameters<Plugin>[0]["client"]) {
     if (!Array.isArray(response.data)) throw new Error("learner_history_unavailable")
     return learnerParts(response.data, sessionID)
   }
+  async function verifyReferences(sessionID: string, value: unknown, current?: TopicState) {
+    const refs = evidenceReferences(value)
+    const stored = current?.verified_evidence ?? []
+    const fresh = refs.filter((ref) => !stored.some((known) => canonicalJSON(known) === canonicalJSON(ref)))
+    if (fresh.some((ref) => ref.session_id !== sessionID)) throw new Error("foreign_evidence_reference")
+    if (fresh.length) {
+      const source = await parts(sessionID)
+      if (fresh.some((ref) => !source.some((part) => part.session_id === ref.session_id && part.message_id === ref.message_id && part.part_id === ref.part_id && part.quote.includes(ref.quote)))) throw new Error("unverified_evidence_reference")
+    }
+    return refs
+  }
   return {
     async locate(sessionID: string, excerpts: string[]) {
       const source = await parts(sessionID)
@@ -323,17 +335,10 @@ function createEvidence(client: Parameters<Plugin>[0]["client"]) {
         return matches
       })
     },
+    verifyReferences,
     async verify(sessionID: string, event: LearningEvent, current?: TopicState) {
       if (event.type !== "complete_topic" && event.type !== "record_consolidation" && !(event.type === "record_attempt" && event.outcome === "done") && !("evidence_refs" in event)) return []
-      const refs = evidenceReferences("evidence_refs" in event ? event.evidence_refs : undefined)
-      const stored = current?.verified_evidence ?? []
-      const fresh = refs.filter((ref) => !stored.some((known) => canonicalJSON(known) === canonicalJSON(ref)))
-      if (fresh.some((ref) => ref.session_id !== sessionID)) throw new Error("foreign_evidence_reference")
-      if (fresh.length) {
-        const source = await parts(sessionID)
-        if (fresh.some((ref) => !source.some((part) => part.session_id === ref.session_id && part.message_id === ref.message_id && part.part_id === ref.part_id && part.quote.includes(ref.quote)))) throw new Error("unverified_evidence_reference")
-      }
-      return refs
+      return verifyReferences(sessionID, "evidence_refs" in event ? event.evidence_refs : undefined, current)
     },
   }
 }
@@ -443,15 +448,17 @@ function artifactKind(path: string): string | undefined {
   return ({ notes: "note", exercises: "exercise", quizzes: "quiz", teachbacks: "teachback", dialogues: "dialogue", maps: "map" } as Record<string, string>)[path.split("/", 1)[0]]
 }
 
-function writerAssignment(state: TopicState, artifact: { kind: string; method: string; destination_hint: string; materials_language: string; module_id?: string }, outline: string) {
+function writerAssignment(state: TopicState, artifact: { kind: string; method: string; destination_hint: string; materials_language: string; module_id?: string; evidence_refs?: EvidenceReference[] }, outline: string, verifiedEvidence: EvidenceReference[] = []) {
   const module = artifact.module_id ? state.modules.find((item) => item.id === artifact.module_id) : undefined
   if ((artifact.kind === "note" || artifact.kind === "exercise") && !module) throw new Error("module_artifact_owner_required")
-  const refs = module
+  const moduleRefs = module
     ? [...(module.attempt?.evidence_refs ?? []), ...(module.consolidation?.evidence_refs ?? [])]
     : []
+  const refs = artifact.evidence_refs === undefined ? moduleRefs : evidenceReferences(artifact.evidence_refs)
   const uniqueRefs = [...new Map(refs.map((ref) => [canonicalJSON(ref), ref])).values()]
-  const trusted = new Set((state.verified_evidence ?? []).map(canonicalJSON))
+  const trusted = new Set([...(state.verified_evidence ?? []), ...verifiedEvidence].map(canonicalJSON))
   if (uniqueRefs.some((ref) => !trusted.has(canonicalJSON(ref)))) throw new Error("writer_evidence_not_verified")
+  if (module && uniqueRefs.some((ref) => !moduleRefs.some((known) => canonicalJSON(known) === canonicalJSON(ref)))) throw new Error("writer_evidence_outside_module")
   return {
     approved_outline: requiredString(outline, "approved_outline"),
     teacher_assessment: module ? {
@@ -465,6 +472,29 @@ function writerAssignment(state: TopicState, artifact: { kind: string; method: s
     } : {},
     learner_evidence_refs: uniqueRefs,
   }
+}
+
+function compactWriterAssignment(assignment: ReturnType<typeof writerAssignment>) {
+  return {
+    ...assignment,
+    teacher_assessment: { status: "omitted", reason: WRITER_ASSESSMENT_OMITTED_REASON },
+    practice_state: assignment.practice_state && "skipped" in assignment.practice_state
+      ? {
+          skipped: assignment.practice_state.skipped,
+          ...(assignment.practice_state.attempt ? { attempt: { outcome: assignment.practice_state.attempt.outcome } } : {}),
+        }
+      : {},
+  }
+}
+
+function writerPrompt(artifact: Record<string, unknown>, revision: number, assignment: ReturnType<typeof writerAssignment>) {
+  const outputContract = "Return only JSON: {kind, source_revision, destination_hint, content, module_id?}. Compose one complete artifact; load exclusively method."
+  const payload = (value: ReturnType<typeof writerAssignment>) => JSON.stringify({ ...artifact, source_revision: revision, assignment: value, output_contract: outputContract })
+  const complete = payload(assignment)
+  if (complete.length <= MAX_INPUT_CHARS) return complete
+  const compact = payload(compactWriterAssignment(assignment))
+  if (compact.length <= MAX_INPUT_CHARS) return compact
+  throw new Error("writer_assignment_too_large: shorten approved_outline or pass a bounded artifact.evidence_refs selection; exact learner quotes are never truncated")
 }
 
 function eventDigest(event: LearningEvent) {
@@ -1465,11 +1495,18 @@ export const learningRuntimeContracts = { createInteractions, createJobs, create
 export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
   const tool = await loadTool(directory)
   const schema = tool.schema
+  const evidenceReferenceSchema = schema.object({
+    session_id: schema.string().min(1).max(100),
+    message_id: schema.string().min(1).max(100),
+    part_id: schema.string().min(1).max(100),
+    quote: schema.string().min(1).max(MAX_INPUT_CHARS),
+  }).strict()
   const writerArtifactSchema = schema.object({
     kind: schema.enum(["note", "exercise", "resources", "quiz", "teachback", "dialogue", "map"]),
     method: schema.enum(["learning-session", "learning-loop", "cornell-notes", "feynman-teachback", "language-loop", "bidirectional-translation", "anki-vocab", "english-tutor"]),
     destination_hint: schema.string().regex(WRITER_ARTIFACT_PATH).describe("Topic-relative lowercase path, e.g. notes/m-0001.md or exercises/m-0001.md; never include .ai/learning/<topic>/"), materials_language: schema.string().min(1).max(80),
     module_id: schema.string().optional(),
+    evidence_refs: schema.array(evidenceReferenceSchema).max(MAX_RECORDS).optional().describe("Optional exact learner references; verify them with learning_evidence or reuse references already verified in this topic"),
   }).strict()
   const evidence = createEvidence(client)
   const interactions = createInteractions()
@@ -1632,8 +1669,10 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
                 const method = artifact.kind === "note" ? "cornell-notes" : "learning-loop"
                 if (artifact.method !== method) throw new Error("writer_method_mismatch")
               } else if (artifact.module_id !== undefined && (artifact.kind !== "teachback" || !module)) throw new Error("unexpected_artifact_ownership")
-              input = { ...input, prompt: JSON.stringify({ ...artifact, source_revision: input.revision, assignment: writerAssignment(snapshot, artifact, input.prompt),
-                output_contract: "Return only JSON: {kind, source_revision, destination_hint, content, module_id?}. Compose one complete artifact; load exclusively method." }) }
+              const verifiedEvidence = artifact.evidence_refs === undefined ? [] : await evidence.verifyReferences(context.sessionID, artifact.evidence_refs, snapshot)
+              const { evidence_refs: _evidenceRefs, ...artifactPayload } = artifact
+              const assignment = writerAssignment(snapshot, { ...artifact, evidence_refs: artifact.evidence_refs }, input.prompt, verifiedEvidence)
+              input = { ...input, prompt: writerPrompt(artifactPayload, input.revision, assignment) }
             }
             const recorded = snapshot.jobs.find((item) => (item.parent_id === context.sessionID || item.worker === input.worker) && ["starting", "running", "cancelling"].includes(item.status))
             if (recorded) {

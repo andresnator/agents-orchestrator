@@ -50,6 +50,8 @@ Non-language modules follow this sequence:
 
 Omission preserves any partial attempt and never proves competence. Closing never depends on an internal card, a schedule or a delayed observation. Existing schema-1 states may retain historical fields; new events do not create or consult them.
 
+Standalone quizzes, maps, dialogues and teach-backs receive only the exact references explicitly selected in `artifact.evidence_refs`; notes and exercises use verified references from their owned module. The runtime checks the complete writer payload before launching a child, omits oversized teacher guidance with an explicit marker, and rejects oversized literal evidence with a recoverable selection message without truncating quotes.
+
 Learners can adapt a path without losing evidence:
 
 | Need | Operation | What stays pending |

@@ -72,6 +72,96 @@ test("shouldBuildWriterAssignmentFromVerifiedModuleEvidence", () => {
   assert.throws(() => learningRuntimeContracts.writerAssignment(state, { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID }, "Approved outline"), /writer_evidence_not_verified/)
 })
 
+test("shouldPassExplicitVerifiedEvidenceToStandaloneWriter", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  const job = await fixture.call("learning_job_start", {
+    worker: "learning-writer", scope: initial.topic.slug, revision: initial.revision,
+    artifact: {
+      kind: "quiz", method: "learning-loop", destination_hint: "quizzes/learning-flow.md", materials_language: "English",
+      evidence_refs: [LEARNER_REFERENCE],
+    },
+    prompt: "Create a short quiz from the verified learner excerpt.",
+  })
+
+  // Then
+  assert.equal(job.status, "completed")
+  assert.deepEqual(fixture.prompts[0].assignment.learner_evidence_refs, [LEARNER_REFERENCE])
+  assert.equal(fixture.prompts[0].module_id, undefined)
+})
+
+test("shouldCompactOversizedTeacherAssessmentBeforeLaunchingWriter", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.modules[0].class_evidence = "c".repeat(12_500)
+  initial.modules[0].consolidation.learner_evidence = "d".repeat(12_500)
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  const job = await fixture.call("learning_job_start", {
+    worker: "learning-writer", scope: initial.topic.slug, revision: initial.revision,
+    artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID },
+    prompt: "Compose the note from the current module.",
+  })
+
+  // Then
+  assert.equal(job.status, "completed")
+  assert.equal(fixture.prompts[0].assignment.teacher_assessment.status, "omitted")
+  assert.match(fixture.prompts[0].assignment.teacher_assessment.reason, /bounded prompt envelope/)
+  assert.equal(fixture.counts().created, 1)
+})
+
+test("shouldRejectOversizedLiteralEvidenceWithAnActionableSelectionPath", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [
+    { ...LEARNER_REFERENCE, quote: "x".repeat(12_000) },
+    { ...LEARNER_REFERENCE, message_id: "learner-2", quote: "y".repeat(12_000) },
+  ]
+  initial.modules[0].consolidation.evidence_refs = initial.verified_evidence
+  const fixture = await pluginFixture(t, initial)
+
+  // When / Then
+  await assert.rejects(fixture.call("learning_job_start", {
+    worker: "learning-writer", scope: initial.topic.slug, revision: initial.revision,
+    artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID },
+    prompt: "Compose the note from the current module.",
+  }), /writer_assignment_too_large:.*artifact\.evidence_refs.*never truncated/)
+  assert.equal(fixture.counts().created, 0)
+
+  const recovered = await fixture.call("learning_job_start", {
+    worker: "learning-writer", scope: initial.topic.slug, revision: initial.revision,
+    artifact: {
+      kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID,
+      evidence_refs: [initial.verified_evidence[0]],
+    },
+    prompt: "Compose the note from the selected learner evidence.",
+  })
+  assert.equal(recovered.status, "completed")
+  assert.deepEqual(fixture.prompts[0].assignment.learner_evidence_refs, [initial.verified_evidence[0]])
+})
+
+test("shouldRejectUnverifiedStandaloneEvidenceBeforeCreatingChild", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  const fixture = await pluginFixture(t, initial)
+
+  // When / Then
+  await assert.rejects(fixture.call("learning_job_start", {
+    worker: "learning-writer", scope: initial.topic.slug, revision: initial.revision,
+    artifact: {
+      kind: "dialogue", method: "language-loop", destination_hint: "dialogues/learning-flow.md", materials_language: "English",
+      evidence_refs: [{ ...LEARNER_REFERENCE, message_id: "missing" }],
+    },
+    prompt: "Create a dialogue from this learner response.",
+  }), /unverified_evidence_reference/)
+  assert.equal(fixture.counts().created, 0)
+})
+
 test("shouldMakeLanguagePracticeAvailableOnExposureDayWithoutScheduling", () => {
   // Given
   const state = topicState("class")
@@ -259,7 +349,8 @@ function workerFixture() {
         started.resolve(path.id)
         return Promise.race([response.promise, new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true }))])
       },
-      messages: async ({ path }) => ({ data: records.get(path.id).messages }),
+      get: async ({ path }) => ({ data: { id: path.id } }),
+      messages: async ({ path }) => ({ data: records.get(path.id)?.messages ?? [] }),
       status: async () => ({ data: Object.fromEntries([...records].map(([id, record]) => [id, { type: record.busy ? "busy" : "idle" }])) }),
       abort: async ({ path }) => { aborted++; records.get(path.id).busy = false; return { data: true } },
     },
@@ -355,6 +446,7 @@ async function pluginFixture(t, initial) {
   const directory = await mkdtemp(join(tmpdir(), "learning-protocol-"))
   t.after(() => rm(directory, { recursive: true, force: true }))
   const fixture = workerFixture()
+  const prompts = []
   if (initial) {
     const root = join(directory, ".ai/learning", initial.topic.slug)
     await mkdir(root, { recursive: true })
@@ -365,6 +457,7 @@ async function pluginFixture(t, initial) {
     if (body.agent === "learning-summarizer") result = { kind: "summary", title: "Resumen", language: "Spanish", markdown: "# Resumen\n\n## Preguntas\n\n¿Por qué revalidar?\n\n## Notas\n\nComprueba cambios.\n\n## Resumen\n\nRevalidar permite reutilizar." }
     else {
       const input = JSON.parse(body.parts[0].text)
+      prompts.push(input)
       result = { kind: input.kind, source_revision: input.source_revision, destination_hint: input.destination_hint, module_id: input.module_id, content: "# Material\n\n## Evidence\n\nPractice skipped; no completed attempt.\n" }
     }
     fixture.finish(path.id, JSON.stringify(result))
@@ -382,7 +475,7 @@ async function pluginFixture(t, initial) {
     assert.equal(answered.status, "answered")
     return answered.id
   }
-  return { ...fixture, directory, plugin, call, choose }
+  return { ...fixture, directory, plugin, call, choose, prompts }
 }
 
 test("shouldDeliverNoteExerciseAndCloseInOneProtocolTurnAfterNativeSkip", async (t) => {

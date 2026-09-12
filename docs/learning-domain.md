@@ -85,7 +85,9 @@ Close requires a completed or explicitly omitted practice decision, a consolidat
 
 `learning_evidence` locates literal excerpts only in real learner text parts of the current parent session. Each reference keeps `session_id`, `message_id`, `part_id` and exact `quote`. Practice and Consolidation references are checked against the topic's `verified_evidence`, deduplicated and restricted to the module. Foreign or unverified references fail before commit.
 
-The writer assignment contains four separate fields: `approved_outline`, `teacher_assessment`, `practice_state` and `learner_evidence_refs`. Mentor text is a composition instruction or assessment; it is never evidence of learner speech. Cornell and exercise outputs must distinguish literal quotes from teacher synthesis and mark missing evidence as pending.
+The writer assignment contains four separate fields: `approved_outline`, `teacher_assessment`, `practice_state` and `learner_evidence_refs`. Mentor text is a composition instruction or assessment; it is never evidence of learner speech. For standalone quizzes, maps, dialogues and teach-backs, pass a bounded `artifact.evidence_refs` selection after `learning_evidence`; module notes and exercises use their module references by default. Cornell and exercise outputs must distinguish literal quotes from teacher synthesis and mark missing evidence as pending.
+
+The runtime budgets the complete serialized assignment before creating a child. If stored teacher assessment makes the payload too large, it replaces that guidance with an explicit `teacher_assessment.status: omitted` marker while preserving exact learner references. If the outline plus literal references still exceed the envelope, `writer_assignment_too_large` stops before child creation and directs Mentor to shorten the outline or select fewer `artifact.evidence_refs`; quotes are never truncated.
 
 Workers are bounded and sequential. The runtime checks worker ownership, source revision, destination, exact returned content and job settlement before attachment. An accepted failed child is recovered or cancelled by ID; no automatic retry or equivalent duplicate job is created.
 
@@ -111,3 +113,4 @@ Deterministic tests and installation checks prove contracts, state validation, a
 - `revision_conflict`: read current state and form a new event from that revision.
 - `topic_busy` or `ambiguous_topic_lock`: inspect the owner; remove a lock only after proving its PID is dead.
 - `invalid_or_stale_artifact` or `unsettled_or_stale_writer`: inspect the accepted child and current revision before launching current work.
+- `writer_assignment_too_large`: shorten the approved outline or pass a smaller explicit `artifact.evidence_refs` selection; exact learner quotes remain intact.
