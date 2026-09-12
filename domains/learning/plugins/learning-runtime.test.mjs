@@ -1,15 +1,23 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+import { createHash } from "node:crypto"
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { LearningRuntimePlugin, learningRuntimeContracts } from "./learning-runtime.ts"
 
 const MODULE_ID = "M-0001"
-const PREVIEW_ID = "RETENTION-RECOVERY"
 const REVISION = 7
+const RETIRED_CARD_EVENTS = ["preview_cards", "select_cards", "grade_card", "preview_card_change", "apply_card_change", "set_card_status", "set_fundamental_override"]
 
-function topicState(phase, disposition = "pending", preview) {
+// Mirrors the runtime's canonical digest so fixtures can carry valid historical digests.
+function digestOf(value) {
+  const canonical = JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map((key) => [key, item[key]])) : item)
+  return createHash("sha256").update(canonical).digest("hex")
+}
+
+function topicState(phase) {
   return {
     schema_version: 1,
     revision: REVISION,
@@ -24,84 +32,16 @@ function topicState(phase, disposition = "pending", preview) {
       class_evidence: "Class completed",
       attempt: { revision: 5, outcome: "done", evidence: "Practice completed" },
       consolidation: { revision: 6, learner_evidence: "Consolidated", blocking_gaps: [] },
-      retention: { disposition, ...(preview ? { preview } : {}), selected_card_ids: [] },
       artifacts: { note: "notes/m-0001.md", exercise: "exercises/m-0001.md" },
     }],
-    cards: [], card_changes: [], review_events: [], language_units: [],
+    language_units: [],
     vocabulary: { candidates: [], exports: [] }, gaps: [], jobs: [], artifacts: {},
     applied_events: {}, consents: [], views: { revision: REVISION, status: "current" },
   }
 }
 
-function previewEvent() {
-  return {
-    type: "preview_cards",
-    event_id: "TEST-RETENTION-RECOVERY",
-    date: "2026-09-09",
-    module_id: MODULE_ID,
-    preview_id: PREVIEW_ID,
-    source_revision: REVISION,
-    cards: [],
-  }
-}
-
-for (const phase of ["practice", "consolidation"]) {
-  test(`shouldPreserveModuleEvidenceWhenRecoveringMissingPreviewIn${phase}`, () => {
-    // Given
-    const current = topicState(phase)
-    const before = structuredClone(current)
-
-    // When
-    const { state } = learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, previewEvent())
-    const updated = state.modules[0]
-
-    // Then
-    assert.deepEqual(current, before)
-    assert.deepEqual({ ...updated, retention: before.modules[0].retention }, before.modules[0])
-    assert.equal(updated.retention.preview.id, PREVIEW_ID)
-    assert.equal(updated.retention.disposition, "pending")
-  })
-}
-
-for (const phase of ["mission", "closed"]) {
-  test(`shouldRejectPreviewWhenModuleIs${phase}`, () => {
-    // Given
-    const current = topicState(phase)
-
-    // When / Then
-    assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, previewEvent()), /preview_requires_class/)
-  })
-}
-
-for (const disposition of ["none", "deferred", "selected"]) {
-  test(`shouldRejectLatePreviewWhenRetentionIs${disposition}`, () => {
-    // Given
-    const current = topicState("consolidation", disposition)
-
-    // When / Then
-    assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, previewEvent()), /preview_requires_class/)
-  })
-}
-
-test("shouldRejectLateReplacementWhenPreviewAlreadyExists", () => {
-  // Given
-  const existingPreview = { topic_slug: "retention-recovery", module_id: MODULE_ID, id: "EXISTING", source_revision: REVISION, digest: "digest", cards: [] }
-  const current = topicState("consolidation", "pending", existingPreview)
-
-  // When / Then
-  assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, previewEvent()), /preview_requires_class/)
-})
-
-test("shouldStillRejectClosureWhenRetentionIsPending", () => {
-  // Given
-  const current = topicState("consolidation")
-  const event = { type: "close_module", event_id: "TEST-CLOSE", date: "2026-09-09", module_id: MODULE_ID }
-
-  // When / Then
-  assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, event), /module_close_requirements_not_met/)
-})
-
 const LEARNER_REFERENCE = { session_id: "parent", message_id: "learner", part_id: "text", quote: "A stale response must be revalidated before reuse." }
+const UNVERIFIED_REFERENCE = { session_id: "parent", message_id: "learner", part_id: "text-late", quote: "Later unverified remark." }
 const CONTEXT = { agent: "mentor", sessionID: "parent", messageID: "assistant", abort: new AbortController().signal }
 
 function answeredReadiness(current, selected = "skip") {
@@ -122,7 +62,7 @@ function skipEvent(choice) {
 for (const phase of ["class", "practice"]) {
   test(`shouldPreserveAttemptsAndRequireConsolidationWhenSkippingFrom${phase}`, () => {
     // Given
-    const current = topicState(phase, "none")
+    const current = topicState(phase)
     delete current.modules[0].consolidation
     if (phase === "class") delete current.modules[0].attempt
     else current.modules[0].attempt.outcome = "partial"
@@ -162,7 +102,7 @@ for (const invalid of ["pending", "dismissed", "wrong-selection", "stale", "wron
 for (const skipped of [false, true]) {
   test(`shouldCloseWithVerifiedConsolidationAndMaterialsWhenPracticeIs${skipped ? "Skipped" : "Done"}`, () => {
     // Given
-    let current = topicState("consolidation", "none")
+    let current = topicState("consolidation")
     delete current.modules[0].consolidation
     if (skipped) { current.modules[0].practice_skipped = true; delete current.modules[0].attempt }
     const event = { type: "record_consolidation", event_id: "CONSOLIDATE", date: "2026-09-10", module_id: MODULE_ID, learner_evidence: "Correct essential explanation", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: [] }
@@ -173,7 +113,7 @@ for (const skipped of [false, true]) {
     const close = { type: "close_module", event_id: "CLOSE", date: "2026-09-10", module_id: MODULE_ID }
     assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, close), /module_artifacts_not_current/)
     for (const path of ["notes/m-0001.md", "exercises/m-0001.md"]) {
-      current = learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, { type: "attach_artifact", event_id: path.startsWith("notes") ? "NOTE" : "EXERCISE", date: "2026-09-10", module_id: MODULE_ID, path, content: "# Material\n\n" + (skipped ? "Practice skipped" : "Practice done"), source_revision: current.revision, job_id: "writer", selected_card_ids: [] }).state
+      current = learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, { type: "attach_artifact", event_id: path.startsWith("notes") ? "NOTE" : "EXERCISE", date: "2026-09-10", module_id: MODULE_ID, path, content: "# Material\n\n" + (skipped ? "Practice skipped" : "Practice done"), source_revision: current.revision, job_id: "writer" }).state
     }
     const blocked = structuredClone(current)
     blocked.modules[0].consolidation.blocking_gaps = ["Unresolved misconception"]
@@ -184,7 +124,8 @@ for (const skipped of [false, true]) {
     assert.equal(current.modules[0].phase, "closed")
     assert.deepEqual(current.modules[0].consolidation.evidence_refs, [LEARNER_REFERENCE])
     const views = learningRuntimeContracts.renderViews(current)
-    const old = learningRuntimeContracts.renderViews(topicState("closed", "none"))
+    assert.equal(views["review-queue.md"], undefined)
+    const old = learningRuntimeContracts.renderViews(topicState("closed"))
     assert.deepEqual(Object.keys(views).filter((path) => !path.includes("/")), Object.keys(old))
     const structure = (text) => text.split("\n").filter((line) => line.startsWith("#") || line.startsWith("| ID") || line.startsWith("| ---"))
     for (const path of Object.keys(old)) assert.deepEqual(structure(views[path]), structure(old[path]))
@@ -314,12 +255,15 @@ async function pluginFixture(t, initial) {
     await mkdir(root, { recursive: true })
     await writeFile(join(root, ".state.json"), JSON.stringify(initial))
   }
+  fixture.prompts = []
+  fixture.writerExtras = {}
   fixture.client.session.prompt = async ({ path, body }) => {
+    fixture.prompts.push(body.parts[0]?.text)
     let result
     if (body.agent === "learning-summarizer") result = { kind: "summary", title: "Resumen", language: "Spanish", markdown: "# Resumen\n\n## Preguntas\n\n¿Por qué revalidar?\n\n## Notas\n\nComprueba cambios.\n\n## Resumen\n\nRevalidar permite reutilizar." }
     else {
       const input = JSON.parse(body.parts[0].text)
-      result = { kind: input.kind, source_revision: input.source_revision, destination_hint: input.destination_hint, module_id: input.module_id, selected_card_ids: input.selected_card_ids, content: "# Material\n\n## Evidence\n\nPractice skipped; no completed attempt.\n" }
+      result = { kind: input.kind, source_revision: input.source_revision, destination_hint: input.destination_hint, module_id: input.module_id, content: "# Material\n\n## Evidence\n\nPractice skipped; no completed attempt.\n", ...fixture.writerExtras }
     }
     fixture.finish(path.id, JSON.stringify(result))
     return { data: fixture.records.get(path.id).messages.at(-1) }
@@ -336,12 +280,12 @@ async function pluginFixture(t, initial) {
     assert.equal(answered.status, "answered")
     return answered.id
   }
-  return { ...fixture, directory, plugin, call, choose }
+  return Object.assign(fixture, { directory, plugin, call, choose })
 }
 
 test("shouldDeliverNoteExerciseAndCloseInOneProtocolTurnAfterNativeSkip", async (t) => {
   // Given: an old schema-1 snapshot has no practice_skipped field.
-  const initial = topicState("class", "none")
+  const initial = topicState("class")
   delete initial.modules[0].attempt
   delete initial.modules[0].consolidation
   initial.verified_evidence = [LEARNER_REFERENCE]
@@ -353,11 +297,13 @@ test("shouldDeliverNoteExerciseAndCloseInOneProtocolTurnAfterNativeSkip", async 
     const result = await call("learning_commit", { topic_slug, expected_revision: revision, event: { date: "2026-09-10", module_id: MODULE_ID, ...event } })
     revision = result.revision
     assert.equal(result.views, "current")
+    return result
   }
 
   // When: every operation uses the same parent message, with no continuation.
   const capabilities = await call("learning_context", {})
   assert.equal(capabilities.sequential_jobs, true)
+  assert.equal(capabilities.calculator, undefined)
   assert.equal(capabilities.async_sessions, undefined)
   assert.equal(fixture.plugin["chat.message"], undefined)
   const reference = await call("learning_event_reference", { event_type: "skip_practice" })
@@ -368,10 +314,15 @@ test("shouldDeliverNoteExerciseAndCloseInOneProtocolTurnAfterNativeSkip", async 
   const revisions = []
   for (const kind of ["note", "exercise"]) {
     revisions.push(revision)
-    const job = await call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID, selected_card_ids: [] }, prompt: "Retain the existing template. Practice was skipped; preserve omission in existing evidence fields." })
+    const job = await call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID }, prompt: "Retain the existing template. Practice was skipped; preserve omission in existing evidence fields." })
     assert.equal(job.status, "completed")
+    if (kind === "note") {
+      const assignment = JSON.parse(fixture.prompts.at(-1))
+      assert.equal(assignment.practice_status.skipped, true)
+      assert.deepEqual(assignment.learner_evidence, [LEARNER_REFERENCE])
+    }
     const output = JSON.parse(job.result)
-    await commit({ type: "attach_artifact", event_id: kind.toUpperCase(), path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id, selected_card_ids: [] })
+    await commit({ type: "attach_artifact", event_id: kind.toUpperCase(), path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id })
   }
   await commit({ type: "close_module", event_id: "CLOSE" })
 
@@ -381,11 +332,83 @@ test("shouldDeliverNoteExerciseAndCloseInOneProtocolTurnAfterNativeSkip", async 
   assert.deepEqual(revisions, [REVISION + 2, REVISION + 3])
   assert.equal(state.modules[0].phase, "closed")
   assert.equal(state.modules[0].practice_skipped, true)
+  assert.equal(state.modules[0].retention, undefined)
   assert.equal(state.modules[0].attempt, undefined)
   assert.equal(state.consents.length, 1)
   assert.deepEqual(state.jobs.map((job) => job.status), ["completed", "completed"])
   assert.match(await readFile(join(fixture.directory, ".ai/learning", topic_slug, "path.md"), "utf8"), /closed \(practice skipped\)/)
   assert.equal(fixture.counts().created, 2)
+})
+
+test("shouldSeparateOutlineAssessmentAndLearnerEvidenceInWriterAssignment", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  initial.modules[0].attempt = { revision: 5, outcome: "partial", evidence: "Teacher saw a partial attempt", evidence_refs: [LEARNER_REFERENCE, UNVERIFIED_REFERENCE] }
+  initial.modules[0].consolidation = { revision: 6, learner_evidence: "Teacher confirms the causal explanation", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: [] }
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID }, prompt: "Keep the existing template. The learner clearly passed." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+
+  // Then: only verified module references reach the writer; Mentor text stays instruction.
+  assert.equal(assignment.approved_outline, "Keep the existing template. The learner clearly passed.")
+  assert.deepEqual(assignment.learner_evidence, [LEARNER_REFERENCE])
+  assert.deepEqual(assignment.practice_status, { skipped: false, outcome: "partial" })
+  assert.equal(assignment.teaching_assessment.class_evidence, "Class completed")
+  assert.equal(assignment.teaching_assessment.attempt_assessment, "Teacher saw a partial attempt")
+  assert.equal(assignment.teaching_assessment.consolidation_assessment, "Teacher confirms the causal explanation")
+  assert.match(assignment.output_contract, /never learner quotes/)
+})
+
+test("shouldKeepLearnerEvidencePendingWhenModuleHasNoReferences", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  delete initial.modules[0].attempt
+  delete initial.modules[0].consolidation
+  const fixture = await pluginFixture(t, initial)
+
+  // When
+  await fixture.call("learning_job_start", { worker: "learning-writer", scope: initial.topic.slug, revision: REVISION, artifact: { kind: "exercise", method: "learning-loop", destination_hint: "exercises/m-0001.md", materials_language: "English", module_id: MODULE_ID }, prompt: "Compose the exercise." })
+  const assignment = JSON.parse(fixture.prompts.at(-1))
+
+  // Then
+  assert.deepEqual(assignment.learner_evidence, [])
+  assert.deepEqual(assignment.practice_status, { skipped: false, outcome: null })
+  assert.deepEqual(assignment.teaching_assessment, { class_evidence: "Class completed" })
+})
+
+test("shouldRejectWriterResultsCarryingRetiredCardFields", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, initial)
+  fixture.writerExtras = { selected_card_ids: [] }
+  const topic_slug = initial.topic.slug
+  const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID }, prompt: "Approved outline" })
+  const output = JSON.parse(job.result)
+
+  // When / Then
+  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: { type: "attach_artifact", event_id: "CARDS", date: "2026-09-10", module_id: MODULE_ID, path: output.destination_hint, content: output.content, source_revision: REVISION, job_id: job.id } }), /unexpected_writer_retention/)
+  assert.equal(fixture.counts().created, 1)
+})
+
+test("shouldRejectStaleWriterResultAtCommitWithoutRelaunch", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID }, prompt: "Approved outline" })
+
+  // When
+  await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: { type: "record_consolidation", event_id: "NEW-EVIDENCE", date: "2026-09-10", module_id: MODULE_ID, learner_evidence: "Updated assessment", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: [] } })
+  const output = JSON.parse(job.result)
+
+  // Then
+  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: REVISION + 1, event: { type: "attach_artifact", event_id: "STALE", date: "2026-09-10", module_id: MODULE_ID, path: output.destination_hint, content: output.content, source_revision: REVISION, job_id: job.id } }), /invalid_or_stale_artifact/)
+  assert.equal(fixture.counts().created, 1)
 })
 
 test("shouldCreateApprovedSummaryExclusivelyInSameProtocolTurn", async (t) => {
@@ -404,23 +427,6 @@ test("shouldCreateApprovedSummaryExclusivelyInSameProtocolTurn", async (t) => {
   await assert.rejects(fixture.call("learning_summary_create", args), /summary_interaction_already_used/)
   const files = await readdir(join(fixture.directory, ".ai/learning/summaries"))
   assert.equal(files.length, 1)
-  assert.equal(fixture.counts().created, 1)
-})
-
-test("shouldRejectStaleWriterResultAtCommitWithoutRelaunch", async (t) => {
-  // Given
-  const initial = topicState("consolidation", "none")
-  initial.verified_evidence = [LEARNER_REFERENCE]
-  const fixture = await pluginFixture(t, initial)
-  const topic_slug = initial.topic.slug
-  const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision: REVISION, artifact: { kind: "note", method: "cornell-notes", destination_hint: "notes/m-0001.md", materials_language: "English", module_id: MODULE_ID, selected_card_ids: [] }, prompt: "Approved outline" })
-
-  // When
-  await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: { type: "record_consolidation", event_id: "NEW-EVIDENCE", date: "2026-09-10", module_id: MODULE_ID, learner_evidence: "Updated assessment", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: [] } })
-  const output = JSON.parse(job.result)
-
-  // Then
-  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: REVISION + 1, event: { type: "attach_artifact", event_id: "STALE", date: "2026-09-10", module_id: MODULE_ID, selected_card_ids: [], path: output.destination_hint, content: output.content, source_revision: REVISION, job_id: job.id } }), /invalid_or_stale_artifact/)
   assert.equal(fixture.counts().created, 1)
 })
 
@@ -453,7 +459,7 @@ for (const terminal of ["failed", "completed"]) {
 
 test("shouldPreservePracticePathAndRejectOmissionAfterCompletion", () => {
   // Given
-  let current = topicState("class", "none")
+  let current = topicState("class")
   delete current.modules[0].attempt
   delete current.modules[0].consolidation
   const choice = answeredReadiness(current, "ready")
@@ -504,15 +510,15 @@ const SCOPE_PROPOSAL = {
 }
 
 function flexibleTopic() {
-  const initial = topicState("consolidation", "none")
+  const initial = topicState("consolidation")
   initial.topic.goal = "Implement a plugin and integrate it with local and remote work."
   initial.modules[0].win = "Implement and operate a plugin."
   initial.modules[0].practice_skipped = true
   delete initial.modules[0].attempt
   initial.modules[0].consolidation = { revision: 6, learner_evidence: "Sound theoretical security decisions; no operation observed.", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: ["No implemented plugin."] }
-  initial.modules.push({ id: NEXT_MODULE_ID, title: "Integration", win: "Incorporate your plugin.", phase: "mission", taught_concept_ids: [], retention: { disposition: "pending", selected_card_ids: [] }, artifacts: {} })
+  initial.modules.push({ id: NEXT_MODULE_ID, title: "Integration", win: "Incorporate your plugin.", phase: "mission", taught_concept_ids: [], artifacts: {} })
   initial.verified_evidence = [LEARNER_REFERENCE]
-  for (const path of ["notes/m-0001.md", "exercises/m-0001.md"]) initial.artifacts[path] = { content: "# Prior material\n\nPractice omitted, but required by the original goal.", source_revision: 6, module_id: MODULE_ID, selected_card_ids: [] }
+  for (const path of ["notes/m-0001.md", "exercises/m-0001.md"]) initial.artifacts[path] = { content: "# Prior material\n\nPractice omitted, but required by the original goal.", source_revision: 6, module_id: MODULE_ID }
   return initial
 }
 
@@ -555,9 +561,9 @@ test("shouldReviseTheoryScopeAndCloseWithReusedEvidenceAfterRefreshingMaterials"
   await commit({ type: "record_consolidation", event_id: "REASSESS", module_id: MODULE_ID, evidence_refs: [LEARNER_REFERENCE], learner_evidence: "The theoretical goal is met. Practical competence is not assessed; its requirement was retired by consent.", blocking_gaps: [] })
   await assert.rejects(commit(close), /module_artifacts_not_current/)
   for (const kind of ["note", "exercise"]) {
-    const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID, selected_card_ids: [] }, prompt: "Revised theoretical goal. Practice omitted and no longer required, not demonstrated. Retention none. Reuse verified evidence." })
+    const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID }, prompt: "Revised theoretical goal. Practice omitted and no longer required, not demonstrated. Reuse verified evidence." })
     const output = JSON.parse(job.result)
-    await commit({ type: "attach_artifact", event_id: `REVISED-${kind}`, module_id: MODULE_ID, selected_card_ids: [], path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id })
+    await commit({ type: "attach_artifact", event_id: `REVISED-${kind}`, module_id: MODULE_ID, path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id })
   }
   await commit(close)
   const resumed = await LearningRuntimePlugin({ client: fixture.client, directory: fixture.directory })
@@ -682,7 +688,6 @@ test("shouldAssessPriorKnowledgeWithoutInventingClassOrPractice", () => {
   const consolidation = { type: "record_consolidation", event_id: "KNOWN", date: "2026-09-11", module_id: MODULE_ID, evidence_refs: [LEARNER_REFERENCE], learner_evidence: "Prior explanation meets the goal.", blocking_gaps: [] }
   assert.throws(() => learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, consolidation), /unverified_evidence_reference/)
   state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, consolidation, undefined, [LEARNER_REFERENCE]).state
-  state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { ...previewEvent(), source_revision: state.revision }).state
 
   // Then
   assert.equal(state.modules[0].phase, "consolidation")
@@ -690,8 +695,7 @@ test("shouldAssessPriorKnowledgeWithoutInventingClassOrPractice", () => {
   assert.equal(state.modules[0].attempt, undefined)
   assert.equal(state.concepts[0].taught, false)
   assert.deepEqual(state.modules[0].taught_concept_ids, [])
-  assert.deepEqual(state.modules[0].retention.preview.cards, [])
-  assert.throws(() => learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { type: "close_module", event_id: "CLOSE", date: "2026-09-11", module_id: MODULE_ID }), /module_close_requirements_not_met/)
+  assert.throws(() => learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { type: "close_module", event_id: "CLOSE", date: "2026-09-11", module_id: MODULE_ID }), /module_artifacts_not_current/)
 })
 
 for (const invalid of ["unknown-module", "closed-module", "duplicate-module", "empty-modules", "empty-goal", "completed-topic"]) {
@@ -722,7 +726,7 @@ test("shouldOfferDeferredWorkAfterClosingTheSelectedModule", async (t) => {
   // Given
   const initial = flexibleTopic()
   initial.modules[1] = { ...structuredClone(initial.modules[0]), id: NEXT_MODULE_ID, consolidation: { ...initial.modules[0].consolidation, blocking_gaps: [] }, artifacts: { note: "notes/m-0002.md", exercise: "exercises/m-0002.md" } }
-  for (const path of ["notes/m-0002.md", "exercises/m-0002.md"]) initial.artifacts[path] = { content: "# Current material", source_revision: 6, module_id: NEXT_MODULE_ID, selected_card_ids: [] }
+  for (const path of ["notes/m-0002.md", "exercises/m-0002.md"]) initial.artifacts[path] = { content: "# Current material", source_revision: 6, module_id: NEXT_MODULE_ID }
   const fixture = await pluginFixture(t, initial)
   const topic_slug = initial.topic.slug
 
@@ -780,3 +784,139 @@ for (const mutation of ["history-shape", "history-entry", "history-module", "cur
     await assert.rejects(fixture.call("learning_state_read", { topic_slug: initial.topic.slug }), /state_malformed/)
   })
 }
+
+test("shouldExposeNoCalendarToolsOrRetiredCardEvents", async (t) => {
+  // Given
+  const fixture = await pluginFixture(t)
+  const current = topicState("consolidation")
+
+  // When
+  const catalog = await fixture.call("learning_event_reference", {})
+  const capabilities = await fixture.call("learning_context", {})
+
+  // Then: no calendar tools, no card events, no calculator capability.
+  for (const retired of RETIRED_CARD_EVENTS) assert.equal(catalog.events[retired], undefined)
+  assert.equal(fixture.plugin.tool.learning_due, undefined)
+  assert.equal(fixture.plugin.tool.recall_due, undefined)
+  assert.equal(fixture.plugin.tool.recall_schedule, undefined)
+  assert.equal(capabilities.calculator, undefined)
+  for (const event of [
+    { type: "grade_card", event_id: "G1", date: "2026-09-10", card_id: "C-0001", grade: "Good", evidence: "Recalled", interaction_id: "choice" },
+    { type: "preview_cards", event_id: "P1", date: "2026-09-10", module_id: MODULE_ID, preview_id: "p", source_revision: REVISION, cards: [] },
+    { type: "select_cards", event_id: "S1", date: "2026-09-10", module_id: MODULE_ID, preview_id: "p", interaction_id: "choice", disposition: "none", proposal_ids: [] },
+    { type: "preview_card_change", event_id: "C1", date: "2026-09-10", card_id: "C-0001", change_id: "ch", source_revision: REVISION, kind: "edit", replacements: [{ cue: "c", answer: "a" }] },
+    { type: "apply_card_change", event_id: "A1", date: "2026-09-10", card_id: "C-0001", change_id: "ch", interaction_id: "choice" },
+    { type: "set_card_status", event_id: "ST1", date: "2026-09-10", card_id: "C-0001", status: "suspended", interaction_id: "choice" },
+    { type: "set_fundamental_override", event_id: "F1", date: "2026-09-10", concept_id: "K-0001", enabled: true, interaction_id: "choice" },
+  ]) {
+    assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, event), /unsupported_event_type/)
+  }
+  const scheduled = { type: "add_language_unit", event_id: "L1", date: "2026-09-10", unit_id: "L-0001", passive_at: "2026-09-07", next_due: "2026-09-10", situation: "s", target_text: "t", native_text: "n" }
+  const languageTopic = topicState("consolidation")
+  languageTopic.topic.target_language = "English"
+  languageTopic.topic.native_language = "Spanish"
+  assert.throws(() => learningRuntimeContracts.applyLearningEvent(languageTopic, languageTopic.topic.slug, scheduled), /unexpected_next_due/)
+})
+
+test("shouldPracticeLanguageUnitsTheSameDayWithoutCalendar", () => {
+  // Given
+  const current = topicState("consolidation")
+  current.topic.target_language = "English"
+  current.topic.native_language = "Spanish"
+  const add = { type: "add_language_unit", event_id: "ADD", date: "2026-09-10", unit_id: "L-0001", passive_at: "2026-09-10", situation: "Airport check-in", target_text: "Could I have a window seat?", native_text: "¿Podría tener un asiento de ventanilla?" }
+
+  // When: exposed today, practiced today with an error, then input-only.
+  let state = learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, add).state
+  assert.equal(state.language_units[0].status, "pending")
+  assert.equal(state.language_units[0].next_due, undefined)
+  state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { type: "record_language_attempt", event_id: "ATT1", date: "2026-09-10", unit_id: "L-0001", outcome: "needs-another-attempt", evidence: "Dropped the seat request" }).state
+  assert.equal(state.language_units[0].status, "needs-another-attempt")
+  assert.equal(state.language_units[0].next_due, undefined)
+  state = learningRuntimeContracts.applyLearningEvent(state, state.topic.slug, { type: "record_language_attempt", event_id: "ATT2", date: "2026-09-10", unit_id: "L-0001", outcome: "input-only", evidence: "Gist only" }).state
+
+  // Then: statuses record outcomes; nothing schedules a future date.
+  assert.equal(state.language_units[0].status, "input-only")
+})
+
+function answeredMission(event, slug) {
+  const interactions = learningRuntimeContracts.createInteractions()
+  const choice = interactions.stage(CONTEXT, {
+    purpose: "mission", revision: 0,
+    subject_json: JSON.stringify({ topic_slug: slug, title: event.title, materials_language: event.materials_language, goal: event.goal, concepts: event.concepts, modules: event.modules }),
+    question: "¿Crear el path?",
+    options: [{ id: "create", label: "create", description: "create" }, { id: "revise", label: "revise", description: "revise" }, { id: "cancel", label: "cancel", description: "cancel" }],
+  })
+  return { ...choice, status: "answered", requestID: "native-request", selected: ["create"] }
+}
+
+for (const flagged of [true, false]) {
+  test(`shouldAcceptMissionConceptsWithoutFundamentalQuotaWhenFlagIs${flagged ? "All" : "Omitted"}`, () => {
+    // Given: three concepts, all fundamental or without the flag — the retired quota would reject both.
+    const event = { type: "create_topic", event_id: "CREATE", date: "2026-09-10", title: "Tiny topic", materials_language: "English", goal: "Know things", concepts: [1, 2, 3].map((n) => ({ id: `K-000${n}`, title: `C${n}`, prerequisites: [], ...(flagged ? { fundamental: true } : {}) })), modules: [{ id: "M-0001", title: "Only", win: "Win" }] }
+    const choice = answeredMission(event, "tiny-topic")
+
+    // When
+    const { state } = learningRuntimeContracts.applyLearningEvent(undefined, "tiny-topic", { ...event, interaction_id: choice.id }, choice)
+
+    // Then
+    assert.equal(state.concepts.every((concept) => concept.fundamental === flagged), true)
+    assert.equal(state.concepts.every((concept) => concept.learner_override === false), true)
+    assert.equal(state.modules[0].retention, undefined)
+    assert.equal(state.cards, undefined)
+  })
+}
+
+test("shouldReadLegacyStatePreserveHistoricalFieldsAndCloseWithoutRetention", async (t) => {
+  // Given: an old schema-1 snapshot with cards, retention, review events, and a scheduled language unit.
+  const legacy = topicState("consolidation")
+  legacy.cards = [{ id: "C-0001", cue: "Why revalidate?", answer: "Check freshness", concept_id: "K-0001", source_revision: 5, box: 2, last: "2026-09-01", next: "2026-09-04", status: "active", again_count: 0, lineage: [] }]
+  const previewBody = { topic_slug: legacy.topic.slug, module_id: MODULE_ID, id: "OLD-PREVIEW", source_revision: 6, cards: [{ proposal_id: "P-1", cue: "Why revalidate?", answer: "Check freshness", concept_id: "K-0001", reason: "Recurring decision" }] }
+  legacy.modules[0].retention = { disposition: "pending", preview: { ...previewBody, digest: digestOf(previewBody) }, selected_card_ids: [] }
+  legacy.review_events = [{ event_id: "OLD-GRADE", card_id: "C-0001", date: "2026-09-02", grade: "Good", evidence: "Recalled with one hesitation" }]
+  legacy.language_units = [{ id: "L-0001", passive_at: "2026-09-01", next_due: "2026-09-04", situation: "Airport", target_text: "Texto", native_text: "Text", status: "pending" }]
+  legacy.consents.push({ interaction_id: "old-cards-choice", purpose: "cards", request_id: "old-request", digest: "a".repeat(64), selected: [] })
+  legacy.verified_evidence = [LEARNER_REFERENCE]
+  const fixture = await pluginFixture(t, legacy)
+  const topic_slug = legacy.topic.slug
+  let revision = REVISION
+  const commit = async (event) => {
+    const result = await fixture.call("learning_commit", { topic_slug, expected_revision: revision, event: { date: "2026-09-10", module_id: MODULE_ID, ...event } })
+    revision = result.revision
+    return result
+  }
+  const queue = "# Review Queue — historical\n\n| ID | Cue | Box | Last | Next | Source |\n| --- | --- | --- | --- | --- | --- |\n| C-0001 | Why revalidate? | 2 | 2026-09-01 | 2026-09-04 | K-0001@r5 |\n"
+  await writeFile(join(fixture.directory, ".ai/learning", topic_slug, "review-queue.md"), queue)
+
+  // When: history is preserved while the module finishes without any card operation.
+  await commit({ type: "record_consolidation", event_id: "REASSESS-LEGACY", learner_evidence: "Explanation verified", evidence_refs: [LEARNER_REFERENCE], blocking_gaps: [] })
+  const afterConsolidation = await fixture.call("learning_state_read", { topic_slug })
+  assert.deepEqual(afterConsolidation.cards, legacy.cards)
+  assert.equal(afterConsolidation.modules[0].retention.disposition, "pending")
+  assert.deepEqual(afterConsolidation.review_events, legacy.review_events)
+  assert.equal(afterConsolidation.language_units[0].next_due, "2026-09-04")
+  for (const kind of ["note", "exercise"]) {
+    const job = await fixture.call("learning_job_start", { worker: "learning-writer", scope: topic_slug, revision, artifact: { kind, method: kind === "note" ? "cornell-notes" : "learning-loop", destination_hint: `${kind === "note" ? "notes" : "exercises"}/m-0001.md`, materials_language: "English", module_id: MODULE_ID }, prompt: "Reuse the historical context verbatim." })
+    const output = JSON.parse(job.result)
+    await commit({ type: "attach_artifact", event_id: `LEGACY-${kind}`, path: output.destination_hint, content: output.content, source_revision: job.revision, job_id: job.id })
+  }
+  await commit({ type: "close_module", event_id: "LEGACY-CLOSE" })
+  const closed = await fixture.call("learning_state_read", { topic_slug })
+  await fixture.call("learning_recover", { topic_slug })
+
+  // Then: close ignores historical retention; the old queue file is untouched history.
+  assert.equal(closed.modules[0].phase, "closed")
+  assert.equal(closed.modules[0].retention.disposition, "pending")
+  assert.deepEqual(closed.cards, legacy.cards)
+  assert.equal(closed.language_units[0].next_due, "2026-09-04")
+  assert.equal(await readFile(join(fixture.directory, ".ai/learning", topic_slug, "review-queue.md"), "utf8"), queue)
+})
+
+test("shouldRejectArtifactEventsThatCarryRetiredCardFields", () => {
+  // Given
+  const current = topicState("consolidation")
+  current.verified_evidence = [LEARNER_REFERENCE]
+  const event = { type: "attach_artifact", event_id: "OLD-CLIENT", date: "2026-09-10", module_id: MODULE_ID, path: "notes/m-0001.md", content: "# Material", source_revision: REVISION, job_id: "writer", selected_card_ids: [] }
+
+  // When / Then
+  assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, event), /unexpected_artifact_ownership/)
+})

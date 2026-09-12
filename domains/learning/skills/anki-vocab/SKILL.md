@@ -24,7 +24,7 @@ Use common natural phrases/chunks as anchors and full situational sentences, reu
 
 Separate candidates from exported rows. Compare duplicate keys using target-language tag plus Unicode NFKC normalization, lowercase, and collapsed whitespace. Preserve natural display text. Only already exported anchors in the supplied inventory are duplicates; unexported candidates remain eligible. Report the limits of an absent inventory.
 
-Preview exact five-field rows before export. Let the learner select a subset, edit/reconfirm, postpone, or save none. Export only their unchanged selection. A candidate list is not approval. Never create a second spaced-repetition card for an exported phrase without an explicit learner exception.
+Preview exact five-field rows before export. Let the learner select a subset, edit/reconfirm, postpone, or save none. Export only their unchanged selection. A candidate list is not approval. Export never creates an internal review item or a review date; learning or importing the phrase is always a separate, explicit learner activity.
 
 Format plain UTF-8, one row per card, no header or quoting:
 

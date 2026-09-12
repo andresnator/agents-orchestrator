@@ -16,7 +16,7 @@ Use a learner explanation to diagnose causal understanding of a supplied concept
 
 ## Inputs
 
-Required: concept and reference answer or source material. Optional: learner explanation, prior observations, language, and explicit existing card references. No topic state or cards are necessary.
+Required: concept and reference answer or source material. Optional: learner explanation, prior observations, and language. No topic state is necessary.
 
 ## Method
 
@@ -26,7 +26,7 @@ Classify material gaps as missing piece, hand-waved step, wrong claim, or jargon
 
 Use an example, counterexample, or analogy only when it reveals understanding. Never require an analogy regardless of topic. Reuse an existing correct explanation or novel application rather than demand a duplicate ritual.
 
-Agree a focused return path for remaining gaps: a supplied source passage, targeted explanation, or new learner attempt. A mapped card reference permits a proposed review action only; neither a gap nor a fluent answer automatically demotes/promotes cards. Absent cards produce a diagnostic proposal without inventing one.
+Agree a focused return path for remaining gaps: a supplied source passage, targeted explanation, or new learner attempt. A teach-back never changes stored progression by itself; it produces a diagnostic proposal only.
 
 ## Output
 
