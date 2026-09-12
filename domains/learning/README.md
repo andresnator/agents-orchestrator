@@ -50,7 +50,7 @@ An explicit summary request uses a native host choice. After approval, a fresh `
 
 Durable topics use `.ai/learning/<topic>/.state.json` as their single semantic authority. `mission.md`, `path.md`, `review-queue.md`, `vocabulary.md`, `gaps.md`, and approved artifacts are generated views of a committed revision.
 
-Non-language modules follow this sequence:
+Non-language modules normally follow this sequence:
 
 | Phase | Learner-visible result |
 | --- | --- |
@@ -62,6 +62,16 @@ Non-language modules follow this sequence:
 | Close | Require completed or explicitly omitted practice, essential learner explanation, no blocking gap, and a resolved retention disposition. Selected card IDs may be empty. |
 
 Both the note and exercise are generated when practice is omitted, with omission in existing document fields. Existing paths, sections, tables, and templates stay intact. `practice_skipped` is optional in `schema_version: 1`; old states need no migration. A brief verified learner explanation, resolved retention, materials, and no blocking gaps remain required. Topic completion assesses agreed criteria from real evidence; there is no default mandatory capstone, and omission does not prove practical competence.
+
+Learners can adapt the path without losing evidence:
+
+| Need | Durable operation | What stays pending |
+| --- | --- | --- |
+| Change the goal | `revise_scope`, with native approval of the exact goal and affected module wins | Reassessment and updated materials before closing; retired requirements are not credited as learned. |
+| Already know the material | `skip_practice` also accepts Mission; reuse verified explanations in Consolidation | Any uncovered criterion, retention decision, and materials; no fictitious teaching or practice. |
+| Study another module now | `select_module`, with native approval of destination and reason | The previous module is deferred at its actual phase, with all requirements preserved. |
+
+Resolve scope and navigation subjects through `learning_event_reference`. `current_module_id`, module `deferred`/`scope_revision`, and `scope_revisions` are optional schema-1 fields. Scope history retains before/after goals and wins, prior assessments, reasons, retired requirements, and consent references. Existing snapshots need no migration. On resume, use the selected module; otherwise the first open non-deferred module. If only deferred work remains, choose what to resume. Navigation needs neither materials nor closure; topic completion still requires all modules closed and evidence against the agreed goal.
 
 The mission defines stable concept IDs and prerequisites. The default fundamental shortlist is at most `floor(concept_count / 5)`; fewer than five concepts can yield zero. A learner can explicitly override the shortlist for a shown, taught concept. Cornell questions remain useful retrieval prompts even when no card is saved.
 

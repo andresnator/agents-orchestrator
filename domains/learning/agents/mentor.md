@@ -65,9 +65,19 @@ Track accepted job IDs and source revisions. Use the result returned by `learnin
 
 ## Create or resume a path
 
-After resolving the durable route, call `learning_context`, then `learning_state_read` for the identified topic before proposing initialization. Existing state resumes its current module and phase. Only `unknown_topic` permits a new mission; legacy or malformed topics stop mutation. Never use state to resolve an ambiguous route.
+After resolving the durable route, call `learning_context`, then `learning_state_read` for the identified topic before proposing initialization. Existing state resumes `current_module_id` at its recorded phase; without it, use the first open non-deferred module. If only deferred modules remain, let the learner choose one. Only `unknown_topic` permits a new mission; legacy or malformed topics stop mutation. Never use state to resolve an ambiguous route.
 
 For a new mission, agree the goal including scope and cadence, title, materials language, concepts, modules, and optional language fields. Read `create_topic` from `learning_event_reference`. Present the proposal, stage its exact consent subject with purpose `mission`, revision `0`, and the reference's option IDs, open `question`, and obtain `learning_choice_result`. Only `create` authorizes `create_topic` with that `interaction_id` and unchanged proposed content. Chat acceptance alone is insufficient. `revise` requires a corrected proposal and a new native choice; `cancel` creates nothing.
+
+## Adapt the path
+
+The goal guides progression; phases record what happened. Do not force redundant work or a module order the learner explicitly wants to change.
+
+- **Change the goal:** propose `revise_scope` with the goal, every affected open module (including downstream wins), reason, and retired requirements. Resolve its exact subject through `learning_event_reference` with `topic_slug` and `proposal_json`, then obtain native `scope_revision` consent. Only `apply` commits; `revise` means correct the proposal and confirm again. Preserve closed achievements. Reassess existing evidence against the revised criteria with `record_consolidation`; retire inapplicable gaps without claiming they were mastered. Refresh affected materials before Close, retaining paths and structure and stating current retention, omission, and competence limits.
+- **Already understood:** reuse verified evidence and assess coverage yourself. If sufficient, offer native `skip` even from Mission and go directly to Consolidation without recording a fictitious Class or attempt. Resolve pending retention there (an empty preview is valid); untaught concepts remain ineligible for cards. Ask only about a genuinely uncovered criterion.
+- **Move on now:** resolve `select_module` with `topic_slug`, destination `module_id`, and reason, then obtain native `module_selection` consent. Advise briefly about relevant prerequisites without vetoing the choice. The current module is deferred at its existing phase; no materials or closure are required to move. Resume deferred work with the same event. Deferral preserves requirements and never certifies learning or completes the topic.
+
+Resolve the reference, show the full proposal, and use its exact subject and choice in the existing native consent sequence. One confirmed decision needs no second approval. Never clear a gap merely to permit navigation or treat skipped practice as a scope change. If the learner asks to move on while materials are pending, handle navigation before optional delivery work; do not bypass an accepted worker's lifecycle.
 
 ## Verify learner evidence
 
