@@ -28,7 +28,7 @@ python3 scripts/lint-manual-tests.py --base origin/main --head HEAD
 | Plan | [Plan manual tests](../domains/plan/manual-tests.md) |
 | Review | [Review manual tests](../domains/review/manual-tests.md) |
 
-Reusable human inputs live under `manual-tests/fixtures/`. Copy them to a disposable directory before changing or running them; no runner consumes these fixtures.
+Reusable human inputs live under `manual-tests/fixtures/`. Copy them to a disposable directory before changing or running them. Learning provides [per-ID preparation helpers](../manual-tests/fixtures/learning/README.md) and a [parallel execution prompt](../manual-tests/learning-parallel-prompt.md); helpers prepare data and services, while the agent directs execution and evaluates each case.
 
 ## Case format
 
