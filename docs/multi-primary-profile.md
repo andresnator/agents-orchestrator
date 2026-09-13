@@ -26,7 +26,9 @@ The profile domains are `plan,orchestration,architecture,review,common`. The six
 
 Plans are neutral Markdown files. Give `orchestraitor` the exact path with `ejecuta el plan <path>`.
 
-Localized work runs directly without `.ai/` state. SDD state starts only after explicit intent or a closed confirmation and lives under `.ai/orchestration/runs/`.
+Localized work runs directly without `.ai/` state or an approval gate. For newly generated SDD contracts, Orchestraitor presents Outcome, Scope, every WHEN/THEN scenario, Approach, and Verify and waits for approval before creating state or implementing. Direct → SDD uses the same approval for contract and route; adjustments require approval of the revised draft.
+
+Executing an exact existing plan uses Direct or SDD without another contract or route confirmation; structural validation, delivery controls, and the external plan checksum remain required. SDD runs live under `.ai/orchestration/runs/` and record `Approval: explicit | plan-execution` plus the actual `Approval evidence:`. `continúa <run>` resumes an approved run without reconfirmation, preserving its contract, progress, and Git controls. Missing approval blocks as an incomplete execution contract; no migration is performed.
 
 ## Remove
 
