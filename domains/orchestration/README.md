@@ -6,7 +6,7 @@
 
 1. Select `orchestraitor` and request a change or exact plan.
 2. Request commits or TCR when wanted, directly or through the plan's `Delivery:` line.
-3. Inspect fresh verification, optional commit SHAs, and any archived run.
+3. Approve any newly generated SDD contract, then inspect fresh verification, optional commit SHAs, and any archived run.
 
 ## Entry points
 
@@ -15,10 +15,15 @@
 | Clear localized change | Direct | Verified working-tree change by default |
 | Explicit commits | Direct or SDD | Cohesive commits after focused checks pass |
 | Explicit TCR | Direct only | Commit green microsteps; revert attributable red changes |
-| `ejecuta el plan <path>` | Plan execution | Direct work or confirmed SDD |
-| `continúa <run>` | Resume | Continue the exact recorded SDD run |
+| Explicit SDD request | Contract approval | Present the generated contract before implementation |
+| `ejecuta el plan <path>` | Plan execution | Direct or SDD without another approval |
+| `continúa <run>` | Resume | Continue the approved run without reconfirmation |
 
-Direct handles localized, reversible work without `.ai/` state or workers. Use SDD for dependencies, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs; it requires explicit intent or confirmation. TCR requires safe Direct work; otherwise choose `commit-per-unit` for SDD or reduce scope before editing.
+Direct handles localized, reversible work without `.ai/` state or workers. Use SDD for dependencies, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs; generated contracts require approval before implementation.
+
+Present Outcome, Scope, all WHEN/THEN scenarios, Approach, and Verify with native Approve / Request adjustments / Cancel choices; an explicit response approving the presented contract also counts. Direct → SDD uses one informed approval for both contract and route. Adjustments require presenting and approving the revised draft; silence and initial SDD intent do not count. Before approval, only exploration and drafting in conversation are allowed, with no run creation, implementation workers, implementation edits, staging, or commits. On interruption, present the unapproved draft again.
+
+Executing an exact existing plan skips this gate and content reapproval while retaining structural validation and checksum checks. TCR requires safe Direct work; otherwise choose `commit-per-unit` for SDD or reduce scope before editing.
 
 ### Delivery
 
@@ -28,7 +33,9 @@ Only `orchestraitor` owns Git delivery. It preserves unrelated changes and stage
 
 ### SDD resume
 
-Runs live at `.ai/orchestration/runs/<slug>/run.md` and retain the plan path and checksum. In `commit-per-unit`, units run serially: save pending delivery before staging and hooks, then record each verified commit. Resume requires matching `HEAD` and saved Git state, including when the first hook fails. Cold verification checks exactly `<Baseline>..HEAD`; completion archives the run with no pending unit.
+Runs live at `.ai/orchestration/runs/<slug>/run.md` and retain the external plan path and SHA-256, or the complete generated contract including Scope and Approach. They record `Approval: explicit | plan-execution` and `Approval evidence:` with the actual authorizing response or instruction. Resume requires this evidence and never asks again; missing approval blocks as an incomplete contract without migration. Contractual sections remain immutable while execution state tracks progress and delivery. A required behavior, scope, or acceptance change stops implementation for communication.
+
+In `commit-per-unit`, units run serially: save pending delivery before staging and hooks, then record each verified commit. Resume requires matching `HEAD` and saved Git state, including when the first hook fails. Cold verification checks exactly `<Baseline>..HEAD`; completion archives the run with no pending unit.
 
 Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [orchestraitor](agents/orchestraitor.md) for the run controls.
 

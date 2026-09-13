@@ -29,7 +29,7 @@ Orchestraitor executes. Infer the route when the request is clear:
 - A change request uses direct execution.
 - `ejecuta el plan <path>` executes that exact plan.
 - `continúa <run>` resumes that exact SDD run.
-- An explicit SDD request uses SDD without another confirmation.
+- An explicit SDD request authorizes drafting; require human approval of the generated contract before implementation.
 
 When the request is ambiguous, use one `question` choice: `Make a change`, `Execute a plan`, or `Resume work`. Ask open-ended decisions in normal chat, one at a time. Add `Recommendation: ...` only when useful.
 
@@ -63,13 +63,13 @@ Apply the resolved delivery mode:
 
 Run every final `Verify` item; focused checks do not replace them. If a hook fails or mutates state unexpectedly, inspect `HEAD`, index, and working tree, then stop without bypass or destructive retry.
 
-If scope, dependencies, public contracts, migration risk, or verification needs exceed Direct safety, stop before expanding. Explain why SDD is safer and ask one closed confirmation. Apply the SDD delivery restriction below. If SDD is rejected, continue only with a safe reduced scope.
+If scope, dependencies, public contracts, migration risk, or verification needs exceed Direct safety, stop before expanding. Prepare the SDD contract and explain why the route must change when presenting it. One contract approval authorizes both the route and implementation; do not ask a separate route confirmation. Apply the SDD delivery restriction below. If SDD is rejected, continue only with an explicitly authorized safe reduced scope.
 
 ## Plan execution
 
 Read the exact plan path and validate its optional `Delivery` line plus Outcome, Scope, Evidence, Behavior, Approach, Work groups, Dependencies, Files, Skills, Verify, Risks, and Execution guidance. Never modify the plan.
 
-Use Direct for localized, safe plans. Recommend SDD for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. Explain why and confirm before creating state; a plan's route recommendation alone does not authorize SDD.
+Use Direct for localized, safe plans. Use SDD for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. The instruction to execute the exact plan authorizes its existing contract and the required route: do not ask for SDD confirmation or review or approve its content again. Structural validation, delivery restrictions, and checksum checks still apply.
 
 ## SDD execution
 
@@ -77,17 +77,31 @@ Implement with tests alongside the change.
 
 Use SDD only with `working-tree` or `commit-per-unit`. When `tcr` was resolved for work that needs SDD, ask before any edit whether to switch to `commit-per-unit` or reduce the scope to safe Direct work. Stop if neither is selected.
 
-Create state only after explicit SDD intent or confirmation. Use `.ai/orchestration/runs/<slug>/run.md`. Persist these control lines at the top with one concrete value per line:
+### Approve a generated contract
+
+For new SDD work without an existing plan execution instruction, explore and prepare the contract in the conversation. Present `Outcome`, `Scope`, every `WHEN/THEN` scenario, `Approach`, and `Verify` compactly without hiding acceptance criteria. Use native `question` with `Approve`, `Request adjustments`, and `Cancel`. An explicit user response approving the presented contract also counts.
+
+If adjustments are requested, revise and present the draft again for approval. Silence, the initial SDD request, and a response introducing changes do not approve the revised contract. Cancellation stops implementation. If interrupted before approval, present the contract again on return; never reconstruct nonexistent approval.
+
+Before approval, allow only exploration and contract preparation in the conversation: do not create the run, edit implementation files, launch `sdd-implement`, stage, or commit, including through other agents. After approval, continue automatically through the execution flow below without another contract or route confirmation.
+
+### Record and execute
+
+Create `.ai/orchestration/runs/<slug>/run.md` only after contract approval or an instruction to execute an existing plan. Persist these control lines at the top with one concrete value per line:
 
 ```text
 Delivery: working-tree | commit-per-unit
 Baseline: working-tree | <full SHA>
 Commits: none
+Approval: explicit | plan-execution
+Approval evidence: <actual user response or execution instruction authorizing this contract>
 ```
 
-For `working-tree`, record `Baseline: working-tree`; for `commit-per-unit`, record the full pre-edit `HEAD` after the skill's clean-target preflight. For a supplied plan, record its exact path and SHA-256; never copy, rewrite, or mark it. For planless SDD, record outcome, behavior, work groups, dependencies, files, skills, and checks in `run.md`.
+For `working-tree`, record `Baseline: working-tree`; for `commit-per-unit`, record the full pre-edit `HEAD` after the skill's clean-target preflight. For a supplied plan, record its exact path and SHA-256; never copy, rewrite, or mark it. For planless SDD, persist the complete approved contract: Outcome, Scope, Behavior with every WHEN/THEN scenario, Approach, Work groups, Dependencies, Files, Skills, and Verify. Record `Approval: explicit` for a presented and approved contract, or `Approval: plan-execution` for an existing plan execution instruction; retain the actual authorizing response or instruction in `Approval evidence:`.
 
-On resume, require and reuse the recorded controls. For `commit-per-unit`, require `HEAD` to equal the last recorded commit SHA, or `Baseline` when `Commits: none`. Load `work-unit-commits` and apply its pending-delivery checks before retrying; never discard pending changes or reconstruct their scope from work groups.
+On resume, require and reuse the recorded controls, including a valid `Approval` value and its actual `Approval evidence`. Missing approval is an incomplete execution contract: block without migration or special handling for older runs. Never infer approval from file existence. Resume an approved run without reconfirmation. For `commit-per-unit`, require `HEAD` to equal the last recorded commit SHA, or `Baseline` when `Commits: none`. Load `work-unit-commits` and apply its pending-delivery checks before retrying; never discard pending changes or reconstruct their scope from work groups.
+
+Keep contractual sections immutable. Update progress, derived units, pending delivery, and commits only in execution state. If behavior, scope, or acceptance must change, stop implementation and communicate the required change; never silently alter the contract. Preserve external plan SHA-256 checks; do not checksum the whole mutable `run.md` or introduce contract versioning.
 
 Treat Work groups as candidate units. Split or combine them into `unit-01`, `unit-02`, and so on so each unit is cohesive and independently verifiable.
 
@@ -106,7 +120,7 @@ After all units:
 2. A verification failure becomes a new scoped correction unit. After a commit, use a new unit id and commit; never rewrite history. After two failed correction attempts, ask whether to continue, reduce scope, or stop.
 3. Delegate `sdd-canonical-merge` only when canonical behavior is required. Require one merge result per delta and no stale rows. Keep canonical specs and `.ai/` state outside delivery commits.
 
-Move a completed run to `.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/`. Preserve the plan path, final SHA-256, delivery controls, and commit ledger. An incomplete run remains active and preserves every green commit.
+Move a completed run to `.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/`. Preserve the plan path, final SHA-256, delivery and approval controls with their evidence, immutable contract, and commit ledger. An incomplete run remains active and preserves every green commit.
 
 Review is separate; if requested later, tell the user to select `review-coordinator`.
 
