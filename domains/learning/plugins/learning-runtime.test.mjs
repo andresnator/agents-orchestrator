@@ -1,6 +1,8 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { createHash } from "node:crypto"
+import { spawn } from "node:child_process"
+import { once } from "node:events"
+import { createHash, randomUUID } from "node:crypto"
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -1105,4 +1107,531 @@ test("shouldRejectArtifactEventsThatCarryRetiredCardFields", () => {
 
   // When / Then
   assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, event), /unexpected_artifact_ownership/)
+})
+
+function evidenceEvent(refs, event_id) {
+  return { type: "record_consolidation", event_id, date: "2026-09-14", module_id: MODULE_ID, learner_evidence: "Verified explanation", evidence_refs: refs, blocking_gaps: [] }
+}
+
+test("shouldAccumulateMoreThan200ReferencesAndReuseThemAfterRestart", async (t) => {
+  // Given
+  const fixture = await pluginFixture(t, topicState("consolidation"))
+  const refs = Array.from({ length: 201 }, (_, index) => ({ ...PARENT_REFERENCE, part_id: `evidence-${index}`, quote: `Learner explanation ${index}.` }))
+  fixture.records.get("parent").messages[0].parts.push(...refs.map(ref => ({ type: "text", id: ref.part_id, sessionID: ref.session_id, messageID: ref.message_id, text: ref.quote })))
+  const topic_slug = topicState("consolidation").topic.slug
+
+  // When
+  await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION, event: evidenceEvent(refs.slice(0, 200), "FIRST-200") })
+  await fixture.call("learning_commit", { topic_slug, expected_revision: REVISION + 1, event: evidenceEvent(refs.slice(200), "REFERENCE-201") })
+  const resumed = await LearningRuntimePlugin({ client: fixture.client, directory: fixture.directory })
+  fixture.client.session.get = async () => { throw new Error("Old learner session unavailable") }
+  await resumed.tool.learning_commit.execute({ topic_slug, expected_revision: REVISION + 2, event: evidenceEvent([refs[0], refs[200]], "REUSE") }, { ...CONTEXT, sessionID: "new-parent" })
+
+  // Then
+  const state = JSON.parse(await resumed.tool.learning_state_read.execute({ topic_slug }, CONTEXT))
+  assert.deepEqual(state.verified_evidence, refs)
+  assert.deepEqual(state.modules[0].consolidation.evidence_refs, [refs[0], refs[200]])
+  const before = await readFile(join(fixture.directory, ".ai/learning", topic_slug, ".state.json"), "utf8")
+  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: state.revision, event: evidenceEvent(refs, "EXCESSIVE-OPERATION") }), /invalid_evidence_refs/)
+  assert.equal(await readFile(join(fixture.directory, ".ai/learning", topic_slug, ".state.json"), "utf8"), before)
+})
+
+test("shouldRejectStateAboveOneMegabyteAtomicallyWithoutTrimmingEvidence", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.verified_evidence = Array.from({ length: 40 }, (_, index) => ({ ...LEARNER_REFERENCE, part_id: `large-${index}`, quote: "e".repeat(23000) }))
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const store = learningRuntimeContracts.createStateStore(fixture.directory)
+  const path = join(fixture.directory, ".ai/learning", topic_slug, ".state.json")
+  const before = await readFile(path, "utf8")
+
+  // When / Then
+  await assert.rejects(store.commit(topic_slug, REVISION, evidenceEvent(initial.verified_evidence.slice(0, 4), "TOO-LARGE")), /state_too_large/)
+  assert.equal(await readFile(path, "utf8"), before)
+  assert.deepEqual((await store.read(topic_slug)).verified_evidence, initial.verified_evidence)
+  assert.equal((await readdir(join(fixture.directory, ".ai/learning", topic_slug))).includes(".state.lock"), false)
+})
+
+for (const previous of ["skipped", "done"]) {
+  test(`shouldReopenPracticePreserve${previous}HistoryAndRequireNewConsolidation`, async (t) => {
+    // Given
+    const initial = topicState("class")
+    delete initial.modules[0].attempt
+    delete initial.modules[0].consolidation
+    initial.verified_evidence = [LEARNER_REFERENCE]
+    const fixture = await pluginFixture(t, initial)
+    const topic_slug = initial.topic.slug
+    const store = learningRuntimeContracts.createStateStore(fixture.directory)
+    const commit = async event => store.commit(topic_slug, (await store.read(topic_slug)).revision, { date: "2026-09-14", module_id: MODULE_ID, ...event })
+    const firstChoice = answeredReadiness(initial, previous === "skipped" ? "skip" : "ready")
+    await store.commit(topic_slug, initial.revision, { ...skipEvent(firstChoice), type: previous === "skipped" ? "skip_practice" : "start_practice" }, firstChoice)
+    if (previous === "done") await commit({ type: "record_attempt", event_id: "OLD-DONE", outcome: "done", evidence: "Old completed practice", evidence_refs: [LEARNER_REFERENCE] })
+    await commit(evidenceEvent([LEARNER_REFERENCE], "OLD-CONSOLIDATION"))
+    const prior = await store.read(topic_slug)
+    const interaction_id = await fixture.choose("readiness", { topic_slug, module_id: MODULE_ID }, prior.revision, ["ready", "skip"], "ready")
+    const event = { type: "start_practice", event_id: "REOPEN", date: "2026-09-14", module_id: MODULE_ID, interaction_id }
+
+    // When
+    await fixture.call("learning_commit", { topic_slug, expected_revision: prior.revision, event })
+    const resumed = await LearningRuntimePlugin({ client: fixture.client, directory: fixture.directory })
+    const replay = JSON.parse(await resumed.tool.learning_commit.execute({ topic_slug, expected_revision: prior.revision, event }, CONTEXT))
+    const reopened = await store.read(topic_slug)
+
+    // Then
+    assert.equal(replay.duplicate, true)
+    const { attempt, consolidation, practice_skipped, ...preserved } = prior.modules[0]
+    assert.deepEqual(reopened.modules[0], { ...preserved, phase: "practice", practice_history: [{ revision: prior.revision + 1, event_id: event.event_id, date: event.date, interaction_id, ...(attempt ? { attempt } : {}), consolidation, ...(practice_skipped !== undefined ? { practice_skipped } : {}) }] })
+    assert.deepEqual(reopened.verified_evidence, prior.verified_evidence)
+    assert.deepEqual(reopened.artifacts, prior.artifacts)
+    await assert.rejects(commit({ type: "attach_artifact", event_id: "OLD-WRITER", path: "notes/m-0001.md", content: "Old material", source_revision: prior.revision, job_id: "old" }), /invalid_or_stale_artifact/)
+    await commit({ type: "record_attempt", event_id: "NEW-DONE", outcome: "done", evidence: "New practice completed", evidence_refs: [LEARNER_REFERENCE] })
+    await assert.rejects(commit({ type: "close_module", event_id: "CLOSE" }), /module_close_requirements_not_met/)
+    await commit(evidenceEvent([LEARNER_REFERENCE], "NEW-CONSOLIDATION"))
+    await assert.rejects(commit({ type: "close_module", event_id: "CLOSE" }), /module_artifacts_not_current/)
+    for (const path of ["notes/m-0001.md", "exercises/m-0001.md"]) await commit({ type: "attach_artifact", event_id: `REFRESH-${path.startsWith("notes") ? "NOTE" : "EXERCISE"}`, path, content: "Refreshed material", source_revision: (await store.read(topic_slug)).revision, job_id: "new" })
+    await commit({ type: "close_module", event_id: "CLOSE" })
+    assert.equal((await store.read(topic_slug)).modules[0].phase, "closed")
+  })
+}
+
+for (const invalid of ["closed", "dismissed", "invalidated", "skip", "stale", "altered", "consumed"]) {
+  test(`shouldRejectPracticeReopeningWhen${invalid}`, () => {
+    // Given
+    const current = topicState(invalid === "closed" ? "closed" : "consolidation")
+    const choice = answeredReadiness(current, "ready")
+    if (["dismissed", "invalidated"].includes(invalid)) choice.status = invalid
+    if (invalid === "skip") choice.selected = ["skip"]
+    if (invalid === "stale") choice.input.revision--
+    if (invalid === "altered") choice.input.subject_json = "{}"
+    const event = { ...skipEvent(choice), type: "start_practice" }
+    const before = structuredClone(current)
+
+    // When / Then
+    assert.throws(() => learningRuntimeContracts.applyLearningEvent(current, current.topic.slug, event, invalid === "consumed" ? undefined : choice), /interaction|practice_requires/)
+    assert.deepEqual(current, before)
+  })
+}
+
+function languageState(phase = "closed") {
+  const initial = topicState(phase)
+  Object.assign(initial.topic, { target_language: "English", native_language: "Spanish", production_required: true })
+  initial.verified_evidence = [LEARNER_REFERENCE]
+  initial.language_units = [{ id: "L-0001", passive_at: "2026-09-14", situation: "Airport", target_text: "Window seat", native_text: "Ventanilla", status: "input-only", evidence: "Understood only" }]
+  return initial
+}
+
+async function reviseProduction(fixture, production_required, event_id, modules = []) {
+  const topic_slug = languageState().topic.slug
+  const state = await fixture.call("learning_state_read", { topic_slug })
+  const proposal = { goal: state.topic.goal, modules, production_required, reason: "Learner changes the production requirement", retired_requirements: production_required ? [] : ["Production"] }
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug, proposal_json: JSON.stringify(proposal) })
+  const interaction_id = await fixture.choose("scope_revision", resolved.consent_subject, state.revision, ["apply", "revise", "cancel"], "apply")
+  const event = { type: "revise_scope", event_id, date: "2026-09-14", interaction_id, ...proposal }
+  await fixture.call("learning_commit", { topic_slug, expected_revision: state.revision, event })
+  return { event, resolved }
+}
+
+test("shouldRetireAndReactivateProductionWithAllModulesClosedWithoutChangingInputOnly", async (t) => {
+  // Given
+  const initial = languageState()
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const complete = { type: "complete_topic", event_id: "COMPLETE", date: "2026-09-14", evidence_refs: [LEARNER_REFERENCE] }
+
+  // When
+  const { resolved } = await reviseProduction(fixture, false, "RETIRE")
+  const retired = await learningRuntimeContracts.createStateStore(fixture.directory).read(topic_slug)
+  const completed = learningRuntimeContracts.applyLearningEvent(retired, topic_slug, complete).state
+  await reviseProduction(fixture, true, "REACTIVATE")
+  const active = await fixture.call("learning_state_read", { topic_slug })
+
+  // Then
+  assert.deepEqual(resolved.consent_subject.before, { goal: initial.topic.goal, modules: [], production_required: true })
+  assert.deepEqual(resolved.consent_subject.after, { goal: initial.topic.goal, modules: [], production_required: false })
+  assert.deepEqual(retired.modules, initial.modules)
+  assert.deepEqual(completed.language_units, initial.language_units)
+  assert.deepEqual(active.language_units, initial.language_units)
+  assert.deepEqual(active.scope_revisions.map(entry => [entry.before.production_required, entry.production_required]), [[true, false], [false, true]])
+  await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: active.revision, event: complete }), /language_production_criteria_pending/)
+  await fixture.call("learning_commit", { topic_slug, expected_revision: active.revision, event: { type: "record_language_attempt", event_id: "PRODUCED", date: "2026-09-14", unit_id: "L-0001", outcome: "completed", evidence: "Correct equivalent production" } })
+  await fixture.call("learning_commit", { topic_slug, expected_revision: active.revision + 1, event: complete })
+})
+
+test("shouldRequireReassessmentOfOpenModulesWhenProductionChanges", async (t) => {
+  // Given
+  const initial = languageState("consolidation")
+  const fixture = await pluginFixture(t, initial)
+  const modules = initial.modules.map(({ id, title, win }) => ({ id, title, win }))
+
+  // When
+  await reviseProduction(fixture, false, "RETIRE", modules)
+  const state = await fixture.call("learning_state_read", { topic_slug: initial.topic.slug })
+
+  // Then
+  assert.deepEqual(state.modules[0].consolidation, initial.modules[0].consolidation)
+  await assert.rejects(fixture.call("learning_commit", { topic_slug: initial.topic.slug, expected_revision: state.revision, event: { type: "close_module", event_id: "CLOSE", date: "2026-09-14", module_id: MODULE_ID } }), /scope_requires_reassessment/)
+})
+
+for (const invalid of ["altered", "non-language", "not-boolean", "no-change"]) {
+  test(`shouldRejectProductionProposalWhen${invalid}`, async (t) => {
+    // Given
+    const initial = invalid === "non-language" ? topicState("closed") : languageState()
+    const fixture = await pluginFixture(t, initial)
+    const topic_slug = initial.topic.slug
+    const proposal = { goal: initial.topic.goal, modules: [], production_required: invalid === "not-boolean" ? "false" : invalid === "no-change" ? true : false, reason: "Change requirement", retired_requirements: [] }
+
+    // When / Then
+    if (invalid !== "altered") await assert.rejects(fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug, proposal_json: JSON.stringify(proposal) }), /production|affected_modules_required/)
+    else {
+      const { resolved } = await fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug, proposal_json: JSON.stringify(proposal) })
+      const interaction_id = await fixture.choose("scope_revision", resolved.consent_subject, initial.revision, ["apply", "revise", "cancel"], "apply")
+      await assert.rejects(fixture.call("learning_commit", { topic_slug, expected_revision: initial.revision, event: { ...proposal, goal: "Altered goal", type: "revise_scope", event_id: "ALTERED", date: "2026-09-14", interaction_id } }), /interaction_subject_mismatch/)
+    }
+    assert.deepEqual(await fixture.call("learning_state_read", { topic_slug }), initial)
+  })
+}
+
+const MISSING_SESSION = { error: { name: "NotFoundError", data: { message: "Session absent" } }, response: { status: 404 } }
+const PENDING_JOB = { id: "lost-worker", parent_id: "old-parent", worker: "learning-researcher", source_revision: 5, status: "running" }
+
+for (const action of ["inspect", "cancel", "retry"]) {
+  test(`shouldPersistMissingWorkerFromAnotherSessionBefore${action}`, async (t) => {
+    // Given
+    const initial = topicState("consolidation")
+    initial.jobs = [PENDING_JOB]
+    const fixture = await pluginFixture(t, initial)
+    const get = fixture.client.session.get
+    fixture.client.session.get = async args => args.path.id === PENDING_JOB.id ? MISSING_SESSION : get(args)
+    const topic_slug = initial.topic.slug
+    fixture.client.session.prompt = async ({ path }) => { fixture.finish(path.id, "Explicit replacement"); return { data: {} } }
+
+    // When
+    const result = action === "retry"
+      ? await fixture.call("learning_job_start", { ...RESEARCH_JOB, scope: topic_slug, revision: initial.revision })
+      : await fixture.call("learning_job_result", { id: PENDING_JOB.id, topic_slug, action })
+    const stored = await learningRuntimeContracts.createStateStore(fixture.directory).read(topic_slug)
+
+    // Then
+    assert.deepEqual(stored.jobs[0], { ...PENDING_JOB, status: "failed", error: "worker_session_missing" })
+    assert.equal(stored.revision, initial.revision)
+    assert.equal(result.status, action === "retry" ? "completed" : "failed")
+    assert.deepEqual(fixture.counts(), { created: action === "retry" ? 1 : 0, aborted: 0 })
+    if (action === "retry") assert.equal(result.revision, initial.revision)
+  })
+}
+
+for (const observation of ["timeout", "permission", "network", "ambiguous-404", "bare-not-found", "error-text", "wrong-session"]) {
+  test(`shouldKeepMissingWorkerExclusionWhenObservationIs${observation}`, async (t) => {
+    // Given
+    const initial = topicState("consolidation")
+    initial.jobs = [PENDING_JOB]
+    const fixture = await pluginFixture(t, initial)
+    fixture.client.session.get = async () => {
+      if (["timeout", "network"].includes(observation)) throw new Error(observation)
+      return {
+        permission: { error: { name: "PermissionError" }, response: { status: 403 } },
+        "ambiguous-404": { response: { status: 404 }, error: "NotFoundError" },
+        "bare-not-found": { error: { name: "NotFoundError" } },
+        "error-text": { error: { name: "Error", data: { message: "404 NotFoundError" } }, response: { status: 500 } },
+        "wrong-session": { data: { id: "other" } },
+      }[observation]
+    }
+    const topic_slug = initial.topic.slug
+
+    // When / Then
+    for (const action of ["inspect", "cancel"]) await assert.rejects(fixture.call("learning_job_result", { id: PENDING_JOB.id, topic_slug, action }), /observation_failed|timeout|network/)
+    await assert.rejects(fixture.call("learning_job_start", { ...RESEARCH_JOB, scope: topic_slug, revision: initial.revision }), /observation_failed|timeout|network/)
+    assert.deepEqual((await fixture.call("learning_state_read", { topic_slug })).jobs, [PENDING_JOB])
+    assert.deepEqual(fixture.counts(), { created: 0, aborted: 0 })
+  })
+}
+
+test("shouldKeepMissingWorkerPendingUntilFailedSettlementIsDurable", async () => {
+  // Given
+  const fixture = workerFixture()
+  fixture.client.session.get = async () => MISSING_SESSION
+  let writesFail = true
+  const saved = []
+  const jobs = learningRuntimeContracts.createJobs(fixture.client, async job => {
+    if (writesFail) throw new Error("write_failed")
+    saved.push(structuredClone(job))
+  })
+  const scope = "recovery-topic"
+  jobs.restore(PENDING_JOB, scope)
+
+  // When / Then
+  await assert.rejects(jobs.inspectAny(PENDING_JOB.id), /write_failed/)
+  await assert.rejects(jobs.cancelAny(PENDING_JOB.id), /write_failed/)
+  await assert.rejects(jobs.launch(CONTEXT, { ...RESEARCH_JOB, scope, revision: REVISION }), /write_failed/)
+  assert.deepEqual(jobs.restore(PENDING_JOB, scope), { id: PENDING_JOB.id, parentID: PENDING_JOB.parent_id, worker: PENDING_JOB.worker, scope, revision: PENDING_JOB.source_revision, status: "running" })
+  assert.deepEqual(fixture.counts(), { created: 0, aborted: 0 })
+  writesFail = false
+  const recovered = await jobs.inspectAny(PENDING_JOB.id)
+  assert.equal(recovered.status, "failed")
+  assert.deepEqual(saved, [recovered])
+})
+
+const LOCK_PROCESS = new URL("../../../manual-tests/fixtures/learning/lock-process.mjs", import.meta.url)
+
+async function exitedPID() {
+  const child = spawn(process.execPath, ["-e", ""], { stdio: "ignore" })
+  const pid = child.pid
+  await once(child, "exit")
+  return pid
+}
+
+function lockProcess(t, directory, slug, checkpoint = {}) {
+  const child = spawn(process.execPath, [LOCK_PROCESS.pathname, directory, slug, JSON.stringify(checkpoint)], { stdio: ["ignore", "ignore", "pipe", "ipc"] })
+  const stopped = deferred()
+  const finished = deferred()
+  const exited = once(child, "exit")
+  let stderr = ""
+  child.stderr.on("data", bytes => { stderr += bytes })
+  child.on("message", message => {
+    if (message.checkpoint) stopped.resolve(message.checkpoint)
+    else finished.resolve(message)
+  })
+  exited.then(() => {
+    stopped.resolve({ exited: true, stderr })
+    finished.resolve({ exited: true, stderr })
+  })
+  t.after(async () => { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); await exited })
+  return { child, stopped: stopped.promise, finished: finished.promise, exited }
+}
+
+async function deadLock(t, claimKind) {
+  const initial = topicState("consolidation")
+  const fixture = await pluginFixture(t, initial)
+  const root = join(fixture.directory, ".ai/learning", initial.topic.slug)
+  const path = join(root, ".state.lock")
+  const owner = { pid: await exitedPID(), token: randomUUID(), acquired_at: new Date().toISOString() }
+  await writeFile(path, JSON.stringify(owner))
+  let claim
+  if (claimKind) {
+    claim = { pid: await exitedPID(), stale_token: owner.token, ...(claimKind === "new" ? { token: randomUUID() } : {}) }
+    await writeFile(`${path}.reclaim-${owner.token}`, JSON.stringify(claim))
+  }
+  return { ...fixture, root, path, owner, claim, slug: initial.topic.slug }
+}
+
+for (const kind of ["legacy", "new"]) {
+  test(`shouldRecoverAbandoned${kind}ClaimWithRealExitedOwners`, { timeout: 10000 }, async (t) => {
+    // Given
+    const fixture = await deadLock(t, kind)
+    const before = await fixture.call("learning_state_read", { topic_slug: fixture.slug })
+
+    // When
+    const recovered = await fixture.call("learning_recover", { topic_slug: fixture.slug })
+
+    // Then
+    assert.deepEqual(recovered, { revision: before.revision, views: "current" })
+    assert.deepEqual(await fixture.call("learning_state_read", { topic_slug: fixture.slug }), before)
+    assert.deepEqual((await readdir(fixture.root)).filter(name => name.startsWith(".state.lock")), [])
+  })
+}
+
+for (const kind of ["lock", "claim"]) {
+  for (const stage of ["open:after", "writeFile:after", "sync:after", "link:before", "link:after"]) {
+    test(`shouldRecoverAfterProcessDiesDuring${kind}PublicationAt${stage}`, { timeout: 10000 }, async (t) => {
+      // Given
+      const fixture = await deadLock(t)
+      if (kind === "lock") await rm(fixture.path)
+      const [operation, when] = stage.split(":")
+      const process = lockProcess(t, fixture.directory, fixture.slug, { operation, when, kind })
+      const checkpoint = await process.stopped
+      assert.equal(checkpoint.kind, kind, JSON.stringify(checkpoint))
+
+      // When
+      process.child.kill("SIGKILL")
+      await process.exited
+      const recovered = await fixture.call("learning_recover", { topic_slug: fixture.slug })
+
+      // Then
+      assert.equal(recovered.revision, REVISION)
+      await assert.rejects(readFile(fixture.path), { code: "ENOENT" })
+      for (const path of (await readdir(fixture.root)).filter(name => name.includes(".reclaim-") && !name.endsWith(".tmp"))) JSON.parse(await readFile(join(fixture.root, path), "utf8"))
+    })
+  }
+}
+
+for (const stage of ["before", "after"]) {
+  test(`shouldRecoverWhenClaimOwnerDies${stage}OriginalLockRemoval`, { timeout: 10000 }, async (t) => {
+    // Given
+    const fixture = await deadLock(t, "legacy")
+    const process = lockProcess(t, fixture.directory, fixture.slug, { operation: "unlink", when: stage, kind: "lock", temporary: false })
+    const checkpoint = await process.stopped
+    assert.equal(checkpoint.kind, "lock", JSON.stringify(checkpoint))
+
+    // When
+    process.child.kill("SIGKILL")
+    await process.exited
+    await fixture.call("learning_recover", { topic_slug: fixture.slug })
+
+    // Then
+    await assert.rejects(readFile(fixture.path), { code: "ENOENT" })
+    assert.equal((await fixture.call("learning_state_read", { topic_slug: fixture.slug })).revision, REVISION)
+  })
+}
+
+test("shouldFenceTwoRecoverersAndKeepTheWinningLiveLock", { timeout: 10000 }, async (t) => {
+  // Given
+  const fixture = await deadLock(t, "new")
+  const checkpoint = { operation: "link", when: "before", kind: "claim" }
+  const first = lockProcess(t, fixture.directory, fixture.slug, checkpoint)
+  const second = lockProcess(t, fixture.directory, fixture.slug, checkpoint)
+  assert.equal((await first.stopped).kind, "claim")
+  assert.equal((await second.stopped).kind, "claim")
+
+  // When
+  first.child.send("continue")
+  const winner = await first.finished
+  const holder = lockProcess(t, fixture.directory, fixture.slug, { operation: "link", when: "after", kind: "lock" })
+  assert.equal((await holder.stopped).kind, "lock")
+  const live = await readFile(fixture.path, "utf8")
+  second.child.send("continue")
+  const loser = await second.finished
+
+  // Then
+  assert.equal(winner.result.views, "current")
+  assert.match(loser.error, /topic_busy|ambiguous_topic_lock/)
+  assert.equal(await readFile(fixture.path, "utf8"), live)
+  await assert.rejects(fixture.call("learning_recover", { topic_slug: fixture.slug }), /topic_busy/)
+  holder.child.send("continue")
+  assert.equal((await holder.finished).result.views, "current")
+})
+
+for (const replace of ["lock", "ancestor", "leaf"]) {
+  test(`shouldLeaveReplaced${replace}GenerationUntouched`, { timeout: 10000 }, async (t) => {
+    // Given
+    const fixture = await deadLock(t, "legacy")
+    const child = lockProcess(t, fixture.directory, fixture.slug, { operation: "link", when: "after", kind: "claim" })
+    const checkpoint = await child.stopped
+    assert.equal(checkpoint.kind, "claim")
+    const path = replace === "lock" ? fixture.path : replace === "ancestor" ? `${fixture.path}.reclaim-${fixture.owner.token}` : checkpoint.path
+    const original = JSON.parse(await readFile(path, "utf8"))
+    const replacement = JSON.stringify({ ...original, pid: process.pid, token: randomUUID() })
+    await writeFile(path, replacement)
+
+    // When
+    child.child.send("continue")
+    const result = await child.finished
+
+    // Then
+    assert.match(result.error, /topic_busy/)
+    assert.equal(await readFile(path, "utf8"), replacement)
+    if (replace !== "lock") assert.deepEqual(JSON.parse(await readFile(fixture.path, "utf8")), fixture.owner)
+  })
+}
+
+for (const invalid of ["live-lock", "live-claim", "malformed-claim", "malformed-lock", "zero-pid"]) {
+  test(`shouldKeepCoordinationBlockedWhen${invalid}`, async (t) => {
+    // Given
+    const fixture = await deadLock(t, "new")
+    const claimPath = `${fixture.path}.reclaim-${fixture.owner.token}`
+    if (invalid === "live-lock") await writeFile(fixture.path, JSON.stringify({ ...fixture.owner, pid: process.pid }))
+    if (invalid === "live-claim") await writeFile(claimPath, JSON.stringify({ ...fixture.claim, pid: process.pid }))
+    if (invalid === "malformed-claim") await writeFile(claimPath, "{")
+    if (invalid === "malformed-lock") await writeFile(fixture.path, "{")
+    if (invalid === "zero-pid") await writeFile(fixture.path, JSON.stringify({ ...fixture.owner, pid: 0 }))
+    const before = await readFile(fixture.path, "utf8")
+    const claim = await readFile(claimPath, "utf8")
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_recover", { topic_slug: fixture.slug }), /topic_busy|ambiguous_topic_lock/)
+    assert.equal(await readFile(fixture.path, "utf8"), before)
+    assert.equal(await readFile(claimPath, "utf8"), claim)
+  })
+}
+
+test("shouldRetainMissingWorkerExclusionWhenTopicPersistenceIsLocked", async (t) => {
+  // Given
+  const initial = topicState("consolidation")
+  initial.jobs = [PENDING_JOB]
+  const fixture = await pluginFixture(t, initial)
+  fixture.client.session.get = async () => MISSING_SESSION
+  const topic_slug = initial.topic.slug
+  const path = join(fixture.directory, ".ai/learning", topic_slug, ".state.lock")
+  await writeFile(path, JSON.stringify({ pid: process.pid, token: randomUUID() }))
+
+  // When / Then
+  await assert.rejects(fixture.call("learning_job_result", { id: PENDING_JOB.id, topic_slug, action: "inspect" }), /topic_busy/)
+  await assert.rejects(fixture.call("learning_job_start", { ...RESEARCH_JOB, scope: topic_slug, revision: initial.revision }), /topic_busy/)
+  assert.deepEqual((await fixture.call("learning_state_read", { topic_slug })).jobs, [PENDING_JOB])
+  assert.equal(fixture.counts().created, 0)
+  await rm(path)
+  const recovered = await fixture.call("learning_job_result", { id: PENDING_JOB.id, topic_slug, action: "inspect" })
+  assert.equal(recovered.error, "worker_session_missing")
+  assert.equal((await fixture.call("learning_state_read", { topic_slug })).jobs[0].status, "failed")
+})
+
+for (const operation of ["commit", "syncJob"]) {
+  test(`shouldRecoverAbandonedClaimThroughShared${operation}Acquisition`, async (t) => {
+    // Given
+    const fixture = await deadLock(t, "legacy")
+    const store = learningRuntimeContracts.createStateStore(fixture.directory)
+
+    // When
+    if (operation === "commit") await store.commit(fixture.slug, REVISION, evidenceEvent([LEARNER_REFERENCE], "SHARED-LOCK"), undefined, async () => [LEARNER_REFERENCE])
+    else await store.syncJob({ id: PENDING_JOB.id, parentID: PENDING_JOB.parent_id, worker: PENDING_JOB.worker, scope: fixture.slug, revision: PENDING_JOB.source_revision, status: "failed", error: "worker_session_missing" })
+
+    // Then
+    const stored = await store.read(fixture.slug)
+    assert.equal(stored.revision, operation === "commit" ? REVISION + 1 : REVISION)
+    assert.deepEqual((await readdir(fixture.root)).filter(path => path.startsWith(".state.lock")), [])
+  })
+}
+
+test("shouldPreserveCompletedJobWhenItsOutputSessionDisappears", async () => {
+  // Given
+  const fixture = workerFixture()
+  fixture.client.session.get = async () => MISSING_SESSION
+  const saved = []
+  const jobs = learningRuntimeContracts.createJobs(fixture.client, async job => { saved.push(job) })
+  const record = { ...PENDING_JOB, status: "completed", result_digest: "0".repeat(64) }
+  jobs.restore(record, "recovery-topic")
+
+  // When / Then
+  await assert.rejects(jobs.inspectAny(record.id), /worker_session_observation_failed/)
+  assert.equal(jobs.restore(record, "recovery-topic").status, "completed")
+  assert.deepEqual(saved, [])
+})
+
+for (const mutation of ["shape", "future-revision", "unrecorded-event", "wrong-consent", "malformed-reference"]) {
+  test(`shouldRejectUnreadablePracticeHistoryWhen${mutation}`, async (t) => {
+    // Given
+    const initial = topicState("consolidation")
+    const choice = answeredReadiness(initial, "ready")
+    const state = learningRuntimeContracts.applyLearningEvent(initial, initial.topic.slug, { ...skipEvent(choice), type: "start_practice" }, choice).state
+    const history = state.modules[0].practice_history
+    if (mutation === "shape") state.modules[0].practice_history = {}
+    if (mutation === "future-revision") history[0].revision = state.revision + 1
+    if (mutation === "unrecorded-event") history[0].event_id = "NOT-RECORDED"
+    if (mutation === "wrong-consent") state.consents[0].selected = ["skip"]
+    if (mutation === "malformed-reference") history[0].consolidation.evidence_refs = [{ ...LEARNER_REFERENCE, quote: null }]
+    const fixture = await pluginFixture(t, state)
+
+    // When / Then
+    await assert.rejects(fixture.call("learning_state_read", { topic_slug: state.topic.slug }), /state_malformed/)
+  })
+}
+
+test("shouldPreserveProductionAndLegacyConsentShapeWhenScopeOmitsTheFlag", async (t) => {
+  // Given
+  const initial = languageState("consolidation")
+  const fixture = await pluginFixture(t, initial)
+  const topic_slug = initial.topic.slug
+  const proposal = { goal: "Understand and produce airport requests", modules: [{ id: MODULE_ID, title: "Requests", win: "Understand and produce requests" }], reason: "Narrow the situation", retired_requirements: [] }
+  const { resolved } = await fixture.call("learning_event_reference", { event_type: "revise_scope", topic_slug, proposal_json: JSON.stringify(proposal) })
+  const interaction_id = await fixture.choose("scope_revision", resolved.consent_subject, initial.revision, ["apply", "revise", "cancel"], "apply")
+
+  // When
+  await fixture.call("learning_commit", { topic_slug, expected_revision: initial.revision, event: { ...proposal, type: "revise_scope", event_id: "LEGACY-SHAPE", date: "2026-09-14", interaction_id } })
+  const state = await fixture.call("learning_state_read", { topic_slug })
+
+  // Then
+  assert.equal(state.topic.production_required, true)
+  assert.equal(Object.hasOwn(resolved.consent_subject.before, "production_required"), false)
+  assert.equal(Object.hasOwn(resolved.consent_subject.after, "production_required"), false)
+  assert.equal(Object.hasOwn(state.scope_revisions[0], "production_required"), false)
 })

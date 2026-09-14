@@ -28,6 +28,8 @@ Dates on units are historical records of passive exposure and past attempts, nev
 
 A completed active unit needs observed comprehension and meaning-preserving production. Material unresolved differences mean `needs-another-attempt`. Input-only remains valid; a production-requiring mission keeps those criteria pending until demonstrated.
 
+If the learner changes the mission to input-only, propose retiring the production requirement through the caller's native scope-revision consent. Until committed, the existing requirement remains effective. After approval, units retain their actual outcomes; `input-only` never becomes demonstrated production. Reinstating production makes unfinished production required again. Closed modules retain their closure.
+
 Keep phrase candidates distinct from exported vocabulary. Neither a gap's adoption nor a candidate implies any schedule or card. Practice resources (Cornell questions, quizzes, teach-backs, drills) are optional and learner-requested.
 
 ## Output

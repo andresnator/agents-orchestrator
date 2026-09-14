@@ -1,0 +1,159 @@
+{
+  "MT-LEARNING-RUNTIME": {
+    "variants": {
+      "base": "empty",
+      "upgrade": "empty",
+      "limits": "empty",
+      "cancellation": "empty",
+      "transport": "empty",
+      "missing_api": "empty",
+      "missing_helper": "empty",
+      "retired": "class"
+    }
+  },
+  "MT-LEARNING-SESSION": {
+    "variants": {
+      "base": "empty"
+    }
+  },
+  "MT-LEARNING-PATH": {
+    "variants": {
+      "base": "empty",
+      "natural": "empty",
+      "ambiguous": "empty",
+      "java_create": "empty",
+      "java_cancel": "empty",
+      "reject": "empty",
+      "missing_consent": "empty",
+      "changed": "empty",
+      "markdown_only": "empty"
+    }
+  },
+  "MT-LEARNING-MODULE-DELIVERY": {
+    "variants": {
+      "base": "mission",
+      "omit": "class",
+      "partial": "partial",
+      "final": "mission",
+      "invalid_evidence": "class",
+      "stale_writer": "consolidation",
+      "legacy": "consolidation",
+      "reopen_skipped": "consolidation",
+      "reopen_completed": "practice-done",
+      "reopen_closed": "closed"
+    }
+  },
+  "MT-LEARNING-INDEPENDENT-EVIDENCE": {
+    "variants": {
+      "base": "class",
+      "explicit_module": "class",
+      "invalid": "class",
+      "automatic": "class",
+      "no_evidence": "class"
+    }
+  },
+  "MT-LEARNING-FLEXIBLE-PATH": {
+    "variants": {
+      "base": "flexible",
+      "defer": "flexible",
+      "prior": "plugin-mission",
+      "cancel": "flexible",
+      "stale": "flexible",
+      "conceptual_gap": "flexible",
+      "production_open": "language-1",
+      "production_closed": "language-closed"
+    }
+  },
+  "MT-LEARNING-AMBIGUOUS-ROUTE": {
+    "variants": {
+      "base": "pizza",
+      "durable": "pizza",
+      "dismissed": "pizza"
+    }
+  },
+  "MT-LEARNING-SUMMARY-LIFECYCLE": {
+    "variants": {
+      "base": "empty",
+      "concurrent": "empty",
+      "malformed": "empty"
+    }
+  },
+  "MT-LEARNING-REVIEW-ONDEMAND": {
+    "variants": {
+      "base": "closed",
+      "retired": "closed"
+    }
+  },
+  "MT-LEARNING-ENGLISH": {
+    "variants": {
+      "base": "empty",
+      "adoption": "language-1"
+    }
+  },
+  "MT-LEARNING-STANDALONE-SKILLS": {
+    "variants": {
+      "learning-session": "skill:learning-session",
+      "learning-loop": "skill:learning-loop",
+      "cornell-notes": "skill:cornell-notes",
+      "feynman-teachback": "skill:feynman-teachback",
+      "language-loop": "skill:language-loop",
+      "bidirectional-translation": "skill:bidirectional-translation",
+      "anki-vocab": "skill:anki-vocab",
+      "english-tutor": "skill:english-tutor"
+    }
+  },
+  "MT-LEARNING-STATE-RECOVERY": {
+    "variants": {
+      "base": "class",
+      "views": "class",
+      "writer": "consolidation",
+      "foreign": "class",
+      "dead_lock": "class",
+      "live_lock": "class",
+      "malformed_lock": "class",
+      "dead_claim": "class",
+      "legacy_claim": "class",
+      "missing_worker": "consolidation",
+      "evidence_history": "consolidation"
+    }
+  },
+  "MT-LEARNING-NO-SRS-COMPAT": {
+    "variants": {
+      "pending": "legacy-pending",
+      "selected": "legacy-selected",
+      "bad_digest": "legacy-pending",
+      "bad_disposition": "legacy-pending",
+      "unexpected_date": "legacy-pending"
+    }
+  },
+  "MT-LEARNING-LANGUAGE-PRACTICE": {
+    "variants": {
+      "one": "language-1",
+      "five": "language-5",
+      "six": "language-6",
+      "negative": "language-1",
+      "revise_production": "language-closed"
+    }
+  },
+  "MT-LEARNING-VOCAB-EXPORT": {
+    "variants": {
+      "base": "language-1",
+      "malformed": "language-1"
+    }
+  },
+  "MT-LEARNING-MODEL-VARIANCE": {
+    "variants": {
+      "session": "empty",
+      "module": "mission",
+      "review": "closed",
+      "language": "language-1",
+      "vocab": "language-1",
+      "standalone": "skill:cornell-notes"
+    }
+  },
+  "MT-LEARNING-DELAYED-RETENTION": {
+    "variants": {
+      "day0": "mission"
+    }
+  }
+}

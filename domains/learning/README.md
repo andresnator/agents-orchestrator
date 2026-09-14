@@ -66,6 +66,8 @@ Learners can adapt the path without losing evidence:
 
 | Need | Durable operation | What stays pending |
 | --- | --- | --- |
+| Practice again in an open module | `start_practice` from Consolidation with fresh native `readiness` / `ready` consent | A new attempt and Consolidation; previous cycle stays in optional `practice_history`. Resume alone does not reopen. |
+| Retire or reinstate language production | `revise_scope.production_required` with exact before/after consent | Reassessment of affected open modules; `input-only` units keep their outcome. Closed achievements remain closed. |
 | Change the goal | `revise_scope`, with native approval of the exact goal and affected module wins | Reassessment and updated materials before closing; retired requirements are not credited as learned. |
 | Already know the material | `skip_practice` also accepts Mission; reuse verified explanations in Consolidation | Any uncovered criterion and materials; no fictitious teaching or practice. |
 | Study another module now | `select_module`, with native approval of destination and reason | The previous module is deferred at its actual phase, with all requirements preserved. |
@@ -73,6 +75,8 @@ Learners can adapt the path without losing evidence:
 Resolve scope and navigation subjects through `learning_event_reference`. `current_module_id`, module `deferred`/`scope_revision`, and `scope_revisions` are optional schema-1 fields. Scope history retains before/after goals and wins, prior assessments, reasons, retired requirements, and consent references. Existing snapshots need no migration. On resume, use the selected module; otherwise the first open non-deferred module. If only deferred work remains, choose what to resume. Navigation needs neither materials nor closure; topic completion still requires all modules closed and evidence against the agreed goal.
 
 The mission defines stable concept IDs and prerequisites; concept order guides teaching and informs the learner without gating navigation. Cornell questions remain useful retrieval prompts for any learner-requested review.
+
+Each evidence operation accepts at most 200 references. Accumulated `verified_evidence` is retained without that count limit and remains reusable after restart. The snapshot limit stays 1 MB; `state_too_large` leaves the previous state intact. For abandoned locks or claims, use the normal operation or `learning_recover`: recovery checks dead owners and exact generations. Live owners or ambiguous records keep the topic blocked.
 
 ## Review
 
@@ -84,6 +88,8 @@ Older topics may still contain historical card, retention, and scheduling fields
 
 `learning_job_start` creates one actual child session for bounded research or composition and waits for a verified terminal result. Only one job runs per Mentor session. Mentor completes note → save → exercise → save → Close, or an approved summary save, in the same turn without “continue” messages. `learning_job_result` waits for recovery of the same child or cancels it; parent cancellation propagates to the child. Transport failure retains the accepted ID and never permits an unchecked replacement.
 
+`session.get` HTTP 404 with structured `NotFoundError` resolves a missing worker as `failed` / `worker_session_missing`. The runtime persists that result before permitting an explicitly requested retry at the current revision. Network, permissions, ambiguous responses and failed persistence keep replacement blocked.
+
 Topic jobs carry a source revision. Same-topic work is serialized, a newer request remains blocked behind the accepted worker, stale output cannot commit, and a completed host child can be recovered after an OpenCode restart. The writer receives a structured assignment that separates `approved_outline`, `teaching_assessment`, `practice_status`, and `learner_evidence`; only `learner_evidence` entries, with exact session, message, part, and quote, are learner words. Loading `cornell-notes` supplies its full inline lesson template, and `learning-loop` supplies the full exercise template. The runtime verifies worker kind, destination, source revision, and exact content before writing.
 
 Writer artifacts also accept optional `evidence_refs`: literal `{session_id, message_id, part_id, quote}` references. When present, `learner_evidence` receives exactly that selection and explicit selection takes priority; when omitted, the automatic verified module selection (`evidence_module_id` or the owning module) remains the fallback. A teach-back from Class with no recorded attempt or consolidation still works: Mentor calls `learning_evidence` with literal excerpts from the learner's answer, then passes the returned selection as `artifact.evidence_refs` on `learning_job_start`. The runtime verifies every reference before creating any worker (fresh ones against real learner messages of the current parent session, stored ones reused from the topic's `verified_evidence`) and rejects altered, synthetic, assistant, or foreign references. Verification creates no progress events and never auto-adds references to `verified_evidence`.
@@ -92,7 +98,7 @@ Writer artifacts also accept optional `evidence_refs`: literal `{session_id, mes
 
 Language units store the passive exposure date, attempt outcome, and status. Dates are historical records, not a calendar: units the learner selects are available for practice immediately, including units with errors or `input-only` status. The default proposal follows unit order. Required production stays pending until demonstrated.
 
-Input-only practice is valid. If the mission requires production, input-only evidence keeps that criterion pending and the unit remains eligible for later productive practice. Completion requires observed comprehension and meaning-preserving production.
+Input-only practice is valid. A natively approved `revise_scope` can change `production_required`; omitting it preserves the current value. With no affected open modules, an effective production change accepts `modules: []`, even when every module is closed but the topic remains active. Reactivating the requirement again requires production evidence. Unit outcomes never change as a side effect. If the mission requires production, input-only evidence keeps that criterion pending and the unit remains eligible for later productive practice. Completing a productive unit requires observed comprehension and meaning-preserving production; topic completion follows the approved mission requirements.
 
 Vocabulary phrases begin as candidates and can be corrected under the same ID until export. Each edit requires a fresh preview and confirmation. Consent binds the full displayed rows; only the selected subset is exported, and exported rows remain immutable. After a native selection, one state event marks the exact rows exported and creates the semicolon batch. Duplicate keys normalize target language plus NFKC/lowercase/whitespace-normalized unit. Export does not prove Anki import or mastery and creates no internal review item.
 
