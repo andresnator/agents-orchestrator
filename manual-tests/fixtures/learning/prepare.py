@@ -13,19 +13,66 @@ REPO = ROOT.parents[2]
 REVISION = 7
 PREFIX = 'MT-LEARNING-'
 
+# A prepared topic must describe the behavior exercised by its case.  Keep
+# these profiles together so changing a slug cannot silently retain another
+# curriculum's goal, concept, module, or language metadata.
+TOPIC_PROFILES = {
+    'http-cache-validation': {
+        'title': 'HTTP cache validation',
+        'goal': 'Decide whether a cached response can be reused, revalidated, or refetched from freshness and validators.',
+        'concept': 'Freshness and conditional validation',
+        'module': 'Freshness and validation',
+        'win': 'Explain and apply freshness and conditional validation.',
+    },
+    'pizza': {
+        'title': 'Pizza dough fermentation',
+        'goal': 'Explain how fermentation changes pizza dough and apply the explanation to a dough preparation decision.',
+        'concept': 'Fermentation and dough structure',
+        'module': 'Fermentation of pizza dough',
+        'win': 'Explain fermentation and apply it to a pizza dough decision.',
+    },
+    'airport': {
+        'title': 'Airport check-in English',
+        'goal': 'Handle an airport check-in exchange in English while preserving the intended meaning.',
+        'concept': 'Airport check-in communication',
+        'module': 'Check in for a flight',
+        'win': 'Produce and understand a clear airport check-in exchange.',
+    },
+    'plugin-security': {
+        'title': 'Plugin security and integration',
+        'goal': 'Explain safe plugin activation decisions and their effect on a local and remote integration.',
+        'concept': 'Plugin contracts and safe activation',
+        'module': 'Plugin theory',
+        'win': 'Explain plugin contracts and safe activation decisions.',
+    },
+}
+
+LANGUAGE_TOPIC_SLUG = 'airport'
+
 
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
 
 
+def topic_slug_for_kind(kind):
+    if kind == 'pizza':
+        return 'pizza'
+    if kind.startswith('language'):
+        return LANGUAGE_TOPIC_SLUG
+    if kind == 'flexible':
+        return 'plugin-security'
+    return 'http-cache-validation'
+
+
 def state_for(kind, today):
-    slug = 'pizza' if kind == 'pizza' else 'airport' if kind.startswith('language') else 'http-cache-validation'
+    slug = topic_slug_for_kind(kind)
+    profile = TOPIC_PROFILES[slug]
     state = dict(schema_version=1, revision=REVISION,
-                 topic=dict(slug=slug, title='Synthetic fixture: ' + slug, materials_language='Spanish',
-                            goal='Decide reuse, revalidation, or refetch from freshness and validators.', status='active'),
-                 concepts=[dict(id='K-0001', title='Freshness and validation', prerequisites=[], taught=False)],
-                 modules=[dict(id='M-0001', title='Freshness and validation', win='Explain and apply freshness and conditional validation.',
+                 topic=dict(slug=slug, title=profile['title'], materials_language='Spanish',
+                            goal=profile['goal'], status='active'),
+                 concepts=[dict(id='K-0001', title=profile['concept'], prerequisites=[], taught=False)],
+                 modules=[dict(id='M-0001', title=profile['module'], win=profile['win'],
                                phase='mission', taught_concept_ids=[], artifacts={})],
                  language_units=[], vocabulary=dict(candidates=[], exports=[]), gaps=[], jobs=[], artifacts={},
                  applied_events={}, consents=[], views=dict(revision=REVISION, status='current'))
@@ -39,13 +86,21 @@ def state_for(kind, today):
         module.update(phase='closed' if kind == 'closed' else 'consolidation', practice_skipped=True,
                       consolidation=dict(revision=6, learner_evidence='SYNTHETIC historical narrative; obtain real references for new assessment.', blocking_gaps=[]),
                       artifacts=dict(note='notes/m-0001.md', exercise='exercises/m-0001.md'))
-        for path, content in [('notes/m-0001.md', '# Cornell: cache validation\n\n## Questions\n- When is a response stale?\n- What does a 304 permit?\n\n## Notes\nAge greater than max-age is stale. A 304 allows body reuse.\n\n## Learner evidence\nPending: synthetic starting material.\n'), ('exercises/m-0001.md', '# Transfer\n\nAge 90, max-age 60, ETag present: explain the next request.\n\nPractice omitted in synthetic history.\n')]:
+        materials = {
+            'http-cache-validation': [
+                ('notes/m-0001.md', '# Cornell: cache validation\n\n## Questions\n- When is a response stale?\n- What does a 304 permit?\n\n## Notes\nAge greater than max-age is stale. A 304 allows body reuse.\n\n## Learner evidence\nPending: synthetic starting material.\n'),
+                ('exercises/m-0001.md', '# Transfer\n\nAge 90, max-age 60, ETag present: explain the next request.\n\nPractice omitted in synthetic history.\n'),
+            ],
+            'plugin-security': [
+                ('notes/m-0001.md', '# Cornell: plugin security\n\n## Questions\n- What must be checked before activation?\n- When should a plugin be disabled?\n\n## Notes\nCheck the host contract, permissions, and failure behavior before activation. Disable an unsafe plugin.\n\n## Learner evidence\nPending: synthetic starting material.\n'),
+                ('exercises/m-0001.md', '# Transfer\n\nA plugin requests a capability that is outside its contract: explain the safe decision and its integration impact.\n\nPractice omitted in synthetic history.\n'),
+            ],
+        }
+        for path, content in materials[slug]:
             state['artifacts'][path] = dict(content=content, source_revision=6, module_id='M-0001')
     if kind == 'flexible':
-        state['topic']['goal'] = 'Implement a plugin and incorporate it in an integration project.'
-        module.update(title='Plugin theory', win='Implement and operate a plugin.')
         module['consolidation']['blocking_gaps'] = ['No implemented plugin.']
-        state['modules'].append(dict(id='M-0002', title='Integration', win='Incorporate your plugin.', phase='mission', taught_concept_ids=[], artifacts={}))
+        state['modules'].append(dict(id='M-0002', title='Integration', win='Explain how the plugin decision affects local and remote integration.', phase='mission', taught_concept_ids=[], artifacts={}))
     if kind.startswith('language') or kind.startswith('legacy'):
         state['topic'].update(target_language='English', native_language='Spanish', production_required=True)
         count = int(kind.split('-')[1]) if kind.startswith('language') else 1

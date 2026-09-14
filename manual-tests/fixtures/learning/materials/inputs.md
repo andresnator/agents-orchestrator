@@ -11,6 +11,11 @@ These are test scripts, not evidence of a human learning outcome. Submit each an
 - Review 1: `Age exceeds max-age, so the response is stale.`
 - Review 2: `A 304 lets the cache reuse its stored body after validation.`
 
+## Pizza
+
+- One-off answer: `La fermentación produce gas que expande la masa y cambia su textura.`
+- Follow-up: `Una masa que fermenta más tiempo desarrolla más sabor y una estructura más aireada.`
+
 ## Plugin theory
 
 `A plugin registers capabilities with the host. I check the contract and permissions before activation, inspect failures, and disable it if unsafe. I can explain these decisions but have not implemented a plugin.`
