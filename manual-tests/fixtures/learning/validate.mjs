@@ -38,12 +38,12 @@ const TOPIC_PROFILES = {
     goal: /plugin.*activation|local and remote integration/i,
     concept: /plugin.*safe activation|safe activation/i,
     module: /plugin theory/i,
-    win: /plugin.*safe activation/i,
+    win: /plugin.*safe activation|implement.*plugin/i,
   },
 }
 
 function assertTopicProfile(kind, state) {
-  const profile = kind === 'pizza' ? TOPIC_PROFILES.pizza : kind.startsWith('language') ? TOPIC_PROFILES.language : kind === 'flexible' ? TOPIC_PROFILES.plugin : TOPIC_PROFILES.cache
+  const profile = kind === 'pizza' ? TOPIC_PROFILES.pizza : kind.startsWith('language') ? TOPIC_PROFILES.language : ['flexible', 'plugin-mission'].includes(kind) ? TOPIC_PROFILES.plugin : TOPIC_PROFILES.cache
   assert.equal(state.topic.slug, profile.slug)
   assert.match(state.topic.title, profile.title)
   assert.match(state.topic.goal, profile.goal)
@@ -65,16 +65,48 @@ function assertTopicProfile(kind, state) {
   }
 }
 
+function assertFlexibleScenario(variant, state) {
+  const [current, downstream] = state.modules
+  if (variant === 'prior') {
+    assert.equal(state.modules.length, 1, 'FLEXIBLE-PATH prior requires one theoretical module')
+    assert.match(state.topic.goal, /^Explain .*plugin/i, 'FLEXIBLE-PATH prior requires a theoretical goal')
+    assert.match(current.win, /^Explain .*plugin/i, 'FLEXIBLE-PATH prior requires a theoretical win')
+    assert.deepEqual({ phase: current.phase, taught: state.concepts[0].taught, taught_ids: current.taught_concept_ids,
+      class_evidence: current.class_evidence, attempt: current.attempt, consolidation: current.consolidation,
+      module_artifacts: current.artifacts, artifacts: state.artifacts, verified_evidence: state.verified_evidence },
+    { phase: 'mission', taught: false, taught_ids: [], class_evidence: undefined, attempt: undefined,
+      consolidation: undefined, module_artifacts: {}, artifacts: {}, verified_evidence: undefined },
+    'FLEXIBLE-PATH prior must start without recorded teaching, practice or evidence')
+    return
+  }
+  assert.equal(state.modules.length, 2, 'FLEXIBLE-PATH requires current and downstream modules')
+  assert.match(state.topic.goal, /^Implement a plugin and incorporate it /, 'FLEXIBLE-PATH requires a practical goal before revision')
+  assert.match(current.win, /^Implement, activate, diagnose and disable a real plugin\./, 'FLEXIBLE-PATH requires current practical work')
+  assert.match(downstream.win, /^Incorporate a personal plugin in the integration project\./, 'FLEXIBLE-PATH requires downstream practical integration')
+  assert.deepEqual({ phase: current.phase, skipped: current.practice_skipped, gaps: current.consolidation?.blocking_gaps,
+    next_phase: downstream.phase, artifacts: Object.keys(state.artifacts).sort() },
+  { phase: 'consolidation', skipped: true, gaps: ['No implemented plugin.'], next_phase: 'mission',
+    artifacts: ['exercises/m-0001.md', 'notes/m-0001.md'] }, 'FLEXIBLE-PATH requires unfinished practical work and materials')
+}
+
 let count = 0
 for (const variant of Object.keys(manifest.variants)) {
+  const kind = manifest.variants[variant]
+  const flexible = manifest.case_id === 'MT-LEARNING-FLEXIBLE-PATH'
+  if (flexible) {
+    const expected = variant === 'prior' ? 'plugin-mission' : 'flexible'
+    assert.equal(kind, expected, `FLEXIBLE-PATH ${variant} requires ${expected}`)
+  }
   const project = join(root, variant, 'project')
   const topics = await readdir(join(project, '.ai/learning')).catch(error => {
     if (error.code === 'ENOENT') return []
     throw error
   })
+  if (flexible) assert.deepEqual(topics, ['plugin-security'], `FLEXIBLE-PATH ${variant} requires the plugin topic`)
   for (const slug of topics) {
     const state = await runtime.createStateStore(project).read(slug)
-    assertTopicProfile(manifest.variants[variant], state)
+    if (flexible) assertFlexibleScenario(variant, state)
+    assertTopicProfile(kind, state)
     for (const [path, content] of Object.entries(runtime.renderViews(state))) {
       const target = join(project, '.ai/learning', slug, path)
       await mkdir(dirname(target), { recursive: true })

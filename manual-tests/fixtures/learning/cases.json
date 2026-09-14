@@ -53,7 +53,7 @@
     "variants": {
       "base": "flexible",
       "defer": "flexible",
-      "prior": "mission",
+      "prior": "plugin-mission",
       "cancel": "flexible",
       "stale": "flexible",
       "conceptual_gap": "flexible"

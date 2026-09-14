@@ -60,7 +60,7 @@ def topic_slug_for_kind(kind):
         return 'pizza'
     if kind.startswith('language'):
         return LANGUAGE_TOPIC_SLUG
-    if kind == 'flexible':
+    if kind in ('flexible', 'plugin-mission'):
         return 'plugin-security'
     return 'http-cache-validation'
 
@@ -99,8 +99,12 @@ def state_for(kind, today):
         for path, content in materials[slug]:
             state['artifacts'][path] = dict(content=content, source_revision=6, module_id='M-0001')
     if kind == 'flexible':
+        state['topic']['goal'] = 'Implement a plugin and incorporate it in a local and remote integration project.'
+        module['win'] = 'Implement, activate, diagnose and disable a real plugin.'
         module['consolidation']['blocking_gaps'] = ['No implemented plugin.']
-        state['modules'].append(dict(id='M-0002', title='Integration', win='Explain how the plugin decision affects local and remote integration.', phase='mission', taught_concept_ids=[], artifacts={}))
+        state['modules'].append(dict(id='M-0002', title='Integration', win='Incorporate a personal plugin in the integration project.', phase='mission', taught_concept_ids=[], artifacts={}))
+        for artifact in state['artifacts'].values():
+            artifact['content'] += '\n## Pending practical requirements\n\n' + '\n'.join('- ' + item['win'] for item in state['modules']) + '\n\nNo implementation or integration has been demonstrated.\n'
     if kind.startswith('language') or kind.startswith('legacy'):
         state['topic'].update(target_language='English', native_language='Spanish', production_required=True)
         count = int(kind.split('-')[1]) if kind.startswith('language') else 1

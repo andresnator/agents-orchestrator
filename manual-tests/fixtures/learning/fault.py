@@ -48,7 +48,10 @@ def inject(variant, fault):
         if fault == 'malformed-lock':
             lock.write_text('not JSON')
             return
-        process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(1800)' if fault == 'live-lock' else 'pass'])
+        process = subprocess.Popen(
+            [sys.executable, '-c', 'import time; time.sleep(1800)' if fault == 'live-lock' else 'pass'],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
         if fault == 'dead-lock':
             process.wait()
         record = dict(pid=process.pid, token=str(uuid.uuid4()), acquired_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
