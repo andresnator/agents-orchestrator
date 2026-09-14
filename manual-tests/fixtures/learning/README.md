@@ -132,3 +132,25 @@ python3 manual-tests/fixtures/learning/queue-smoke.py /tmp/learning-queue-unique
 ```
 
 This creates four owned panes and five fresh worktrees at HEAD, launches five **simulated processes**, and verifies continuous reuse, inactivity review, timeout and archive-before-cleanup. Test-only thresholds are 2 seconds without progress and 5 seconds total. `queue.json` records the ordering; the fifth must use the first pane before the other three finish. PASS worktrees are removed; blocked/timeout worktrees are retained. Copy the output into the coordinator report before any later cleanup. This smoke check does not validate actual coding-agent startup/exit, native consent, or model behavior. The production limits and agent lifecycle are specified in the reusable prompt.
+
+## Workflow recovery variants
+
+Use fresh copies of the variants below. Historical fixture narratives remain synthetic; submit actual user messages and obtain `learning_evidence` before new assessments.
+
+| Case / variants | Cause and operation to exercise | What stays pending |
+| --- | --- | --- |
+| MODULE-DELIVERY / `reopen_skipped`, `reopen_completed`, `reopen_closed` | Request `Quiero volver a practicar este módulo`, approve new native readiness / ready and commit `start_practice`; the first two start in Consolidation. Replay after restart. Closed variant must reject reopening. | Previous cycle goes to `practice_history`; new attempt, Consolidation and refreshed materials are required. Existing paths stay intact. |
+| FLEXIBLE-PATH / `production_open`, `production_closed`; LANGUAGE-PRACTICE / `revise_production` | Request `Quiero solo comprensión; retira la producción del objetivo`. Resolve/approve `revise_scope` including `production_required: false` and all affected open wins. The closed fixture permits `modules: []`. Reinstate production before completing the active topic. | Closed achievements and input-only outcomes stay real; affected open modules need reassessment. Reactivation requires production. |
+| STATE-RECOVERY / `missing_worker` | Accept a delayed worker through the host. Abort its case-owned session, delete it through the host API while the job record is still pending, then use `learning_job_result` from another parent. Record the actual session.get response. | Confirmed HTTP 404 plus structured NotFoundError must persist failed/worker_session_missing before explicit retry. Timeout, permissions, ambiguity and write failure keep exclusion. Never fabricate a successful host deletion or use another case's child. |
+| STATE-RECOVERY / `evidence_history` | Submit 201 distinct learner excerpts, locate and commit them in batches of at most 200. Restart and reuse the first and last references. Test a single excessive operation separately. | All accumulated references survive. A total snapshot over 1 MB rejects atomically; state capacity expansion remains outside this flow. |
+| STATE-RECOVERY / `dead_claim`, `legacy_claim` | Run `fault.py <variant> dead-claim` or `legacy-claim`, then `learning_recover`. Both lock and claim owners are actual exited case-owned processes. | Recovery requires dead owners and unchanged generations; live or ambiguous records stay blocked. |
+
+`lock-process.mjs` is a disposable process harness used by `learning-runtime.test.mjs`. IPC checkpoints intercept coordination open/write/sync/link/unlink only in that child. Tests kill owned processes during publication/removal, race two recoverers, and replace tokens before final validation. Temporary files left by interruption cannot act as locks. These are deterministic filesystem/process tests, not model behavior. The fixture tests also check both claim recipes and every new preparation variant.
+
+For a reproducible host protocol smoke test on the current checkout:
+
+```bash
+node manual-tests/fixtures/learning/recovery-protocol.mjs /tmp/learning-recovery-unique-run
+```
+
+The destination must not exist. The runner installs Learning from the current checkout into its own config, uses fresh XDG roots and loopback ports, and drives only `fixture/scripted`. It exercises native skip/reopen and production choices, 201 references across a host restart, a real deleted worker session with an explicit replacement, and abandoned-claim recovery. It records host requests, replies, schema, versions, state, process IDs and assertions under `one/evidence/`, retains provider exchanges under `one/provider/`, and stops its own services. It reads OpenCode's saved full tool output when the host truncates large state responses. No model quality or human competence is inferred. Permission/network faults and crash races remain separately covered by deterministic tests.

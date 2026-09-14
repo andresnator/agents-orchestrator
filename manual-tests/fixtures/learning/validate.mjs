@@ -55,6 +55,11 @@ function assertTopicProfile(kind, state) {
     assert.equal(state.topic.native_language, 'Spanish')
     assert.equal(state.topic.production_required, true)
     assert.ok(state.language_units.length > 0)
+    if (kind === 'language-closed') {
+      assert.ok(state.modules.every(module => module.phase === 'closed'))
+      assert.equal(state.language_units[0].status, 'input-only')
+      assert.equal(state.topic.status, 'active')
+    }
     assert.ok(state.language_units.every((unit) => /check[- ]in/i.test(unit.situation) && /check[- ]in/i.test(unit.target_text) && /facturar/i.test(unit.native_text)))
   }
   // Legacy compatibility deliberately carries a historical language unit in
@@ -92,7 +97,9 @@ function assertFlexibleScenario(variant, state) {
 let count = 0
 for (const variant of Object.keys(manifest.variants)) {
   const kind = manifest.variants[variant]
-  const flexible = manifest.case_id === 'MT-LEARNING-FLEXIBLE-PATH'
+  const productionKind = { production_open: 'language-1', production_closed: 'language-closed' }[variant]
+  if (manifest.case_id === 'MT-LEARNING-FLEXIBLE-PATH' && productionKind) assert.equal(kind, productionKind)
+  const flexible = manifest.case_id === 'MT-LEARNING-FLEXIBLE-PATH' && !productionKind
   if (flexible) {
     const expected = variant === 'prior' ? 'plugin-mission' : 'flexible'
     assert.equal(kind, expected, `FLEXIBLE-PATH ${variant} requires ${expected}`)

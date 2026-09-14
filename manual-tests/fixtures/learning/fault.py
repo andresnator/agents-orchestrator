@@ -41,7 +41,7 @@ def inject(variant, fault):
         state['modules'][0]['retention']['preview']['digest'] = '0' * 64
     elif fault == 'bad-disposition':
         state['modules'][0]['retention']['disposition'] = 'unknown'
-    elif fault in ('dead-lock', 'live-lock', 'malformed-lock'):
+    elif fault in ('dead-lock', 'live-lock', 'malformed-lock', 'dead-claim', 'legacy-claim'):
         lock = path.parent / '.state.lock'
         if lock.exists():
             raise ValueError('Lock already exists')
@@ -52,10 +52,18 @@ def inject(variant, fault):
             [sys.executable, '-c', 'import time; time.sleep(1800)' if fault == 'live-lock' else 'pass'],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        if fault == 'dead-lock':
+        if fault != 'live-lock':
             process.wait()
         record = dict(pid=process.pid, token=str(uuid.uuid4()), acquired_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
         lock.write_text(json.dumps(record) + '\n')
+        if fault in ('dead-claim', 'legacy-claim'):
+            claimant = subprocess.Popen([sys.executable, '-c', 'pass'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            claimant.wait()
+            claim = dict(pid=claimant.pid, stale_token=record['token'])
+            if fault == 'dead-claim':
+                claim['token'] = str(uuid.uuid4())
+            (lock.parent / (lock.name + '.reclaim-' + record['token'])).write_text(json.dumps(claim) + '\n')
+            (variant / 'evidence/claim-owner.json').write_text(json.dumps(dict(claim, synthetic=True, command='exited Python child')) + '\n')
         (variant / 'evidence/lock-owner.json').write_text(json.dumps(dict(record, synthetic=True, command='case-owned Python sleeper' if fault == 'live-lock' else 'exited Python child')) + '\n')
         return
     else:
@@ -66,6 +74,6 @@ def inject(variant, fault):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('variant', type=Path)
-    parser.add_argument('fault', choices=['upgrade', 'pending-views', 'bad-digest', 'bad-disposition', 'dead-lock', 'live-lock', 'malformed-lock'])
+    parser.add_argument('fault', choices=['upgrade', 'pending-views', 'bad-digest', 'bad-disposition', 'dead-lock', 'live-lock', 'malformed-lock', 'dead-claim', 'legacy-claim'])
     args = parser.parse_args()
     inject(args.variant, args.fault)

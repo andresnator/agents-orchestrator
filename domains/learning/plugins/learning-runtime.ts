@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { constants } from "node:fs"
-import { mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises"
+import { link, mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -16,7 +16,9 @@ const MAX_STATE_BYTES = 1_000_000
 const MAX_WRITER_ASSIGNMENT_CHARS = MAX_STATE_BYTES + 7 * MAX_INPUT_CHARS
 const MAX_CHOICES = 12
 const MAX_RECORDS = 200
+const MAX_EVIDENCE_PER_OPERATION = 200
 const JOB_POLL_MS = 250
+const LOCK_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const READINESS_OPTIONS = ["ready", "skip"]
 const STATE_VERSION = 1
 const TOPIC_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/
@@ -120,11 +122,11 @@ const EVIDENCE_REFERENCE = { session_id: "session", message_id: "message", part_
 
 const EVENT_REFERENCE: Record<EventType, EventReference> = {
   create_topic: { choice: { purpose: "mission", revision: 0, options: MISSION_OPTIONS, multiple: false }, consent_subject: "{topic_slug, title, materials_language, goal, concepts, modules, and only supplied target_language/native_language/production_required}; exact proposed values; omit type, event_id, date, interaction_id", event: { type: "create_topic", interaction_id: "UUID", event_id: "EVENT_ID", date: "YYYY-MM-DD", title: "string", materials_language: "string", goal: "string", target_language: "optional string", native_language: "optional string", production_required: "optional boolean", concepts: [{ id: "K-0001", title: "string", prerequisites: [], fundamental: false }], modules: [{ id: "M-0001", title: "string", win: "string" }] }, rules: ["target_language and native_language appear together", "default fundamental count <= floor(concepts / 5)"] },
-  revise_scope: { choice: { purpose: "scope_revision", options: SCOPE_OPTIONS, multiple: false }, event: { type: "revise_scope", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", goal: "revised topic goal", modules: [{ id: "M-####", title: "revised title", win: "revised win" }], reason: "why the learner changes scope", retired_requirements: ["requirement no longer applicable"] }, consent_subject: "Resolve with topic_slug and proposal_json containing exactly goal, modules, reason, retired_requirements; copy resolved subject_json and choice. Copy resolved consent_subject.after and reason/retired_requirements into the event.", rules: ["List every affected open module, including downstream requirements. Preserve closed achievements and all evidence.", "Revision does not close modules or clear gaps. Reassess against the revised goal with record_consolidation, then refresh materials before closing."] },
+  revise_scope: { choice: { purpose: "scope_revision", options: SCOPE_OPTIONS, multiple: false }, event: { type: "revise_scope", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", goal: "revised topic goal", modules: [{ id: "M-####", title: "revised title", win: "revised win" }], production_required: "optional boolean; language topics only", reason: "why the learner changes scope", retired_requirements: ["requirement no longer applicable"] }, consent_subject: "Resolve with topic_slug and proposal_json containing goal, modules, reason, retired_requirements and optional production_required for language topics; copy resolved subject_json and choice. Copy resolved consent_subject.after and reason/retired_requirements into the event.", rules: ["List every affected open module, including downstream requirements. Preserve closed achievements and all evidence.", "Omitting production_required preserves its current value and legacy consent shape. Include it to bind before/after effective production; modules may be empty only for an effective production change with no open modules affected. Preserve input-only results; reactivation requires production again.", "Revision does not close modules or clear gaps. Reassess against the revised goal with record_consolidation, then refresh materials before closing."] },
   select_module: { choice: { purpose: "module_selection", options: MODULE_OPTIONS, multiple: false }, event: { type: "select_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", interaction_id: "UUID", module_id: "M-####", reason: "why to move or resume" }, consent_subject: "Resolve with topic_slug, module_id and reason; exact subject binds current module, destination and reason.", rules: ["Defer the current open module without changing its phase, evidence or goal. Resume the selected module at its existing phase.", "Deferred modules remain required for topic completion; prerequisites inform the learner, not a navigation gate."] },
   record_class: { event: { type: "record_class", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", taught_concept_ids: ["K-####"], evidence: "actual teaching evidence" } },
   skip_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "skip_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" }, rules: ["Only selected skip permits omission from Mission, Class or unfinished Practice; preserve existing attempts. From Mission, assess prior knowledge in Consolidation without inventing teaching or mastery."] },
-  start_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" } },
+  start_practice: { choice: { purpose: "readiness", options: READINESS_OPTIONS, multiple: false }, event: { type: "start_practice", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", interaction_id: "UUID" }, consent_subject: { topic_slug: "TOPIC_SLUG", module_id: "M-####" }, rules: ["From Class, start practice. From an open module in Consolidation, explicitly reopen with new readiness/ready consent at the current revision. Closed modules use on-demand review.", "Reopening archives the previous attempt, consolidation and omission in practice_history; preserves verified evidence and material paths; requires new consolidation and current materials before Close. Session resume alone never reopens."] },
   record_attempt: { event: { type: "record_attempt", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", outcome: "pending | partial | stuck | done", evidence_refs: [EVIDENCE_REFERENCE], evidence: "teacher assessment", causal_explanation: "optional string", transfer_evidence: "optional string" }, rules: ["evidence_refs are required for outcome done and verified whenever supplied; copy literal references from learning_evidence or the same topic state.", "evidence and causal/transfer commentary are teacher assessment, separate from learner quotes."] },
   record_consolidation: { event: { type: "record_consolidation", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####", evidence_refs: [EVIDENCE_REFERENCE], learner_evidence: "teacher assessment", blocking_gaps: ["string"] }, rules: ["Copy evidence_refs from learning_evidence or the same topic state; authorship alone does not prove correctness."] },
   close_module: { event: { type: "close_module", event_id: "EVENT_ID", date: "YYYY-MM-DD", module_id: "M-####" } },
@@ -139,6 +141,7 @@ const EVENT_REFERENCE: Record<EventType, EventReference> = {
 }
 
 interface ScopeProposal {
+  production_required?: boolean
   goal: string
   modules: Array<{ id: string; title: string; win: string }>
   reason: string
@@ -150,7 +153,17 @@ interface ScopeRevision extends ScopeProposal {
   event_id: string
   date: string
   interaction_id: string
-  before: { goal: string; modules: Array<{ id: string; title: string; win: string; consolidation?: TopicState["modules"][number]["consolidation"] }> }
+  before: { production_required?: boolean; goal: string; modules: Array<{ id: string; title: string; win: string; consolidation?: TopicState["modules"][number]["consolidation"] }> }
+}
+
+interface PracticeHistory {
+  revision: number
+  date: string
+  event_id: string
+  interaction_id: string
+  practice_skipped?: boolean
+  attempt?: TopicState["modules"][number]["attempt"]
+  consolidation?: TopicState["modules"][number]["consolidation"]
 }
 
 interface TopicState {
@@ -163,6 +176,7 @@ interface TopicState {
   modules: Array<{
     id: string; title: string; win: string; phase: LearningPhase; taught_concept_ids: string[]; class_evidence?: string
     practice_skipped?: boolean
+    practice_history?: PracticeHistory[]
     deferred?: { date: string; reason: string; interaction_id: string }
     scope_revision?: number
     attempt?: { revision: number; outcome: "pending" | "partial" | "stuck" | "done"; evidence_refs?: EvidenceReference[]; evidence: string; causal_explanation?: string; transfer_evidence?: string }
@@ -244,6 +258,21 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
     if (item.practice_skipped !== undefined && typeof item.practice_skipped !== "boolean") return false
     if (item.attempt !== undefined && (!record(item.attempt) || !Number.isSafeInteger(item.attempt.revision) || item.attempt.revision > state.revision || !["pending", "partial", "stuck", "done"].includes(item.attempt.outcome) || typeof item.attempt.evidence !== "string")) return false
     if (item.consolidation !== undefined && (!record(item.consolidation) || !Number.isSafeInteger(item.consolidation.revision) || item.consolidation.revision > state.revision || typeof item.consolidation.learner_evidence !== "string" || !strings(item.consolidation.blocking_gaps))) return false
+    if (item.practice_history !== undefined) {
+      if (!Array.isArray(item.practice_history)) return false
+      let previousRevision = 0
+      for (const entry of item.practice_history) {
+        if (!record(entry) || !Number.isSafeInteger(entry.revision) || entry.revision <= previousRevision || entry.revision > state.revision || !isIsoDate(entry.date) || !EVENT_ID.test(entry.event_id) || !state.applied_events[entry.event_id]) return false
+        if (!state.consents.some((consent: any) => consent.interaction_id === entry.interaction_id && consent.purpose === "readiness" && sameStrings(consent.selected, ["ready"]))) return false
+        if (entry.practice_skipped !== undefined && typeof entry.practice_skipped !== "boolean") return false
+        if (entry.attempt !== undefined && (!record(entry.attempt) || !Number.isSafeInteger(entry.attempt.revision) || entry.attempt.revision < 1 || entry.attempt.revision >= entry.revision || !["pending", "partial", "stuck", "done"].includes(entry.attempt.outcome) || typeof entry.attempt.evidence !== "string")) return false
+        if (entry.consolidation !== undefined && (!record(entry.consolidation) || !Number.isSafeInteger(entry.consolidation.revision) || entry.consolidation.revision < 1 || entry.consolidation.revision >= entry.revision || typeof entry.consolidation.learner_evidence !== "string" || !strings(entry.consolidation.blocking_gaps))) return false
+        try {
+          for (const refs of [entry.attempt?.evidence_refs, entry.consolidation?.evidence_refs]) if (refs !== undefined) evidenceReferences(refs)
+        } catch { return false }
+        previousRevision = entry.revision
+      }
+    }
     return true
   })) return false
   if (state.current_module_id !== undefined && !state.modules.some((item: any) => item.id === state.current_module_id && item.phase !== "closed" && !item.deferred)) return false
@@ -255,6 +284,9 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
         if (!Number.isSafeInteger(entry.revision) || entry.revision <= previousRevision || entry.revision > state.revision || !EVENT_ID.test(entry.event_id) || !state.applied_events[entry.event_id] || !isIsoDate(entry.date)) return false
         if (!state.consents.some((consent: any) => consent.interaction_id === entry.interaction_id && consent.purpose === "scope_revision")) return false
         if (!record(entry.before) || typeof entry.before.goal !== "string" || !entry.before.goal.trim() || !Array.isArray(entry.before.modules) || !sameStrings(entry.before.modules.map((item: any) => item.id), entry.modules.map((item: any) => item.id))) return false
+        if (entry.production_required !== undefined && (!state.topic.target_language || typeof entry.before.production_required !== "boolean")) return false
+        if (entry.before.production_required !== undefined && typeof entry.before.production_required !== "boolean") return false
+        if (!entry.modules.length && entry.production_required === entry.before.production_required) return false
         for (const item of entry.before.modules) {
           if (!moduleIDs.has(item.id) || typeof item.title !== "string" || !item.title.trim() || typeof item.win !== "string" || !item.win.trim()) return false
           if (item.consolidation !== undefined) {
@@ -285,15 +317,16 @@ function validStoredState(value: unknown, slug: string): value is TopicState {
   if (!Object.entries(state.artifacts).every(([path, artifact]: [string, any]) => ARTIFACT_PATH.test(path) && record(artifact) && typeof artifact.content === "string" && Number.isSafeInteger(artifact.source_revision) && artifact.source_revision <= state.revision && (artifact.module_id === undefined || moduleIDs.has(artifact.module_id)) && (artifact.selected_card_ids === undefined || strings(artifact.selected_card_ids) && new Set(artifact.selected_card_ids).size === artifact.selected_card_ids.length && artifact.selected_card_ids.every((id: string) => cardIDs.has(id))))) return false
   if (!Object.entries(state.applied_events).every(([id, hash]) => EVENT_ID.test(id) && typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash))) return false
   try {
-    for (const refs of [state.verified_evidence, state.topic.completion?.evidence_refs, ...state.modules.flatMap((item: any) => [item.attempt?.evidence_refs, item.consolidation?.evidence_refs])]) {
+    if (state.verified_evidence !== undefined) evidenceReferences(state.verified_evidence, Infinity)
+    for (const refs of [state.topic.completion?.evidence_refs, ...state.modules.flatMap((item: any) => [item.attempt?.evidence_refs, item.consolidation?.evidence_refs])]) {
       if (refs !== undefined) evidenceReferences(refs)
     }
   } catch { return false }
   return true
 }
 
-function evidenceReferences(value: unknown): EvidenceReference[] {
-  const refs = requiredArray<unknown>(value, "evidence_refs").map((value) => {
+function evidenceReferences(value: unknown, limit = MAX_EVIDENCE_PER_OPERATION): EvidenceReference[] {
+  const refs = requiredArray<unknown>(value, "evidence_refs", limit).map((value) => {
     const ref = requiredRecord(value, "evidence_ref")
     if (!sameStrings(Object.keys(ref).sort(), ["message_id", "part_id", "quote", "session_id"])) throw new Error("invalid_evidence_ref")
     return {
@@ -502,21 +535,25 @@ function scopeProposal(value: unknown): ScopeProposal {
     const item = requiredRecord(value, "scope_module")
     return { id: requiredID(item.id, "M"), title: requiredString(item.title, "module_title", 200), win: requiredString(item.win, "module_win", 2000) }
   })
-  if (!modules.length) throw new Error("affected_modules_required")
+  if (!modules.length && proposal.production_required === undefined) throw new Error("affected_modules_required")
+  const productionRequired = proposal.production_required === undefined ? undefined : requiredBoolean(proposal.production_required, "production_required")
   unique(modules.map((item) => item.id), "module_id")
-  return { goal: requiredString(proposal.goal, "goal"), modules, reason: requiredString(proposal.reason, "scope_reason", 1000), retired_requirements: requiredArray<string>(proposal.retired_requirements, "retired_requirements").map((item) => requiredString(item, "retired_requirement", 1000)) }
+  return { ...(productionRequired === undefined ? {} : { production_required: productionRequired }), goal: requiredString(proposal.goal, "goal"), modules, reason: requiredString(proposal.reason, "scope_reason", 1000), retired_requirements: requiredArray<string>(proposal.retired_requirements, "retired_requirements").map((item) => requiredString(item, "retired_requirement", 1000)) }
 }
 
 function scopeSubject(state: TopicState, value: unknown) {
   if (state.topic.status !== "active") throw new Error("topic_already_completed")
   const proposal = scopeProposal(value)
-  const before = { goal: state.topic.goal, modules: proposal.modules.map(({ id }) => {
+  if (proposal.production_required !== undefined && !state.topic.target_language) throw new Error("production_requires_language_topic")
+  const productionChanged = proposal.production_required !== undefined && proposal.production_required !== (state.topic.production_required === true)
+  if (!proposal.modules.length && (!productionChanged || proposal.goal !== state.topic.goal && state.modules.some((item) => item.phase !== "closed"))) throw new Error("affected_modules_required")
+  const before = { ...(proposal.production_required === undefined ? {} : { production_required: state.topic.production_required === true }), goal: state.topic.goal, modules: proposal.modules.map(({ id }) => {
     const module = state.modules.find((item) => item.id === id)
     if (!module) throw new Error("unknown_module")
     if (module.phase === "closed") throw new Error("closed_module_scope_immutable")
     return { id, title: module.title, win: module.win }
   }) }
-  const after = { goal: proposal.goal, modules: proposal.modules }
+  const after = { ...(proposal.production_required === undefined ? {} : { production_required: proposal.production_required }), goal: proposal.goal, modules: proposal.modules }
   if (canonicalJSON(before) === canonicalJSON(after)) throw new Error("scope_unchanged")
   return { topic_slug: state.topic.slug, before, after, reason: proposal.reason, retired_requirements: proposal.retired_requirements }
 }
@@ -639,6 +676,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       state.scope_revisions ??= []
       state.scope_revisions.push({ ...proposal, before, revision: current.revision + 1, event_id: event.event_id, date: event.date, interaction_id: event.interaction_id })
       state.topic.goal = proposal.goal
+      if (proposal.production_required !== undefined) state.topic.production_required = proposal.production_required
       for (const update of proposal.modules) Object.assign(state.modules.find((item) => item.id === update.id)!, update, { scope_revision: current.revision + 1 })
       state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
       changed.add("mission"); changed.add("path")
@@ -672,9 +710,21 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     case "skip_practice":
     case "start_practice": {
       const skipping = event.type === "skip_practice"
-      if (!module || !(module.phase === "class" || skipping && (module.phase === "mission" || module.phase === "practice" && module.attempt?.outcome !== "done"))) throw new Error("practice_requires_class_or_unfinished_practice")
+      if (!module || !(module.phase === "class" || !skipping && module.phase === "consolidation" || skipping && (module.phase === "mission" || module.phase === "practice" && module.attempt?.outcome !== "done"))) throw new Error("practice_requires_class_or_unfinished_practice")
       validateConsent(choice, "readiness", event.interaction_id, [skipping ? "skip" : "ready"], { topic_slug: state.topic.slug, module_id: module.id })
       if (choice!.input.revision !== current.revision) throw new Error("stale_interaction_revision")
+      if (!skipping && module.phase === "consolidation") {
+        module.practice_history ??= []
+        module.practice_history.push({
+          revision: current.revision + 1, date: event.date, event_id: event.event_id, interaction_id: choice!.id,
+          ...(module.attempt ? { attempt: structuredClone(module.attempt) } : {}),
+          ...(module.consolidation ? { consolidation: structuredClone(module.consolidation) } : {}),
+          ...(module.practice_skipped !== undefined ? { practice_skipped: module.practice_skipped } : {}),
+        })
+        delete module.attempt
+        delete module.consolidation
+        delete module.practice_skipped
+      }
       module.phase = skipping ? "consolidation" : "practice"
       if (skipping) module.practice_skipped = true
       state.consents.push({ interaction_id: choice!.id, purpose: choice!.input.purpose, request_id: choice!.requestID!, digest: choice!.digest, selected: [...choice!.selected!] })
@@ -720,7 +770,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
     }
     case "add_language_unit": {
       if (!state.topic.target_language || !state.topic.native_language) throw new Error("language_topic_required")
-      if (event.next_due !== undefined) throw new Error("unexpected_next_due")
+      if ("next_due" in event && event.next_due !== undefined) throw new Error("unexpected_next_due")
       requiredID(event.unit_id, "L")
       if (state.language_units.some((item) => item.id === event.unit_id)) throw new Error("duplicate_language_unit")
       requiredDate(event.passive_at, "passive_at")
@@ -826,7 +876,7 @@ function applyLearningEvent(current: TopicState | undefined, slug: string, rawEv
       requiredString(event.job_id, "job_id", 100)
       const kind = artifactKind(event.path)
       let ownership: { module_id?: string } = {}
-      if (event.selected_card_ids !== undefined) throw new Error("unexpected_artifact_ownership")
+      if ("selected_card_ids" in event && event.selected_card_ids !== undefined) throw new Error("unexpected_artifact_ownership")
       if (kind === "note" || kind === "exercise") {
         if (!module) throw new Error("module_artifact_owner_required")
         module.artifacts[kind] = event.path
@@ -1020,13 +1070,15 @@ function renderViews(state: TopicState): Record<string, string> {
   const candidates = state.vocabulary.candidates.map((item) => `| ${markdown(item.target_language)} | ${markdown(item.duplicate_key)} | ${markdown(item.unit)} | ${item.status} |`).join("\n")
   const gaps = state.gaps.map((item) => `| ${item.id} | ${markdown(item.category)} | ${markdown(item.synthetic_pattern)} | ${item.occurrence_refs.length} | ${item.adoption} |`).join("\n")
   const language = state.language_units.map((item) => `| ${item.id} | ${item.passive_at} | ${item.status} | ${markdown(item.situation)} |`).join("\n")
-  const scopeHistory = state.scope_revisions?.length ? `\n## Scope revisions\n\n${state.scope_revisions.map((entry) => `- r${entry.revision} · ${entry.date} · ${entry.event_id}: ${markdown(entry.reason)}\n  Goal: ${markdown(entry.before.goal)} → ${markdown(entry.goal)}\n${entry.modules.map((item, index) => `  ${item.id}: ${markdown(entry.before.modules[index].title)} / ${markdown(entry.before.modules[index].win)} → ${markdown(item.title)} / ${markdown(item.win)}`).join("\n")}\n  Retired requirements (not demonstrated): ${entry.retired_requirements.map(markdown).join("; ") || "none"}`).join("\n")}\n` : ""
+  const scopeHistory = state.scope_revisions?.length ? `\n## Scope revisions\n\n${state.scope_revisions.map((entry) => `- r${entry.revision} · ${entry.date} · ${entry.event_id}: ${markdown(entry.reason)}\n  Goal: ${markdown(entry.before.goal)} → ${markdown(entry.goal)}\n${entry.production_required === undefined ? "" : `  Production required: ${entry.before.production_required} → ${entry.production_required}\n`}${entry.modules.map((item, index) => `  ${item.id}: ${markdown(entry.before.modules[index].title)} / ${markdown(entry.before.modules[index].win)} → ${markdown(item.title)} / ${markdown(item.win)}`).join("\n")}\n  Retired requirements (not demonstrated): ${entry.retired_requirements.map(markdown).join("; ") || "none"}`).join("\n")}\n` : ""
+  const practiceHistory = state.modules.flatMap((module) => (module.practice_history ?? []).map((entry) => `- ${module.id} · r${entry.revision} · ${entry.date} · ${entry.event_id}: reopened; previous practice ${entry.practice_skipped ? "skipped" : entry.attempt?.outcome ?? "pending"}; previous assessment ${markdown(entry.consolidation?.learner_evidence ?? "pending")}`))
+  const practiceRecord = practiceHistory.length ? `\n## Practice history\n\n${practiceHistory.join("\n")}\n` : ""
   const navigation = state.current_module_id || state.modules.some((item) => item.deferred) ? `\n> Current module: ${currentModule(state)?.id ?? "none; choose a deferred module"}\n` : ""
   const completion = state.topic.completion
   const completionRecord = completion ? `\n## Completion\n\nDate: ${completion.date} · Event: ${completion.event_id}\n\n${completion.evidence}\n${completion.evidence_refs ? `\nSources:\n${completion.evidence_refs.map((ref) => `- ${ref.session_id} / ${ref.message_id} / ${ref.part_id}: ${JSON.stringify(ref.quote)}`).join("\n")}\n` : ""}` : ""
   return {
-    "mission.md": `# Mission — ${state.topic.title}\n\n> Status: ${state.topic.status} · Materials language: ${state.topic.materials_language}\n\n## Observable goal\n\n${state.topic.goal}\n\n## Concepts\n\n| ID | Concept | Prerequisites | Fundamental | Taught |\n| --- | --- | --- | --- | --- |\n${concepts}\n${scopeHistory}${completionRecord}`,
-    "path.md": `# Learning Path — ${state.topic.title}\n\n> State revision: ${state.revision}\n${navigation}\n## Modules\n\n| ID | Module | Tangible win | Phase | Note | Exercise |\n| --- | --- | --- | --- | --- | --- |\n${modules}\n${language ? `\n## Language units\n\n| ID | Passive at | Status | Situation |\n| --- | --- | --- | --- |\n${language}\n` : ""}`,
+    "mission.md": `# Mission — ${state.topic.title}\n\n> Status: ${state.topic.status} · Materials language: ${state.topic.materials_language}\n\n## Observable goal\n\n${state.topic.goal}\n${state.topic.target_language ? `\nProduction required: ${state.topic.production_required === true}\n` : ""}\n## Concepts\n\n| ID | Concept | Prerequisites | Fundamental | Taught |\n| --- | --- | --- | --- | --- |\n${concepts}\n${scopeHistory}${completionRecord}`,
+    "path.md": `# Learning Path — ${state.topic.title}\n\n> State revision: ${state.revision}\n${navigation}\n## Modules\n\n| ID | Module | Tangible win | Phase | Note | Exercise |\n| --- | --- | --- | --- | --- | --- |\n${modules}\n${practiceRecord}${language ? `\n## Language units\n\n| ID | Passive at | Status | Situation |\n| --- | --- | --- | --- |\n${language}\n` : ""}`,
     "vocabulary.md": `# Vocabulary — ${state.topic.title}\n\n> Candidates and exports are distinct. Export status does not prove Anki import.\n\n| Target language | Duplicate key | Unit | Status |\n| --- | --- | --- | --- |\n${candidates}\n`,
     "gaps.md": `# Synthetic gaps — ${state.topic.title}\n\n> No raw corrections. Adoption is a separate learner choice.\n\n| ID | Category | Synthetic pattern | Distinct occurrences | Adoption |\n| --- | --- | --- | --- | --- |\n${gaps}\n`,
     ...Object.fromEntries(Object.entries(state.artifacts).map(([path, artifact]) => [path, artifact.content])),
@@ -1056,7 +1108,93 @@ async function processIsAlive(pid: number) {
     process.kill(pid, 0)
     return true
   } catch (error: any) {
-    return error?.code === "EPERM"
+    return error?.code !== "ESRCH"
+  }
+}
+
+// Only fully written, synced files become visible under coordination names.
+async function publishExclusive(path: string, content: string) {
+  const temporary = `${path}.${randomUUID()}.tmp`
+  let handle: Awaited<ReturnType<typeof open>> | undefined
+  try {
+    handle = await open(temporary, "wx", 0o600)
+    await handle.writeFile(content, "utf8")
+    await handle.sync()
+    await handle.close()
+    handle = undefined
+    await link(temporary, path)
+  } finally {
+    await handle?.close().catch(() => undefined)
+    await unlink(temporary).catch(() => undefined)
+  }
+}
+
+async function readCoordination(path: string) {
+  const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)
+  try {
+    const metadata = await handle.stat()
+    if (!metadata.isFile() || metadata.size > MAX_INPUT_CHARS) throw new Error("ambiguous_topic_lock")
+    const content = await handle.readFile("utf8")
+    const record = JSON.parse(content)
+    if (!record || !Number.isSafeInteger(record.pid) || record.pid <= 0) throw new Error("ambiguous_topic_lock")
+    return { content, record }
+  } finally { await handle.close() }
+}
+
+async function removeIdentical(path: string, content: string) {
+  try {
+    if ((await readCoordination(path)).content === content) await unlink(path)
+  } catch { /* Keep anything whose identity cannot be proved. */ }
+}
+
+async function reclaimLock(lockPath: string) {
+  let original: Awaited<ReturnType<typeof readCoordination>>
+  try {
+    original = await readCoordination(lockPath)
+    if (!LOCK_TOKEN.test(original.record.token)) throw new Error("invalid_lock")
+  } catch { throw new Error("ambiguous_topic_lock") }
+  if (await processIsAlive(original.record.pid)) throw new Error("topic_busy")
+  const prefix = `${lockPath}.reclaim-${original.record.token}`
+  const ancestors: Array<{ path: string; content: string; pid: number }> = []
+  let path = prefix
+  let parentGeneration: string | undefined
+  while (true) {
+    const content = JSON.stringify({ pid: process.pid, token: randomUUID(), stale_token: original.record.token, ...(parentGeneration ? { parent_generation: parentGeneration } : {}) })
+    try {
+      await publishExclusive(path, content)
+    } catch (error: any) {
+      if (error?.code !== "EEXIST") throw error
+      let claim: Awaited<ReturnType<typeof readCoordination>>
+      try {
+        claim = await readCoordination(path)
+        if (claim.record.stale_token !== original.record.token || (claim.record.token !== undefined && !LOCK_TOKEN.test(claim.record.token)) || claim.record.parent_generation !== parentGeneration) throw new Error("invalid_claim")
+      } catch { throw new Error("ambiguous_topic_lock") }
+      if (await processIsAlive(claim.record.pid)) throw new Error("topic_busy")
+      ancestors.push({ path, content: claim.content, pid: claim.record.pid })
+      // Includes legacy claims without their own token. The raw content hash
+      // binds their generation, not merely the original stale lock token.
+      parentGeneration = digest({ stale_token: original.record.token, content: claim.content })
+      path = `${prefix}-${parentGeneration}`
+      continue
+    }
+    let removed = false
+    try {
+      // The exclusive leaf fences all previous, dead claim owners. A contender
+      // observing a changed generation must abandon this entire attempt.
+      for (const ancestor of ancestors) {
+        if ((await readCoordination(ancestor.path)).content !== ancestor.content || await processIsAlive(ancestor.pid)) throw new Error("topic_busy")
+      }
+      if ((await readCoordination(path)).content !== content) throw new Error("topic_busy")
+      if (await processIsAlive(original.record.pid) || (await readCoordination(lockPath)).content !== original.content) throw new Error("topic_busy")
+      await unlink(lockPath)
+      removed = true
+    } finally {
+      // On interruption the complete chain remains recoverable. Only remove
+      // ancestors once the original lock is resolved; never remove replacements.
+      if (removed) for (const ancestor of ancestors) await removeIdentical(ancestor.path, ancestor.content)
+      await removeIdentical(path, content)
+    }
+    return
   }
 }
 
@@ -1124,44 +1262,13 @@ function createStateStore(directory: string) {
   async function acquire(root: string) {
     const lockPath = join(root, ".state.lock")
     for (let attempt = 0; attempt < 2; attempt++) {
-      const token = randomUUID()
+      const content = JSON.stringify({ pid: process.pid, token: randomUUID(), acquired_at: new Date().toISOString() })
       try {
-        const handle = await open(lockPath, "wx", 0o600)
-        await handle.writeFile(JSON.stringify({ pid: process.pid, token, acquired_at: new Date().toISOString() }), "utf8")
-        await handle.sync()
-        return async () => {
-          await handle.close()
-          try {
-            const stored = JSON.parse(await readFile(lockPath, "utf8"))
-            if (stored.token === token) await unlink(lockPath)
-          } catch { /* Never remove a lock we cannot prove is ours. */ }
-        }
+        await publishExclusive(lockPath, content)
+        return async () => { await removeIdentical(lockPath, content) }
       } catch (error: any) {
         if (error?.code !== "EEXIST" || attempt > 0) throw new Error("topic_busy")
-        let stored: { pid: number; token: string }
-        try {
-          stored = JSON.parse(await readFile(lockPath, "utf8"))
-          if (!Number.isInteger(stored.pid) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored.token)) throw new Error("invalid_lock")
-        } catch { throw new Error("ambiguous_topic_lock") }
-        if (await processIsAlive(stored.pid)) throw new Error("topic_busy")
-        const claimPath = `${lockPath}.reclaim-${stored.token}`
-        let claim: Awaited<ReturnType<typeof open>>
-        try {
-          claim = await open(claimPath, "wx", 0o600)
-        } catch (claimError: any) {
-          if (claimError?.code === "EEXIST") throw new Error("topic_busy")
-          throw claimError
-        }
-        try {
-          await claim.writeFile(JSON.stringify({ pid: process.pid, stale_token: stored.token }), "utf8")
-          await claim.sync()
-          const current = JSON.parse(await readFile(lockPath, "utf8"))
-          if (current.pid !== stored.pid || current.token !== stored.token || await processIsAlive(current.pid)) throw new Error("topic_busy")
-          await unlink(lockPath)
-        } finally {
-          await claim.close().catch(() => undefined)
-          await unlink(claimPath).catch(() => undefined)
-        }
+        await reclaimLock(lockPath)
       }
     }
     throw new Error("topic_busy")
@@ -1269,7 +1376,8 @@ function createStateStore(directory: string) {
 function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job) => Promise<void> = async () => undefined) {
   const jobs = new Map<string, Job>()
   const launching = new Set<string>()
-  const available = ["create", "prompt", "messages", "status", "abort"].every((name) => typeof (client.session as any)?.[name] === "function")
+  const inspections = new Map<string, Promise<Job>>()
+  const available = ["get", "create", "prompt", "messages", "status", "abort"].every((name) => typeof (client.session as any)?.[name] === "function")
 
   async function sync(job: Job) {
     const priorSyncError = job.error === "job_state_sync_failed; inspect the accepted child before replacement"
@@ -1302,7 +1410,8 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
     const topicScoped = TOPIC_SLUG.test(input.scope) && input.scope !== "summaries"
     const keys = [`parent:${context.sessionID}`, ...(topicScoped ? [`topic:${input.scope}:${input.worker}`] : [])]
     const existing = [...jobs.values()].find((job) => (job.parentID === context.sessionID || topicScoped && job.scope === input.scope && job.worker === input.worker) && ["starting", "running", "cancelling"].includes(job.status))
-    if (existing) {
+    if (existing) await inspect(existing)
+    if (existing && ["starting", "running", "cancelling"].includes(existing.status)) {
       if (input.scope === existing.scope && input.revision > existing.revision) {
         existing.supersededRevision = Math.max(existing.supersededRevision ?? input.revision, input.revision)
         await sync(existing)
@@ -1371,8 +1480,27 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
     }
   }
 
-  async function inspect(job: Job) {
+  function inspect(job: Job): Promise<Job> {
+    const pending = inspections.get(job.id)
+    if (pending) return pending
+    const inspection = inspectOnce(job).finally(() => { inspections.delete(job.id) })
+    inspections.set(job.id, inspection)
+    return inspection
+  }
+
+  async function inspectOnce(job: Job) {
     if (["failed", "cancelled"].includes(job.status) || (job.status === "completed" && job.result !== undefined)) return structuredClone(job)
+    // Keep the response envelope: an arbitrary thrown message is not proof of absence.
+    const session = await client.session.get({ path: { id: job.id }, throwOnError: false })
+    if (["starting", "running", "cancelling"].includes(job.status) && !session.data && session.response?.status === 404 && session.error?.name === "NotFoundError") {
+      const failed: Job = { ...job, status: "failed", error: "worker_session_missing" }
+      // Publish settlement durably before releasing in-memory exclusion. On write
+      // failure the original job stays pending and the next inspection retries.
+      await onChange(failed)
+      Object.assign(job, failed)
+      return structuredClone(job)
+    }
+    if (session.error || session.data?.id !== job.id) throw new Error("worker_session_observation_failed")
     const messages = await client.session.messages({ path: { id: job.id }, throwOnError: true })
     const prompt = messages.data?.find((message) => message.info.role === "user")
     if (prompt) job.promptMessageID = prompt.info.id
@@ -1398,9 +1526,16 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
 
   async function cancel(parentID: string, id: string): Promise<Job> {
     const job = get(parentID, id)
+    await inspect(job)
     if (["completed", "failed", "cancelled"].includes(job.status)) return structuredClone(job)
     job.status = "cancelling"
-    await client.session.abort({ path: { id: job.id }, throwOnError: true })
+    try {
+      await client.session.abort({ path: { id: job.id }, throwOnError: true })
+    } catch (error) {
+      const observed = await inspect(job)
+      if (observed.status === "failed" && observed.error === "worker_session_missing") return observed
+      throw error
+    }
     return wait(job)
   }
 
@@ -1679,7 +1814,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
         },
       }),
       learning_job_result: tool({
-        description: "Recover the same accepted worker, waiting inside this call if still active, or cancel it and verify settlement. Observation failure never permits replacement.",
+        description: "Recover the same accepted worker, waiting inside this call if still active, or cancel it and verify settlement. Confirmed session.get 404/NotFoundError persists failed/worker_session_missing before an explicit retry; uncertain observations keep exclusion.",
         args: { id: schema.string(), action: schema.enum(["inspect", "cancel"]), topic_slug: schema.string().regex(TOPIC_SLUG).optional() },
         async execute({ id, action, topic_slug }, context) {
           requireTeacher(context)

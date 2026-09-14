@@ -162,3 +162,44 @@ function answeredChoice(state, purpose, subject, selected) {
   })
   return { ...choice, status: 'answered', requestID: 'synthetic-request', selected: [selected] }
 }
+
+for (const fault of ['dead-claim', 'legacy-claim']) {
+  test(`shouldRecoverPrepared${fault}WithRealExitedOwners`, async (t) => {
+    // Given
+    const root = await prepare(t, 'STATE-RECOVERY')
+    const variant = join(root, fault === 'dead-claim' ? 'dead_claim' : 'legacy_claim')
+    await run('python3', [join(FIXTURES, 'fault.py'), variant, fault])
+    const claim = JSON.parse(await readFile(join(variant, 'evidence/claim-owner.json'), 'utf8'))
+    const store = runtime.createStateStore(join(variant, 'project'))
+    const before = await store.read('http-cache-validation')
+
+    // When
+    const result = await store.recover('http-cache-validation')
+
+    // Then
+    assert.equal(typeof claim.token, fault === 'dead-claim' ? 'string' : 'undefined')
+    assert.deepEqual(result, { revision: before.revision, views: 'current' })
+    assert.deepEqual(await store.read('http-cache-validation'), before)
+  })
+}
+
+for (const id of ['MODULE-DELIVERY', 'FLEXIBLE-PATH', 'STATE-RECOVERY', 'LANGUAGE-PRACTICE']) {
+  test(`shouldValidateEveryRecoveryVariantFor${id}`, async (t) => {
+    // Given
+    const root = await prepare(t, id)
+
+    // When / Then
+    await run('node', [join(FIXTURES, 'validate.mjs'), root])
+    if (id === 'MODULE-DELIVERY') {
+      const state = await runtime.createStateStore(join(root, 'reopen_completed/project')).read('http-cache-validation')
+      assert.equal(state.modules[0].attempt.outcome, 'done')
+      assert.equal(state.modules[0].practice_skipped, undefined)
+      assert.equal(state.verified_evidence, undefined)
+    }
+    if (id === 'LANGUAGE-PRACTICE') {
+      const state = await runtime.createStateStore(join(root, 'revise_production/project')).read('airport')
+      assert.deepEqual({ status: state.topic.status, phase: state.modules[0].phase, production: state.topic.production_required, unit: state.language_units[0].status },
+        { status: 'active', phase: 'closed', production: true, unit: 'input-only' })
+    }
+  })
+}

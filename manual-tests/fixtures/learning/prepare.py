@@ -66,6 +66,17 @@ def topic_slug_for_kind(kind):
 
 
 def state_for(kind, today):
+    if kind == 'practice-done':
+        state = state_for('consolidation', today)
+        module = state['modules'][0]
+        del module['practice_skipped']
+        module['attempt'] = dict(revision=5, outcome='done', evidence='SYNTHETIC historical completed practice, not verified learner evidence.')
+        return state
+    if kind == 'language-closed':
+        state = state_for('language-1', today)
+        state['modules'][0]['phase'] = 'closed'
+        state['language_units'][0].update(status='input-only', evidence='SYNTHETIC comprehension only; production not demonstrated.')
+        return state
     slug = topic_slug_for_kind(kind)
     profile = TOPIC_PROFILES[slug]
     state = dict(schema_version=1, revision=REVISION,

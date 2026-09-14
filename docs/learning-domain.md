@@ -126,7 +126,9 @@ Every topic has one semantic authority:
 
 `learning_event_reference` publishes every supported discriminated event payload and its exact consent subject on demand. An identical event ID and body is idempotent. Reusing the ID with another body fails. Two commits at one expected revision cannot both win, and the complete resulting snapshot is validated before replacement. If view generation is interrupted, committed state remains authoritative and `learning_recover` regenerates views without applying the event again. `review-queue.md` is no longer generated; an existing file from an older version is left untouched as history.
 
-A lock records PID and token. Recovery first claims that exact stale token with an exclusive file, rechecks the owner, and only then removes it; another process cannot delete a replacement lock. A live, malformed, or already-claimed lock stops the mutation. Topic, state-file, and artifact paths are canonicalized under the active project's `.ai/learning/`; traversal and symlink escape fail before content is read.
+Locks and reclamations are published fully written and synced through a temporary file plus an exclusive atomic link. A lock records PID and token; each new claim has its own PID and token. A dead claim owner can be recovered through a new exclusive claim bound to its content generation, retaining ancestors until the original lock is resolved. Legacy claims without their own token use the original token and content fingerprint. Recovery revalidates the chain and original lock identity and owners before removal; another generation aborts the attempt. Live owners, uncertain liveness and malformed records block mutation, with no expiry or forced deletion. Commits, job synchronization and `learning_recover` share this acquisition protocol. An interrupted publication may leave an unreferenced temporary file; it cannot act as a lock. Topic, state-file, and artifact paths are canonicalized under the active project's `.ai/learning/`; traversal and symlink escape fail before content is read.
+
+Each operation accepts at most 200 evidence references, validating structure, uniqueness and literal learner provenance. The accumulated `verified_evidence` history has no separate count limit and remains reusable after restart. The complete snapshot stays limited to 1 MB; an excessive write fails atomically with `state_too_large`, preserving all prior evidence. Capacity expansion and evidence trimming are outside this recovery flow.
 
 ## Durable teaching
 
@@ -145,6 +147,8 @@ Non-language modules follow `Class → optional Practice → Consolidation`:
 | Practice | Actual attempt on a new application, with hints faded from observed performance |
 | Consolidation | Learner explanation of essential decisions and transfer, with no unresolved conceptual gap |
 | Close | Completed or explicitly omitted practice, sufficient explanation, no blocking gap, and valid module note and exercise |
+
+`start_practice` also accepts an open module in Consolidation when the learner explicitly asks to practice again. New native `readiness` / `ready` consent binds the exact subject and current revision. The optional schema-1 `practice_history` stores the previous attempt, consolidation and omission with reopening revision, date, event and consent ID. Only current-cycle fields are cleared. Verified references and material paths remain intact; new Consolidation and current materials are required before Close. Closed modules use existing on-demand review; ordinary session resume never repeats readiness.
 
 Actual evidence may satisfy more than one consolidation purpose. Do not demand a redundant Summary, debrief, or teach-back when the learner's causal explanation and transfer already meet the rubric. Use teach-back selectively for a foundational or uncertain concept. Confidence and worker output are not learner evidence.
 
@@ -183,7 +187,7 @@ Mentor runs one bounded worker at a time per parent session. `learning_job_start
 
 The researcher receives a question and source scope, returns at most five source-grounded findings, and cannot write or delegate. The writer receives one artifact kind, destination, source revision, materials language, approved outline, teacher assessment, practice status, and literal learner evidence. It composes the complete body and has no file, shell, question, research, or delegation access.
 
-`learning_job_result` is for cancellation or recovery of the same accepted child; recovery waits inside the call while it remains active. Parent cancellation propagates to the child. Transport errors retain the accepted ID and do not authorize a replacement without inspecting its state. Deferred notifications are not emitted. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
+`learning_job_result` is for cancellation or recovery of the same accepted child; recovery waits inside the call while it remains active. Parent cancellation propagates to the child. Transport errors retain the accepted ID and do not authorize a replacement without inspecting its state. `session.get` HTTP 404 with structured `NotFoundError` settles a missing child as `failed` / `worker_session_missing`, retaining ID, owner and source revision. Inspection, cancellation and the checks before new work share this recovery. The failed result must persist before exclusion is released; write failure can be retried and still blocks replacement. Network, timeout, permissions and ambiguous observations keep the accepted job pending. Only an explicit retry launches a new worker, using the current revision. Deferred notifications are not emitted. Silence or absence from the busy map is not a successful result. Observe the accepted child; cancel that ID and verify settlement before replacement.
 
 Topic job metadata is stored with authoritative state. Same-worker work for one topic is not duplicated across parent sessions or simultaneous starts. A newer revision stays blocked behind the accepted job and makes the old result ineligible. A completed child result can be recovered through its host session after OpenCode restarts. Before attachment, the runtime checks topic ownership, worker kind, exact source revision, destination, and content.
 
@@ -192,6 +196,8 @@ Topic job metadata is stored with authoritative state. Same-worker work for one 
 Each language unit records the passive exposure date, situation, bilingual text, status, and actual evidence. Unit dates are historical records, never a calendar: a unit the learner selects is available for practice immediately, including units recorded with errors or as input-only. The default proposal follows unit order, and unit count never determines what is offered.
 
 When the learner practices a unit, they reconstruct meaning from the native side. Natural equivalents are valid. Meaning-changing omissions or structural errors produce focused feedback and `needs-another-attempt`; the record notes the error without scheduling a future date. Completion requires observed gist and meaning-preserving production.
+
+`revise_scope` accepts optional `production_required` for language topics. When supplied, exact consent and scope history include the effective previous value and proposed value. Omission preserves both the requirement and the legacy consent shape. Goal, affected open wins and production change together in one revision. An effective production change with no affected open modules permits `modules: []`, including all modules closed in an active topic. Affected open modules still need reassessment; closed achievements and unit outcomes are preserved. Reinstating production makes its evidence necessary again.
 
 Input-only remains a valid choice. If the mission requires production, it leaves that criterion pending and stays eligible for later productive practice. Unfinished units remain available in unit order until the finite course is drained; one-, five-, and six-unit courses need no buffer or invented unit.
 
@@ -237,3 +243,13 @@ Model-backed cases require explicit credit authorization and record the exact mo
 - A summary was not created: confirm a positive native save choice, completed summarizer JSON, and unused interaction ID.
 - A language topic will not complete: inspect input-only or retry-needed units when production is required.
 - `unsupported_event_type` for a card or scheduling event: the operation was retired; use the current `learning_event_reference` catalog.
+
+## Recovery operations
+
+| Block and cause | Available operation | Still pending |
+| --- | --- | --- |
+| Practice already omitted or completed | Explicit `start_practice` from open Consolidation with new native readiness consent | New attempt and Consolidation, then current materials; old cycle stays in history. |
+| Language production remains required after a goal change | Native `revise_scope` including `production_required` | Reassessment of affected open wins; no production credit for input-only. |
+| More than 200 accumulated references | Keep each evidence operation at 200 or fewer; reuse stored references after restart | Total snapshot must fit 1 MB; an excessive write remains unsaved. |
+| Accepted worker session disappeared | `learning_job_result` with topic ownership, or recovery before an explicit retry | Persist confirmed 404/NotFoundError failure, then retry explicitly at current revision. |
+| Lock reclamation owner died | Retry the normal operation or `learning_recover` | Dead owners and unchanged generations must be verifiable; active/ambiguous records remain blocked. |
