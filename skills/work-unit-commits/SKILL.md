@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: in-progress
-  version: "3.0.4"
+  version: "3.0.5"
 ---
 
 # Work-unit commits
@@ -73,7 +73,9 @@ After staging and validation, save a separate pre-hook snapshot of the same stat
 
 Use only the installed/loaded harness, the named project's run evidence, and local Git state. Normal installed skill loading is allowed. Never search a harness source repository, sibling worktrees, controller data, or another run for rules or missing evidence. Report gaps without expanding access.
 
-Resolve pending delivery before ordinary `HEAD`/ledger equality. Require complete original pending metadata and pre-stage evidence; completed-commit recovery also requires the original pre-hook snapshot. Missing, incomplete, or ambiguous evidence blocks without mutation. Preserve snapshots; never regenerate evidence, reconstruct units from work groups, or search ancestry for a plausible commit. A hook failure or unexpected hook mutation cannot justify commit adoption. After human remediation, retry only through the precommit route below.
+With no pending record, validate the ledger and require `HEAD` to equal its last SHA, or `Baseline` for `Commits: none`. Skip pending-evidence checks and recovery writes; normal execution can resume.
+
+Only when pending exists, resolve it before ordinary `HEAD`/ledger equality. Require complete original pending metadata and pre-stage evidence; completed-commit recovery also requires the original pre-hook snapshot. Missing, incomplete, or ambiguous evidence blocks without mutation. Preserve snapshots; never regenerate evidence, reconstruct units from work groups, or search ancestry for a plausible commit. A hook failure or unexpected hook mutation cannot justify commit adoption. After human remediation, retry only through the precommit route below.
 
 After validating the ledger, choose one route. Its **preceding tip** is the last SHA, or `Baseline` for an empty ledger, excluding only an exact final row matching the pending unit id, current full `HEAD`, and intended message.
 
