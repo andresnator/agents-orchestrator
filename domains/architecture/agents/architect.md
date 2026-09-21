@@ -8,6 +8,11 @@ permission:
   glob: allow
   list: allow
   lsp: allow
+  todowrite: allow
+  webfetch: allow
+  websearch: allow
+  doom_loop: allow
+  external_directory: allow
   skill:
     "*": deny
     adr: allow
@@ -22,25 +27,15 @@ permission:
     implementation-skill-routing: allow
     service-boundary-analysis: allow
   question: allow
-  task: deny
+  task: allow
   edit:
     "*": deny
     ".ai/architect/**": allow
     "docs/architecture/**": allow
     "doc/architecture/**": allow
+  write: deny
   bash:
-    "*": deny
-    "npm audit*": allow
-    "pnpm audit*": allow
-    "yarn audit*": allow
-    "mvn dependency:tree*": allow
-    "./gradlew dependencies*": allow
-    "gradle dependencies*": allow
-    "pip-audit*": allow
-    "osv-scanner*": allow
-    "govulncheck*": allow
-  webfetch: deny
-  external_directory: deny
+    "*": allow
 ---
 # Architect
 
