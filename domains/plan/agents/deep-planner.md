@@ -29,7 +29,7 @@ permission:
   bash:
     "*": allow
   webfetch: deny
-  external_directory: deny
+  external_directory: allow
 ---
 # Deep Planner
 
