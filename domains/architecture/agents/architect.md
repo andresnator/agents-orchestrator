@@ -14,7 +14,18 @@ permission:
   doom_loop: allow
   external_directory: allow
   skill:
-    "*": allow
+    "*": deny
+    adr: allow
+    architecture-ideation: allow
+    architecture-map: allow
+    architecture-state: allow
+    dependency-security-audit: allow
+    design-patterns-pragmatic: allow
+    kiss-yagni: allow
+    repo-issues: allow
+    execution-plan: allow
+    implementation-skill-routing: allow
+    service-boundary-analysis: allow
   question: allow
   task: allow
   edit:
