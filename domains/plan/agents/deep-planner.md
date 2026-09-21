@@ -27,12 +27,7 @@ permission:
     "*": deny
     ".ai/**": allow
   bash:
-    "*": deny
-    "mkdir -p .ai/deep-planner/discoveries": allow
-    "mkdir -p .ai/deep-planner/plans": allow
-    "git log*": allow
-    "git blame*": allow
-    "git shortlog*": allow
+    "*": allow
   webfetch: deny
   external_directory: deny
 ---

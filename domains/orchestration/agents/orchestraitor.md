@@ -2,25 +2,7 @@
 description: "Adaptive implementation primary for direct changes, execution plans, and durable SDD runs."
 mode: primary
 temperature: 0.3
-permission:
-  question: allow
-  edit: allow
-  write: allow
-  bash: allow
-  skill:
-    "*": allow
-    implementation-skill-routing: allow
-    judgment-day: deny
-    chained-pr: deny
-    tcr: allow
-    work-unit-commits: allow
-  task:
-    "*": deny
-    sdd-explore: allow
-    sdd-implement: allow
-    sdd-canonical-merge: allow
-    sdd-verify: allow
-    general: allow
+permission: allow
 ---
 # Orchestraitor
 
