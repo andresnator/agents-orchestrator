@@ -12,7 +12,7 @@ Shared engineering, quality, question, and output skills used across domains. It
 
 | Entry | Use | Result |
 |---|---|---|
-| `/caveman` | Select response compression | Inherited session-tree level |
+| `/caveman` | Select response compression | Globally saved level for all primaries and subagents |
 | `/graphify-index` | Approve first indexing | Recorded mode and repository graph |
 | `/grill` | Stress-test an idea or artifact | Focused questions and revised outcome |
 
@@ -20,11 +20,19 @@ Shared skills have one body under top-level `skills/`; each consuming domain dec
 
 After changing this domain, run the affected [Common manual tests](manual-tests.md).
 
+### Caveman scope and persistence
+
+With no saved selection, Caveman uses `lite`. `/caveman lite|full|ultra|wenyan` saves a global level; bare `/caveman` selects `lite`. Send `normal mode` or `stop caveman` as a standalone message to save `off` for normal prose. All levels, including `off`, persist across restarts until explicitly replaced.
+
+The selection applies on the next response of every existing and new primary and subagent session sharing the same global OpenCode configuration directory, including other processes. It does not affect earlier responses, other machines, or independent configuration directories. Invalid arguments preserve the saved level and show valid syntax; state errors are reported rather than silently reset.
+
+Quit and restart OpenCode after installing or changing plugin code or configuration-time files. Once loaded, mode changes need no restart. See [Caveman guidance](skills/caveman/SKILL.md) for levels and storage details and [the manual test](manual-tests.md#mt-common-caveman) for real-process verification.
+
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/caveman` | Selects inherited response compression |
+| Command | `/caveman` | Saves global response compression |
 | Command | `/graphify-index` | Indexes Graphify after explicit consent |
 | Command | `/grill` | Routes focused interview modes |
 | Skill | `caveman` | Preserves meaning during response compression |
@@ -57,5 +65,5 @@ After changing this domain, run the affected [Common manual tests](manual-tests.
 | Skill | `systematic-debugging` | Finds root causes before fixes |
 | Skill | `tcr` | Runs test-commit-revert micro-cycles |
 | Skill | `work-unit-commits` | Plans reviewable and cohesive commits |
-| Plugin | `caveman-mode` | Propagates mode through session trees |
+| Plugin | `caveman-mode` | Persists global mode and reads it before every primary/subagent response |
 | External npm server plugin | `opencode-graphify-init` | Refreshes approved Graphify indexes |

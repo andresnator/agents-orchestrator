@@ -1,20 +1,26 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import fs from "node:fs"
+import { randomUUID } from "node:crypto"
+import { homedir } from "node:os"
+import { join } from "node:path"
 
 const PLUGIN_ID = "caveman-mode"
 const COMMAND_NAME = "caveman"
 const DEFAULT_MODE = "lite"
+const BARE_COMMAND_MODE = "lite"
 const OFF_MODE = "off"
 const MODE_MARKER_PREFIX = "CAVEMAN SESSION MODE:"
 const VALID_MODES = ["lite", "full", "ultra", "wenyan"] as const
 const DEACTIVATION_PHRASES = new Set(["stop caveman", "normal mode"])
+const STATE_FILE = "caveman-mode.json"
+const COMMAND_USAGE = "Usage: /caveman [lite|full|ultra|wenyan]"
 
 type CavemanLevel = (typeof VALID_MODES)[number]
 type CavemanMode = CavemanLevel | typeof OFF_MODE
-type ParentResolver = (sessionID: string) => Promise<string | undefined>
 
 function parseCommandMode(rawArguments: string): CavemanLevel | null {
   const normalized = rawArguments.trim().toLowerCase()
-  if (!normalized) return DEFAULT_MODE
+  if (!normalized) return BARE_COMMAND_MODE
   return VALID_MODES.includes(normalized as CavemanLevel) ? (normalized as CavemanLevel) : null
 }
 
@@ -23,26 +29,46 @@ function parseDeactivationPhrase(text: string): typeof OFF_MODE | null {
   return DEACTIVATION_PHRASES.has(normalized) ? OFF_MODE : null
 }
 
-async function resolveEffectiveMode(
-  sessionID: string | undefined,
-  explicitModes: ReadonlyMap<string, CavemanMode>,
-  parentOf: ParentResolver,
-): Promise<CavemanMode> {
-  if (!sessionID) return DEFAULT_MODE
-  const visited = new Set<string>()
-  let current: string | undefined = sessionID
+function configDirectory(): string {
+  return process.env.OPENCODE_CONFIG_DIR ||
+    join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "opencode")
+}
 
-  while (current && !visited.has(current)) {
-    visited.add(current)
-    const explicit = explicitModes.get(current)
-    if (explicit) return explicit
-    try {
-      current = await parentOf(current)
-    } catch {
-      return DEFAULT_MODE
-    }
+function readMode(statePath: string): CavemanMode {
+  let text: string
+  try {
+    text = fs.readFileSync(statePath, "utf8")
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return DEFAULT_MODE
+    throw error
   }
-  return DEFAULT_MODE
+  const state = JSON.parse(text)
+  if (!state || typeof state !== "object" || Array.isArray(state) ||
+    Object.keys(state).length !== 1 ||
+    !(state.mode === OFF_MODE || VALID_MODES.includes(state.mode))) {
+    throw new Error(`Invalid Caveman state: ${statePath}`)
+  }
+  return state.mode
+}
+
+function writeMode(directory: string, statePath: string, mode: CavemanMode): void {
+  // Never replace an unreadable or corrupt selection with a new one.
+  readMode(statePath)
+  fs.mkdirSync(directory, { recursive: true })
+  const temporaryPath = `${statePath}.${randomUUID()}.tmp`
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify({ mode }) + "\n", { flag: "wx", mode: 0o600 })
+    readMode(statePath)
+    // Same-directory rename is the atomic commit point across processes.
+    fs.renameSync(temporaryPath, statePath)
+  } catch (error) {
+    try {
+      fs.rmSync(temporaryPath, { force: true })
+    } catch {
+      // Preserve the original failure; an orphan temporary file is never read.
+    }
+    throw error
+  }
 }
 
 function markerFor(mode: CavemanMode): string {
@@ -67,56 +93,50 @@ export const cavemanModeContracts = {
   MODE_MARKER_PREFIX,
   OFF_MODE,
   VALID_MODES,
+  STATE_FILE,
+  configDirectory,
   commandMatches,
   injectModeMarker,
   markerFor,
   parseCommandMode,
   parseDeactivationPhrase,
-  resolveEffectiveMode,
 }
 
-export const CavemanModePlugin: Plugin = async ({ client, directory }) => {
-  const explicitModes = new Map<string, CavemanMode>()
-  const parentIDs = new Map<string, string | null>()
-
-  const parentOf: ParentResolver = async (sessionID) => {
-    if (parentIDs.has(sessionID)) return parentIDs.get(sessionID) ?? undefined
-    const response = await client.session.get({
-      path: { id: sessionID },
-      query: { directory },
-    })
-    const parentID = response.data?.parentID
-    parentIDs.set(sessionID, parentID ?? null)
-    return parentID
+export const CavemanModePlugin: Plugin = async () => {
+  const directory = configDirectory()
+  const statePath = join(directory, STATE_FILE)
+  const reportFailure = (error: unknown): never => {
+    throw new Error(`Caveman global state failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error })
+  }
+  const selectMode = (mode: CavemanMode): void => {
+    try {
+      writeMode(directory, statePath, mode)
+    } catch (error) {
+      reportFailure(error)
+    }
   }
 
   return {
     "command.execute.before": async (input) => {
       if (!commandMatches(input.command)) return
       const mode = parseCommandMode(input.arguments)
-      if (mode) explicitModes.set(input.sessionID, mode)
+      if (!mode) throw new Error(COMMAND_USAGE)
+      selectMode(mode)
     },
 
-    "chat.message": async (input, output) => {
+    "chat.message": async (_input, output) => {
       for (const part of output.parts) {
         if (part.type !== "text" || typeof part.text !== "string") continue
         const mode = parseDeactivationPhrase(part.text)
-        if (mode) explicitModes.set(input.sessionID, mode)
+        if (mode) selectMode(mode)
       }
     },
 
-    "experimental.chat.system.transform": async (input, output) => {
-      const mode = await resolveEffectiveMode(input.sessionID, explicitModes, parentOf)
-      injectModeMarker(output.system, mode)
-    },
-
-    event: async ({ event }) => {
-      if (event.type === "session.created" || event.type === "session.updated") {
-        parentIDs.set(event.properties.info.id, event.properties.info.parentID ?? null)
-      }
-      if (event.type === "session.deleted") {
-        explicitModes.delete(event.properties.info.id)
-        parentIDs.delete(event.properties.info.id)
+    "experimental.chat.system.transform": async (_input, output) => {
+      try {
+        injectModeMarker(output.system, readMode(statePath))
+      } catch (error) {
+        reportFailure(error)
       }
     },
   }

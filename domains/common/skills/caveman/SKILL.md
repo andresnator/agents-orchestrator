@@ -1,7 +1,7 @@
 ---
 name: caveman
 description: >
-  Session-scoped compressed response style with lite, full, ultra, and wenyan levels.
+  Globally persistent compressed response style with lite, full, ultra, and wenyan levels, plus off for normal prose.
   Trigger: /caveman, caveman mode, talk like caveman, concise response mode, stop caveman, normal mode.
 license: MIT
 metadata:
@@ -18,9 +18,13 @@ Respond tersely while preserving all technical substance. Compress style, never 
 
 ## Persistence
 
-The OpenCode `caveman-mode` plugin owns the selected level for one session tree. A root session defaults to `lite`; descendants inherit the nearest explicit ancestor level. The selection ends when OpenCode restarts.
+The OpenCode `caveman-mode` plugin owns one saved global level. All existing and new primary and subagent sessions sharing a global OpenCode configuration directory use the current level on their next response, not an obsolete session or ancestor selection. The fallback is `lite` only when no selection is saved.
 
-Switch with `/caveman lite|full|ultra|wenyan`. A bare `/caveman` selects `lite`. Say `stop caveman` or `normal mode` to use normal prose for the current session subtree.
+Switch globally with `/caveman lite|full|ultra|wenyan`. A bare `/caveman` selects `lite`. Send `stop caveman` or `normal mode` as a standalone message to save `off` for normal prose. Every level, including `off`, persists across OpenCode restarts and shared-configuration processes until explicitly replaced. Invalid arguments leave the selection unchanged and show valid syntax; `/caveman off` is not supported.
+
+State lives in `caveman-mode.json` under `OPENCODE_CONFIG_DIR`, or otherwise `${XDG_CONFIG_HOME:-~/.config}/opencode`. The plugin reads it before each response and writes changes atomically; the last completed write wins. Corrupt or inaccessible state produces an error rather than a silent reset or successful acknowledgement. Other machines and independent configuration directories are outside this scope.
+
+After installing or changing plugin code or configuration-time files, quit and restart OpenCode to load them. Selecting a level with the loaded plugin needs no restart and does not change earlier responses.
 
 ## Invariants
 
@@ -39,6 +43,7 @@ Switch with `/caveman lite|full|ultra|wenyan`. A bare `/caveman` selects `lite`.
 | `full` | Drop safe articles and filler. Fragments and short synonyms are allowed. |
 | `ultra` | State every fact once. Strip conjunctions only when ordering and causality remain unambiguous. |
 | `wenyan` | Use terse classical Chinese, equivalent to upstream `wenyan-full`, while preserving technical literals. |
+| `off` | Use normal prose until another level is explicitly selected. |
 
 Examples for "Why does this React component re-render?":
 

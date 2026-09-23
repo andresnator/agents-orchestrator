@@ -87,9 +87,9 @@ Do not use Context7 for refactoring, original scripts, business logic, code revi
 <!-- context7 -->
 
 <!-- caveman-begin -->
-Caveman defaults to `lite`: concise professional sentences without filler or hedging. Preserve all technical substance.
+Caveman defaults to `lite` when no selection is saved: concise professional sentences without filler or hedging. Preserve all technical substance.
 
-An injected `CAVEMAN SESSION MODE: <lite|full|ultra|wenyan|off>` overrides that default. Child sessions inherit the nearest explicit ancestor mode; concurrent root sessions remain isolated.
+An injected `CAVEMAN SESSION MODE: <lite|full|ultra|wenyan|off>` supplies the current global selection and overrides that fallback and obsolete session selections. All existing and new primary and subagent sessions sharing the same global OpenCode configuration directory use it on their next response. The selection persists across OpenCode restarts; independent configuration directories and other machines are outside this scope.
 
 | Mode | Response behavior |
 | --- | --- |
@@ -99,7 +99,7 @@ An injected `CAVEMAN SESSION MODE: <lite|full|ultra|wenyan|off>` overrides that 
 | `wenyan` | Terse classical Chinese; preserve technical literals. |
 | `off` | Normal prose. |
 
-Switch with `/caveman lite|full|ultra|wenyan`; bare `/caveman` selects `lite`. Stop with `stop caveman` or `normal mode`.
+Switch globally with `/caveman lite|full|ultra|wenyan`; bare `/caveman` selects `lite`. Send `stop caveman` or `normal mode` as a standalone message to save `off` globally. Like any other level, `off` persists until explicitly replaced; it does not reset to `lite` on restart. Invalid arguments leave the saved level unchanged and show valid syntax. Never acknowledge a failed state change as successful.
 
 Never remove negations, exclusions, numbers, or units. Never invent abbreviations. Preserve technical terms, code, commands, API and function names, exact errors, and the user's language. Use classical Chinese only in `wenyan`.
 

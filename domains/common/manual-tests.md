@@ -6,20 +6,26 @@ Run these cases after changing Common commands, plugins, or the directly named s
 
 1. Install the current checkout's `common` domain into a disposable project.
 2. Run the affected IDs from the pull-request summary.
-3. Inspect session inheritance or generated local state, then clean it up.
+3. Inspect shared mode behavior or generated local state, then clean it up.
 
 ### MT-COMMON-CAVEMAN
 
-- **Title:** Inherit and override response compression
-- **Coverage key:** `common/caveman/session-inheritance`
-- **Applies to:** `domains/common/commands/caveman.md`, `domains/common/plugins/caveman-mode.ts`, `domains/common/skills/caveman/**`
-- **Preconditions:** Start an OpenCode parent session in a disposable project and ensure the `caveman-mode` plugin is loaded.
+- **Title:** Share a persistent global mode across primaries and real subagents
+- **Coverage key:** `common/caveman/global-persistence`
+- **Applies to:** `global/AGENTS.md`, `domains/common/commands/caveman.md`, `domains/common/plugins/caveman-mode.ts`, `domains/common/skills/caveman/**`, `domains/common/README.md`
+- **Preconditions:** Use two independent OpenCode processes in Herdr-managed panes, with primary sessions A and B sharing one disposable global configuration directory via `OPENCODE_CONFIG_DIR`. Install the current plugin, command, skill, and global instructions there; verify the plugin and global-instructions symlinks target this checkout. Start with no `caveman-mode.json` in that disposable directory. Quit and restart both processes after installation to load the current code. Use the runtime's actual delegation and continuation controls; a primary imitating a subagent is not a substitute.
 - **Steps:**
-  1. Run `/caveman full`, open a child session, and ask both sessions for the same short explanation.
-  2. Set the child to `/caveman ultra`, ask again, then say `normal mode` in the parent.
-- **Expected result:** The child first inherits `full`, its explicit `ultra` override does not alter the parent, and the parent's subtree returns to normal prose without duplicate mode markers.
-- **Essential negative variant:** Run `/caveman invalid` and confirm the current mode stays unchanged while the response lists only the valid syntax.
-- **Cleanup:** Close the session tree and remove the disposable project.
+   1. Ask A and B for the same short technical explanation. Have A delegate a real subagent S and retain its continuation identifier. Confirm all three use the `lite` fallback without an explicit selection.
+   2. Run `/caveman full` in A. Request the explanation from A, existing B, continuing S, and a newly delegated subagent. Open a new primary C with the same configuration and ask it too. Each next response must use `full` without a local command.
+   3. Run `/caveman wenyan` in B. Repeat the existing-primary and continuing/new-subagent checks. They must use `wenyan`, not their earlier `full` selection. Check that technical literals remain intact.
+   4. Send the standalone message `normal mode` in A. Check A, B, C, continuing S, and a new subagent: every next response must use normal prose (`off`).
+   5. Quit and restart B's OpenCode process with the same configuration. Request an explanation from a primary and a real subagent without selecting a mode. Both must still use `off`.
+   6. Run `/caveman ultra` in B. Confirm existing A and continuing S use `ultra` next. Restart B again; its primary and a subagent must retain `ultra`. Send `stop caveman` in B and confirm A and S return to `off` next.
+   7. Run bare `/caveman` in A. Confirm B and continuing/new subagents switch from `off` to `lite` on their next responses.
+- **Expected result:** All sessions and processes in the shared configuration follow the latest saved level, including durable `off`; no session or ancestor retains a private override. Restart preserves the selection. Prior responses remain unchanged. Inspect the saved `caveman-mode.json` alongside actual response behavior; where runtime diagnostics expose the system prompt, confirm one current `CAVEMAN SESSION MODE:` marker. A model's claim about its mode alone is not proof.
+- **Essential negative variant:** Run `/caveman invalid` and `/caveman off`. Each must show `Usage: /caveman [lite|full|ultra|wenyan]`, leave the saved state unchanged, and leave B and continuing S using `lite` on their next responses.
+- **Evidence:** Record pane/process and session identifiers, the real subagent's continuation identifier, selected levels, observed responses, and restart results. If Herdr, real delegation, continuation, or runtime evidence is unavailable, mark that case **unverified** with the blocker; do not infer a pass from automated plugin tests.
+- **Cleanup:** Close the test processes and remove only the disposable configuration directory and project. Closing sessions alone does not clear the saved level. Never delete or reset the user's normal global state.
 
 ### MT-COMMON-GRAPHIFY-INDEX
 
