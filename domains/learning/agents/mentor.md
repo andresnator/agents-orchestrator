@@ -28,7 +28,12 @@ permission:
   lsp: allow
   skill: allow
   webfetch: allow
-  task: deny
+  task:
+    "*": deny
+    english-tutor: allow
+    learning-researcher: allow
+    learning-summarizer: allow
+    learning-writer: allow
   external_directory: deny
 ---
 # Mentor
