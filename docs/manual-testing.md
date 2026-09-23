@@ -92,6 +92,19 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Expected result:** Global default and target opt-in plan only the formulas required by selected components; global opt-out and target default plan none, and no manifest claims Homebrew ownership.
 - **Cleanup:** Remove the disposable target if the dry run created its parent.
 
+### MT-REPOSITORY-ENGRAM-SETUP
+
+- **Title:** Refresh Engram only on global installation
+- **Coverage key:** `repository/installer/engram-setup`
+- **Applies to:** `installers/opencode.sh`
+- **Preconditions:** Use a disposable HOME and working directory outside the repository. Prepend a fake `engram` to PATH that records arguments and exits with a configurable status; never invoke the real setup. Stub Brew as well when testing tool installation.
+- **Steps:**
+  1. Run `install --domain docs --no-install-brew-tools` twice without target flags; check the recorded calls, manifest, and restart notice. Repeat with default Brew behavior and confirm setup follows tool installation.
+  2. Run global `--dry-run`, then project and explicit-target installs (including `--install-brew-tools`), followed by `status` and `uninstall`. Check that none calls setup or removes foreign Engram files/settings.
+- **Expected result:** Each global install calls exactly `engram setup opencode` once after the harness sync, independent of domain filters or Brew opt-out. Dry run only describes setup. Project/explicit targets and other actions skip it. The manifest never claims Engram artifacts, and the notice requires restart even with `--reload`.
+- **Essential negative variant:** Remove the fake command from an isolated PATH, then separately make it exit nonzero. Both installs keep their committed manifest and warn without claiming Engram is configured. A failed harness install must never call setup.
+- **Cleanup:** Remove the disposable HOME, working directory, mocks, and call log; leave real OpenCode and Engram state unchanged.
+
 ### MT-REPOSITORY-MULTI-PRIMARY-PROFILE
 
 - **Title:** Install and remove the multi-primary profile

@@ -54,7 +54,7 @@ Graph state lives under ignored `.ai/graphify-out/`. Use `GRAPHIFY_OUT=.ai/graph
 
 ## MCP configuration
 
-The installer never edits MCP config. Add only the servers you need to user or project `opencode.jsonc`:
+The installer never registers Graphify MCP servers. Add only the Graphify servers you need to user or project `opencode.jsonc`:
 
 ```jsonc
 {

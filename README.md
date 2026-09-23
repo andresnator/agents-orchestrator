@@ -12,6 +12,10 @@ installers/opencode.sh install
 
 Global installs also attempt to install missing Homebrew tools required by the selected components. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip Homebrew by default and accept `--install-brew-tools` as an opt-in.
 
+Every global install then runs [`engram setup opencode`](https://github.com/Gentleman-Programming/engram/blob/v2.1.0/docs/AGENT-SETUP.md#opencode) if `engram` is on PATH, including with `--no-install-brew-tools`. This refreshes Engram's plugin, MCP registration, and statusline integration from the **installed binary**, without upgrading Engram or enabling Cloud. Missing Engram or setup failure produces a warning without rolling back the harness; check setup output for additional warnings. Restart OpenCode afterward, check `opencode mcp list`, and verify memory tools in a new session. `--reload` does not reload plugin code.
+
+`--dry-run` only prints the planned setup. `--project`, any explicit `--target`, `status`, and `uninstall` never run it. Engram's files and settings remain owned by Engram, outside the harness manifest, and survive harness uninstall.
+
 Or install the multi-primary profile into one project only:
 
 ```bash
