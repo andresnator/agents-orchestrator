@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: in-progress
-  version: "3.0.1"
+  version: "3.0.6"
 ---
 
 # Work-unit commits
@@ -48,17 +48,66 @@ Use outcome-oriented Conventional Commit messages unless the user supplied exact
 
 ## SDD pending delivery
 
-Before staging, persist a pending record in `run.md`: unit id, source work ids, declared scope and exact changed paths, focused check and result, intended message, expected parent SHA, and a pre-stage Git snapshot. Store snapshot evidence under the run root, outside commits. Include index paths, modes and blob IDs, plus working-tree paths, status, modes and content hashes for tracked and untracked changes, including unrelated state; mark absent paths and exclude `.ai/`.
+### Validate the ledger
 
-After staging and validation, save a separate pre-hook snapshot of the same state before invoking `git commit`. Keep both snapshots and the pending record on failure; record the failure and observed state without replacing that evidence.
-
-On resume, require `HEAD` to match both the ledger tip (or `Baseline` when `Commits: none`) and the pending parent. Require Git state to match the saved pre-stage or pre-hook snapshot, then rerun the focused check before retrying that same unit. Missing evidence or any mismatch blocks; never reconstruct a split or combined unit from work groups or absorb new changes.
-
-Only after commit verification, replace `Commits: none` or append one complete row, then clear the pending record:
+Use only the top control block in `run.md`. Keep complete rows together in delivery order:
 
 ```text
 Commits: <unit-id> | <full SHA> | <message>
 ```
+
+An empty ledger contains exactly one `Commits: none`, never mixed with commit rows. Before delivery or any resume, including without pending delivery, validate:
+
+- **Format:** unit ids and SHAs are unique. Missing, malformed, truncated, duplicate, conflicting, or alternative representations block. This includes a `### Commits` section, execution-state list, or mirror, even if it agrees. Never select, merge, remove, or infer rows to repair the ledger.
+- **History:** every SHA names an existing commit with exactly one parent: `Baseline` for the first row, the preceding row's SHA thereafter. Validate every row before trusting any unit as delivered; a matching final `HEAD` alone is insufficient.
+
+Validation failures block without recovery mutations or inferred repair.
+
+### Save pending evidence
+
+Before the unit's first focused check, declare its generated output paths from the project/check configuration. Record `Check outputs: none` or literal repository-relative file/directory paths in the pending record and both snapshots. Keep that declaration fixed for the unit, including resume; never infer exclusions after observing drift.
+
+Only untracked generated outputs qualify, such as Maven's `target/` in the Java fixture. Never exclude tracked paths, source, unrelated user files, or all ignored files. Reject paths outside the project, `.git/`, `.ai/`, or a directory mixing generated and protected content; narrow the declaration before the first check or block. Only focused checks may change declared outputs; hook failures or unexpected hook mutations still block.
+
+Use one **protected state** definition for capture and validation: the full Git index and every working-tree path outside `.git/`, `.ai/`, and the declared check outputs. Include clean tracked files and unrelated untracked/ignored files, their inventory, modes, hashes, and absences. Record symlinks as links without traversing outside the project.
+
+Before staging, persist a pending record in `run.md`: unit id, source work ids, declared scope and exact changed paths, focused check and result, check outputs, intended message, expected parent SHA, and a pre-stage Git snapshot of that complete protected state. Include all index paths, modes, stage numbers, and blob IDs. Store snapshots under the run root, outside commits.
+
+After staging and validation, save a separate pre-hook snapshot of the same state before invoking `git commit`. Keep both snapshots and the pending record on failure; record the failure and observed state without replacing that evidence.
+
+### Resume pending delivery
+
+Use only the installed/loaded harness, the named project's run evidence, and local Git state. Normal installed skill loading is allowed. Keep coordinator and worker searches inside those read boundaries, including shell commands and symlink traversal. An external evidence path or missing local evidence blocks before lookup; never search parent directories, harness source repositories, sibling worktrees, controller data, or other runs to fill a gap.
+
+With no pending record, validate the ledger and require `HEAD` to equal its last SHA, or `Baseline` for `Commits: none`. Skip pending-evidence checks and recovery writes; normal execution can resume.
+
+Only when pending exists, resolve it before ordinary `HEAD`/ledger equality. Require complete original pending metadata and pre-stage evidence; completed-commit recovery also requires the original pre-hook snapshot. Both snapshots must cover the complete protected state and agree with the pending record's check-output declaration. Missing, incomplete, or ambiguous evidence blocks without mutation. Preserve snapshots; never regenerate evidence, reconstruct units from work groups, or search ancestry for a plausible commit. A hook failure or unexpected hook mutation cannot justify commit adoption. After human remediation, retry only through the precommit route below.
+
+After validating the ledger, choose one route. Its **preceding tip** is the last SHA, or `Baseline` for an empty ledger, excluding only an exact final row matching the pending unit id, current full `HEAD`, and intended message.
+
+| Observed state | Action |
+|---|---|
+| No pending record | Require `HEAD` = last ledger SHA, or `Baseline` for `Commits: none`. Make no recovery writes. |
+| `HEAD` = pending parent = preceding tip; no row for the pending unit | Require Git state to match the original pre-stage or pre-hook snapshot, rerun the focused check, and recheck protected state before retrying the same unit through the normal staging/hook flow. |
+| `HEAD` is the validated pending commit below; ledger ends at its parent with no pending-unit row | Append exactly one complete row, then clear pending; never recommit. |
+| Same validated commit; its exact matching row is already final | Clear pending only; never append a duplicate or recommit. |
+| Anything else | Stop without Git, index, source, or recovery-bookkeeping changes. |
+
+For either completed-commit route, validate all of the following before bookkeeping:
+
+- Current `HEAD` has exactly one parent, equal to both the pending parent and preceding tip. Its message matches the intended message. Extra commits or a merge block.
+- Its changed paths against that parent, without rename folding, exactly equal the pending changed paths and exclude `.ai/`. Every target commit entry matches the pre-hook staged blob ID and mode, including absence for deletions; unsupported entries or incomplete evidence block.
+- Target index and working tree are clean against that commit and consistent with the saved target evidence. The remaining protected state stays invariant against pre-hook evidence. Compare target transitions separately: successful commit status changes are expected, so never require literal equality of full status snapshots.
+- Rerun the focused check and require success, then recheck `HEAD`, target and unrelated protected state, and preserved snapshot evidence before completing recovery. A failed check or any drift blocks; recovery bookkeeping itself changes only the ledger and pending record, never Git, index, or source.
+
+Completed-commit recovery changes only the top ledger and pending record. Leave descriptions, status labels, summaries, and all other run content unchanged. The validated ledger determines delivered units: stale descriptions never authorize reimplementation or recommit. Reconcile descriptions only when normal execution resumes.
+
+### Record a verified commit
+
+After normal commit verification or completed-commit recovery validation:
+
+1. If the row is missing, replace `Commits: none` or append one complete row using the full SHA returned by local Git. Finish the write and verify the persisted row matches the validated commit and pending metadata while pending remains present.
+2. In a separate, subsequent write, replace the pending label and fields with `Pending delivery: none`; preserve enclosing section headings. If the exact final row already existed, perform only this step.
 
 No pending unit may remain at final verification or archive.
 
