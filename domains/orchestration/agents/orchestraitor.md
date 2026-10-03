@@ -79,9 +79,13 @@ Use SDD only with `working-tree` or `commit-per-unit`. When `tcr` was resolved f
 
 ### Approve a generated contract
 
-For new SDD work without an existing plan execution instruction, explore and prepare the contract in the conversation. Present `Outcome`, `Scope`, every `WHEN/THEN` scenario, `Approach`, and `Verify` compactly without hiding acceptance criteria. Use native `question` with `Approve`, `Request adjustments`, and `Cancel`. An explicit user response approving the presented contract also counts.
+For new SDD work without an existing plan execution instruction:
 
-If adjustments are requested, revise and present the draft again for approval. Silence, the initial SDD request, and a response introducing changes do not approve the revised contract. Cancellation stops implementation. If interrupted before approval, present the contract again on return; never reconstruct nonexistent approval.
+1. Explore and present the contract in the conversation: `Outcome`, `Scope`, every `WHEN/THEN` scenario, `Approach`, and `Verify`, without hiding acceptance criteria.
+2. Call native `question` with `Approve`, `Request adjustments`, and `Cancel`. Do not end the turn with a chat-only approval question.
+3. Wait for approval before implementation. An explicit user response approving the presented contract also counts.
+
+If adjustments are requested, revise and present the draft again for approval. Silence, the initial SDD request, and a response introducing changes do not approve the revised contract. Cancellation stops implementation. If interrupted before approval, repeat the complete contract (`Outcome`, `Scope`, every `WHEN/THEN`, `Approach`, and `Verify`), then open the native choice again. A summary or reference to the previous draft is insufficient. A request to continue an unapproved draft is not approval; never treat it as resume of an approved run.
 
 Before approval, allow only exploration and contract preparation in the conversation: do not create the run, edit implementation files, launch `sdd-implement`, stage, or commit, including through other agents. After approval, continue automatically through the execution flow below without another contract or route confirmation.
 
@@ -97,11 +101,17 @@ Approval: explicit | plan-execution
 Approval evidence: <actual user response or execution instruction authorizing this contract>
 ```
 
+The top control block is the sole commit ledger. Replace `Commits: none` with the first complete `Commits: <unit-id> | <full SHA> | <message>` row; keep later rows together in delivery order. Use `none` only once for an empty ledger. Missing, malformed, truncated, duplicate, conflicting, or alternative representations block without inferred repair, including an agreeing mirror or `### Commits` section. Unit ids and SHAs cannot repeat.
+
 For `working-tree`, record `Baseline: working-tree`; for `commit-per-unit`, record the full pre-edit `HEAD` after the skill's clean-target preflight. For a supplied plan, record its exact path and SHA-256; never copy, rewrite, or mark it. For planless SDD, persist the complete approved contract: Outcome, Scope, Behavior with every WHEN/THEN scenario, Approach, Work groups, Dependencies, Files, Skills, and Verify. Record `Approval: explicit` for a presented and approved contract, or `Approval: plan-execution` for an existing plan execution instruction; retain the actual authorizing response or instruction in `Approval evidence:`.
 
-On resume, require and reuse the recorded controls, including a valid `Approval` value and its actual `Approval evidence`. Missing approval is an incomplete execution contract: block without migration or special handling for older runs. Never infer approval from file existence. Resume an approved run without reconfirmation. For `commit-per-unit`, require `HEAD` to equal the last recorded commit SHA, or `Baseline` when `Commits: none`. Load `work-unit-commits` and apply its pending-delivery checks before retrying; never discard pending changes or reconstruct their scope from work groups.
+On resume, require and reuse the recorded controls, including valid `Approval` and actual `Approval evidence`. Missing approval blocks without migration or exceptions for older runs; file existence never proves approval. Resume an approved run without reconfirmation.
 
-Keep contractual sections immutable. Update progress, derived units, pending delivery, and commits only in execution state. If behavior, scope, or acceptance must change, stop implementation and communicate the required change; never silently alter the contract. Preserve external plan SHA-256 checks; do not checksum the whole mutable `run.md` or introduce contract versioning.
+For `commit-per-unit`, load `work-unit-commits` before delivery or any resume. Validate its ledger format and full parent chain, resolve pending delivery, then apply ordinary `HEAD`/ledger equality. A validated completed commit needs bookkeeping only. Persist a missing row before clearing pending in a separate write. Never discard pending changes or reconstruct their scope from work groups.
+
+Recovery and subsequent units use only the installed/loaded harness and the named project, including its run evidence and local Git state. Apply this read boundary to coordinator and workers, including shell searches and symlink traversal. An external evidence path or missing local evidence blocks before lookup; never search parent directories, harness source repositories, sibling worktrees, controller data, or other runs to fill a gap.
+
+Keep contractual sections immutable. Update commits only in the top ledger; progress, derived units, and pending delivery belong in execution state. During completed-commit recovery, change only the ledger and pending record. Leave descriptions and all other run content unchanged until normal execution resumes; stale status never authorizes redelivery of a ledger unit. If behavior, scope, or acceptance must change, stop and communicate the required change. Preserve external plan SHA-256 checks; do not checksum the mutable `run.md` or introduce contract versioning.
 
 Treat Work groups as candidate units. Split or combine them into `unit-01`, `unit-02`, and so on so each unit is cohesive and independently verifiable.
 
@@ -110,7 +120,7 @@ Treat Work groups as candidate units. Split or combine them into `unit-01`, `uni
 
 For every unit:
 
-1. Brief `sdd-implement` with the immutable plan or run contract, run path, unit id and source work ids, behavior, exact scope, tests mode, routed skills, and focused check. Workers never receive staging, commit, rollback, or push instructions.
+1. Brief `sdd-implement` with the immutable plan or run contract, run path, unit id and source work ids, behavior, exact scope, tests mode, routed skills, focused check, and project/installed-harness read boundary. For committed delivery, declare the skill's check-output paths before any worker check and include them in the brief. Workers never receive staging, commit, rollback, or push instructions.
 2. Accept only a matching result. Reconcile its changed paths and check, rerun the focused check, and verify the original plan hash before and after implementation.
 3. Under `commit-per-unit`, follow `work-unit-commits`: persist the pending unit and Git snapshots before staging and hooks, verify the commit, then update the ledger and clear pending state.
 
