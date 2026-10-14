@@ -17,7 +17,6 @@ DOMAIN_NAMES = (
     "architecture",
     "common",
     "docs",
-    "learning",
     "meta",
     "orchestration",
     "plan",
@@ -86,6 +85,12 @@ class CaseSnapshot:
     title: str
     coverage_key: str
     raw: str
+
+
+@dataclass(frozen=True)
+class ChangedPath:
+    path: str
+    deleted: bool = False
 
 
 def relative(path: Path) -> str:
@@ -316,18 +321,19 @@ def git_output(arguments: list[str]) -> str:
     return completed.stdout
 
 
-def changed_paths(base: str, head: str) -> tuple[str, ...]:
+def changed_paths(base: str, head: str) -> tuple[ChangedPath, ...]:
     output = git_output(["diff", "--name-status", "--find-renames", f"{base}...{head}"])
-    paths: list[str] = []
+    paths: list[ChangedPath] = []
     for line in output.splitlines():
         columns = line.split("\t")
         if not columns:
             continue
         status = columns[0]
         if status.startswith(("R", "C")) and len(columns) == 3:
-            paths.extend(columns[1:])
+            paths.append(ChangedPath(columns[1], deleted=status.startswith("R")))
+            paths.append(ChangedPath(columns[2]))
         elif len(columns) == 2:
-            paths.append(columns[1])
+            paths.append(ChangedPath(columns[1], deleted=status == "D"))
     return tuple(dict.fromkeys(paths))
 
 
@@ -522,11 +528,11 @@ def main() -> int:
             previous = base_snapshots(arguments.base)
             validate_immutable_identity(cases, previous, errors)
             affected_ids.update(modified_case_ids(cases, previous))
-            for path in paths:
-                matches = matching_case_ids(path, cases)
+            for change in paths:
+                matches = matching_case_ids(change.path, cases)
                 affected_ids.update(matches)
-                if is_runtime_artifact(path) and not matches:
-                    errors.append(f"runtime artifact has no manual coverage: {path}")
+                if not change.deleted and is_runtime_artifact(change.path) and not matches:
+                    errors.append(f"runtime artifact has no manual coverage: {change.path}")
         except RuntimeError as error:
             errors.append(f"cannot compare Git refs: {error}")
 
