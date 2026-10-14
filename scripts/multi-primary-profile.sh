@@ -22,6 +22,9 @@ PROJECT_ROOT_ARG=""
 PROJECT_ROOT=""
 TARGET=""
 CONFIG_FILE=""
+CLI_CONFIG_FILE=""
+CLI_BACKUP_SNAPSHOT=""
+CLI_BACKUP_PRESENT=0
 PROFILE_CONFIG_FILE=""
 INSTALLER_MANIFEST=""
 PROFILE_MANIFEST=""
@@ -46,7 +49,34 @@ EOF
 }
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
-cleanup() { rm -f "$TMP_ONE" "$TMP_TWO" "$TMP_THREE"; }
+cleanup() {
+  restore_cli_backup
+  rm -f "$TMP_ONE" "$TMP_TWO" "$TMP_THREE"
+}
+
+snapshot_cli_backup() {
+  local backup="$CLI_CONFIG_FILE.bak" snapshot
+  CLI_BACKUP_PRESENT=0
+  [ ! -L "$backup" ] || die "refusing symlinked CLI backup: $backup"
+  if [ -e "$backup" ]; then
+    [ -f "$backup" ] || die "CLI backup is not a regular file: $backup"
+    CLI_BACKUP_PRESENT=1
+    snapshot="$(mktemp "$TARGET/.multi-primary-cli-backup.XXXXXX")"
+    # Move aside before rewrites so symlink-free hardlink aliases are also safe.
+    if ! mv -f "$backup" "$snapshot"; then
+      rm -f "$snapshot"
+      die "failed to snapshot CLI backup: $backup"
+    fi
+    CLI_BACKUP_SNAPSHOT="$snapshot"
+  fi
+}
+
+restore_cli_backup() {
+  if [ -n "$CLI_BACKUP_SNAPSHOT" ]; then
+    mv -f "$CLI_BACKUP_SNAPSHOT" "$CLI_CONFIG_FILE.bak"
+    CLI_BACKUP_SNAPSHOT=""
+  fi
+}
 
 sha256_file() {
   if command -v shasum >/dev/null 2>&1; then
@@ -93,6 +123,7 @@ resolve_project_root() {
   else
     CONFIG_FILE="$TARGET/opencode.jsonc"
   fi
+  CLI_CONFIG_FILE="$TARGET/cli.json"
   INSTALLER_MANIFEST="$TARGET/.agents-orchestrator-manifest"
   PROFILE_MANIFEST="$TARGET/.multi-primary-profile-manifest"
 }
@@ -176,9 +207,12 @@ render_restored_config() {
 }
 
 is_removable_generated_config() {
-  local compact
-  compact="$(tr -d '[:space:]' < "$1")"
-  [ "$compact" = "{}" ] || [ "$compact" = '{"plugin":[]}' ]
+  # Match only empty generated content; retain comments and foreign keys verbatim.
+  python3 - "$1" "${2:-plugin}" <<'PY'
+import json, pathlib, re, sys
+pattern = r'\s*\{\s*(?:' + re.escape(json.dumps(sys.argv[2])) + r'\s*:\s*\[\s*\]\s*)?\}\s*'
+sys.exit(0 if re.fullmatch(pattern, pathlib.Path(sys.argv[1]).read_text()) else 1)
+PY
 }
 
 manifest_value() {
@@ -483,6 +517,13 @@ validate_profile_manifest() {
   case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in profile manifest" ;; esac
   target_existed="$(manifest_value target-existed)"
   case "$target_existed" in ""|0|1) ;; *) die "invalid target-existed value in profile manifest" ;; esac
+  local key
+  for key in cli-config-existed cli-backup-existed; do
+    case "$(manifest_value "$key")" in
+      ""|0|1) ;;
+      *) die "invalid $key value in profile manifest" ;;
+    esac
+  done
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing"
   expected_sha="$(manifest_value installer-manifest-sha256)"
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
@@ -493,6 +534,7 @@ validate_profile_manifest() {
 
 write_profile_manifest() {
   local depth_state="$1" depth_json="$2" config_existed="$3" target_existed="$4" parent_state="$5"
+  local cli_existed="$6" cli_backup_existed="$7"
   TMP_THREE="$(mktemp "$TARGET/.multi-primary-profile-manifest.tmp.XXXXXX")"
   {
     printf 'contract\t%s\n' "$PROFILE_CONTRACT"
@@ -502,6 +544,8 @@ write_profile_manifest() {
     printf 'config-file\t%s\n' "$CONFIG_FILE"
     printf 'config-existed\t%s\n' "$config_existed"
     printf 'target-existed\t%s\n' "$target_existed"
+    printf 'cli-config-existed\t%s\n' "$cli_existed"
+    printf 'cli-backup-existed\t%s\n' "$cli_backup_existed"
     printf 'previous-subagent-depth-state\t%s\n' "$depth_state"
     printf 'previous-subagent-depth-json\t%s\n' "$depth_json"
     printf 'previous-experimental-state\t%s\n' "$parent_state"
@@ -513,6 +557,7 @@ write_profile_manifest() {
 
 run_install() {
   local depth_state depth_json parent_state config_existed=0 target_existed=0
+  local cli_existed=1 cli_backup_existed=1
   local previous_config_file="" previous_depth_path="" previous_depth_state="" previous_depth_json=""
   local previous_parent_state=value migrate_config=0 input_file
   local installer_args=(install --domain "$PROFILE_DOMAINS" --target "$TARGET")
@@ -526,6 +571,10 @@ run_install() {
     config_existed="$(manifest_value config-existed)"
     target_existed="$(manifest_value target-existed)"
     [ -n "$target_existed" ] || target_existed=1
+    cli_existed="$(manifest_value cli-config-existed)"
+    cli_backup_existed="$(manifest_value cli-backup-existed)"
+    cli_existed="${cli_existed:-1}"
+    cli_backup_existed="${cli_backup_existed:-1}"
     if [ "$CONFIG_FILE" != "$PROFILE_CONFIG_FILE" ] || [ "$previous_depth_path" != "$MANAGED_DEPTH_PATH" ]; then
       previous_config_file="$PROFILE_CONFIG_FILE"
       previous_depth_state="$depth_state"
@@ -543,6 +592,8 @@ run_install() {
     preflight_fresh_destinations
     if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then target_existed=1; fi
     [ ! -e "$CONFIG_FILE" ] || config_existed=1
+    if [ ! -e "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ]; then cli_existed=0; fi
+    if [ ! -e "$CLI_CONFIG_FILE.bak" ] && [ ! -L "$CLI_CONFIG_FILE.bak" ]; then cli_backup_existed=0; fi
     read_scalar "$CONFIG_FILE" "$MANAGED_DEPTH_PATH"
     depth_state="$JSON_STATE"; depth_json="$JSON_VALUE"
     read_scalar "$CONFIG_FILE" experimental get-path
@@ -558,7 +609,9 @@ run_install() {
   fi
   render_managed_config "$input_file"
   [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
+  snapshot_cli_backup
   "$INSTALLER" "${installer_args[@]}"
+  restore_cli_backup
   validate_installer_contents
 
   # Re-render after sync so managed plugin edits are not overwritten by preflight.
@@ -574,7 +627,7 @@ run_install() {
   fi
   mv "$TMP_TWO" "$CONFIG_FILE"
   TMP_TWO=""
-  write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed" "$parent_state"
+  write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed" "$parent_state" "$cli_existed" "$cli_backup_existed"
   validate_managed_config
   printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nexperimental.subagent_depth: 1\n' \
     "$PROJECT_ROOT" "$CONFIG_FILE"
@@ -605,6 +658,7 @@ run_uninstall() {
   validate_managed_config "$PROFILE_CONFIG_FILE"
 
   local depth_state depth_json config_existed target_existed depth_path parent_state
+  local cli_existed cli_backup_existed cli_sha=""
   depth_path="$(profile_depth_path)"
   parent_state="$(manifest_value previous-experimental-state)"
   parent_state="${parent_state:-value}"
@@ -613,9 +667,24 @@ run_uninstall() {
   config_existed="$(manifest_value config-existed)"
   target_existed="$(manifest_value target-existed)"
   [ -n "$target_existed" ] || target_existed=1
+  cli_existed="$(manifest_value cli-config-existed)"
+  cli_backup_existed="$(manifest_value cli-backup-existed)"
   CONFIG_FILE="$PROFILE_CONFIG_FILE"
   render_restored_config "$depth_state" "$depth_json" "$depth_path" "$parent_state"
+  snapshot_cli_backup
+  if [ -f "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ]; then cli_sha="$(sha256_file "$CLI_CONFIG_FILE")"; fi
   "$INSTALLER" uninstall --target "$TARGET"
+  restore_cli_backup
+  if [ "$cli_existed" = 0 ] && [ -f "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ] &&
+    is_removable_generated_config "$CLI_CONFIG_FILE" plugins; then
+    rm -f "$CLI_CONFIG_FILE"
+    # Only this uninstall's newly created, unchanged backup is safe to delete.
+    if [ "$cli_backup_existed" = 0 ] && [ "$CLI_BACKUP_PRESENT" = 0 ] &&
+      [ -f "$CLI_CONFIG_FILE.bak" ] && [ ! -L "$CLI_CONFIG_FILE.bak" ] &&
+      [ -n "$cli_sha" ] && [ "$(sha256_file "$CLI_CONFIG_FILE.bak")" = "$cli_sha" ]; then
+      rm -f "$CLI_CONFIG_FILE.bak"
+    fi
+  fi
   render_restored_config "$depth_state" "$depth_json" "$depth_path" "$parent_state"
   if [ "$config_existed" = 0 ] && is_removable_generated_config "$TMP_TWO"; then
     rm -f "$CONFIG_FILE"

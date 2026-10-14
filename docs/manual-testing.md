@@ -115,7 +115,8 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Steps:**
   1. Run profile `install`, `status`, and a second `install` with `--project-root <project>`.
   2. Inspect selected domains, four primaries, six primary commands, `experimental.subagent_depth=1`, then run `uninstall`.
-- **Expected result:** The profile selects `plan,orchestration,architecture,review,common`, preserves the default agent and foreign JSONC content, and restores prior managed values on uninstall.
+  3. Repeat starting without `.opencode`; install twice and uninstall. Repeat with preexisting empty/foreign CLI settings and backup, later-added settings/comments/backup, and an older ledger without CLI provenance. Use isolated mocks for snapshot/uninstall failure and a disposable backup symlink/hardlink; never point at personal files.
+- **Expected result:** The profile selects `plan,orchestration,architecture,review,common`, preserves the default agent and foreign JSONC content, and restores prior managed values on uninstall. A fresh round trip removes generated CLI files and the originally absent target. Existing CLI files, foreign changes and backup bytes/mode/hardlink aliases survive. Unknown old-ledger provenance preserves files. Backup failures do not replace original bytes; backup symlinks block before installer mutation.
 - **Cleanup:** Remove the disposable Git project.
 
 ### MT-REPOSITORY-UNSAFE-TARGETS

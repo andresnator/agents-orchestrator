@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, readdir, readlink, rm, writeFile } from "node:fs/promises";
+import { link, mkdtemp, mkdir, readFile, readdir, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,7 +34,7 @@ async function fixture(t, version = "2.0.28") {
       "--domain", domain, "--target", target, ...(action === "install" ? ["--no-install-brew-tools"] : []), ...extra,
     ], extraEnv),
     projectInstall: () => invoke(INSTALLER, "install", ["--domain", "meta", "--project", "--no-install-brew-tools"]),
-    profile: (action) => invoke(PROFILE, action, ["--project-root", project, ...(action === "install" ? ["--no-install-brew-tools"] : [])]),
+    profile: (action, extraEnv = {}) => invoke(PROFILE, action, ["--project-root", project, ...(action === "install" ? ["--no-install-brew-tools"] : [])], extraEnv),
     value: (file, path) => execFileSync("python3", [EDITOR, "get-path", file, path], { encoding: "utf8" }).trim(),
     set: async (file, path, value) => writeFile(file, execFileSync("python3", [EDITOR, "set-path", file, path, JSON.stringify(value)], { encoding: "utf8" })),
   };
@@ -147,6 +147,146 @@ test("shouldSkipCliOnlyNpmPluginWhenInstallingProjectWithoutGlobalMutation", asy
   await assert.rejects(readFile(join(f.target, "cli.json")), { code: "ENOENT" });
   await assert.rejects(readdir(join(f.home, ".config/opencode")), { code: "ENOENT" });
 });
+
+test("shouldRemoveGeneratedCliStateWhenFreshProfileIsReinstalledAndRemoved", async (t) => {
+  // Given
+  const f = await fixture(t);
+  // When
+  succeeds(f.profile("install"));
+  const firstManifest = await readFile(join(f.target, ".multi-primary-profile-manifest"), "utf8");
+  succeeds(f.profile("install"));
+  const repeatedManifest = await readFile(join(f.target, ".multi-primary-profile-manifest"), "utf8");
+  succeeds(f.profile("uninstall"));
+  // Then
+  await assert.rejects(readdir(f.target), { code: "ENOENT" });
+  assert.equal(repeatedManifest, firstManifest);
+  assert.match(firstManifest, /cli-config-existed\t0\n/);
+  assert.match(firstManifest, /cli-backup-existed\t0\n/);
+});
+
+for (const existingCli of [false, true]) {
+  test(`shouldPreserveOriginalCliBackupWhenProfileIsRemoved_existingCli_${existingCli}`, async (t) => {
+    // Given
+    const f = await fixture(t);
+    await mkdir(f.target);
+    const cli = join(f.target, "cli.json");
+    const backup = join(f.target, "cli.json.bak");
+    const original = { plugins: [FOREIGN_SPEC], theme: "custom" };
+    if (existingCli) await writeFile(cli, JSON.stringify(original));
+    const backupContent = "original backup\n";
+    await writeFile(backup, backupContent, { mode: 0o640 });
+    const alias = join(f.root, "backup-alias");
+    await link(backup, alias);
+    // When
+    succeeds(f.profile("install"));
+    succeeds(f.profile("install"));
+    succeeds(f.profile("uninstall"));
+    // Then
+    assert.equal(await readFile(backup, "utf8"), backupContent);
+    assert.equal(await readFile(alias, "utf8"), backupContent);
+    assert.equal((await stat(backup)).ino, (await stat(alias)).ino);
+    assert.equal((await stat(backup)).mode & 0o777, 0o640);
+    if (existingCli) assert.deepEqual(JSON.parse(await readFile(cli, "utf8")), original);
+    else await assert.rejects(readFile(cli), { code: "ENOENT" });
+  });
+}
+
+for (const original of [{}, { plugins: [] }]) {
+  test(`shouldPreserveExistingEmptyCliWhenProfileIsRemoved_${JSON.stringify(original)}`, async (t) => {
+    // Given
+    const f = await fixture(t);
+    await mkdir(f.target);
+    const cli = join(f.target, "cli.json");
+    const content = JSON.stringify(original);
+    await writeFile(cli, content);
+    // When
+    succeeds(f.profile("install"));
+    succeeds(f.profile("uninstall"));
+    // Then
+    assert.deepEqual(JSON.parse(await readFile(cli, "utf8")), { plugins: [] });
+    assert.equal(await readFile(join(f.target, "cli.json.bak"), "utf8"), content);
+  });
+}
+
+test("shouldPreserveLaterForeignCliContentAndBackupWhenProfileIsReinstalledAndRemoved", async (t) => {
+  // Given
+  const f = await fixture(t);
+  succeeds(f.profile("install"));
+  const cli = join(f.target, "cli.json");
+  const backup = join(f.target, "cli.json.bak");
+  await f.set(cli, "theme", "custom");
+  await writeFile(cli, (await readFile(cli, "utf8")) + "\n// keep foreign comment\n");
+  const backupContent = "later foreign backup\n";
+  await writeFile(backup, backupContent, { mode: 0o640 });
+  // When
+  succeeds(f.profile("install"));
+  succeeds(f.profile("uninstall"));
+  // Then
+  assert.equal(f.value(cli, "theme"), '"custom"');
+  assert.equal(f.value(cli, "plugins"), "[]");
+  assert.match(await readFile(cli, "utf8"), /keep foreign comment/);
+  assert.equal(await readFile(backup, "utf8"), backupContent);
+  assert.equal((await stat(backup)).mode & 0o777, 0o640);
+});
+
+test("shouldPreserveCliStateWhenOldLedgerHasNoOwnershipEvidence", async (t) => {
+  // Given
+  const f = await fixture(t);
+  succeeds(f.profile("install"));
+  const manifest = join(f.target, ".multi-primary-profile-manifest");
+  const oldLedger = (await readFile(manifest, "utf8")).split("\n")
+    .filter((line) => !line.startsWith("cli-config-existed\t") && !line.startsWith("cli-backup-existed\t")).join("\n");
+  await writeFile(manifest, oldLedger);
+  // When
+  succeeds(f.profile("install"));
+  succeeds(f.profile("uninstall"));
+  // Then
+  assert.deepEqual(JSON.parse(await readFile(join(f.target, "cli.json"), "utf8")), { plugins: [] });
+  assert.ok((await readFile(join(f.target, "cli.json.bak"), "utf8")).includes("subagent-statusline"));
+});
+
+test("shouldRejectSymlinkedCliBackupBeforeMutationWhenInstallingProfile", async (t) => {
+  // Given
+  const f = await fixture(t);
+  await mkdir(f.target);
+  const outside = join(f.root, "foreign-backup");
+  await writeFile(outside, "do not change\n");
+  await symlink(outside, join(f.target, "cli.json.bak"));
+  const before = await snapshot(f.target);
+  // When
+  const result = f.profile("install");
+  // Then
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /symlinked CLI backup/);
+  assert.deepEqual(await snapshot(f.target), before);
+  assert.equal(await readFile(outside, "utf8"), "do not change\n");
+});
+
+for (const failure of ["snapshot", "uninstall"]) {
+  test(`shouldPreserveForeignBackupWhenCliOperationFails_${failure}`, async (t) => {
+    // Given
+    const f = await fixture(t);
+    await mkdir(f.target);
+    const backup = join(f.target, "cli.json.bak");
+    const backupContent = "foreign backup before failure\n";
+    await writeFile(backup, backupContent, { mode: 0o640 });
+    if (failure === "uninstall") succeeds(f.profile("install"));
+    const operation = failure === "snapshot" ? "mv" : "cp";
+    const realOperation = execFileSync("bash", ["-c", "command -v " + operation], { encoding: "utf8" }).trim();
+    const destination = failure === "snapshot" ? "*/.multi-primary-cli-backup.*" : "*/cli.json.bak";
+    await writeFile(join(f.root, operation), `#!/bin/sh
+case "$3" in ${destination}) printf 'partial operation' > "$3"; exit 9 ;; esac
+exec '${realOperation}' "$@"
+`, { mode: 0o700 });
+    // When
+    const result = f.profile(failure === "snapshot" ? "install" : "uninstall", { PATH: f.root + ":" + process.env.PATH });
+    // Then
+    assert.notEqual(result.status, 0);
+    assert.equal(await readFile(backup, "utf8"), backupContent);
+    assert.equal((await stat(backup)).mode & 0o777, 0o640);
+    assert.deepEqual((await readdir(f.target)).filter((name) => name.startsWith(".multi-primary-cli-backup.")), []);
+  });
+}
 
 test("shouldRestoreNativeDepthAndPreserveNeighborsWhenProfileIsReinstalledAndRemoved", async (t) => {
   // Given
