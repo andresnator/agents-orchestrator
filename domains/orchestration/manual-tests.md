@@ -29,8 +29,8 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-path>`.
   2. Inspect implementation and focused coverage, rerun the named check, and compare the plan checksum.
-  3. In fresh Git-backed copies, repeat with `Delivery: commit-per-unit` immediately after the title: once without an execution override, then with an explicit no-commits override.
-- **Expected result:** No contract or SDD confirmation is requested. Implementation and focused coverage stay Direct; the plan is unchanged and no run or SDD worker appears. Default delivery leaves Git untouched. The delivery plan commits without another confirmation; the no-commits override leaves it uncommitted.
+  3. In fresh Git-backed copies, repeat with `Delivery: commit-per-unit` immediately after the title: once without a current Git authorization, once with an explicit current commits instruction, then with an explicit no-commits override.
+- **Expected result:** No contract or SDD confirmation is requested. Implementation and focused coverage stay Direct; the plan is unchanged and no run or SDD worker appears. Default delivery leaves Git untouched. An imported delivery line alone leaves the diff unstaged and uncommitted; only the current explicit commits instruction authorizes delivery, and the no-commits override leaves it uncommitted.
 - **Essential negative variant:** Duplicate or unknown plan delivery values block before editing.
 - **Cleanup:** Remove generated `.ai/` state and delete the fixture copy.
 
@@ -112,7 +112,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
   1. Start a fresh session and tell `orchestraitor`, `continúa <exact-run-path>`.
   2. Inspect conversation/tool events, which group resumes, contract sections, Git controls, final verification, archive destination, and external plan checksum when present.
 - **Expected result:** Orchestraitor asks no contract or route reconfirmation, resumes only the named run, preserves the immutable contract, approval evidence, completed work, and Git controls, executes pending scope without creating a second run or plan, verifies the original contract, and archives on completion.
-- **Essential negative variant:** In separate copies, remove `Approval` or `Approval evidence` and request resume. Both block as incomplete execution contracts before implementation or Git mutation; no approval is inferred, migrated, or reconstructed.
+- **Essential negative variant:** In separate copies, remove `Approval` or `Approval evidence` and request resume. Both block as incomplete execution contracts before implementation or Git mutation; no approval is inferred, migrated, or reconstructed. Separately modify an accepted unit's input after its receipt: resume must reject stale evidence and require fresh scoped inspection/verification rather than silently trusting the old result.
 - **Cleanup:** Delete the disposable run, plan, and project.
 
 ### MT-ORCHESTRATION-DIRECT-TCR

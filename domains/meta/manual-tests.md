@@ -63,7 +63,7 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 - **Title:** Apply and restore model profile assignments
 - **Coverage key:** `meta/models/profile-lifecycle`
 - **Applies to:** `domains/meta/external-plugins/opencode-models-presets.npm-tui.json`
-- **Preconditions:** Install the Meta domain in a disposable project whose OpenCode config contains a default agent and one foreign model assignment.
+- **Preconditions:** Use OpenCode >=2.0.28 and <3 with an isolated HOME/global CLI config, and install Meta into that explicit configuration target. Confirm `cli.json.plugins` contains Models Presets; a project-only install intentionally skips it. Use a disposable project with a default agent and one foreign model assignment.
 - **Steps:**
   1. Run `/models-profiles`, choose a preset, and apply it only to the disposable project.
   2. Inspect effective agent assignments, then restore or remove the selected preset.

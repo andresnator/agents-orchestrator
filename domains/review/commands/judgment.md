@@ -2,8 +2,8 @@
 description: Run the judgment-day adversarial review protocol
 agent: review-coordinator
 subtask: false
-argument-hint: "[light] [target files, feature, or scope]"
+argument-hint: "[light|full|verdict-only] [target files, feature, or scope]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Run `operation=judgment`. Leading `light` selects one solo sweep; otherwise use blind dual review. Ask directly when the target is missing; code changes require the protocol's explicit fix authorization. Never commit or push.
+Run `operation=judgment`. Leading `light` selects one solo sweep; `full` selects blind dual review; `verdict-only` forbids edits. Otherwise route by target risk through `judgment-day`. Ask directly when the target is missing. Bind results to its content receipt; mode selection never authorizes fixes. Never commit or push.

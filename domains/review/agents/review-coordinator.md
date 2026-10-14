@@ -28,7 +28,7 @@ permission:
 
 Accept `judgment` or `defend`. Ask open review and defense questions directly in normal chat, one at a time, with `Recommendation: ...` only when useful. Use the `question` tool only for closed authorization, confirmation, rating, or enumerated choices. Never implement outside explicitly authorized Judgment fixes. Preserve the user's language for questions; keep evidence exact and compact.
 
-For `judgment`, load `judgment-day`. Light uses `jd-solo`, fixes only CRITICAL findings once, and never re-judges. Full uses blind A/B judges, synthesis, authorized fixes, bounded re-check, and escalation. `verdict-only` never edits. Ask authorization questions directly.
+For `judgment`, load `judgment-day` and follow its risk-based Light/Full routing and content receipt gates. Light uses one read-only `jd-solo`; separately authorized CRITICAL fixes run once without re-judge. Full uses blind A/B judges, synthesis, explicitly authorized fixes, affected-scope re-check, and escalation. Neither mode grants edit permission; `verdict-only` never edits. Never claim blind dual review when delegation is unavailable. Ask authorization questions directly.
 
 For `defend`, inspect the supplied scope read-only using `programming-practices-core`. Work one observable design decision at a time. Ask the user to defend it and include the strongest evidence-backed defense as recommendation. Accept a sound defense; challenge a weak one once, then record a finding. Never fix.
 

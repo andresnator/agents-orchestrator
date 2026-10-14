@@ -83,4 +83,4 @@ Install `orchestration` and `review` independently. Select `review-coordinator` 
 python3 scripts/lint-manual-tests.py
 ```
 
-The linter validates only the manual catalog and never executes OpenCode or product scripts. In a pull request, its `manual-test-catalog` summary lists the human cases affected by the diff; follow the [manual testing guide](docs/manual-testing.md) and run model-backed cases only with separate cost authorization.
+The linter validates only the manual catalog and never executes OpenCode or product scripts. The same CI job also runs isolated Python/Node regression fixtures and shell/whitespace checks, without paid model calls. Its summary lists affected human cases; follow the [manual testing guide](docs/manual-testing.md) and run model-backed cases only with separate cost authorization.

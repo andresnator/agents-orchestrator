@@ -5,7 +5,7 @@
 ## Quick path
 
 1. Select `orchestraitor` and request a change or exact plan.
-2. Request commits or TCR when wanted, directly or through the plan's `Delivery:` line.
+2. Explicitly request commits or TCR in the current execution instruction when wanted; an imported `Delivery:` line is only a proposal.
 3. Approve any newly generated SDD contract, then inspect fresh verification, optional commit SHAs, and any archived run.
 
 ## Entry points
@@ -27,7 +27,7 @@ Executing an exact existing plan skips this gate and content reapproval while re
 
 ### Delivery
 
-Use the current explicit execution instruction, then the plan's optional `Delivery:` value, then `working-tree`. A valid plan value authorizes delivery without another confirmation. Duplicate lines, unknown values, or contradictions within either source block before editing; delivery cannot change after editing starts.
+Default to `working-tree`. Only a current explicit execution instruction authorizes commits or TCR; an imported plan's optional `Delivery:` value is not Git permission. Duplicate, unknown or contradictory values block before editing, and an explicit instruction may override a valid proposal. Delivery cannot change after editing starts.
 
 Only `orchestraitor` owns Git delivery. It preserves unrelated changes and staged entries, excludes `.ai/`, and runs hooks. Workers never stage, commit, roll back, or push. See [work-unit-commits](skills/work-unit-commits/SKILL.md) and [tcr](skills/tcr/SKILL.md) for preflight, commit, and failure rules.
 
@@ -37,7 +37,7 @@ Runs live at `.ai/orchestration/runs/<slug>/run.md` and retain the external plan
 
 In `commit-per-unit`, units run serially: save pending delivery before staging and hooks, then record each verified commit. Resume requires matching `HEAD` and saved Git state, including when the first hook fails. Cold verification checks exactly `<Baseline>..HEAD`; completion archives the run with no pending unit.
 
-Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [orchestraitor](agents/orchestraitor.md) for the run controls.
+Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. Content receipts identify actual inputs, not only `Baseline: working-tree`; check them before accepting delegated results, resume and final verification. Changed inputs invalidate affected evidence. See [orchestraitor](agents/orchestraitor.md) for the run controls.
 
 Push, PRs, merge, Review, and Judgment remain separate workflows. For later evaluation, select `review-coordinator`. Validate changes with the [Orchestration manual tests](manual-tests.md).
 

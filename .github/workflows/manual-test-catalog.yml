@@ -24,3 +24,21 @@ jobs:
           --base "$BASE_SHA"
           --head "$HEAD_SHA"
           --summary "$GITHUB_STEP_SUMMARY"
+      - name: Run Python regression tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Run dependency-free Node fixtures
+        run: |
+          node --version
+          node --test domains/common/plugins/*.test.mjs domains/orchestration/tui-plugins/subagent-statusline/*.test.mjs scripts/test-*.mjs scripts/tests/*.test.mjs
+      - name: Check shell syntax
+        run: |
+          while IFS= read -r -d '' script; do
+            bash -n "$script"
+          done < <(find installers scripts -type f -name '*.sh' -print0)
+      - name: Check pull-request whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA" "$HEAD_SHA"

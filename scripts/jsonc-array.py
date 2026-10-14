@@ -288,11 +288,15 @@ def edit_npm(text: str, property_name: str, package: str, action: str) -> tuple[
     return rendered, changed
 
 
-def scalar_property(text: str, property_name: str) -> tuple[Node, Node | None]:
+def object_property(text: str, property_name: str) -> tuple[Node, Node | None]:
     root = Parser(text).parse()
     if root.kind != "object" or root.properties is None:
         raise JsoncError("JSONC root must be an object")
-    node = root.properties.get(property_name)
+    return root, root.properties.get(property_name)
+
+
+def scalar_property(text: str, property_name: str) -> tuple[Node, Node | None]:
+    root, node = object_property(text, property_name)
     if node is not None and node.kind not in {"string", "number", "literal"}:
         raise JsoncError(f"property '{property_name}' must be a JSON scalar")
     return root, node
@@ -320,14 +324,63 @@ def set_scalar(text: str, property_name: str, encoded_value: str) -> tuple[str, 
             return text, False
         return text[: node.start] + encoded + text[node.end :], True
 
+    return insert_property(text, root, property_name, encoded), True
+
+
+def insert_property(text: str, root: Node, property_name: str, encoded: str) -> str:
     close = root.end - 1
     if root.properties and not has_trailing_comma(text, root):
         last = max(root.properties.values(), key=lambda item: item.end)
         text = text[: last.end] + "," + text[last.end :]
         close += 1
     insertion = f'\n  {json.dumps(property_name)}: {encoded}\n'
-    rendered = text[: trim_before(text, close, root.start + 1)] + insertion + text[close:]
-    return rendered, True
+    return text[: trim_before(text, close, root.start + 1)] + insertion + text[close:]
+
+
+def path_parts(property_path: str) -> list[str]:
+    parts = property_path.split(".")
+    if any(not part for part in parts):
+        raise JsoncError("property path cannot contain empty segments")
+    return parts
+
+
+def get_path(text: str, property_path: str) -> tuple[str, bool]:
+    node = Parser(text).parse()
+    for part in path_parts(property_path):
+        if node.kind != "object" or node.properties is None:
+            raise JsoncError(f"parent of '{part}' must be an object")
+        node = node.properties.get(part)
+        if node is None:
+            return "", False
+    return json.dumps(node_value(node), ensure_ascii=False, separators=(",", ":")), True
+
+
+def set_scalar_path(text: str, property_path: str, encoded_value: str) -> tuple[str, bool]:
+    return edit_path(text, path_parts(property_path), encoded_value, False)
+
+
+def remove_path(text: str, property_path: str, prune_empty: bool = False) -> tuple[str, bool]:
+    return edit_path(text, path_parts(property_path), None, prune_empty)
+
+
+def edit_path(text: str, parts: list[str], encoded_value: str | None, prune_empty: bool) -> tuple[str, bool]:
+    if len(parts) == 1:
+        return remove_property(text, parts[0]) if encoded_value is None else set_scalar(text, parts[0], encoded_value)
+    root, parent = object_property(text, parts[0])
+    if parent is None:
+        if encoded_value is None:
+            return text, False
+        child, _ = edit_path("{}", parts[1:], encoded_value, prune_empty)
+        return insert_property(text, root, parts[0], child), True
+    if parent.kind != "object":
+        raise JsoncError(f"property '{parts[0]}' must be an object")
+    child, changed = edit_path(text[parent.start : parent.end], parts[1:], encoded_value, prune_empty)
+    if not changed:
+        return text, False
+    # Do not discard comments or foreign keys added to a profile-created parent.
+    if prune_empty and "".join(child.split()) == "{}":
+        return remove_property(text, parts[0])
+    return text[: parent.start] + child + text[parent.end :], True
 
 
 def comma_tokens_between(text: str, start: int, end: int) -> list[int]:
@@ -357,7 +410,7 @@ def property_separator_comma(text: str, root: Node, property_name: str) -> int |
 
 
 def remove_property(text: str, property_name: str) -> tuple[str, bool]:
-    root, node = scalar_property(text, property_name)
+    root, node = object_property(text, property_name)
     if node is None:
         return text, False
     assert root.property_keys is not None
@@ -482,7 +535,9 @@ def main() -> int:
             "       jsonc-array.py <has-json|add-json|remove-json> <file> <property> <json-value>\n"
             "       jsonc-array.py <has-npm|remove-npm> <file> <property> <package>\n"
             "       jsonc-array.py <get|remove-property> <file> <property>\n"
-            "       jsonc-array.py set <file> <property> <json-scalar>",
+            "       jsonc-array.py set <file> <property> <json-scalar>\n"
+            "       jsonc-array.py get-path|remove-path|remove-path-prune <file> <dot.path>\n"
+            "       jsonc-array.py set-path <file> <dot.path> <json-scalar>",
             file=sys.stderr,
         )
         return 2
@@ -498,13 +553,16 @@ def main() -> int:
         "has-npm",
         "remove-npm",
     }
-    if action in array_actions | {"set"} and value is None:
+    read_actions = {"get", "get-path"}
+    remove_actions = {"remove-property", "remove-path", "remove-path-prune"}
+    set_actions = {"set", "set-path"}
+    if action in array_actions | set_actions and value is None:
         print(f"error: action '{action}' requires a value", file=sys.stderr)
         return 2
-    if action in {"get", "remove-property"} and len(sys.argv) != 4:
+    if action in read_actions | remove_actions and len(sys.argv) != 4:
         print(f"error: action '{action}' takes no value", file=sys.stderr)
         return 2
-    if action not in array_actions | {"get", "set", "remove-property"}:
+    if action not in array_actions | read_actions | remove_actions | set_actions:
         print(f"error: unsupported action '{action}'", file=sys.stderr)
         return 2
     file = Path(file_name)
@@ -521,16 +579,21 @@ def main() -> int:
             rendered, changed = edit_npm(text, property_name, value, action)
         elif action == "get":
             rendered, changed = get_scalar(text, property_name)
-        elif action == "set":
+        elif action in set_actions:
             assert value is not None
-            rendered, changed = set_scalar(text, property_name, value)
+            setter = set_scalar_path if action == "set-path" else set_scalar
+            rendered, changed = setter(text, property_name, value)
+        elif action == "get-path":
+            rendered, changed = get_path(text, property_name)
+        elif action in {"remove-path", "remove-path-prune"}:
+            rendered, changed = remove_path(text, property_name, prune_empty=action == "remove-path-prune")
         else:
             rendered, changed = remove_property(text, property_name)
     except (OSError, JsoncError) as error:
         print(f"error: {file}: {error}", file=sys.stderr)
         return 2
-    if action in {"has", "has-json", "has-npm", "get"}:
-        if action == "get" and changed:
+    if action in {"has", "has-json", "has-npm"} | read_actions:
+        if action in read_actions and changed:
             print(rendered)
         return 0 if changed else 1
     sys.stdout.write(rendered)

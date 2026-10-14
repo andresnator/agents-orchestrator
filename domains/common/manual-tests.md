@@ -36,8 +36,8 @@ Run these cases after changing Common commands, plugins, or the directly named s
 - **Steps:**
   1. Run `/graphify-index <repository>`, choose code-only in chat, and wait for the announced extraction to finish.
   2. Inspect `.ai/graphify-out/graph.json`, `.opencode-index-mode`, the lock cleanup, and the repository's Git exclude file.
-- **Expected result:** Indexing starts only after consent, every Graphify call uses `.ai/graphify-out`, the mode records `code-only`, a healthy graph and node count are reported, and later startup refresh owns no first index.
-- **Essential negative variant:** Target the filesystem or home root and confirm the command refuses before writing mode, lock, graph, or exclude state.
+- **Expected result:** Indexing starts only after consent, every Graphify call uses `.ai/graphify-out`, the completed mode records `code-only` with `policyVersion: 1`, a healthy graph and node count are reported, and later startup refresh owns no first index.
+- **Essential negative variant:** Target the filesystem/home root or symlinked state directories and confirm refusal before mutation. With an existing dead-PID lock, verify no automatic unlink/takeover; recovery needs operator-confirmed process quiescence. No docs/backend choice is offered, even when old docs environment variables are present.
 - **Cleanup:** Remove Graphify global registration if one was created, then delete `.ai/graphify-out/` and the disposable repository.
 
 ### MT-COMMON-GRILL

@@ -1,37 +1,26 @@
-# Apply Changes Without Restarting OpenCode
+# Apply OpenCode changes safely
 
-Validated on OpenCode 1.17.15. Model assignments and installed Markdown artifacts can reload; plugin registration and code still require a restart.
+The pinned plugins require OpenCode >=2.0.28 and <3. Restart after changing plugin registration or code. Do not treat legacy V1 disposal endpoints as V2 reload support.
 
 ## Quick path
 
-- Save model or variant changes through `/models-profiles`; it hot-applies when supported.
-- Reinstall agents, commands, or skills with `installers/opencode.sh install --reload`.
-- Restart after plugin registration or code changes, or when the tool reports fallback.
+- Save model/variant changes through `/models-profiles`; accept hot apply only when the connected runtime reports success.
+- Reinstall changed agents, commands or skills with `installers/opencode.sh install`, then restart the session to refresh its catalog.
+- `install --reload` is best-effort: on V2+ it warns that authenticated native reload is not integrated and requires restart. It never undoes a successful installation.
 
 ## Support matrix
 
-| Change | Live mechanism | Restart condition |
-|---|---|---|
-| Global model or variant set | `PATCH /global/config` | Server failure or another OpenCode process |
-| Global key removal | Local JSONC write plus a changed set leaf | Removal-only update |
-| Project `opencode.json[c]` | Write then `POST /instance/dispose?directory=<dir>` | Disposal failure |
-| Installed Markdown artifacts | `POST /global/dispose` through `install --reload` | Client catalog stays stale |
-| Plugin registration or code | None | Always |
+| Change | Supported path | Limitation |
+| --- | --- | --- |
+| Model/variant assignments | Models Presets save and reported hot apply | Restart on fallback; other OpenCode processes may remain stale |
+| Agents, commands and skills on V2 | Reinstall, then restart | Authenticated native reload integration remains unverified |
+| Plugin registration or code | Reinstall, then restart | Always restart |
+| Markdown-only installation on V1 | Legacy `--reload` best-effort disposal | Does not make pinned V2 plugins V1-compatible |
 
-## Mechanism and limits
+V2 has authenticated native reload facilities, but the end-to-end authenticated replacement has not been validated here. The installer deliberately does not call `/global/health` or `POST /global/dispose` on V2: an HTML 200 response is not health evidence, and legacy disposal is not a supported V2 contract. Unknown host versions also fall back to restart without probing.
 
-`PATCH /global/config` preserves JSONC comments, deep-merges changes, invalidates the global config cache, and disposes instances only when bytes change. It cannot delete keys, and an identical patch does not invalidate state.
+## Legacy V1 behavior
 
-`POST /instance/dispose?directory=<dir>` reloads project config for one instance. `POST /global/dispose` reloads Markdown artifacts and project config for all instances, but not hand-edited global config because that cache is separate.
+For a V1 Markdown-only installation, `--reload` discovers local servers or uses explicit `OPENCODE_RELOAD_URLS`, requires the JSON healthy response, and attempts `POST /global/dispose`. Failure warns; installation remains saved. Legacy global disposal re-reads Markdown and project config, not plugin code or hand-edited global config.
 
-Avoid instance `PATCH /config` on 1.17.15: it writes `<project>/config.json`, which the loader does not re-read.
-
-A disposed TUI instance refreshes agents, config, and providers on its next bootstrap. A session-level `/model` choice still overrides the configured agent model until the user changes it or restarts.
-
-## Repository behavior
-
-The pinned `opencode-models-presets` package keeps transactional JSONC writes. Project changes dispose the target instance. Global removals are written locally, then a changed set leaf triggers `PATCH /global/config`; removal-only changes request a restart. Failure leaves the config saved and reports that restart is required.
-
-`installers/opencode.sh install --reload` discovers healthy local servers or uses `OPENCODE_RELOAD_URLS`, then calls global disposal after a successful install. Reload is best-effort and never rolls back installation.
-
-Only the connected server receives Models Presets hot apply. Restart any other running OpenCode process that needs the change.
+A session-level model selection can override configured assignments. Verify the effective agent/model in a new session; a successful file write alone is not runtime proof.
