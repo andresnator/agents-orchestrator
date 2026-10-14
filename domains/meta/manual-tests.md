@@ -48,12 +48,14 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Refresh the resolved skill registry
 - **Coverage key:** `meta/registry/startup-snapshot`
-- **Applies to:** `domains/meta/external-plugins/opencode-skill-registry.npm-server.json`, `global/AGENTS.md`, `domains/meta/skills/skill-creator/**`
+- **Applies to:** `domains/meta/external-plugins/opencode-skill-registry.npm-server.json`, `global/AGENTS.md`, `domains/meta/skills/skill-creator/**`, `skills/implementation-skill-routing/**`, `scripts/test-skill-registry-contract.mjs`
 - **Preconditions:** Install the Meta domain into a disposable project with at least one project skill and no stale OpenCode process.
 - **Steps:**
   1. Start OpenCode, inspect `.ai/atl/skill-registry.md`, then add or remove one disposable project skill.
-  2. Restart OpenCode and inspect the refreshed snapshot and native `/skill` catalog.
-- **Expected result:** The pinned server plugin alone owns the snapshot, canonical runtime sections and `Description | Skill | Location` columns reflect resolved skills, and no repository generator is required.
+   2. Restart OpenCode and inspect the refreshed snapshot and native `/skill` catalog.
+   3. Match a skill whose display Name differs from its Skill ID and load only its allowed native identifier. Do not follow the generated preamble's suggestion to read bodies through Location.
+   4. In disposable fixtures, try missing, malformed, legacy three-column, unavailable, and disallowed entries; inspect runtime-catalog fallback and already assigned `Skills:` validation.
+- **Expected result:** The pinned server plugin alone owns the snapshot. `## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills` each have exactly `Description | Skill ID | Name | Location` columns in that order. Consumers match Description, select Skill ID only, and use the native loader within the agent's allowlist; Name is display-only and Location diagnostic-only. Invalid or ineligible registry matches fall back to available, allowed runtime identifiers without direct body reads, generated-file edits, or a manual generator. No eligible match yields `none` during routing discovery; an unavailable or disallowed already assigned identifier blocks validation rather than being replaced.
 - **Cleanup:** Remove the disposable skill, generated `.ai/atl/` state, and project.
 
 ### MT-META-MODEL-PROFILES

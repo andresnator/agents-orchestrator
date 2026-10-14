@@ -1,0 +1,9 @@
+{
+  "name": "opencode-local-subagent-statusline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tui": "./tui.tsx"
+  }
+}

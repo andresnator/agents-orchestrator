@@ -8,7 +8,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TARGET=""
 OPENCODE_CONFIG_FILE=""
+CLI_CONFIG_FILE=""
 MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
+MIN_LOCAL_TUI_OPENCODE_VERSION="2.0.28"
 RETIRED_MODEL_TUI_SPECS="./plugins/model-configurator/tui.js ./plugins/model-configurator.tsx"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 BREW_TOOLS_CATALOG="$SCRIPT_DIR/brew-tools.tsv"
@@ -29,7 +31,9 @@ Actions:
               components are symlinked; external plugin bundles are downloaded
               from commit-pinned GitHub sources and SHA-256 verified. npm server
               and TUI plugins are registered by exact package version in the
-              matching OpenCode config.
+              matching OpenCode config. Repository-local V2 TUI plugins require
+              OpenCode >= 2.0.28 and register in cli.json; external TUI plugin
+              registrations remain in tui.json.
               Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
               regardless of --domain/--status filters. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
@@ -44,8 +48,8 @@ Targets:
 Filters:
   --domain    Comma-separated domains, or all.
               Domains are discovered dynamically from domains/
-              (currently: architecture, common, docs, learning, meta, plan,
-              orchestration, review).
+              (currently: architecture, common, docs, meta, orchestration,
+              plan, review).
               Exclusive skills live in their domain; shared skills use relative
               symlinks to the top-level skills/ directory.
   --status    Comma-separated skill lifecycle states, or all.
@@ -132,6 +136,7 @@ runtime_init() {
   else
     OPENCODE_CONFIG_FILE="$TARGET/opencode.jsonc"
   fi
+  CLI_CONFIG_FILE="$TARGET/cli.json"
   MANIFEST_ROOT="$TARGET"
 }
 
@@ -353,6 +358,15 @@ tui_spec_for_dest() {
   esac
 }
 
+tui_support_sources() {
+  local companion="$1" support
+  for support in "$companion"/*.ts "$companion"/*.tsx "$companion"/*.mjs "$companion"/package.json; do
+    [ -f "$support" ] || continue
+    case "$support" in *.test.*) continue ;; esac
+    printf '%s\n' "$support"
+  done
+}
+
 runtime_install_component() {
   local type="$1" name="$2" src="$3" dest="$4" manifest="$5" companion support spec package legacy_spec
   case "$type" in
@@ -411,14 +425,13 @@ runtime_install_component() {
   companion="${src%.tsx}"
   if [ -d "$companion" ]; then
     prepare_tui_directory "${dest%.tsx}" "$manifest"
-    for support in "$companion"/*.ts "$companion"/*.tsx; do
-      [ -f "$support" ] || continue
+    while IFS= read -r support; do
       install_tui_source "$support" "${dest%.tsx}/$(basename "$support")" "$manifest"
-    done
+    done < <(tui_support_sources "$companion")
   fi
   maybe_fail_install "after-links"
   spec="$(tui_spec_for_dest "$dest")"
-  ensure_managed_array_entry "$TARGET/tui.json" plugin "$spec" "$manifest"
+  ensure_managed_array_entry "$CLI_CONFIG_FILE" plugins "$spec" "$manifest"
   maybe_fail_install "after-managed-array"
 }
 
@@ -546,16 +559,15 @@ runtime_component_state() {
   companion="${src%.tsx}"
   companion_state="generated"
   if [ -d "$companion" ]; then
-    for support in "$companion"/*.ts "$companion"/*.tsx; do
-      [ -f "$support" ] || continue
+    while IFS= read -r support; do
       support_state="$(file_state "$support" "${dest%.tsx}/$(basename "$support")" copy_source)"
       [ "$support_state" = "generated" ] || companion_state="$support_state"
-    done
+    done < <(tui_support_sources "$companion")
   fi
   spec="$(tui_spec_for_dest "$dest")"
   if [ "$state" = "generated" ] && [ "$companion_state" = "generated" ] &&
-    managed_array_has "$TARGET/tui.json" plugin "$spec"; then
-    compatibility="$(opencode_compatibility)"
+    managed_array_has "$CLI_CONFIG_FILE" plugins "$spec"; then
+    compatibility="$(opencode_compatibility "$MIN_LOCAL_TUI_OPENCODE_VERSION")"
     if [ "$compatibility" = "compatible" ]; then
       printf 'generated+registered'
     else
@@ -714,6 +726,10 @@ runtime_pre_install() {
     command -v python3 >/dev/null 2>&1 || die "python3 is required to preserve OpenCode config comments"
     [ -f "$JSONC_EDITOR" ] || die "JSONC editor not found: $JSONC_EDITOR"
     validate_managed_files "$has_tui" "$has_npm_server"
+    if awk -F '\t' '$1 == "tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected"; then
+      check_opencode_version "$MIN_LOCAL_TUI_OPENCODE_VERSION"
+      validate_managed_jsonc_file "$CLI_CONFIG_FILE" plugins
+    fi
   fi
 
   while IFS=$'\t' read -r type name domain status src; do
@@ -776,10 +792,9 @@ runtime_pre_install() {
         companion="${src%.tsx}"
         if [ -d "$companion" ]; then
           preflight_tui_directory "${dest%.tsx}"
-          for support in "$companion"/*.ts "$companion"/*.tsx; do
-            [ -f "$support" ] || continue
+          while IFS= read -r support; do
             preflight_tui_source "$support" "${dest%.tsx}/$(basename "$support")"
-          done
+          done < <(tui_support_sources "$companion")
         fi
         ;;
     esac
@@ -813,6 +828,8 @@ runtime_begin_install() {
   snapshot_install_path "$OPENCODE_CONFIG_FILE.bak"
   snapshot_install_path "$TARGET/tui.json"
   snapshot_install_path "$TARGET/tui.json.bak"
+  snapshot_install_path "$CLI_CONFIG_FILE"
+  snapshot_install_path "$CLI_CONFIG_FILE.bak"
   snapshot_install_path "$TARGET/package.json"
   snapshot_install_path "$TARGET/package.json.bak"
   snapshot_install_path "$manifest"
@@ -931,22 +948,26 @@ maybe_fail_install() {
 
 check_opencode_version() {
   local compatibility
-  compatibility="$(opencode_compatibility)"
+  compatibility="$(opencode_compatibility "${1:-$MIN_EXTERNAL_OPENCODE_VERSION}")"
   [ "$compatibility" = "compatible" ] || die "$compatibility"
 }
 
 opencode_compatibility() {
-  local binary version
+  local binary version version_pattern minimum
+  minimum="${1:-$MIN_EXTERNAL_OPENCODE_VERSION}"
   binary="${OPENCODE_BIN:-$(command -v opencode || true)}"
   if [ -z "$binary" ]; then
-    printf 'opencode >= %s is required for external and TUI plugins' "$MIN_EXTERNAL_OPENCODE_VERSION"
+    printf 'opencode >= %s is required for external and TUI plugins' "$minimum"
     return 0
   fi
-  version="$($binary --version 2>/dev/null | tr -d '[:space:]')"
-  if version_at_least "$version" "$MIN_EXTERNAL_OPENCODE_VERSION"; then
+  # Accept bare/v-prefixed versions and OpenCode v2's product-prefixed output.
+  version_pattern='^[[:space:]]*(opencode[[:space:]]+)?v?([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?[[:space:]]*$'
+  if version="$("$binary" --version 2>/dev/null)" &&
+    [[ "$version" =~ $version_pattern ]] &&
+    version_at_least "${BASH_REMATCH[2]}" "$minimum"; then
     printf 'compatible'
   else
-    printf 'opencode >= %s is required for external and TUI plugins (found %s)' "$MIN_EXTERNAL_OPENCODE_VERSION" "${version:-unknown}"
+    printf 'opencode >= %s is required for external and TUI plugins (found %s)' "$minimum" "${version:-unknown}"
   fi
 }
 
@@ -963,9 +984,9 @@ version_at_least() {
 }
 
 validate_managed_jsonc_file() {
-  local file="$1" status=0
+  local file="$1" field="${2:-plugin}" status=0
   [ -e "$file" ] || return 0
-  python3 "$JSONC_EDITOR" has "$file" plugin "__agents_orchestrator_validation_probe__" >/dev/null || status=$?
+  python3 "$JSONC_EDITOR" has "$file" "$field" "__agents_orchestrator_validation_probe__" >/dev/null || status=$?
   [ "$status" -ne 2 ] || die "$file is not valid supported JSONC"
 }
 

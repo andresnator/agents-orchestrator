@@ -22,13 +22,12 @@ python3 scripts/lint-manual-tests.py --base origin/main --head HEAD
 | Architecture | [Architecture manual tests](../domains/architecture/manual-tests.md) |
 | Common | [Common manual tests](../domains/common/manual-tests.md) |
 | Docs | [Docs manual tests](../domains/docs/manual-tests.md) |
-| Learning | [Learning manual tests](../domains/learning/manual-tests.md) |
 | Meta | [Meta manual tests](../domains/meta/manual-tests.md) |
 | Orchestration | [Orchestration manual tests](../domains/orchestration/manual-tests.md) |
 | Plan | [Plan manual tests](../domains/plan/manual-tests.md) |
 | Review | [Review manual tests](../domains/review/manual-tests.md) |
 
-Reusable human inputs live under `manual-tests/fixtures/`. Copy them to a disposable directory before changing or running them. Learning provides [per-ID preparation helpers](../manual-tests/fixtures/learning/README.md) and a [parallel execution prompt](../manual-tests/learning-parallel-prompt.md); helpers prepare data and services, while the agent directs execution and evaluates each case.
+Reusable human inputs live under `manual-tests/fixtures/`. Copy them to a disposable directory before changing or running them.
 
 ## Case format
 
@@ -38,7 +37,7 @@ Every case follows this field order: Title, Coverage key, Applies to, Preconditi
 
 ## Pull request gate
 
-The read-only workflow runs on every pull request with one job, `manual-test-catalog`. It compares base and head, expands a changed shared skill to every domain symlink that owns it, includes cases added or modified in the pull request, and fails when a changed runtime artifact matches no case.
+The read-only workflow runs on every pull request with one job, `manual-test-catalog`. It compares base and head, expands a changed shared skill to every domain symlink that owns it, includes cases added or modified in the pull request, and fails when an added, modified, copied, or renamed destination runtime artifact matches no current case. Deleted artifacts and old rename paths do not require current coverage.
 
 A documentation-only pull request can report that no runtime manual cases are affected. After an authorized GitHub delivery and the workflow's first check run, a repository administrator can add `manual-test-catalog` from GitHub Actions as a required, non-strict check in the existing `Main` ruleset while preserving every other rule. GitHub documents the [required-check source and loose/strict policy](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets) and the [job-name context format](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/troubleshooting-rules).
 
@@ -73,12 +72,14 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Title:** Preserve external plugin registrations
 - **Coverage key:** `repository/plugins/registration-lifecycle`
 - **Applies to:** `installers/opencode.sh`, `installers/lib/**`, `scripts/jsonc-array.py`, `domains/*/external-plugins/**`, `manual-tests/fixtures/external-plugins/**`
-- **Preconditions:** Copy one JSONC before fixture to a disposable target and keep its matching after fixture available for comparison.
+- **Preconditions:** Copy one JSONC before fixture to a disposable target and keep its matching after fixture available for comparison. Have OpenCode available; for version variants, point `OPENCODE_BIN` at an executable stub whose `--version` output and exit status you control.
 - **Steps:**
-  1. Install `common,meta` into the target and inspect server and TUI plugin registrations plus the installer manifest.
-  2. Reinstall, run status, then uninstall and compare the JSONC comments, foreign entries, and managed entries.
-- **Expected result:** Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
-- **Cleanup:** Delete the disposable target and fixture copy.
+  1. Dry-run `install --domain common,meta --target <target>` with version outputs `1.17.15`, `v1.17.15`, and `opencode v2.0.28`.
+  2. Install `common,meta` into the target with the real binary and inspect server and TUI plugin registrations plus the installer manifest.
+  3. Reinstall, run status, then uninstall and compare the JSONC comments, foreign entries, and managed entries.
+- **Expected result:** Bare, v-prefixed, and product-prefixed versions at or above `1.17.15` pass the gate, including major-version upgrades. Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
+- **Essential negative variant:** Repeat the dry run with `1.17.14`, `opencode v1.17.14`, malformed or empty output, and a stub that prints `opencode v2.0.28` but exits nonzero. Each is rejected before any target file or manifest changes.
+- **Cleanup:** Delete the disposable target, fixture copy, and version stubs.
 
 ### MT-REPOSITORY-BREW-TOOLS
 
@@ -134,11 +135,12 @@ A documentation-only pull request can report that no runtime manual cases are af
 
 - **Title:** Reject an invalid manual catalog
 - **Coverage key:** `repository/catalog/schema-gate`
-- **Applies to:** `scripts/lint-manual-tests.py`, `.github/workflows/manual-test-catalog.yml`, `docs/manual-testing.md`, `domains/*/manual-tests.md`
+- **Applies to:** `scripts/lint-manual-tests.py`, `scripts/tests/test_lint_manual_tests.py`, `.github/workflows/manual-test-catalog.yml`, `docs/manual-testing.md`, `domains/*/manual-tests.md`
 - **Preconditions:** Use a disposable copy of this repository with Python 3 and Git available.
 - **Steps:**
   1. Run `python3 scripts/lint-manual-tests.py`, then compare a committed base and head and inspect the affected-ID summary.
   2. Change one case while keeping its ID and coverage key, commit it, and rerun the base/head comparison.
-- **Expected result:** The valid catalog passes, the changed case appears automatically, and the workflow contains one read-only job without path filters or product execution.
-- **Essential negative variant:** Duplicate an ID or coverage key and confirm the linter exits nonzero with both source locations; restore the file and confirm it passes.
+  3. Run `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -v` to check deletion, rename, and coverage regressions.
+- **Expected result:** The valid catalog passes, the changed case appears automatically, and the workflow contains one read-only job without path filters or product execution. Deleted artifacts and old rename paths do not require current coverage; surviving runtime artifacts still do.
+- **Essential negative variant:** Duplicate an ID or coverage key and confirm the linter exits nonzero with both source locations. Add or modify an uncovered runtime artifact, or rename one to an uncovered destination, and confirm rejection; restore the fixture and confirm it passes.
 - **Cleanup:** Discard the disposable repository copy.
