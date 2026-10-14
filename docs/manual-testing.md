@@ -73,12 +73,14 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Title:** Preserve external plugin registrations
 - **Coverage key:** `repository/plugins/registration-lifecycle`
 - **Applies to:** `installers/opencode.sh`, `installers/lib/**`, `scripts/jsonc-array.py`, `domains/*/external-plugins/**`, `manual-tests/fixtures/external-plugins/**`
-- **Preconditions:** Copy one JSONC before fixture to a disposable target and keep its matching after fixture available for comparison.
+- **Preconditions:** Copy one JSONC before fixture to a disposable target and keep its matching after fixture available for comparison. Have OpenCode available; for version variants, point `OPENCODE_BIN` at an executable stub whose `--version` output and exit status you control.
 - **Steps:**
-  1. Install `common,meta` into the target and inspect server and TUI plugin registrations plus the installer manifest.
-  2. Reinstall, run status, then uninstall and compare the JSONC comments, foreign entries, and managed entries.
-- **Expected result:** Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
-- **Cleanup:** Delete the disposable target and fixture copy.
+  1. Dry-run `install --domain common,meta --target <target>` with version outputs `1.17.15`, `v1.17.15`, and `opencode v2.0.28`.
+  2. Install `common,meta` into the target with the real binary and inspect server and TUI plugin registrations plus the installer manifest.
+  3. Reinstall, run status, then uninstall and compare the JSONC comments, foreign entries, and managed entries.
+- **Expected result:** Bare, v-prefixed, and product-prefixed versions at or above `1.17.15` pass the gate, including major-version upgrades. Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
+- **Essential negative variant:** Repeat the dry run with `1.17.14`, `opencode v1.17.14`, malformed or empty output, and a stub that prints `opencode v2.0.28` but exits nonzero. Each is rejected before any target file or manifest changes.
+- **Cleanup:** Delete the disposable target, fixture copy, and version stubs.
 
 ### MT-REPOSITORY-BREW-TOOLS
 

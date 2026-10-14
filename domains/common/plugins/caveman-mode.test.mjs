@@ -4,15 +4,17 @@ import fs from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawn } from "node:child_process"
-import { CavemanModePlugin, cavemanModeContracts as contracts } from "./caveman-mode.ts"
+import CavemanModePlugin, { cavemanModeContracts as contracts } from "./caveman-mode.ts"
 
 const ROOT_SESSION_ID = "root"
 const CHILD_SESSION_ID = "child"
 const OTHER_ROOT_SESSION_ID = "other-root"
 const PLUGIN_URL = new URL("./caveman-mode.ts", import.meta.url).href
+const FIXTURE_ROOT = join(tmpdir(), "opencode")
 
 function isolate(t) {
-  const directory = fs.mkdtempSync(join(tmpdir(), "caveman-test-"))
+  fs.mkdirSync(FIXTURE_ROOT, { recursive: true })
+  const directory = fs.mkdtempSync(join(FIXTURE_ROOT, "caveman-test-"))
   const previous = process.env.OPENCODE_CONFIG_DIR
   process.env.OPENCODE_CONFIG_DIR = directory
   t.after(() => {
@@ -23,10 +25,74 @@ function isolate(t) {
   return { directory, statePath: join(directory, contracts.STATE_FILE) }
 }
 
+async function createHost(definition, failHook) {
+  const hooks = new Map()
+  const transforms = new Set()
+  const prompts = []
+  const disposals = []
+  const register = (collection, value) => {
+    collection.add(value)
+    let disposed = false
+    return { async dispose() {
+      if (disposed) return
+      disposed = true
+      collection.delete(value)
+      disposals.push(value)
+    } }
+  }
+  const context = {
+    command: { async transform(callback) { return register(transforms, callback) } },
+    session: {
+      get() { throw new Error("Global mode must not resolve ancestors") },
+      async prompt(input) { prompts.push(input) },
+      async hook(name, callback) {
+        if (name === failHook) throw new Error("Registration failed")
+        if (!hooks.has(name)) hooks.set(name, new Set())
+        return register(hooks.get(name), callback)
+      },
+    },
+  }
+  const invoke = async (name, event) => {
+    for (const callback of hooks.get(name) ?? []) await callback(event)
+  }
+  const commands = () => {
+    const definitions = new Map()
+    for (const transform of transforms) transform({ add(command) { definitions.set(command.name, command) } })
+    return definitions
+  }
+  const host = { context, hooks, transforms, prompts, disposals, invoke, commands }
+  try {
+    host.cleanup = await definition.setup(context)
+  } catch (error) {
+    error.host = host
+    throw error
+  }
+  return host
+}
+
+// Keep the original characterization scenarios, but route every operation through
+// native V2 registrations rather than testing an obsolete production adapter.
+async function characterize(definition) {
+  const host = await createHost(definition)
+  return {
+    async "command.execute.before"(input) {
+      const command = host.commands().get(input.command.replace(/^\//, ""))
+      if (command) await command.execute({ sessionID: input.sessionID, prompt: { text: input.arguments }, delivery: "steer" })
+    },
+    async "chat.message"(input, output) {
+      const text = output.parts.filter((part) => part.type === "text").map((part) => part.text).join("\n")
+      await host.invoke("prompt", { sessionID: input.sessionID, prompt: { text }, delivery: "steer" })
+    },
+    async "experimental.chat.system.transform"(input, output) {
+      const event = { sessionID: input.sessionID, system: output.system.map((text) => ({ type: "text", text })) }
+      await host.invoke("context", event)
+      output.system.splice(0, output.system.length, ...event.system.map((part) => part.text))
+    },
+  }
+}
+
 async function createPlugin() {
-  return CavemanModePlugin({
-    client: { session: { get: () => { throw new Error("Global mode must not resolve ancestors") } } },
-  })
+  return characterize(CavemanModePlugin)
 }
 
 async function select(plugin, mode, sessionID = ROOT_SESSION_ID) {
@@ -42,8 +108,10 @@ async function systemFor(plugin, sessionID) {
 function runProcess(directory, body) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["--input-type=module", "-e", `
-      import { CavemanModePlugin } from ${JSON.stringify(PLUGIN_URL)};
-      const plugin = await CavemanModePlugin({});
+      import CavemanModePlugin from ${JSON.stringify(PLUGIN_URL)};
+      ${createHost.toString()}
+      ${characterize.toString()}
+      const plugin = await characterize(CavemanModePlugin);
       ${body}
     `], { env: { ...process.env, OPENCODE_CONFIG_DIR: directory }, stdio: ["ignore", "pipe", "pipe"] })
     let stdout = ""
@@ -257,3 +325,142 @@ for (const operation of ["readFileSync", "writeFileSync", "renameSync", "mkdirSy
     assert.deepEqual(fs.readdirSync(directory), [contracts.STATE_FILE])
   })
 }
+
+test("shouldRegisterNativeV2DefinitionAndPreserveAttachmentsWhenCommandExecutes", async (t) => {
+  // Given
+  const { statePath } = isolate(t)
+  const host = await createHost(CavemanModePlugin)
+  t.after(host.cleanup)
+  const prompt = { text: " FULL ", files: [{ uri: "file:///fixture.txt" }], skills: ["caveman"] }
+  // When
+  const command = host.commands().get("caveman")
+  await command.execute({ sessionID: CHILD_SESSION_ID, prompt, delivery: "queue" })
+  // Then
+  assert.equal(CavemanModePlugin.id, "caveman-mode")
+  assert.equal(typeof CavemanModePlugin.setup, "function")
+  assert.equal("server" in CavemanModePlugin, false)
+  assert.equal("effect" in CavemanModePlugin, false)
+  assert.deepEqual([...host.hooks.keys()], ["prompt", "context", "compaction", "generate", "title"])
+  assert.deepEqual(JSON.parse(fs.readFileSync(statePath, "utf8")), { mode: "full" })
+  assert.deepEqual(host.prompts, [{
+    ...prompt,
+    sessionID: CHILD_SESSION_ID,
+    delivery: "queue",
+    text: "Caveman mode full was saved globally. Acknowledge in one short sentence using that style.",
+  }])
+})
+
+test("shouldDeduplicateTypedMarkersForEveryModelRequestWhenStateChanges", async (t) => {
+  // Given
+  isolate(t)
+  const host = await createHost(CavemanModePlugin)
+  t.after(host.cleanup)
+  const retained = { type: "text", text: "Existing instructions", providerOptions: { test: { cache: true } } }
+  await host.invoke("prompt", { prompt: { text: "normal mode" } })
+  // When
+  for (const hook of ["context", "compaction", "generate", "title"]) {
+    const event = { sessionID: CHILD_SESSION_ID, system: [retained,
+      { type: "text", text: "CAVEMAN SESSION MODE: full. Obsolete" },
+      { type: "text", text: "CAVEMAN SESSION MODE: lite. Duplicate" },
+    ] }
+    await host.invoke(hook, event)
+    await host.invoke(hook, event)
+    // Then
+    assert.deepEqual(event.system, [retained, {
+      type: "text", text: "CAVEMAN SESSION MODE: off. Use normal prose; this overrides the default lite fallback.",
+    }])
+    assert.equal(event.system[0], retained)
+  }
+})
+
+test("shouldRejectInvalidCommandBeforePromptAdmissionWhenStateExists", async (t) => {
+  // Given
+  const { statePath } = isolate(t)
+  const host = await createHost(CavemanModePlugin)
+  t.after(host.cleanup)
+  const execute = (text) => host.commands().get("caveman").execute({ sessionID: ROOT_SESSION_ID, prompt: { text }, delivery: "steer" })
+  await execute("wenyan")
+  const before = fs.readFileSync(statePath, "utf8")
+  host.prompts.length = 0
+  // When
+  await assert.rejects(execute("off"), /Usage:/)
+  await assert.rejects(execute("lite full"), /Usage:/)
+  // Then
+  assert.deepEqual(host.prompts, [])
+  assert.equal(fs.readFileSync(statePath, "utf8"), before)
+})
+
+for (const operation of ["readFileSync", "writeFileSync", "renameSync", "mkdirSync"]) {
+  test(`shouldNotAdmitAcknowledgmentWhenNativeCommand${operation}Fails`, async (t) => {
+    // Given
+    const { directory, statePath } = isolate(t)
+    const host = await createHost(CavemanModePlugin)
+    t.after(host.cleanup)
+    await host.invoke("prompt", { prompt: { text: "stop caveman" } })
+    const before = fs.readFileSync(statePath, "utf8")
+    const failure = t.mock.method(fs, operation, () => { throw new Error("Denied") })
+    // When
+    await assert.rejects(host.commands().get("caveman").execute({ prompt: { text: "full" }, delivery: "steer" }), /Caveman global state failed: Denied/)
+    failure.mock.restore()
+    // Then
+    assert.deepEqual(host.prompts, [])
+    assert.equal(fs.readFileSync(statePath, "utf8"), before)
+    assert.deepEqual(fs.readdirSync(directory), [contracts.STATE_FILE])
+  })
+}
+
+test("shouldIgnoreQuotedOrExtendedDeactivationWhenPromptIsNotStandalone", async (t) => {
+  // Given
+  const { statePath } = isolate(t)
+  const host = await createHost(CavemanModePlugin)
+  t.after(host.cleanup)
+  await host.commands().get("caveman").execute({ prompt: { text: "ultra" }, delivery: "steer" })
+  const before = fs.readFileSync(statePath, "utf8")
+  // When
+  for (const text of ['"normal mode"', "Explain normal mode", "stop caveman\nand explain", "normal mode please"]) {
+    await host.invoke("prompt", { prompt: { text } })
+  }
+  // Then
+  assert.equal(fs.readFileSync(statePath, "utf8"), before)
+})
+
+test("shouldDisposeAllRegistrationsWithoutStateLossWhenPluginReloads", async (t) => {
+  // Given
+  const { statePath } = isolate(t)
+  const host = await createHost(CavemanModePlugin)
+  await host.invoke("prompt", { prompt: { text: "stop caveman" } })
+  const before = fs.readFileSync(statePath, "utf8")
+  // When
+  host.commands()
+  host.commands()
+  await host.cleanup()
+  await host.cleanup()
+  await host.invoke("prompt", { prompt: { text: "normal mode" } })
+  const fresh = await createHost(CavemanModePlugin)
+  t.after(fresh.cleanup)
+  const event = { system: [] }
+  await fresh.invoke("context", event)
+  // Then
+  assert.equal(host.transforms.size, 0)
+  assert.equal([...host.hooks.values()].reduce((count, callbacks) => count + callbacks.size, 0), 0)
+  assert.equal(host.disposals.length, 6)
+  assert.deepEqual([...fresh.commands().keys()], ["caveman"])
+  assert.equal([...fresh.hooks.values()].every((callbacks) => callbacks.size === 1), true)
+  assert.match(event.system[0].text, /MODE: off\./)
+  assert.equal(fs.readFileSync(statePath, "utf8"), before)
+})
+
+test("shouldRollBackEarlierRegistrationsWhenV2SetupFails", async (t) => {
+  // Given
+  const { statePath } = isolate(t)
+  // When
+  await assert.rejects(createHost(CavemanModePlugin, "generate"), (error) => {
+    // Then
+    assert.match(error.message, /Registration failed/)
+    assert.equal(error.host.transforms.size, 0)
+    assert.equal([...error.host.hooks.values()].every((callbacks) => callbacks.size === 0), true)
+    assert.equal(error.host.disposals.length, 4)
+    assert.equal(fs.existsSync(statePath), false)
+    return true
+  })
+})

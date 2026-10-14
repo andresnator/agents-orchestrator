@@ -153,3 +153,18 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Expected result:** Dry run writes nothing; on creates complete discovered-agent blocks and reports `on`; the second on is idempotent; off removes managed permissions while preserving unrelated configuration.
 - **Essential negative variant:** Add a JSONC comment and confirm `on` fails clearly before backup or mutation because this helper requires valid JSON.
 - **Cleanup:** Remove the disposable target.
+
+### MT-ORCHESTRATION-V2-STATUSLINE
+
+- **Title:** Load and dispose the local OpenCode V2 CLI status contribution
+- **Coverage key:** `orchestration/plugins/v2-subagent-statusline`
+- **Applies to:** `domains/orchestration/tui-plugins/subagent-statusline/**`
+- **Preconditions:** Use OpenCode v2.0.28 with an isolated HOME, XDG configuration/data/cache/state and runtime directory under an approved temporary fixture. Configure only the absolute local plugin directory in the fixture's `cli.json` plugins array. Use a private server and empty fixture project; never edit the real global CLI configuration or submit LLM prompts.
+- **Steps:**
+  1. Run `node --test --test-reporter=tap domains/orchestration/tui-plugins/subagent-statusline/*.test.mjs`, then start the actual full-screen CLI in an isolated PTY with `--standalone` and inspect plugin loading diagnostics.
+  2. Seed parent, direct-child, grandchild and unrelated sessions using the private host session API without prompting a model. Navigate between the parent, child and unrelated sessions; reopen an existing parent to exercise hydration.
+  3. Inspect the appended prompt-footer status contribution with running and idle children and succeeded, failed and interrupted outcomes. Use synthetic host fixtures for execution states when real execution would require separately authorized model credits.
+  4. Disable/reload the plugin in the fixture and close/reopen a session view. Check that the contribution disappears and returns once without duplicate hydration effects, subscriptions or prompt replacement.
+- **Expected result:** The directory's `./tui` export loads with stable ID `orchestration.subagent-statusline` using `@opencode/plugin/tui`. Only direct children of the currently viewed session are counted; grandparents, grandchildren and foreign-session children never leak. Cached states update reactively, reopened sessions hydrate children, and unknown/idle states are not reported as success. The built-in prompt and health indicators remain intact. Disposal removes the single appended contribution; no log scanning, task/delegate heuristics, dependency installation or global configuration changes occur. Node tests and startup evidence alone do not prove visual placement or real execution transitions; unperformed UI checks remain pending.
+- **Essential negative variant:** Reject child hydration in a fixture, switch sessions during an outstanding hydration, and dispose before it finishes. No unhandled rejection, stale foreign count, duplicate contribution or plugin-owned late state write appears.
+- **Cleanup:** Stop only fixture-owned CLI/server processes and remove the disposable fixture.

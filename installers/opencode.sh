@@ -936,14 +936,17 @@ check_opencode_version() {
 }
 
 opencode_compatibility() {
-  local binary version
+  local binary version version_pattern
   binary="${OPENCODE_BIN:-$(command -v opencode || true)}"
   if [ -z "$binary" ]; then
     printf 'opencode >= %s is required for external and TUI plugins' "$MIN_EXTERNAL_OPENCODE_VERSION"
     return 0
   fi
-  version="$($binary --version 2>/dev/null | tr -d '[:space:]')"
-  if version_at_least "$version" "$MIN_EXTERNAL_OPENCODE_VERSION"; then
+  # Accept bare/v-prefixed versions and OpenCode v2's product-prefixed output.
+  version_pattern='^[[:space:]]*(opencode[[:space:]]+)?v?([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?[[:space:]]*$'
+  if version="$("$binary" --version 2>/dev/null)" &&
+    [[ "$version" =~ $version_pattern ]] &&
+    version_at_least "${BASH_REMATCH[2]}" "$MIN_EXTERNAL_OPENCODE_VERSION"; then
     printf 'compatible'
   else
     printf 'opencode >= %s is required for external and TUI plugins (found %s)' "$MIN_EXTERNAL_OPENCODE_VERSION" "${version:-unknown}"

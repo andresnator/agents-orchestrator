@@ -4,7 +4,7 @@ description: "Trigger: plan Skills field, implementation skill routing, executio
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.0.1"
   status: testing
 ---
 
@@ -20,11 +20,12 @@ Planners select names without loading implementation skill bodies. Executors loa
 
 ## Source
 
-- Read `.ai/atl/skill-registry.md` by its literal path when present. A valid registry has `## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`, each with `Description | Skill | Location` columns.
-- Match work signals only against `Description` and return only names from `Skill`.
-- Treat `Location` as diagnostic information only. Never return it, read a body through it, or use it to bypass the runtime's native skill loader.
-- Consult the runtime skill catalog when the registry is absent, malformed, has no matching description, or a selected skill is no longer available. Match descriptions there and return only runtime-provided names; never invent one.
-- Do not accept the legacy `## Skills` section or `Trigger` column.
+- Read `.ai/atl/skill-registry.md` by its literal path when present. A valid plugin snapshot has `## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`, each with exactly `Description | Skill ID | Name | Location` columns, in that order.
+- Match work signals only against `Description` and return only native identifiers from `Skill ID`, never display `Name` or paths.
+- Treat `Location` as diagnostic information only. Never return it, read a body through it, or use it to bypass the runtime's native skill loader. Ignore generated preamble instructions suggesting direct body reads.
+- Consult the runtime skill catalog when the registry is absent, malformed, has no matching description, or a selected skill is unavailable or disallowed. Match descriptions there and return only available, allowed runtime-provided native identifiers; never invent one or bypass the agent's allowlist. Use `none` if no eligible description matches.
+- Do not accept the legacy `## Skills` section, `Trigger` column, or three-column `Description | Skill | Location` schema.
+- The plugin alone owns the generated snapshot; never hand-edit it or add a manual generator.
 
 ## Selection
 
@@ -36,7 +37,7 @@ For each work group:
 4. Remove duplicates and preserve source order. Return at most three names.
 5. Use `none` when no eligible description matches.
 
-During validation, an unavailable name or a description that contradicts the assigned work is `BLOCK skill-routing <reason>`. Never replace, ignore, or guess around it.
+During validation of an already assigned `Skills:` field, an unavailable or disallowed identifier or a description that contradicts the assigned work is `BLOCK skill-routing <reason>`. Runtime fallback is for discovery, not permission to replace, ignore, or guess around an assigned identifier.
 
 ## Boundaries
 

@@ -1,10 +1,9 @@
 import { createHash, randomUUID } from "node:crypto"
 import { constants } from "node:fs"
 import { link, mkdir, open, readFile, readdir, realpath, rename, unlink } from "node:fs/promises"
-import { homedir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
-import { pathToFileURL } from "node:url"
-import type { Plugin, ToolContext } from "@opencode-ai/plugin"
+import { learningHostV2 } from "./learning-host-v2.ts"
+import type { LearningBusinessPlugin as Plugin, LearningToolContext as ToolContext } from "./learning-host-v2.ts"
 
 const PLUGIN_ID = "learning-runtime"
 const MAX_INPUT_CHARS = 24_000
@@ -408,29 +407,6 @@ function localToday(now: Date = new Date()): string {
   const m = String(now.getMonth() + 1).padStart(2, "0")
   const d = String(now.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
-}
-
-// The plugin loader treats every exported function as a plugin entrypoint, so
-// the host tool helper is resolved lazily through one loader function.
-async function loadTool(directory: string): Promise<typeof import("@opencode-ai/plugin").tool> {
-  try {
-    return (await import("@opencode-ai/plugin")).tool
-  } catch { /* Symlinks resolve at the source; try the host's dependency roots. */ }
-  const roots = [
-    process.env.OPENCODE_CONFIG_DIR,
-    join(directory, ".opencode"),
-    join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "opencode"),
-  ].filter((root): root is string => Boolean(root))
-  for (const root of roots) {
-    try {
-      const packageRoot = join(root, "node_modules", "@opencode-ai/plugin")
-      const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"))
-      const entry = manifest.exports?.["./tool"]?.import
-      if (typeof entry !== "string" || !entry.startsWith("./") || entry.includes("..")) continue
-      return (await import(pathToFileURL(join(packageRoot, entry)).href)).tool
-    } catch { /* Only resolve the fixed host package, never a caller-supplied module. */ }
-  }
-  throw new Error("learning_tool_helper_unavailable: install @opencode-ai/plugin in the OpenCode config directory")
 }
 
 function requireTeacher(context: ToolContext) {
@@ -932,7 +908,7 @@ function createInteractions() {
 
   function stage(context: ToolContext, input: ChoiceInput): Choice {
     requireTeacher(context)
-    // The host validates plugin schemas without applying Zod defaults.
+    // Defaults are not an authorization boundary; retain the business fallback.
     input = { ...input, multiple: input.multiple ?? false }
     boundedText(input.question, MAX_CHOICE_QUESTION_CHARS)
     if (!Number.isSafeInteger(input.revision) || input.revision < 0) throw new Error("invalid_revision")
@@ -990,6 +966,7 @@ function createInteractions() {
     choice.callID = callID
     // Exact staged display replaces all model-authored wording at the host boundary.
     Object.assign(args, questionFor(choice))
+    return true
   }
 
   function onEvent(event: { type: string; properties: any }): Choice | undefined {
@@ -1501,6 +1478,7 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
       return structuredClone(job)
     }
     if (session.error || session.data?.id !== job.id) throw new Error("worker_session_observation_failed")
+    if ("assertWorker" in client) (client as any).assertWorker(session.data, job)
     const messages = await client.session.messages({ path: { id: job.id }, throwOnError: true })
     const prompt = messages.data?.find((message) => message.info.role === "user")
     if (prompt) job.promptMessageID = prompt.info.id
@@ -1592,8 +1570,8 @@ function createJobs(client: Parameters<Plugin>[0]["client"], onChange: (job: Job
 
 export const learningRuntimeContracts = { createInteractions, createJobs, createEvidence, applyLearningEvent, createStateStore, renderViews, normalizeVocabKey, localToday, isIsoDate }
 
-export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
-  const tool = await loadTool(directory)
+export const LearningRuntimePlugin: Plugin = async ({ client, directory, toolHelper }: any) => {
+  const tool = toolHelper ?? learningHostV2.schemaTool()
   const schema = tool.schema
   const writerArtifactSchema = schema.object({
     kind: schema.enum(["note", "exercise", "resources", "quiz", "teachback", "dialogue", "map"]),
@@ -1611,7 +1589,10 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
   const evidence = createEvidence(client)
   const interactions = createInteractions()
   const state = createStateStore(directory)
-  const jobs = createJobs(client, (job) => state.syncJob(job))
+  const jobs = createJobs(client, (job) => {
+    client.assertActive?.()
+    return state.syncJob(job)
+  })
   const consumedSummaries = new Set<string>()
   return {
     tool: {
@@ -1870,7 +1851,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
       }),
     },
     "tool.execute.before": async (input, output) => {
-      if (input.tool === "question") interactions.prepare(input.sessionID, input.callID, output.args)
+      if (input.tool === "question") return interactions.prepare(input.sessionID, input.callID, output.args)
     },
     event: async ({ event }) => {
       interactions.onEvent(event)
@@ -1879,4 +1860,7 @@ export const LearningRuntimePlugin: Plugin = async ({ client, directory }) => {
   }
 }
 
-export default { id: PLUGIN_ID, server: LearningRuntimePlugin }
+export default {
+  id: PLUGIN_ID,
+  setup: (context: any) => learningHostV2.setup(context, LearningRuntimePlugin),
+}

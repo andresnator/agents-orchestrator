@@ -1,4 +1,5 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin } from "@opencode/plugin"
+import type { SystemPart } from "@opencode/ai"
 import fs from "node:fs"
 import { randomUUID } from "node:crypto"
 import { homedir } from "node:os"
@@ -14,6 +15,7 @@ const VALID_MODES = ["lite", "full", "ultra", "wenyan"] as const
 const DEACTIVATION_PHRASES = new Set(["stop caveman", "normal mode"])
 const STATE_FILE = "caveman-mode.json"
 const COMMAND_USAGE = "Usage: /caveman [lite|full|ultra|wenyan]"
+const REQUEST_HOOKS = ["context", "compaction", "generate", "title"] as const
 
 type CavemanLevel = (typeof VALID_MODES)[number]
 type CavemanMode = CavemanLevel | typeof OFF_MODE
@@ -78,9 +80,9 @@ function markerFor(mode: CavemanMode): string {
   return `${MODE_MARKER_PREFIX} ${mode}. Apply the matching Caveman rules from global AGENTS.md.`
 }
 
-function injectModeMarker(system: string[], mode: CavemanMode): void {
-  const retained = system.filter((entry) => !entry.startsWith(MODE_MARKER_PREFIX))
-  system.splice(0, system.length, ...retained, markerFor(mode))
+function injectModeMarker(system: SystemPart[], mode: CavemanMode): void {
+  const retained = system.filter((entry) => !entry.text.startsWith(MODE_MARKER_PREFIX))
+  system.splice(0, system.length, ...retained, { type: "text", text: markerFor(mode) })
 }
 
 function commandMatches(command: string): boolean {
@@ -102,7 +104,7 @@ export const cavemanModeContracts = {
   parseDeactivationPhrase,
 }
 
-export const CavemanModePlugin: Plugin = async () => {
+async function setup(ctx: Plugin.Context): Promise<Plugin.Cleanup> {
   const directory = configDirectory()
   const statePath = join(directory, STATE_FILE)
   const reportFailure = (error: unknown): never => {
@@ -116,33 +118,56 @@ export const CavemanModePlugin: Plugin = async () => {
     }
   }
 
-  return {
-    "command.execute.before": async (input) => {
-      if (!commandMatches(input.command)) return
-      const mode = parseCommandMode(input.arguments)
-      if (!mode) throw new Error(COMMAND_USAGE)
-      selectMode(mode)
-    },
-
-    "chat.message": async (_input, output) => {
-      for (const part of output.parts) {
-        if (part.type !== "text" || typeof part.text !== "string") continue
-        const mode = parseDeactivationPhrase(part.text)
-        if (mode) selectMode(mode)
-      }
-    },
-
-    "experimental.chat.system.transform": async (_input, output) => {
-      try {
-        injectModeMarker(output.system, readMode(statePath))
-      } catch (error) {
-        reportFailure(error)
-      }
-    },
+  const registrations: Array<{ dispose(): Promise<void> }> = []
+  let disposed = false
+  const cleanup = async (): Promise<void> => {
+    if (disposed) return
+    disposed = true
+    await Promise.all(registrations.map((registration) => registration.dispose()))
+  }
+  try {
+    registrations.push(await ctx.command.transform((editor) => {
+      editor.add({
+        name: COMMAND_NAME,
+        description: "Save Caveman response compression globally",
+        execute: async ({ sessionID, prompt, delivery }) => {
+          const mode = parseCommandMode(prompt.text)
+          if (!mode) throw new Error(COMMAND_USAGE)
+          selectMode(mode)
+          await ctx.session.prompt({
+            ...prompt,
+            sessionID,
+            delivery,
+            text: `Caveman mode ${mode} was saved globally. Acknowledge in one short sentence using that style.`,
+          })
+        },
+      })
+    }))
+    registrations.push(await ctx.session.hook("prompt", (event) => {
+      const mode = parseDeactivationPhrase(event.prompt.text)
+      if (mode) selectMode(mode)
+    }))
+    for (const hook of REQUEST_HOOKS) {
+      registrations.push(await ctx.session.hook(hook, (event) => {
+        try {
+          injectModeMarker(event.system, readMode(statePath))
+        } catch (error) {
+          reportFailure(error)
+        }
+      }))
+    }
+    return cleanup
+  } catch (error) {
+    await cleanup()
+    throw error
   }
 }
 
-export default {
+// Plugin.define is an identity function in V2. A typed definition keeps standalone
+// Node tests dependency-free while exposing the same native loader/setup shape.
+export const CavemanModePlugin: Plugin.Plugin = {
   id: PLUGIN_ID,
-  server: CavemanModePlugin,
+  setup,
 }
+
+export default CavemanModePlugin

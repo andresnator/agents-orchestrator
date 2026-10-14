@@ -48,6 +48,28 @@ const PARENT_LEARNER_QUOTE = "A stale read must be revalidated before it is reus
 const PARENT_REFERENCE = { session_id: "parent", message_id: "learner-msg-1", part_id: "part-1", quote: PARENT_LEARNER_QUOTE }
 const CONTEXT = { agent: "mentor", sessionID: "parent", messageID: "assistant", abort: new AbortController().signal }
 
+test("shouldPreserveEveryLearningArgumentWhenBuildingPortableJsonSchemaTools", async () => {
+  // Given
+  const expected = {
+    learning_context: [],
+    learning_event_reference: ["event_type", "topic_slug", "module_id", "proposal_json", "reason"],
+    learning_evidence: ["excerpts"], learning_state_read: ["topic_slug"],
+    learning_commit: ["topic_slug", "expected_revision", "event"], learning_recover: ["topic_slug"],
+    learning_choice: ["purpose", "revision", "subject_digest", "subject_json", "question", "options", "multiple"],
+    learning_choice_result: ["id"], learning_job_start: ["worker", "scope", "revision", "artifact", "prompt"],
+    learning_job_result: ["id", "action", "topic_slug"], learning_summary_create: ["job_id", "interaction_id"],
+  }
+  // When
+  const runtime = await LearningRuntimePlugin({ client: { session: {} }, directory: "/unused-portable-fixture" })
+  const actual = Object.fromEntries(Object.entries(runtime.tool).map(([name, tool]) => [name, Object.keys(tool.input.properties)]))
+  // Then
+  assert.deepEqual(actual, expected)
+  assert.deepEqual(runtime.tool.learning_job_start.input.properties.artifact.properties.evidence_refs.items.required,
+    ["session_id", "message_id", "part_id", "quote"])
+  assert.deepEqual(runtime.tool.learning_choice.input.properties.multiple, { type: "boolean", default: false })
+  assert.equal(runtime.tool.learning_commit.input.properties.event.additionalProperties, true)
+})
+
 function answeredReadiness(current, selected = "skip") {
   const interactions = learningRuntimeContracts.createInteractions()
   const choice = interactions.stage(CONTEXT, {
