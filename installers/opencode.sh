@@ -25,7 +25,7 @@ runtime_usage() {
   cat <<'EOF'
 Usage:
   opencode.sh <install|uninstall|status> [--domain d1,d2] [--status s1,s2]
-              [--project] [--target DIR] [--dry-run] [--force] [--reload]
+              [--project] [--target DIR] [--dry-run] [--force] [--reload|--restart]
               [--install-brew-tools|--no-install-brew-tools]
 
 Actions:
@@ -81,6 +81,12 @@ Options:
               (comma/space-separated base URLs) or lsof discovery on localhost.
               Best-effort: never fails the install. Plugin code changes
               (including TUI plugins) still require an OpenCode restart.
+  --restart   Restart the shared V2 service after a successful global install,
+              then check API health and server plugin activation. Opt-in only;
+              interrupts connected sessions. Run from an external terminal.
+              Not allowed with --project, --target or --reload. Dry runs skip it.
+              Failures warn and keep the completed installation. TUI plugins
+              still require reopening clients; they are not verified here.
   --install-brew-tools
               Install missing Homebrew formulas required by selected components.
               Homebrew or formula failures warn and do not fail the OpenCode sync.
@@ -124,6 +130,19 @@ EOF
 }
 
 runtime_init() {
+  if [ "$RESTART" -eq 1 ]; then
+    [ "$ACTION" = "install" ] || die "--restart requires install"
+    [ "$PROJECT_TARGET" -eq 0 ] && [ -z "$TARGET_ARG" ] || die "--restart requires the default global target"
+    [ "$RELOAD" -eq 0 ] || die "--restart and --reload are mutually exclusive"
+    [ -z "${OPENCODE_CONFIG_DIR:-}${OPENCODE_CONFIG:-}${XDG_CONFIG_HOME:-}" ] || die "--restart requires the default OpenCode configuration environment"
+    command -v python3 >/dev/null 2>&1 || die "--restart requires python3 for verification"
+    local restart_version
+    restart_version="$(opencode_version)" || die "--restart requires OpenCode V2"
+    if ! version_at_least "$restart_version" "$MIN_V2_OPENCODE_VERSION" ||
+      version_at_least "$restart_version" "$MAX_PLUGIN_OPENCODE_MAJOR.0.0"; then
+      die "--restart requires OpenCode V2"
+    fi
+  fi
   if [ -n "$TARGET_ARG" ]; then
     TARGET="$(absolute_path "$TARGET_ARG")"
   elif [ "$PROJECT_TARGET" -eq 1 ]; then
@@ -1331,12 +1350,88 @@ setup_global_engram() {
 runtime_post_install() {
   install_selected_brew_tools
   setup_global_engram
+  if [ "$RESTART" -eq 1 ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      printf 'restart: skipped (dry run)\n'
+      return 0
+    fi
+    restart_running_service
+    return 0
+  fi
   [ "$RELOAD" -eq 1 ] || return 0
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'reload: skipped (dry run)\n'
     return 0
   fi
   reload_running_servers
+}
+
+restart_running_service() {
+  local binary
+  binary="${OPENCODE_BIN:-$(command -v opencode || true)}"
+  warn "restart: restarting the shared OpenCode service; connected sessions may be interrupted"
+  python3 - "$binary" "$MANIFEST_ROOT/$MANIFEST_NAME" "$HOME" <<'PY'
+import json
+import pathlib
+import subprocess
+import sys
+import time
+import urllib.parse
+
+binary, manifest, home = sys.argv[1:]
+COMMAND_TIMEOUT = 30
+VERIFY_ATTEMPTS = 5
+RETRY_DELAY = 1
+
+def command(*args):
+    result = subprocess.run([binary, *args], capture_output=True, text=True, timeout=COMMAND_TIMEOUT)
+    if result.returncode:
+        raise ValueError("command failed")
+    return result.stdout
+
+def verify():
+    info = json.loads(command("api", "get", "/api/info"))
+    if not isinstance(info, dict) or not info.get("version") or not isinstance(info.get("pid"), int):
+        raise ValueError("invalid health response")
+    endpoint = "/api/plugin?location[directory]=" + urllib.parse.quote(home, safe="")
+    response = json.loads(command("api", "get", endpoint))
+    plugins = response.get("data") if isinstance(response, dict) else response
+    if not isinstance(plugins, list) or not plugins:
+        raise ValueError("plugin inventory unavailable")
+    if any(p.get("state", {}).get("status") != "active" for p in plugins):
+        raise ValueError("plugin not active")
+    paths = {p.get("source", {}).get("path") for p in plugins}
+    packages = {p.get("source", {}).get("target") for p in plugins}
+    plugin_dir = pathlib.Path(manifest).parent / "plugins"
+    for row in pathlib.Path(manifest).read_text().splitlines():
+        fields = row.split("\t")
+        if len(fields) < 2:
+            continue
+        path = pathlib.Path(fields[1])
+        if fields[0] in {"link", "file"} and path.parent == plugin_dir and path.suffix in {".ts", ".js", ".mjs"}:
+            if str(path) not in paths:
+                raise ValueError("installed server plugin missing from inventory")
+        if len(fields) == 4 and fields[0] == "managed-array" and fields[2] == "plugin":
+            if fields[3] not in packages:
+                raise ValueError("installed server package missing from inventory")
+
+try:
+    command("service", "restart")
+except (OSError, ValueError, subprocess.TimeoutExpired):
+    print("warning: restart: service restart failed or timed out; installation kept", file=sys.stderr)
+    sys.exit(0)
+
+for attempt in range(VERIFY_ATTEMPTS):
+    try:
+        verify()
+        print("restart: service healthy; server plugins active (TUI clients must be reopened)")
+        break
+    except (OSError, ValueError, AttributeError, TypeError, subprocess.TimeoutExpired):
+        if attempt + 1 == VERIFY_ATTEMPTS:
+            print("warning: restart: health or plugin activation verification failed; installation kept; inspect opencode api get /api/plugin", file=sys.stderr)
+        else:
+            time.sleep(RETRY_DELAY)
+PY
 }
 
 # Legacy disposal is V1-only. V2 needs authenticated native reload; until a

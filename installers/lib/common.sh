@@ -29,6 +29,7 @@ TARGET_ARG=""
 DRY_RUN=0
 FORCE=0
 RELOAD=0
+RESTART=0
 BREW_TOOLS_MODE="auto"
 MANIFEST_ROOT=""
 OLD_MANIFEST=""
@@ -640,6 +641,9 @@ harness_main() {
       --dry-run) DRY_RUN=1 ;;
       --force) FORCE=1 ;;
       --reload) RELOAD=1 ;;
+      --restart)
+        declare -F restart_running_service >/dev/null || die "--restart is only supported by the OpenCode installer"
+        RESTART=1 ;;
       --install-brew-tools) set_brew_tools_mode enabled ;;
       --no-install-brew-tools) set_brew_tools_mode disabled ;;
       -h|--help) runtime_usage; exit 0 ;;

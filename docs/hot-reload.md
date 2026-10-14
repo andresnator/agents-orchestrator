@@ -4,6 +4,15 @@ The pinned plugins require OpenCode >=2.0.28 and <3. Restart after changing plug
 
 ## Quick path
 
+- From an external terminal, run `installers/opencode.sh install --restart` to
+  restart the shared V2 service after installation and verify API health and
+  server plugin activation. This interrupts connected sessions. It is never
+  automatic without the flag; reopen TUI clients to refresh their plugins.
+- `--restart` only supports the default global target and configuration
+  environment. It rejects `--project`, `--target`, `--reload`, and non-install
+  actions; `--dry-run` never restarts. Restart or verification failures warn
+  without undoing the completed installation. Verification retries briefly;
+  TUI plugin activation is not checked.
 - Save model/variant changes through `/models-profiles`; accept hot apply only when the connected runtime reports success.
 - Reinstall changed agents, commands or skills with `installers/opencode.sh install`, then restart the session to refresh its catalog.
 - `install --reload` is best-effort: on V2+ it warns that authenticated native reload is not integrated and requires restart. It never undoes a successful installation.

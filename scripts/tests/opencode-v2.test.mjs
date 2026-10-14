@@ -44,6 +44,108 @@ function succeeds(result) {
   assert.equal(result.status, 0, result.stdout + result.stderr);
 }
 
+async function restartFixture(t, failure = "") {
+  const f = await fixture(t);
+  const calls = join(f.root, "restart-calls");
+  const plugins = [{ id: "caveman-mode", source: { type: "local", path: join(f.home, ".config/opencode/plugins/caveman-mode.ts") }, state: { status: failure === "plugin" ? "failed" : "active" } }];
+  if (failure !== "package") plugins.push({ id: "graphify-init", source: { type: "package", target: "opencode-graphify-init@0.2.0" }, state: { status: "active" } });
+  await writeFile(join(f.root, "engram"), "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await writeFile(join(f.root, "opencode"), `#!/bin/sh
+case "$*" in
+  --version) printf 'opencode v2.0.28'; exit 0 ;;
+esac
+test -f "$HOME/.config/opencode/.agents-orchestrator-manifest" || exit 8
+printf '%s\\n' "$*" >> '${calls}'
+case "$*" in
+  'service restart') ${failure === "restart" ? "exit 9" : "exit 0"} ;;
+  'api get /api/info') printf '${failure === "health" ? "{}" : '{"version":"2.0.28","pid":123}'}' ;;
+  'api get /api/plugin'*) printf '${failure === "malformed" ? "invalid-json" : JSON.stringify({ data: failure === "missing" ? [{ id: "builtin", state: { status: "active" } }] : plugins })}' ;;
+  *) exit 10 ;;
+esac
+`, { mode: 0o700 });
+  return { ...f, calls, globalInstall: (extra = [], extraEnv = {}) => spawnSync("bash", [INSTALLER, "install", "--domain", "docs", "--no-install-brew-tools", ...extra], {
+    cwd: f.project, env: { ...process.env, HOME: f.home, PATH: f.root + ":" + process.env.PATH, OPENCODE_BIN: join(f.root, "opencode"), ...extraEnv }, encoding: "utf8",
+  }) };
+}
+
+test("shouldRestartAndVerifyServiceWhenGlobalInstallCommitsWithRestart", async (t) => {
+  // Given
+  const f = await restartFixture(t);
+  // When
+  const result = f.globalInstall(["--restart", "--domain", "common"]);
+  // Then
+  succeeds(result);
+  assert.match(result.stdout, /restart: service healthy; server plugins active/);
+  assert.match(await readFile(f.calls, "utf8"), /^service restart\napi get \/api\/info\napi get \/api\/plugin/);
+  assert.match(await readFile(f.calls, "utf8"), new RegExp(encodeURIComponent(f.home)));
+});
+
+for (const args of [[], ["--restart", "--dry-run"]]) {
+  test(`shouldNotRestartWhenInstallationOptionsAre_${JSON.stringify(args)}`, async (t) => {
+    // Given
+    const f = await restartFixture(t);
+    // When
+    succeeds(f.globalInstall(args));
+    // Then
+    await assert.rejects(readFile(f.calls), { code: "ENOENT" });
+  });
+}
+
+for (const args of [["--project"], ["--target", "scratch"], ["--reload"]]) {
+  test(`shouldRejectRestartBeforeMutationWhenOptionsAre_${JSON.stringify(args)}`, async (t) => {
+    // Given
+    const f = await restartFixture(t);
+    // When
+    const result = f.globalInstall(["--restart", ...args]);
+    // Then
+    assert.notEqual(result.status, 0);
+    await assert.rejects(readFile(f.calls), { code: "ENOENT" });
+    await assert.rejects(readdir(join(f.home, ".config/opencode")), { code: "ENOENT" });
+  });
+}
+
+test("shouldNotRestartWhenInstallationFailsBeforeCommit", async (t) => {
+  // Given
+  const f = await restartFixture(t);
+  // When
+  const result = f.globalInstall(["--restart"], { AGENTS_ORCHESTRATOR_TEST_FAIL_STEP: "before-manifest" });
+  // Then
+  assert.notEqual(result.status, 0);
+  await assert.rejects(readFile(f.calls), { code: "ENOENT" });
+});
+
+for (const failure of ["restart", "plugin", "health", "malformed", "missing", "package"]) {
+  test(`shouldKeepCommittedInstallAndWarnWhenRestartVerificationFails_${failure}`, async (t) => {
+    // Given
+    const f = await restartFixture(t, failure);
+    // When
+    const result = f.globalInstall(["--restart", "--domain", "common"]);
+    // Then
+    succeeds(result);
+    assert.match(result.stderr, /restart:.*installation kept/);
+    assert.doesNotMatch(result.stdout, /service healthy; server plugins active/);
+    assert.ok(await readFile(join(f.home, ".config/opencode/.agents-orchestrator-manifest"), "utf8"));
+  });
+}
+
+for (const action of ["status", "uninstall"]) {
+  test(`shouldRejectRestartWhenActionIs_${action}`, async (t) => {
+    const f = await restartFixture(t);
+    const result = spawnSync("bash", [INSTALLER, action, "--restart"], { cwd: f.project, env: f.env, encoding: "utf8" });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /--restart requires install/);
+    await assert.rejects(readFile(f.calls), { code: "ENOENT" });
+  });
+}
+
+test("shouldRejectRestartWhenRuntimeUsesNonDefaultConfiguration", async (t) => {
+  const f = await restartFixture(t);
+  const result = f.globalInstall(["--restart"], { OPENCODE_CONFIG_DIR: join(f.root, "alternate") });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /default OpenCode configuration environment/);
+  await assert.rejects(readFile(f.calls), { code: "ENOENT" });
+});
+
 async function snapshot(directory) {
   const result = {};
   for (const entry of await readdir(directory, { withFileTypes: true })) {
