@@ -134,7 +134,7 @@ def main():
         raise RuntimeError("Pass --binary for the native OpenCode 2.0.28 executable")
     root = pathlib.Path(tempfile.mkdtemp(prefix="statusline-live-", dir=options.temp_root)).resolve()
     os.chmod(root, 0o700)
-    plugin = pathlib.Path(__file__).resolve().parent
+    repository = pathlib.Path(__file__).resolve().parents[4]
     env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TERM": "xterm-256color",
            "TMPDIR": str(root), "OPENCODE_CONFIG_PROJECT_DISABLE": "true",
            "OPENCODE_DISABLE_MODELS_FETCH": "true", "OPENCODE_DISABLE_AUTOUPDATE": "true",
@@ -150,6 +150,12 @@ def main():
     env["OPENCODE_CONFIG_DIR"] = str(config)
     version = subprocess.check_output([options.binary, "--version"], env=env, cwd=project, timeout=TIMEOUT).decode().strip()
     assert version in ("2.0.28", "opencode v2.0.28"), version
+    subprocess.run(["/bin/bash", str(repository / "installers/opencode.sh"), "install",
+                    "--domain", "orchestration", "--target", str(config), "--no-install-brew-tools"],
+                   env={**env, "OPENCODE_BIN": options.binary}, cwd=project,
+                   check=True, capture_output=True, timeout=TIMEOUT)
+    installed_plugins = json.loads((config / "cli.json").read_text())["plugins"]
+    assert installed_plugins == ["./plugins/subagent-statusline.tsx"], installed_plugins
     provider = http.server.ThreadingHTTPServer(("127.0.0.1", 0), LocalProvider)
     provider.root = root
     base = f"http://127.0.0.1:{provider.server_port}/v1"
@@ -166,7 +172,7 @@ def main():
         "models": {"fixture": {"modelID": "fixture", "capabilities": {"tools": True, "input": ["text"], "output": ["text"]},
         "limit": {"context": 32768, "output": 8192}}}}}}))
     def configure(enabled):
-        entries = [str(plugin), str(driver)]
+        entries = [*installed_plugins, str(driver)]
         if not enabled:
             entries.append("-" + PLUGIN_ID)
         (config / "cli.json").write_text(json.dumps({"plugins": entries}))
