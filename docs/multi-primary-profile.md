@@ -1,6 +1,6 @@
 # Multi-Primary Profile
 
-The profile installs four direct primaries while preserving the user's default agent and foreign configuration.
+The profile installs four direct primaries on OpenCode >=2.0.28 and <3, preserves `default_agent`, and sets the effective `experimental.subagent_depth=1`. A legacy root `subagent_depth` is not the V2 setting and remains untouched unless restoring a profile-owned V1 ledger.
 
 ## Quick path
 
@@ -36,7 +36,11 @@ Executing an exact existing plan uses Direct or SDD without another contract or 
 scripts/multi-primary-profile.sh uninstall --project-root /absolute/project
 ```
 
-Uninstall removes only manifest-owned content. It restores the prior `subagent_depth` and preserves foreign files and configuration.
+Uninstall removes only manifest-owned content. It restores the prior `experimental.subagent_depth` value or absence, retaining originally empty parents and foreign keys/comments. Only a profile-created empty, comment-free parent is pruned. Reinstall keeps the original restore receipt; V1 profile ledgers restore their owned root value before migrating to V2.
+
+Fresh installs also record whether `cli.json` and its backup existed. Uninstall removes a profile-created CLI file only when it contains no comments or foreign settings, and removes only a newly created, unchanged uninstall backup. Existing backups are moved aside and restored around installer calls, including failures. Reinstall retains the initial receipt; older ledgers without CLI provenance preserve those files conservatively. Symlinked or non-regular CLI backups block before installer mutation.
+
+The profile never edits personal/global configuration. Project `cli.json` contributions are not proof that the normal global CLI loaded them; install CLI-only features into an explicitly chosen global configuration directory when needed.
 
 ## Manual regression
 

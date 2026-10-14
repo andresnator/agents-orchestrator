@@ -9,8 +9,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET=""
 OPENCODE_CONFIG_FILE=""
 CLI_CONFIG_FILE=""
-MIN_EXTERNAL_OPENCODE_VERSION="1.17.15"
+MIN_EXTERNAL_OPENCODE_VERSION="2.0.28"
 MIN_LOCAL_TUI_OPENCODE_VERSION="2.0.28"
+MAX_PLUGIN_OPENCODE_MAJOR="3"
+MIN_V2_OPENCODE_VERSION="2.0.0"
 RETIRED_MODEL_TUI_SPECS="./plugins/model-configurator/tui.js ./plugins/model-configurator.tsx"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 BREW_TOOLS_CATALOG="$SCRIPT_DIR/brew-tools.tsv"
@@ -154,7 +156,10 @@ runtime_dest() {
     external-server-plugins) DEST_PATH="$TARGET/plugins/$2.js" ;;
     external-tui-plugins) DEST_PATH="$TARGET/plugins/$2/tui.js" ;;
     npm-server-plugins) DEST_PATH="$OPENCODE_CONFIG_FILE" ;;
-    npm-tui-plugins) DEST_PATH="$TARGET/tui.json" ;;
+    npm-tui-plugins)
+      # V2 CLI settings are global; a project-local cli.json is not loaded.
+      if [ "$PROJECT_TARGET" -eq 1 ]; then DEST_PATH=""; else DEST_PATH="$CLI_CONFIG_FILE"; fi
+      ;;
     tui-plugins) DEST_PATH="$TARGET/plugins/$2" ;;
     *) DEST_PATH="$TARGET/$1/$2" ;;
   esac
@@ -400,17 +405,17 @@ runtime_install_component() {
       maybe_fail_install "after-links"
       package="$(npm_plugin_package "$src")"
       spec="$(npm_plugin_spec "$src")"
-      if ! managed_array_has "$dest" plugin "$spec" &&
-        managed_array_npm_has "$dest" plugin "$package"; then
-        remove_managed_npm_entries "$dest" plugin "$package"
+      if ! managed_array_has "$dest" plugins "$spec" &&
+        managed_array_npm_has "$dest" plugins "$package"; then
+        remove_managed_npm_entries "$dest" plugins "$package"
       fi
       for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-        if managed_array_has "$dest" plugin "$legacy_spec" &&
-          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; }; then
-          remove_managed_array_entry "$dest" plugin "$legacy_spec"
+        if managed_array_has "$dest" plugins "$legacy_spec" &&
+          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugins "$legacy_spec"; }; then
+          remove_managed_array_entry "$dest" plugins "$legacy_spec"
         fi
       done
-      ensure_managed_array_entry "$dest" plugin "$spec" "$manifest"
+      ensure_managed_array_entry "$dest" plugins "$spec" "$manifest"
       maybe_fail_install "after-managed-array"
       return 0
       ;;
@@ -478,14 +483,14 @@ runtime_component_state() {
     version="$(external_descriptor_field "$src" version)"
     package="$(npm_plugin_package "$src")"
     spec="$(npm_plugin_spec "$src")"
-    if managed_array_has "$dest" plugin "$spec"; then
+    if managed_array_has "$dest" plugins "$spec"; then
       compatibility="$(opencode_compatibility)"
       if [ "$compatibility" = "compatible" ]; then
         printf 'registered@%s' "$version"
       else
         printf 'registered@%s; %s' "$version" "$compatibility"
       fi
-    elif managed_array_npm_has "$dest" plugin "$package"; then
+    elif managed_array_npm_has "$dest" plugins "$package"; then
       printf 'foreign'
     else
       printf 'not installed'
@@ -701,7 +706,11 @@ runtime_pre_install() {
   awk -F '\t' '$1 == "external-server-plugins" || $1 == "external-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_external=1
   awk -F '\t' '$1 == "npm-server-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_npm_server=1
   awk -F '\t' '$1 == "npm-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_npm_tui=1
-  awk -F '\t' '$1 == "tui-plugins" || $1 == "external-tui-plugins" || $1 == "npm-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_tui=1
+  if [ "$PROJECT_TARGET" -eq 1 ] && [ "$has_npm_tui" -eq 1 ]; then
+    warn "CLI-only npm plugins require a global install; skipping project registration"
+    has_npm_tui=0
+  fi
+  awk -F '\t' -v project="$PROJECT_TARGET" '$1 == "tui-plugins" || $1 == "external-tui-plugins" || ($1 == "npm-tui-plugins" && !project) { found = 1 } END { exit found ? 0 : 1 }' "$selected" && has_tui=1
   [ "$has_npm_server" -eq 0 ] && [ "$has_npm_tui" -eq 0 ] || has_npm=1
   [ "$has_npm_server" -eq 0 ] && [ "$has_tui" -eq 0 ] || has_managed_config=1
 
@@ -736,6 +745,7 @@ runtime_pre_install() {
     DEST_PATH=""
     runtime_dest "$type" "$name"
     dest="$DEST_PATH"
+    [ -n "$dest" ] || continue
     case "$type" in
       external-server-plugins|external-tui-plugins)
         if [ -n "${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}" ]; then
@@ -773,16 +783,16 @@ runtime_pre_install() {
         validate_npm_tui_descriptor "$name" "$src"
         package="$(npm_plugin_package "$src")"
         spec="$(npm_plugin_spec "$src")"
-        if ! managed_array_has "$dest" plugin "$spec" &&
-          managed_array_npm_has "$dest" plugin "$package" &&
+        if ! managed_array_has "$dest" plugins "$spec" &&
+          managed_array_npm_has "$dest" plugins "$package" &&
           [ "$FORCE" -ne 1 ] &&
-          ! manifest_owns_npm_package "$OLD_MANIFEST" "$dest" plugin "$package"; then
+          ! manifest_owns_npm_package "$OLD_MANIFEST" "$dest" plugins "$package"; then
           die "$dest already configures npm package $package; use --force to replace it"
         fi
         for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-          if managed_array_has "$dest" plugin "$legacy_spec" &&
+          if managed_array_has "$dest" plugins "$legacy_spec" &&
             [ "$FORCE" -ne 1 ] &&
-            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; then
+            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugins "$legacy_spec"; then
             die "$dest contains foreign legacy Models Presets entry $legacy_spec; remove it or use --force"
           fi
         done
@@ -952,23 +962,29 @@ check_opencode_version() {
   [ "$compatibility" = "compatible" ] || die "$compatibility"
 }
 
-opencode_compatibility() {
-  local binary version version_pattern minimum
-  minimum="${1:-$MIN_EXTERNAL_OPENCODE_VERSION}"
+opencode_version() {
+  local binary version version_pattern
   binary="${OPENCODE_BIN:-$(command -v opencode || true)}"
-  if [ -z "$binary" ]; then
-    printf 'opencode >= %s is required for external and TUI plugins' "$minimum"
+  [ -n "$binary" ] || { printf unknown; return 1; }
+  version_pattern='^[[:space:]]*(opencode[[:space:]]+)?v?([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?[[:space:]]*$'
+  if version="$("$binary" --version 2>/dev/null)" && [[ "$version" =~ $version_pattern ]]; then
+    printf '%s' "${BASH_REMATCH[2]}${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
     return 0
   fi
-  # Accept bare/v-prefixed versions and OpenCode v2's product-prefixed output.
-  version_pattern='^[[:space:]]*(opencode[[:space:]]+)?v?([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?[[:space:]]*$'
-  if version="$("$binary" --version 2>/dev/null)" &&
-    [[ "$version" =~ $version_pattern ]] &&
-    version_at_least "${BASH_REMATCH[2]}" "$minimum"; then
-    printf 'compatible'
-  else
-    printf 'opencode >= %s is required for external and TUI plugins (found %s)' "$minimum" "${version:-unknown}"
+  printf '%s' "${version:-unknown}"
+  return 1
+}
+
+opencode_compatibility() {
+  local version minimum="${1:-$MIN_EXTERNAL_OPENCODE_VERSION}"
+  # Pinned package engine ranges exclude prereleases, but allow build metadata.
+  if version="$(opencode_version)" && [[ "${version%%+*}" != *-* ]] &&
+    version_at_least "$version" "$minimum" && [ "${version%%.*}" -lt "$MAX_PLUGIN_OPENCODE_MAJOR" ]; then
+    printf compatible
+    return 0
   fi
+  printf 'opencode >= %s and < %s.0.0 is required for external and TUI plugins (found %s)' \
+    "$minimum" "$MAX_PLUGIN_OPENCODE_MAJOR" "$version"
 }
 
 version_at_least() {
@@ -993,7 +1009,7 @@ validate_managed_jsonc_file() {
 validate_managed_files() {
   local validate_tui="$1" validate_server="$2"
   if [ "$validate_tui" -eq 1 ]; then
-    validate_managed_jsonc_file "$TARGET/tui.json"
+    validate_managed_jsonc_file "$CLI_CONFIG_FILE" plugins
   fi
   if [ "$validate_server" -eq 1 ]; then
     validate_managed_jsonc_file "$OPENCODE_CONFIG_FILE"
@@ -1323,13 +1339,18 @@ runtime_post_install() {
   reload_running_servers
 }
 
-# Validated on OpenCode 1.17.15 (docs/hot-reload.md): POST /global/dispose makes
-# every instance re-read markdown artifacts and project config on its next
-# request. It does NOT re-read the global opencode.json[c] (infinite-TTL cache)
-# and cannot reload plugin code; any installed plugin-bundle change still needs
-# a restart even when --reload is requested.
+# Legacy disposal is V1-only. V2 needs authenticated native reload; until a
+# verified integration exists, report restart instead of probing obsolete APIs.
 reload_running_servers() {
-  local urls url health reachable=0
+  local urls url health version reachable=0
+  if ! version="$(opencode_version)"; then
+    warn "reload: cannot determine OpenCode version; restart sessions to apply"
+    return 0
+  fi
+  if version_at_least "$version" "$MIN_V2_OPENCODE_VERSION"; then
+    warn "reload: OpenCode V2+ authenticated native reload is not integrated; restart sessions to apply"
+    return 0
+  fi
   command -v curl >/dev/null 2>&1 || { warn "reload: curl not found; restart OpenCode sessions to apply"; return 0; }
   urls="$(discover_opencode_server_urls)"
   if [ -z "$urls" ]; then

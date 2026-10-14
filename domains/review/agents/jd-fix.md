@@ -16,7 +16,7 @@ permission:
 
 Fix only ids explicitly marked confirmed or emphasis-confirmed in the brief. One minimal diff per id; no refactors, drive-by changes, new findings, planning/state edits, staging, commits, or push. Follow established conventions and run the named check after each fix. Use graph queries only when available; never mutate graph lifecycle.
 
-Missing/ambiguous authorization is `BLOCK review/fix <reason>` before editing. Unreproducible/conflicting findings remain open.
+Require explicit scope/id authorization and a matching current content receipt before editing; mode selection is not permission. Missing/ambiguous authorization or stale inputs is `BLOCK review/fix <reason>`. Unreproducible/conflicting findings remain open.
 
 ```text
 OK fix files=<csv> check=<one-line>

@@ -7,7 +7,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 INSTALLER="$REPO_ROOT/installers/opencode.sh"
 JSONC_EDITOR="$REPO_ROOT/scripts/jsonc-array.py"
 
-PROFILE_CONTRACT="multi-primary-profile/v1"
+PROFILE_CONTRACT="multi-primary-profile/v2"
+LEGACY_PROFILE_CONTRACT="multi-primary-profile/v1"
+MANAGED_DEPTH_PATH="experimental.subagent_depth"
+LOCAL_TUI_KIND="local-tui"
 PROFILE_DOMAINS="plan,orchestration,architecture,review,common"
 PREVIOUS_PROFILE_DOMAINS="plan,sdd,architecture,review,common"
 EARLIER_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
@@ -19,6 +22,9 @@ PROJECT_ROOT_ARG=""
 PROJECT_ROOT=""
 TARGET=""
 CONFIG_FILE=""
+CLI_CONFIG_FILE=""
+CLI_BACKUP_SNAPSHOT=""
+CLI_BACKUP_PRESENT=0
 PROFILE_CONFIG_FILE=""
 INSTALLER_MANIFEST=""
 PROFILE_MANIFEST=""
@@ -38,12 +44,39 @@ usage: scripts/multi-primary-profile.sh install|status|uninstall --project-root 
 Installs or removes the opt-in multi-primary profile only in
 <dir>/.opencode. Global OpenCode configuration is never a target.
 Project installs skip Homebrew tools unless --install-brew-tools is set.
-The profile preserves default_agent and manages only subagent_depth.
+The profile preserves default_agent and manages only experimental.subagent_depth.
 EOF
 }
 
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
-cleanup() { rm -f "$TMP_ONE" "$TMP_TWO" "$TMP_THREE"; }
+cleanup() {
+  restore_cli_backup
+  rm -f "$TMP_ONE" "$TMP_TWO" "$TMP_THREE"
+}
+
+snapshot_cli_backup() {
+  local backup="$CLI_CONFIG_FILE.bak" snapshot
+  CLI_BACKUP_PRESENT=0
+  [ ! -L "$backup" ] || die "refusing symlinked CLI backup: $backup"
+  if [ -e "$backup" ]; then
+    [ -f "$backup" ] || die "CLI backup is not a regular file: $backup"
+    CLI_BACKUP_PRESENT=1
+    snapshot="$(mktemp "$TARGET/.multi-primary-cli-backup.XXXXXX")"
+    # Move aside before rewrites so symlink-free hardlink aliases are also safe.
+    if ! mv -f "$backup" "$snapshot"; then
+      rm -f "$snapshot"
+      die "failed to snapshot CLI backup: $backup"
+    fi
+    CLI_BACKUP_SNAPSHOT="$snapshot"
+  fi
+}
+
+restore_cli_backup() {
+  if [ -n "$CLI_BACKUP_SNAPSHOT" ]; then
+    mv -f "$CLI_BACKUP_SNAPSHOT" "$CLI_CONFIG_FILE.bak"
+    CLI_BACKUP_SNAPSHOT=""
+  fi
+}
 
 sha256_file() {
   if command -v shasum >/dev/null 2>&1; then
@@ -90,6 +123,7 @@ resolve_project_root() {
   else
     CONFIG_FILE="$TARGET/opencode.jsonc"
   fi
+  CLI_CONFIG_FILE="$TARGET/cli.json"
   INSTALLER_MANIFEST="$TARGET/.agents-orchestrator-manifest"
   PROFILE_MANIFEST="$TARGET/.multi-primary-profile-manifest"
 }
@@ -103,13 +137,14 @@ reject_symlinked_managed_directories() {
 }
 
 read_scalar() {
-  local file="$1" property="$2" status
+  local file="$1" property="$2" action="${3:-get}" status
+  [ "$property" != "$MANAGED_DEPTH_PATH" ] || action=get-path
   JSON_STATE="absent"
   JSON_VALUE=""
   [ ! -e "$file" ] || [ -f "$file" ] || die "$file must be a regular file"
   [ -f "$file" ] || return 0
   set +e
-  JSON_VALUE="$(python3 "$JSONC_EDITOR" get "$file" "$property")"
+  JSON_VALUE="$(python3 "$JSONC_EDITOR" "$action" "$file" "$property")"
   status=$?
   set -e
   case "$status" in
@@ -121,6 +156,9 @@ read_scalar() {
 
 render_jsonc_action() {
   local action="$1" input="$2" property="$3" value="$4" output="$5" status
+  if [ "$property" = "$MANAGED_DEPTH_PATH" ]; then
+    case "$action" in set) action=set-path ;; remove-property) action=remove-path ;; esac
+  fi
   set +e
   if [ -n "$value" ]; then
     python3 "$JSONC_EDITOR" "$action" "$input" "$property" "$value" > "$output"
@@ -138,28 +176,43 @@ render_jsonc_action() {
 new_tmp() { mktemp "${TMPDIR:-/tmp}/multi-primary-profile.XXXXXX"; }
 
 render_managed_config() {
+  [ -z "$TMP_TWO" ] || rm -f "$TMP_TWO"
   TMP_TWO="$(new_tmp)"
-  render_jsonc_action set "$CONFIG_FILE" subagent_depth "$MANAGED_SUBAGENT_DEPTH" "$TMP_TWO"
+  render_jsonc_action set "${1:-$CONFIG_FILE}" "$MANAGED_DEPTH_PATH" "$MANAGED_SUBAGENT_DEPTH" "$TMP_TWO"
+}
+
+profile_depth_path() {
+  if [ "$(manifest_value contract)" = "$LEGACY_PROFILE_CONTRACT" ]; then
+    printf 'subagent_depth'
+  else
+    printf '%s' "$MANAGED_DEPTH_PATH"
+  fi
 }
 
 render_restored_config_file() {
   local file="$1" depth_state="$2" depth_json="$3" output="$4"
+  local depth_path="${5:-$MANAGED_DEPTH_PATH}" parent_state="${6:-value}" action=remove-property
   if [ "$depth_state" = value ]; then
-    render_jsonc_action set "$file" subagent_depth "$depth_json" "$output"
+    render_jsonc_action set "$file" "$depth_path" "$depth_json" "$output"
   else
-    render_jsonc_action remove-property "$file" subagent_depth "" "$output"
+    if [ "$depth_path" = "$MANAGED_DEPTH_PATH" ] && [ "$parent_state" = absent ]; then action=remove-path-prune; fi
+    render_jsonc_action "$action" "$file" "$depth_path" "" "$output"
   fi
 }
 
 render_restored_config() {
+  [ -z "$TMP_TWO" ] || rm -f "$TMP_TWO"
   TMP_TWO="$(new_tmp)"
-  render_restored_config_file "$CONFIG_FILE" "$1" "$2" "$TMP_TWO"
+  render_restored_config_file "$CONFIG_FILE" "$1" "$2" "$TMP_TWO" "$3" "$4"
 }
 
 is_removable_generated_config() {
-  local compact
-  compact="$(tr -d '[:space:]' < "$1")"
-  [ "$compact" = "{}" ] || [ "$compact" = '{"plugin":[]}' ]
+  # Match only empty generated content; retain comments and foreign keys verbatim.
+  python3 - "$1" "${2:-plugin}" <<'PY'
+import json, pathlib, re, sys
+pattern = r'\s*\{\s*(?:' + re.escape(json.dumps(sys.argv[2])) + r'\s*:\s*\[\s*\]\s*)?\}\s*'
+sys.exit(0 if re.fullmatch(pattern, pathlib.Path(sys.argv[1]).read_text()) else 1)
+PY
 }
 
 manifest_value() {
@@ -168,6 +221,7 @@ manifest_value() {
 }
 
 profile_inventory_needs_migration() {
+  [ "$(manifest_value contract)" != "$LEGACY_PROFILE_CONTRACT" ] || return 0
   case "$(manifest_value domains)" in
     "$PREVIOUS_PROFILE_DOMAINS"|"$EARLIER_PROFILE_DOMAINS") return 0 ;;
     *) return 1 ;;
@@ -213,10 +267,17 @@ emit_expected_links() {
 }
 
 emit_expected_files() {
-  local domain file name old_ifs
+  local domain file name support old_ifs
   old_ifs="$IFS"
   IFS=,
   for domain in $PROFILE_DOMAINS; do
+    for file in "$REPO_ROOT/domains/$domain/tui-plugins/"*.tsx; do
+      [ -f "$file" ] || continue
+      printf '%s\t%s\t%s\n' "$TARGET/plugins/$(basename "$file")" "$LOCAL_TUI_KIND" "$file"
+      while IFS= read -r support; do
+        printf '%s\t%s\t%s\n' "$TARGET/plugins/$(basename "${file%.tsx}")/$(basename "$support")" "$LOCAL_TUI_KIND" "$support"
+      done < <(find "${file%.tsx}" -maxdepth 1 -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' -o -name package.json \) ! -name '*.test.*' 2>/dev/null | sort)
+    done
     [ -d "$REPO_ROOT/domains/$domain/external-plugins" ] || continue
     find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f -name '*.server.json' | sort |
       while IFS= read -r file; do
@@ -231,10 +292,14 @@ emit_expected_files() {
 }
 
 emit_expected_managed_arrays() {
-  local config_file="${1:-$CONFIG_FILE}" domain descriptor package version old_ifs
+  local config_file="${1:-$CONFIG_FILE}" domain descriptor package version file old_ifs
   old_ifs="$IFS"
   IFS=,
   for domain in $PROFILE_DOMAINS; do
+    for file in "$REPO_ROOT/domains/$domain/tui-plugins/"*.tsx; do
+      [ -f "$file" ] || continue
+      printf '%s\tplugins\t./plugins/%s\n' "$TARGET/cli.json" "$(basename "$file")"
+    done
     [ -d "$REPO_ROOT/domains/$domain/external-plugins" ] || continue
     find "$REPO_ROOT/domains/$domain/external-plugins" -maxdepth 1 -type f -name '*.npm-server.json' | sort |
       while IFS= read -r descriptor; do
@@ -249,11 +314,14 @@ emit_expected_managed_arrays() {
 is_expected_managed_array() {
   local path="$1" field="$2" value="$3" config_file="${4:-$CONFIG_FILE}"
   local package expected_path expected_field expected_value expected_package
-  package="$(npm_package_from_spec "$value")" || return 1
   while IFS=$'\t' read -r expected_path expected_field expected_value; do
-    expected_package="$(npm_package_from_spec "$expected_value")" || continue
-    if [ "$path" = "$expected_path" ] && [ "$field" = "$expected_field" ] && [ "$package" = "$expected_package" ]; then
-      return 0
+    [ "$path" = "$expected_path" ] && [ "$field" = "$expected_field" ] || continue
+    if [ "$field" = plugins ]; then
+      [ "$value" != "$expected_value" ] || return 0
+    else
+      package="$(npm_package_from_spec "$value")" || continue
+      expected_package="$(npm_package_from_spec "$expected_value")" || continue
+      [ "$package" != "$expected_package" ] || return 0
     fi
   done < <(emit_expected_managed_arrays "$config_file")
   return 1
@@ -366,7 +434,9 @@ validate_installer_contents() {
   while IFS=$'\t' read -r path name descriptor; do
     manifest_has_row file "$path" || die "external profile file is missing from manifest: $path"
     [ -f "$path" ] && [ ! -L "$path" ] || die "external profile file is not regular: $path"
-    if [ -n "${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}" ] &&
+    if [ "$name" = "$LOCAL_TUI_KIND" ]; then
+      expected_sha="$(sha256_file "$descriptor")"
+    elif [ -n "${AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR:-}" ] &&
       [ -f "$AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR/$name.js" ]; then
       expected_sha="$(sha256_file "$AGENTS_ORCHESTRATOR_TEST_EXTERNAL_ARTIFACTS_DIR/$name.js")"
     else
@@ -406,15 +476,29 @@ validate_installer_contents() {
 
 validate_managed_config() {
   local config_file="${1:-$CONFIG_FILE}"
-  read_scalar "$config_file" subagent_depth
+  local depth_path="${2:-$(profile_depth_path)}"
+  read_scalar "$config_file" "$depth_path"
   [ "$JSON_STATE" = value ] && [ "$JSON_VALUE" = "$MANAGED_SUBAGENT_DEPTH" ] ||
-    die "managed subagent_depth changed in $config_file"
+    die "managed $depth_path changed in $config_file"
 }
 
 validate_profile_manifest() {
   local saved_domains
   [ -f "$PROFILE_MANIFEST" ] || die "profile manifest is missing: $PROFILE_MANIFEST"
-  [ "$(manifest_value contract)" = "$PROFILE_CONTRACT" ] || die "foreign profile manifest contract"
+  case "$(manifest_value contract)" in
+    "$PROFILE_CONTRACT"|"$LEGACY_PROFILE_CONTRACT") ;;
+    *) die "foreign profile manifest contract" ;;
+  esac
+  case "$(manifest_value previous-subagent-depth-state)" in
+    absent|value) ;;
+    *) die "invalid previous depth state in profile manifest" ;;
+  esac
+  if [ "$(manifest_value contract)" = "$PROFILE_CONTRACT" ]; then
+    case "$(manifest_value previous-experimental-state)" in
+      absent|value) ;;
+      *) die "invalid previous experimental state in profile manifest" ;;
+    esac
+  fi
   [ "$(manifest_value project-root)" = "$PROJECT_ROOT" ] || die "global or foreign profile manifest root"
   [ "$(manifest_value target)" = "$TARGET" ] || die "global or foreign profile target"
   saved_domains="$(manifest_value domains)"
@@ -433,6 +517,13 @@ validate_profile_manifest() {
   case "$config_existed" in 0|1) ;; *) die "invalid config-existed value in profile manifest" ;; esac
   target_existed="$(manifest_value target-existed)"
   case "$target_existed" in ""|0|1) ;; *) die "invalid target-existed value in profile manifest" ;; esac
+  local key
+  for key in cli-config-existed cli-backup-existed; do
+    case "$(manifest_value "$key")" in
+      ""|0|1) ;;
+      *) die "invalid $key value in profile manifest" ;;
+    esac
+  done
   [ -f "$INSTALLER_MANIFEST" ] || die "installer manifest is missing"
   expected_sha="$(manifest_value installer-manifest-sha256)"
   actual_sha="$(sha256_file "$INSTALLER_MANIFEST")"
@@ -442,7 +533,8 @@ validate_profile_manifest() {
 }
 
 write_profile_manifest() {
-  local depth_state="$1" depth_json="$2" config_existed="$3" target_existed="$4"
+  local depth_state="$1" depth_json="$2" config_existed="$3" target_existed="$4" parent_state="$5"
+  local cli_existed="$6" cli_backup_existed="$7"
   TMP_THREE="$(mktemp "$TARGET/.multi-primary-profile-manifest.tmp.XXXXXX")"
   {
     printf 'contract\t%s\n' "$PROFILE_CONTRACT"
@@ -452,8 +544,11 @@ write_profile_manifest() {
     printf 'config-file\t%s\n' "$CONFIG_FILE"
     printf 'config-existed\t%s\n' "$config_existed"
     printf 'target-existed\t%s\n' "$target_existed"
+    printf 'cli-config-existed\t%s\n' "$cli_existed"
+    printf 'cli-backup-existed\t%s\n' "$cli_backup_existed"
     printf 'previous-subagent-depth-state\t%s\n' "$depth_state"
     printf 'previous-subagent-depth-json\t%s\n' "$depth_json"
+    printf 'previous-experimental-state\t%s\n' "$parent_state"
     printf 'installer-manifest-sha256\t%s\n' "$(sha256_file "$INSTALLER_MANIFEST")"
   } > "$TMP_THREE"
   mv "$TMP_THREE" "$PROFILE_MANIFEST"
@@ -461,25 +556,35 @@ write_profile_manifest() {
 }
 
 run_install() {
-  local depth_state depth_json config_existed=0 target_existed=0
-  local previous_config_file="" previous_depth_state="" previous_depth_json="" migrate_config=0
+  local depth_state depth_json parent_state config_existed=0 target_existed=0
+  local cli_existed=1 cli_backup_existed=1
+  local previous_config_file="" previous_depth_path="" previous_depth_state="" previous_depth_json=""
+  local previous_parent_state=value migrate_config=0 input_file
   local installer_args=(install --domain "$PROFILE_DOMAINS" --target "$TARGET")
   if [ -f "$PROFILE_MANIFEST" ]; then
     validate_profile_manifest
-    validate_managed_config "$PROFILE_CONFIG_FILE"
+    previous_depth_path="$(profile_depth_path)"
+    validate_managed_config "$PROFILE_CONFIG_FILE" "$previous_depth_path"
     depth_state="$(manifest_value previous-subagent-depth-state)"
     depth_json="$(manifest_value previous-subagent-depth-json)"
+    parent_state="$(manifest_value previous-experimental-state)"
     config_existed="$(manifest_value config-existed)"
     target_existed="$(manifest_value target-existed)"
     [ -n "$target_existed" ] || target_existed=1
-    if [ "$CONFIG_FILE" != "$PROFILE_CONFIG_FILE" ]; then
+    cli_existed="$(manifest_value cli-config-existed)"
+    cli_backup_existed="$(manifest_value cli-backup-existed)"
+    cli_existed="${cli_existed:-1}"
+    cli_backup_existed="${cli_backup_existed:-1}"
+    if [ "$CONFIG_FILE" != "$PROFILE_CONFIG_FILE" ] || [ "$previous_depth_path" != "$MANAGED_DEPTH_PATH" ]; then
       previous_config_file="$PROFILE_CONFIG_FILE"
       previous_depth_state="$depth_state"
       previous_depth_json="$depth_json"
-      read_scalar "$CONFIG_FILE" subagent_depth
-      depth_state="$JSON_STATE"
-      depth_json="$JSON_VALUE"
-      config_existed=1
+      previous_parent_state="${parent_state:-value}"
+      read_scalar "$CONFIG_FILE" "$MANAGED_DEPTH_PATH"
+      depth_state="$JSON_STATE"; depth_json="$JSON_VALUE"
+      read_scalar "$CONFIG_FILE" experimental get-path
+      parent_state="$JSON_STATE"
+      [ "$CONFIG_FILE" = "$PROFILE_CONFIG_FILE" ] || config_existed=1
       migrate_config=1
     fi
   else
@@ -487,30 +592,44 @@ run_install() {
     preflight_fresh_destinations
     if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then target_existed=1; fi
     [ ! -e "$CONFIG_FILE" ] || config_existed=1
-    read_scalar "$CONFIG_FILE" subagent_depth
+    if [ ! -e "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ]; then cli_existed=0; fi
+    if [ ! -e "$CLI_CONFIG_FILE.bak" ] && [ ! -L "$CLI_CONFIG_FILE.bak" ]; then cli_backup_existed=0; fi
+    read_scalar "$CONFIG_FILE" "$MANAGED_DEPTH_PATH"
     depth_state="$JSON_STATE"; depth_json="$JSON_VALUE"
+    read_scalar "$CONFIG_FILE" experimental get-path
+    parent_state="$JSON_STATE"
   fi
 
-  [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
-  "$INSTALLER" "${installer_args[@]}"
-  validate_installer_contents
+  # Validate restoration and native parents before the installer mutates anything.
+  input_file="$CONFIG_FILE"
   if [ "$migrate_config" -eq 1 ]; then
     TMP_ONE="$(new_tmp)"
-    render_restored_config_file "$previous_config_file" "$previous_depth_state" "$previous_depth_json" "$TMP_ONE"
-    render_managed_config
-    mv "$TMP_ONE" "$previous_config_file"
-    TMP_ONE=""
-    mv "$TMP_TWO" "$CONFIG_FILE"
-    TMP_TWO=""
-  else
-    render_managed_config
-    mkdir -p "$TARGET"
-    mv "$TMP_TWO" "$CONFIG_FILE"
-    TMP_TWO=""
+    render_restored_config_file "$previous_config_file" "$previous_depth_state" "$previous_depth_json" "$TMP_ONE" "$previous_depth_path" "$previous_parent_state"
+    [ "$CONFIG_FILE" != "$previous_config_file" ] || input_file="$TMP_ONE"
   fi
-  write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed"
+  render_managed_config "$input_file"
+  [ -z "$BREW_TOOLS_OPTION" ] || installer_args+=("$BREW_TOOLS_OPTION")
+  snapshot_cli_backup
+  "$INSTALLER" "${installer_args[@]}"
+  restore_cli_backup
+  validate_installer_contents
+
+  # Re-render after sync so managed plugin edits are not overwritten by preflight.
+  input_file="$CONFIG_FILE"
+  if [ "$migrate_config" -eq 1 ]; then
+    render_restored_config_file "$previous_config_file" "$previous_depth_state" "$previous_depth_json" "$TMP_ONE" "$previous_depth_path" "$previous_parent_state"
+    [ "$CONFIG_FILE" != "$previous_config_file" ] || input_file="$TMP_ONE"
+  fi
+  render_managed_config "$input_file"
+  if [ "$migrate_config" -eq 1 ]; then
+    if [ "$CONFIG_FILE" != "$previous_config_file" ]; then mv "$TMP_ONE" "$previous_config_file"; else rm -f "$TMP_ONE"; fi
+    TMP_ONE=""
+  fi
+  mv "$TMP_TWO" "$CONFIG_FILE"
+  TMP_TWO=""
+  write_profile_manifest "$depth_state" "$depth_json" "$config_existed" "$target_existed" "$parent_state" "$cli_existed" "$cli_backup_existed"
   validate_managed_config
-  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\n' \
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nexperimental.subagent_depth: 1\n' \
     "$PROJECT_ROOT" "$CONFIG_FILE"
 }
 
@@ -529,7 +648,7 @@ run_status() {
       "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
     return 0
   fi
-  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 4\nquestion owners: 4\n' \
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nexperimental.subagent_depth: 1\nrepo-owned primaries: 4\nquestion owners: 4\n' \
     "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
 }
 
@@ -538,15 +657,35 @@ run_uninstall() {
   validate_profile_manifest
   validate_managed_config "$PROFILE_CONFIG_FILE"
 
-  local depth_state depth_json config_existed target_existed
+  local depth_state depth_json config_existed target_existed depth_path parent_state
+  local cli_existed cli_backup_existed cli_sha=""
+  depth_path="$(profile_depth_path)"
+  parent_state="$(manifest_value previous-experimental-state)"
+  parent_state="${parent_state:-value}"
   depth_state="$(manifest_value previous-subagent-depth-state)"
   depth_json="$(manifest_value previous-subagent-depth-json)"
   config_existed="$(manifest_value config-existed)"
   target_existed="$(manifest_value target-existed)"
   [ -n "$target_existed" ] || target_existed=1
-  "$INSTALLER" uninstall --target "$TARGET"
+  cli_existed="$(manifest_value cli-config-existed)"
+  cli_backup_existed="$(manifest_value cli-backup-existed)"
   CONFIG_FILE="$PROFILE_CONFIG_FILE"
-  render_restored_config "$depth_state" "$depth_json"
+  render_restored_config "$depth_state" "$depth_json" "$depth_path" "$parent_state"
+  snapshot_cli_backup
+  if [ -f "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ]; then cli_sha="$(sha256_file "$CLI_CONFIG_FILE")"; fi
+  "$INSTALLER" uninstall --target "$TARGET"
+  restore_cli_backup
+  if [ "$cli_existed" = 0 ] && [ -f "$CLI_CONFIG_FILE" ] && [ ! -L "$CLI_CONFIG_FILE" ] &&
+    is_removable_generated_config "$CLI_CONFIG_FILE" plugins; then
+    rm -f "$CLI_CONFIG_FILE"
+    # Only this uninstall's newly created, unchanged backup is safe to delete.
+    if [ "$cli_backup_existed" = 0 ] && [ "$CLI_BACKUP_PRESENT" = 0 ] &&
+      [ -f "$CLI_CONFIG_FILE.bak" ] && [ ! -L "$CLI_CONFIG_FILE.bak" ] &&
+      [ -n "$cli_sha" ] && [ "$(sha256_file "$CLI_CONFIG_FILE.bak")" = "$cli_sha" ]; then
+      rm -f "$CLI_CONFIG_FILE.bak"
+    fi
+  fi
+  render_restored_config "$depth_state" "$depth_json" "$depth_path" "$parent_state"
   if [ "$config_existed" = 0 ] && is_removable_generated_config "$TMP_TWO"; then
     rm -f "$CONFIG_FILE"
     rm -f "$CONFIG_FILE.bak"

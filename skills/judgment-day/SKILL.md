@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "2.0.0"
+  version: "2.0.1"
   status: in-progress
 ---
 
@@ -14,18 +14,24 @@ metadata:
 
 The coordinator scopes and synthesizes; judges review blindly; the fixer edits only authorized findings. Missing target is `ASK`, never a partial review. Load at most 3-5 relevant project rules and inject the same distilled rules into every child brief.
 
+## Intake and routing
+
+`light` and `full` select review shape, never edit permission; `verdict-only` forbids edits. Without a selector, use Light for a small, bounded, low-risk target and Full for >400 changed lines, security-sensitive behavior, public contracts, migrations, or cross-component risk. Ask when target or risk is unclear. Explicit Light remains solo; recommend Full when its evidence exceeds that scope.
+
+Before dispatch, record canonical root, base SHA/range, exact included paths, staged/unstaged/untracked selection, and SHA-256 of a sorted unambiguous manifest of path, kind, mode and content (symlinks: link target). Include evidence inputs, not just filenames or diff stats. Give every judge the same target receipt. Recompute it before synthesis and final verdict; a mismatch makes affected results stale. Refresh the receipt and repeat only affected review, or report a blocked verdict. An authorized fix creates a new content receipt; retain the before/after evidence and check unrelated scope stayed unchanged. Do not create durable state unless requested.
+
 ## Full protocol
 
 1. Launch `jd-judge-a` and `jd-judge-b` independently, preferably in parallel. A emphasizes correctness/edge cases; B emphasizes security/performance. Each gets one sweep, or two only for >400 changed lines or a hot path.
 2. A valid result is clean or contains evidence-backed findings with stable ids and failure scenarios. Retry one malformed child once; a second malformed return is `JUDGMENT: INVALID ROUND`.
 3. Synthesize: both judges = confirmed; one judge's CRITICAL/WARNING inside its emphasis = emphasis-confirmed; other single findings = suspect; disagreement = contradiction. Keep ids and lifecycle `open | fixed | verified | refuted | wont-fix`.
-4. Without preset mode, ask whether to fix/re-judge, fix only, or stop. Never edit before authorization. `verdict-only` stops; `full` authorizes the first fix.
-5. `jd-fix` touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh A/B judges. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
+4. Without explicit fix authorization, ask whether to fix/re-judge, fix only, or stop. Authorize an exact scope and eligible ids; mode selection alone never authorizes edits. `verdict-only` stops.
+5. `jd-fix` touches explicitly authorized confirmed and emphasis-confirmed rows only. Re-judge affected ids and dependencies, not the entire original target, with fresh A/B judges and the post-fix receipt. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
 6. Maximum two fix rounds. Each later fix/re-judge needs a continue gate. Remaining confirmed issues escalate; never loop forever.
 
 ## Light protocol
 
-Use one `jd-solo` sweep. Retry malformed output once. Auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge. Report other findings and recommend full judgment if evidence is severe or contradictory.
+Use one `jd-solo` sweep, read-only by default. Retry malformed output once. Only after separate explicit fix authorization, fix authorized CRITICAL rows once and run their named checks; no re-judge. Report fixes as unverified by re-judge, not approved. Report other findings and recommend Full if evidence is severe or contradictory. Never upgrade or edit silently.
 
 ## A2A
 

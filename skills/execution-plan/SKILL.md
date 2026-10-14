@@ -4,7 +4,7 @@ description: "Trigger: execution plan, executable plan, deep plan. Draft one neu
 license: MIT
 metadata:
   author: andresnator
-  version: "1.1.1"
+  version: "1.1.2"
   status: testing
 ---
 
@@ -24,7 +24,7 @@ Create exactly one plan for the requested outcome. The plan may be small or larg
 - Every work group requires `Files:` and `Skills:`. Select names with `implementation-skill-routing`; use names, never paths.
 - Keep delivery skills (`tcr`, `work-unit-commits`, or other Git skills) out of `Work groups → Skills:`.
 - Include one `Execution guidance` recommendation: `direct` or `SDD`. State the reason and show `ejecuta el plan <path>`.
-- Write artifacts in English. Only the plan file may change; `Delivery` authorizes later execution. Never edit production code, stage, commit, or push during planning.
+- Write artifacts in English. Only the plan file may change; `Delivery` records intent, not later Git authorization. The executor requires a current explicit delivery instruction. Never edit production code, stage, commit, or push during planning.
 
 ## Self-check
 

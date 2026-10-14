@@ -4,7 +4,7 @@ Repository agents never hardcode `model:`. Users assign providers, models, and v
 
 ## Quick path
 
-1. Install the `meta` domain.
+1. Install `meta` globally on OpenCode >=2.0.28 and <3; project-only installation skips the CLI-only Models Presets plugin.
 2. Open `/models-profiles` in OpenCode.
 3. Choose a scope, review the diff, and save.
 
@@ -54,13 +54,13 @@ Model syntax is `provider_id/model_id`; `variant` is a separate key. Removing bo
 
 ## Configurator behavior
 
-The installer registers the exact package version from the npm descriptor. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before writing. Because no profile directory is supplied, the configurator does not show a Profiles section.
+The installer registers the exact package version from the npm descriptor in global `cli.json` → `plugins`, alongside native CLI contributions. Legacy `tui.json` entries migrate only when installer-owned; foreign entries remain untouched. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before writing. Because no profile directory is supplied, the configurator does not show a Profiles section.
 
 Writes preserve JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections abort. Supported changes hot-apply to the connected server; other OpenCode processes may need a restart. See [hot reload](hot-reload.md).
 
 Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`; the repository does not ship or copy model profiles.
 
-Uninstall removes only the manifest-owned npm registration. It preserves OpenCode's package cache, saved presets, agent assignments, and foreign `tui.json` entries.
+Uninstall removes only the manifest-owned npm registration. It preserves OpenCode's package cache, saved presets, agent assignments, and foreign `cli.json`/`tui.json` entries.
 
 ## Troubleshooting
 

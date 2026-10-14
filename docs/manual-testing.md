@@ -1,6 +1,6 @@
 # Manual regression catalog
 
-Use this catalog to choose short, observable regression checks by changed surface. The only automated check is the catalog linter: it validates this Markdown and reports affected case IDs, but never executes OpenCode, installers, plugins, or the cases themselves.
+Use this catalog to choose short, observable regression checks by changed surface. The catalog linter validates this Markdown and reports affected case IDs; it never executes the manual cases. The same CI job also runs Python/Node regression fixtures, shell syntax and whitespace checks. Installer fixtures use temporary targets and version stubs, not live OpenCode or paid models.
 
 ## Quick path
 
@@ -71,14 +71,14 @@ A documentation-only pull request can report that no runtime manual cases are af
 
 - **Title:** Preserve external plugin registrations
 - **Coverage key:** `repository/plugins/registration-lifecycle`
-- **Applies to:** `installers/opencode.sh`, `installers/lib/**`, `scripts/jsonc-array.py`, `domains/*/external-plugins/**`, `manual-tests/fixtures/external-plugins/**`
+- **Applies to:** `installers/opencode.sh`, `installers/lib/**`, `scripts/jsonc-array.py`, `scripts/tests/test_jsonc_array.py`, `scripts/tests/opencode-v2.test.mjs`, `domains/*/external-plugins/**`, `manual-tests/fixtures/external-plugins/**`
 - **Preconditions:** Copy one JSONC before fixture to a disposable target and keep its matching after fixture available for comparison. Have OpenCode available; for version variants, point `OPENCODE_BIN` at an executable stub whose `--version` output and exit status you control.
 - **Steps:**
-  1. Dry-run `install --domain common,meta --target <target>` with version outputs `1.17.15`, `v1.17.15`, and `opencode v2.0.28`.
-  2. Install `common,meta` into the target with the real binary and inspect server and TUI plugin registrations plus the installer manifest.
+  1. Dry-run `install --domain common,meta --target <target>` with version outputs `2.0.28`, `v2.0.28`, and `opencode v2.0.28`.
+  2. Install `common,meta` into the target with the real binary and inspect server registrations and native `cli.json.plugins` registration for Models Presets plus the installer manifest.
   3. Reinstall, run status, then uninstall and compare the JSONC comments, foreign entries, and managed entries.
-- **Expected result:** Bare, v-prefixed, and product-prefixed versions at or above `1.17.15` pass the gate, including major-version upgrades. Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
-- **Essential negative variant:** Repeat the dry run with `1.17.14`, `opencode v1.17.14`, malformed or empty output, and a stub that prints `opencode v2.0.28` but exits nonzero. Each is rejected before any target file or manifest changes.
+- **Expected result:** Bare, v-prefixed and product-prefixed versions >=2.0.28 and <3 pass; V1 and future unsupported major versions do not. Each pinned npm plugin is registered once in its correct runtime config, comments and foreign values survive, and uninstall removes only manifest-owned registrations.
+- **Essential negative variant:** Repeat the dry run with `1.17.15`, `2.0.27`, `3.0.0`, prereleases such as `2.0.28-beta.1`, malformed or empty output, and a stub that prints `opencode v2.0.28` but exits nonzero. Each is rejected before any target file or manifest changes.
 - **Cleanup:** Delete the disposable target, fixture copy, and version stubs.
 
 ### MT-REPOSITORY-BREW-TOOLS
@@ -114,8 +114,9 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Preconditions:** Create a disposable Git project with a valid commented `opencode.jsonc`, a foreign setting, and no link to this worktree.
 - **Steps:**
   1. Run profile `install`, `status`, and a second `install` with `--project-root <project>`.
-  2. Inspect selected domains, four primaries, six primary commands, `subagent_depth`, then run `uninstall`.
-- **Expected result:** The profile selects `plan,orchestration,architecture,review,common`, preserves the default agent and foreign JSONC content, and restores prior managed values on uninstall.
+  2. Inspect selected domains, four primaries, six primary commands, `experimental.subagent_depth=1`, then run `uninstall`.
+  3. Repeat starting without `.opencode`; install twice and uninstall. Repeat with preexisting empty/foreign CLI settings and backup, later-added settings/comments/backup, and an older ledger without CLI provenance. Use isolated mocks for snapshot/uninstall failure and a disposable backup symlink/hardlink; never point at personal files.
+- **Expected result:** The profile selects `plan,orchestration,architecture,review,common`, preserves the default agent and foreign JSONC content, and restores prior managed values on uninstall. A fresh round trip removes generated CLI files and the originally absent target. Existing CLI files, foreign changes and backup bytes/mode/hardlink aliases survive. Unknown old-ledger provenance preserves files. Backup failures do not replace original bytes; backup symlinks block before installer mutation.
 - **Cleanup:** Remove the disposable Git project.
 
 ### MT-REPOSITORY-UNSAFE-TARGETS
@@ -141,6 +142,6 @@ A documentation-only pull request can report that no runtime manual cases are af
   1. Run `python3 scripts/lint-manual-tests.py`, then compare a committed base and head and inspect the affected-ID summary.
   2. Change one case while keeping its ID and coverage key, commit it, and rerun the base/head comparison.
   3. Run `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -v` to check deletion, rename, and coverage regressions.
-- **Expected result:** The valid catalog passes, the changed case appears automatically, and the workflow contains one read-only job without path filters or product execution. Deleted artifacts and old rename paths do not require current coverage; surviving runtime artifacts still do.
+- **Expected result:** The valid catalog passes, the changed case appears automatically, and the workflow contains one read-only job without path filters, runs dependency-free regression fixtures and syntax/whitespace checks, and never runs live model scenarios. Deleted artifacts and old rename paths do not require current coverage; surviving runtime artifacts still do.
 - **Essential negative variant:** Duplicate an ID or coverage key and confirm the linter exits nonzero with both source locations. Add or modify an uncovered runtime artifact, or rename one to an uncovered destination, and confirm rejection; restore the fixture and confirm it passes.
 - **Cleanup:** Discard the disposable repository copy.

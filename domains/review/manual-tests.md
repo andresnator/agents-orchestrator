@@ -15,7 +15,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 - **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-judge-a.md`, `domains/review/agents/jd-judge-b.md`, `domains/review/commands/judgment.md`, `domains/review/skills/judgment-day/**`
 - **Preconditions:** Use a disposable diff with one observable correctness issue and one harmless style difference; do not authorize fixes.
 - **Steps:**
-  1. Run `/judgment <exact-diff>` without the `light` selector.
+  1. Run `/judgment full <exact-diff>`.
   2. Inspect task activity, evidence lines, synthesis, ledger, and working tree before any fix answer.
 - **Expected result:** Two isolated blind judges run with different emphases, findings require exact failure evidence, synthesis removes unsupported noise, and no file changes before explicit authorization.
 - **Cleanup:** Close the review session and discard the disposable project.
@@ -29,7 +29,8 @@ Run these cases against a disposable diff with known review signals. Review stay
 - **Steps:**
   1. Run `/judgment light <exact-diff>`.
   2. Inspect worker activity, findings, totals, and any offered fix boundary.
-- **Expected result:** Exactly one solo judge performs a balanced sweep, reports exact evidence, never re-judges, and treats only a critical finding as eligible for the bounded light fix.
+- **Expected result:** Exactly one solo judge performs a balanced read-only sweep, reports exact evidence, never re-judges, and makes no edits from mode selection alone. Only a separately authorized critical finding is eligible for one bounded fix with a named check.
+- **Essential negative variant:** Modify an included source file after the sweep and before synthesis; the final fingerprint must reject stale evidence and repeat only affected review or report `JUDGMENT: STALE`.
 - **Cleanup:** Close the session and discard the disposable project.
 
 ### MT-REVIEW-FIX-AUTHORIZATION

@@ -1,11 +1,12 @@
 # Verdict formats
 
-Use normal human language for the final verdict. Include target, mode, totals, unresolved ids, fixes, verification state, and one of:
+Use normal human language for the final verdict. Include target receipt (root, base, included scope, content SHA-256 and final recheck), mode, totals, unresolved ids, fixes, verification state, and one of:
 
 - `JUDGMENT: APPROVED` — clean dual review or every fixed id verified/refuted.
 - `JUDGMENT: VERDICT` — review only; no edits.
 - `JUDGMENT: FIXED (unverified)` — fixes ran without re-judge.
-- `JUDGMENT: LIGHT APPROVED|VERDICT|FIXED (unverified)` — solo mode.
+- `JUDGMENT: LIGHT APPROVED|VERDICT|FIXED (unverified)` — solo mode; fixes never imply approval without re-judge.
+- `JUDGMENT: STALE` — target fingerprint changed; affected evidence cannot support a verdict.
 - `JUDGMENT: ESCALATED` — confirmed issues remain after two fix rounds.
 - `JUDGMENT: STOPPED` — user stopped at a gate.
 - `JUDGMENT: INVALID ROUND` — the same child returned malformed output twice.
