@@ -147,6 +147,21 @@ class ManualCatalogTests(unittest.TestCase):
         # Then
         self.assertEqual(result, 0, summary)
 
+    def test_shouldPassWhenSharedSkillDeclarationMatchesBodyCoverage(self):
+        # Given
+        (self.root / "skills/shared").mkdir(parents=True)
+        (self.root / "domains/common/skills").mkdir(parents=True, exist_ok=True)
+        (self.root / "domains/common/skills/shared").symlink_to("../../../skills/shared")
+        catalog = self.root / "domains/common/manual-tests.md"
+        catalog.write_text(catalog_case("common") + catalog_case("common", "SHARED", "skills/shared/**"), encoding="utf-8")
+
+        # When
+        result, summary = self.run_check("A\tdomains/common/skills/shared\n")
+
+        # Then
+        self.assertEqual(result, 0, summary)
+        self.assertIn("MT-COMMON-SHARED", summary)
+
     def test_shouldRejectWhenRenameDestinationHasNoCoverage(self):
         # Given
         diff = f"R100\t{CURRENT_PATH}\t{UNCOVERED_PATH}\n"

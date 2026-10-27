@@ -410,6 +410,12 @@ def validate_immutable_identity(
 
 def ownership_aliases(path: str) -> tuple[str, ...]:
     parts = Path(path).parts
+    if len(parts) == 4 and parts[0] == "domains" and parts[2] == "skills":
+        declaration = REPOSITORY_ROOT / path
+        if declaration.is_symlink():
+            body = Path("skills", parts[3]).as_posix()
+            return (body, *ownership_aliases(body))
+        return ()
     if len(parts) < 2 or parts[0] != "skills":
         return ()
     skill_name = parts[1]
