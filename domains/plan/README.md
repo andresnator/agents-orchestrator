@@ -1,24 +1,25 @@
 # Plan Domain
 
-`deep-planner` separates discovery from executable planning. It never implements changes.
+Planning skills separate discovery from executable planning; `orchestraitor` loads them and never implements while planning.
+
+When a discovery is complete, ask `orchestraitor` to `convert this discovery into a plan`.
 
 ## Quick path
 
-1. Select `deep-planner` and describe the outcome or idea.
+1. Ask `orchestraitor` for a light plan, deep plan, or to explore an idea.
 2. Answer only unresolved product, acceptance, or risk questions.
-3. Review one discovery or one execution plan.
+3. Review one discovery or one IDSD execution plan.
 
 ## Entry points
 
-| Request | Route | Result |
+| Request | Skill | Result |
 |---|---|---|
-| Clear executable outcome | Deep Plan | `.ai/deep-planner/plans/<slug>.md` |
-| Open destination or decisions | Wayfinder | `.ai/deep-planner/discoveries/<slug>.md` |
+| Small localized outcome | `oc-plan-light` | Plan in chat; saved to `.ai/deep-planner/plans/<slug>.md` on request |
+| Clear large or risky outcome | `oc-plan-deep` (Deep Plan) | `.ai/deep-planner/plans/<slug>.md` |
+| Open destination or decisions | `oc-plan-deep` (Wayfinder) | `.ai/deep-planner/discoveries/<slug>.md` |
 | Ambiguous planning intent | Closed choice | `Create a plan` or `Explore an idea` |
 
-Wayfinder records evidence, decisions, and open questions without status markers. When discovery finishes, ask `deep-planner` to convert it into a plan.
-
-Deep Plan always writes one file. Large plans use work groups and dependencies, not roadmaps or slices. Refactor and hardening are internal rules: missing protection places tooling, seams, tests, and revalidation before restructuring.
+Plans use the IDSD format from `oc-plan-format` (Intent, Context, Expectations, Method). Deep Plan always writes one file; large plans use work groups and dependencies, not roadmaps or slices. Missing protection places tooling, seams, tests, and revalidation before restructuring.
 
 Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el plan <path>`. After changing this domain, run the affected [Plan manual tests](manual-tests.md).
 
@@ -26,8 +27,6 @@ Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el pla
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `deep-planner` | Runs Wayfinder and Deep Plan |
-| Agent (subagent) | `refactor-analyzer` | Applies one read-only analysis lens |
 | Skill | `oc-arch-impact` | Classifies local versus architectural risk |
 | Skill | `oc-characterize` | Records observable legacy behavior |
 | Skill | `oc-char-scope` | Scopes tests, seams, and rollback |
@@ -59,7 +58,10 @@ Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el pla
 | Skill | `oc-refactor` | Supplies cross-language refactoring techniques |
 | Skill | `oc-risk` | Classifies technical and functional risk |
 | Skill | `oc-scope` | Delimits the target boundary |
-| Skill | `oc-plan-format` | Drafts one neutral execution plan |
+| Skill | `oc-plan-deep` | Runs Wayfinder and Deep Plan |
+| Skill | `oc-plan-light` | Drafts quick plans for localized work |
+| Skill | `oc-plan-format` | Drafts one neutral IDSD plan |
+| Skill | `oc-refactor-lens` | Applies one read-only analysis lens |
 | Skill | `oc-routing` | Selects skills for implementation work |
 | Skill | `oc-srp` | Detects multiple reasons to change |
 | Skill | `oc-spaghetti` | Detects tangled flow and hidden ordering |

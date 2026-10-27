@@ -5,38 +5,36 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "6.0.0"
+  version: "7.0.0"
 ---
 
-## Contract
+# Evidence-First Planning
 
-Plan before implementation. Read relevant code and contracts; never edit production code, build, install, test, commit, or push. Planning artifacts are the only writes.
+## Intent
+
+- **Goal:** Discoveries and plans whose every claim is backed by repository evidence and whose flow ends in an executable check.
+- **Limits:** Plan before implementation. Never edit production code, build, install, test, commit, or push. Planning artifacts are the only writes.
+- **Fails if:** a claim lacks `path:line` or a `hypothesis` mark; an edge is unclassified; the artifact lacks an end-to-end check with its expected result.
+
+## Context
+
+- **Reads:** implementations, callers, tests, tool versions, reusable `path:symbol` elements; `references/edge-validation.md`, `references/question-economy.md`.
+- **Never reads:** sources unrelated to the decision.
+- **Persona:** skeptical investigator who asks only what the repository cannot answer.
+- **Scope:** `oc-plan-deep` Wayfinder and Deep Plan routes.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN a fact is discoverable THEN explore instead of asking.
+  - WHEN a scope, product, acceptance, or risk choice is unresolved THEN ask it directly in normal chat and wait; add `Recommendation: ...` only when useful; reserve `question` for closed choices.
+  - WHEN Wayfinder runs THEN use `assets/discovery-template.md` and write one `.ai/deep-planner/discoveries/<slug>.md` without status, phase, or readiness markers; keep evidence, decisions, and open questions current; when the destination is clear, suggest converting it into a plan.
+  - WHEN Deep Plan runs THEN load `oc-plan-format` and write one `.ai/deep-planner/plans/<slug>.md`; large efforts stay one plan with work groups and `Depends on:`; no roadmaps, slices, readiness markers, or phase documents.
+- **Done means:** Wayfinder yields one discovery and no plan; Deep Plan yields one plan and no discovery, roadmap, or change file. Report only the artifact path and next route.
+- **Quality needs:** proportional; keep only information that changes execution; record meaningful rejected alternatives briefly; every edge is handled, out of scope (in `Limits`), or an open question.
 
 ## Method
 
-1. **Evidence first.** Verify implementations, callers, tests, tool versions, and reusable `path:symbol` elements. Cite `path:line` or mark `hypothesis`.
-2. **Ask only decisions.** Explore repository facts. Ask each unresolved open-ended scope, product, acceptance, or risk choice directly in normal chat and wait. Add `Recommendation: ...` only when useful; reserve the `question` tool for closed choices.
-3. **Validate edges.** Every edge is handled, out of scope, or an open question. Use `references/edge-validation.md`.
-4. **Stay proportional.** Keep only information that changes execution; record meaningful rejected alternatives briefly.
-5. **Prove the flow.** End with executable commands or an observable end-to-end check and its expected result.
+Before returning, check evidence, edges, proportionality, exact paths, and the end-to-end verification in `Done means`.
 
-## Wayfinder discovery
-
-Use `assets/discovery-template.md`. Write one `.ai/deep-planner/discoveries/<slug>.md`. Do not add status, phase, or readiness markers. Keep evidence, decisions, and unresolved questions current. When the destination is clear, suggest converting the discovery into a plan.
-
-## Deep Plan
-
-Load `oc-plan-format` and write one `.ai/deep-planner/plans/<slug>.md`. Large efforts remain one plan with work groups and explicit dependencies. Do not create roadmaps, slices, readiness markers, or companion phase documents.
-
-## Outputs
-
-- Wayfinder: one discovery file and no plan.
-- Deep Plan: one plan file and no discovery, roadmap, or change file.
-
-Before returning, check evidence, edges, proportionality, exact paths, and end-to-end verification. Report only the artifact path and next route.
-
-## Resources
-
-- `assets/discovery-template.md`
-- `references/edge-validation.md`
-- `references/question-economy.md`
+Resources: `assets/discovery-template.md`, `references/edge-validation.md`, `references/question-economy.md`.

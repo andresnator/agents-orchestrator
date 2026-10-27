@@ -15,7 +15,7 @@ This repository stores reusable OpenCode agent artifacts, not application code. 
 
 ## Agents and commands
 
-Store fused OpenCode files at `domains/<domain>/agents/<name>.md` and `domains/<domain>/commands/<name>.md`. Names must be globally unique within their type.
+`orchestraitor` (`domains/orchestration/agents/orchestraitor.md`, `mode: primary`) is the only agent. Every other capability is an `oc-*` skill that orchestraitor loads itself or names in a brief to OpenCode's built-in `general` subagent; do not add agents. Store commands at `domains/<domain>/commands/<name>.md`; command `agent:` is `orchestraitor`, a built-in OpenCode agent such as `build`, or omitted. Names must be globally unique within their type.
 
 Agent frontmatter order:
 
@@ -29,9 +29,42 @@ Command frontmatter order:
 description, agent?, model?, subtask?, argument-hint?
 ```
 
-Do not add `name`, `prompt`, `license`, or `metadata` to agent or command frontmatter. Agent `mode` is `primary` or `subagent`. Do not hardcode agent models or provider options; users configure those in OpenCode.
+Do not add `name`, `prompt`, `license`, or `metadata` to agent or command frontmatter. Agent `mode` is `primary`. Do not hardcode agent models or provider options; users configure those in OpenCode.
 
-Keep prompts short: role, accepted operation, ownership and safety boundaries, happy path, real stop conditions, artifact paths, and compact return contract. Put fork attribution outside executable frontmatter.
+Keep prompts short and write them in the IDSD format below. Put fork attribution outside executable frontmatter.
+
+## IDSD format
+
+Agents, skills, and plans follow Intent-Driven Software Development (IDSD). Each body states one ICE (Intent, Context, Expectations) for one capability, then only the method knowledge a model cannot infer. An ICE with a missing part is not ready.
+
+```markdown
+# <Title>
+
+## Intent
+
+- **Goal:** <one observable outcome>
+- **Limits:** <boundaries, forbidden actions, ownership>
+- **Fails if:** <observable conditions that make the result wrong>
+
+## Context
+
+- **Reads:** <inputs, files, skills, and evidence it uses>
+- **Never reads:** <sources it must ignore>
+- **Persona:** <role and stance>
+- **Scope:** <activation and where it applies>
+
+## Expectations
+
+- **Scenarios:** <WHEN ... THEN ... behaviors>
+- **Done means:** <completion criteria and exact return contract>
+- **Quality needs:** <quality bar>
+
+## Method
+
+<Optional: decision tables, protocols, formats, and resource pointers. Describe what to achieve, not a rigid script.>
+```
+
+Keep the bold field labels exact. Use nested bullets or a short table under a field when it needs more than one line. Preserve literal triggers, return lines such as `OK ...` and `BLOCK ...`, and paths exactly.
 
 Open-ended interviews, debriefs, teach-backs, and other free-text questions use normal chat: ask one direct question, add `Recommendation: ...` only when useful, then wait. Do not require question headings, numbering, rationale blocks, or interview-length estimates. Reserve the `question` tool for closed choices such as confirmations, modes, ratings, and enumerated options.
 

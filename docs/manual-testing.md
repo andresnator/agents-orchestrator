@@ -114,7 +114,7 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Preconditions:** Create a disposable Git project with a valid commented `opencode.jsonc`, a foreign setting, and no link to this worktree.
 - **Steps:**
   1. Run profile `install`, `status`, and a second `install` with `--project-root <project>`.
-  2. Inspect selected domains, four primaries, six primary commands, `subagent_depth`, then run `uninstall`.
+  2. Inspect selected domains, the single `orchestraitor` primary, six commands on `orchestraitor`, `subagent_depth`, then run `uninstall`.
 - **Expected result:** The profile selects `plan,orchestration,architecture,review,common`, preserves the default agent and foreign JSONC content, and restores prior managed values on uninstall.
 - **Cleanup:** Remove the disposable Git project.
 

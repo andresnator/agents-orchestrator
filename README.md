@@ -1,6 +1,6 @@
 # Agents Orchestrator
 
-Reusable OpenCode agents, commands, skills, and plugins organized by domain. Core workflows use direct primary agents with one delegation level for specialized workers.
+Reusable OpenCode commands, skills, and plugins organized by domain around a single agent. `orchestraitor` is the only agent; every other capability is an `oc-*` skill that it loads itself or hands to OpenCode's built-in `general` subagent (one delegation level). Skills, the orchestraitor body, and plans follow the Intent-Driven Software Development (IDSD) format described in [CONTRIBUTING.md](CONTRIBUTING.md#idsd-format).
 
 ## Quick path
 
@@ -16,23 +16,23 @@ Every global install then runs [`engram setup opencode`](https://github.com/Gent
 
 `--dry-run` only prints the planned setup. `--project`, any explicit `--target`, `status`, and `uninstall` never run it. Engram's files and settings remain owned by Engram, outside the harness manifest, and survive harness uninstall.
 
-Or install the multi-primary profile into one project only:
+Or install the single-primary profile into one project only:
 
 ```bash
 scripts/multi-primary-profile.sh install --project-root /absolute/path/to/project
 scripts/multi-primary-profile.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `plan,orchestration,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [multi-primary runbook](docs/multi-primary-profile.md). Select a primary directly: Wayfinder discovers, Deep Plan plans, and Orchestraitor executes.
+The project profile selects `plan,orchestration,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [profile runbook](docs/multi-primary-profile.md). Select `orchestraitor` for every route: it plans with `oc-plan-light` or `oc-plan-deep`, executes and resumes, reviews with `oc-review`, and decides architecture with `oc-arch`.
 
 ## Domains
 
 | Domain | Purpose | Entry points |
 |---|---|---|
-| [plan](domains/plan/README.md) | Evidence-first discovery and neutral execution plans | `deep-planner` |
-| [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `/arch-*`, `/boundary-inspector` |
-| [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` |
-| [review](domains/review/README.md) | Adversarial review and Socratic design defense | `review-coordinator`, `/judgment`, `/defend` |
+| [plan](domains/plan/README.md) | Evidence-first discovery and IDSD execution plans | `oc-plan-light`, `oc-plan-deep` skills |
+| [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `oc-arch` skill, `/arch-*`, `/boundary-inspector` |
+| [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` agent (the only agent) |
+| [review](domains/review/README.md) | Adversarial review and Socratic design defense | `oc-review` skill, `/judgment`, `/defend` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
 | [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/absorb` |
 | [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
@@ -41,7 +41,7 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 
 | Path | Ownership |
 |---|---|
-| `domains/<domain>/agents/` | Fused OpenCode agent definitions |
+| `domains/orchestration/agents/` | The single OpenCode agent, `orchestraitor` |
 | `domains/<domain>/commands/` | Fused OpenCode commands |
 | `domains/<domain>/skills/<skill>/` | Skills used by one domain |
 | `skills/<skill>/` | Skill bodies shared by multiple domains |
@@ -62,16 +62,16 @@ installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status --domain orchestration
 ```
 
-Install `orchestration` and `review` independently. Select `review-coordinator` only when a separate evaluation is wanted.
+Install `orchestration` and `review` independently. Ask `orchestraitor` for a review (it loads `oc-review`) only when a separate evaluation is wanted.
 
 ## Documentation
 
 | Guide | Purpose |
 |---|---|
-| [Multi-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back direct primaries |
+| [Single-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back the orchestraitor profile |
 | [Manual regression catalog](docs/manual-testing.md) | Find affected cases by repository surface |
-| [Agent models](docs/agent-models.md) | Assign provider models and variants by tier |
-| [Orchestration permissions](docs/orchestration-permissions.md) | Toggle coordinator and worker permissions |
+| [Agent models](docs/agent-models.md) | Assign provider models and variants to orchestraitor and `general` |
+| [Orchestration permissions](docs/orchestration-permissions.md) | Toggle `orchestraitor` and `general` permissions |
 | [Graphify](docs/graphify.md) | Index and query structural graphs |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |
 | [LM Studio](docs/lm-studio.md) | Connect OpenCode to LAN-hosted models |

@@ -2,7 +2,7 @@
 
 Copy this throwaway Maven project outside the repository before running Plan or Orchestration manual cases. No automated runner consumes it; the person executing a case selects the primary, supplies the prompt, observes worker activity, and inspects final files and hidden `.ai/` state.
 
-The relevant cases live in [Plan manual tests](../../../../domains/plan/manual-tests.md) and [Orchestration manual tests](../../../../domains/orchestration/manual-tests.md). Execution ends with Orchestraitor verification; any later review selects `review-coordinator` independently.
+The relevant cases live in [Plan manual tests](../../../../domains/plan/manual-tests.md) and [Orchestration manual tests](../../../../domains/orchestration/manual-tests.md). Execution ends with Orchestraitor verification; any later review is an explicit request that loads `oc-review`.
 
 The project is intentionally small, so a human can establish the baseline quickly with a warm Maven cache.
 

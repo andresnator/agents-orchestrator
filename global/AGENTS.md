@@ -1,6 +1,6 @@
 # Global Agent Rules
 
-Installed by agents-orchestrator. Applies to every agent and project.
+Installed by agents-orchestrator. Applies to the `orchestraitor` agent, delegated `general` sessions, and every project.
 
 ## Agent Personality
 

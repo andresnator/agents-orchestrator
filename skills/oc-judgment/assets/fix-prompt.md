@@ -1,8 +1,9 @@
 # Fix brief
 
-Fallback when `jd-fix` is unavailable.
+Brief for the `general` subagent that loads `oc-judge-fix`.
 
 ```text
+Load skill oc-judge-fix.
 Target: <exact scope>
 Findings: <confirmed or emphasis-confirmed rows only>
 Rules: <0-5 distilled project rules>

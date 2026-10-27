@@ -1,6 +1,6 @@
 # Assign Models to Agents
 
-Repository agents never hardcode `model:`. Users assign providers, models, and variants in global or project OpenCode state.
+The repository's only agent, `orchestraitor`, never hardcodes `model:`. Users assign providers, models, and variants in global or project OpenCode state.
 
 ## Quick path
 
@@ -14,15 +14,10 @@ Project config overrides global config. The tier table below is manual guidance;
 
 | Tier | Agents | Guidance |
 |---|---|---|
-| Primary coordination | `deep-planner`, `architect`, `orchestraitor`, `review-coordinator` | Strong reasoning; suggested `high` variant |
-| Implementation | `sdd-implement`, `jd-fix` | Strong code-writing model |
-| Analysis | `sdd-explore`, `refactor-analyzer` | Fast economical model |
-| Verification | `sdd-verify` | Strong independent model; suggested `high` |
-| Judge A | `jd-judge-a` | Strong model or provider A |
-| Judge B | `jd-judge-b` | Distinct strong model or provider B |
-| Judge solo | `jd-solo` | Fast balanced reviewer |
+| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan-*`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
+| Delegated workers | built-in `general` (loads `oc-sdd-*`, `oc-refactor-lens`, `oc-judge`, `oc-judge-fix`) | Strong code-writing model |
 
-Distinct Judge A and B providers reduce shared blind spots.
+Former worker agents are now skills, so per-worker models no longer exist; `general` serves every delegated brief. `oc-judge` lenses a and b now share the `general` model; because distinct providers reduce shared blind spots, run the second lens in a separate session (or temporarily change the `general` model) when you want a different provider.
 
 ## Manual configuration
 
@@ -35,16 +30,8 @@ OpenCode merges installed Markdown agents with `agent.<name>` entries in `openco
       "model": "provider/frontier-model",
       "variant": "high"
     },
-    "sdd-implement": {
+    "general": {
       "model": "provider/code-model"
-    },
-    "jd-judge-a": {
-      "model": "provider-a/reviewer",
-      "variant": "high"
-    },
-    "jd-judge-b": {
-      "model": "provider-b/reviewer",
-      "variant": "high"
     }
   }
 }

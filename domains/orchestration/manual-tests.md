@@ -4,7 +4,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 ## Quick path
 
-1. Copy `manual-tests/fixtures/orchestration-agent-routes/java-orders/` outside the repository and install the current multi-primary profile there.
+1. Copy `manual-tests/fixtures/orchestration-agent-routes/java-orders/` outside the repository and install the current single-primary profile there.
 2. Run only the affected IDs from the pull-request summary and wait for each process to finish.
 3. Inspect real conversation/tool events, source diff, hidden `.ai/` state, worker activity, Git index/HEAD, and final verification before cleanup. Catalog lint does not demonstrate model behavior; unexecuted cases remain pending.
 
@@ -20,12 +20,25 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Expected result:** No contract or route approval is requested. Only the local declaration and use change, fresh verification completes, no SDD worker or orchestration state appears, and Orchestraitor does not stage, commit, or push.
 - **Cleanup:** Revert the fixture copy and delete it.
 
+### MT-ORCHESTRATION-PLAN-ROUTE
+
+- **Title:** Route planning requests to a plan skill without implementing
+- **Coverage key:** `orchestration/plan/route`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`
+- **Preconditions:** Use a clean copied Java fixture with a passing baseline.
+- **Steps:**
+  1. Ask `orchestraitor` for a light plan to add `Order.lineCount()` and ask to save it.
+  2. In a fresh copy, ask `orchestraitor` for a deep plan to migrate order pricing across modules.
+  3. Inspect loaded skills, the produced plans, and Git state.
+- **Expected result:** The first request loads `oc-plan-light` and the second `oc-plan-deep`. Each produces only a plan file; no source or test edits, workers, or commits appear.
+- **Cleanup:** Delete the fixture copies.
+
 ### MT-ORCHESTRATION-DIRECT-PLAN
 
 - **Title:** Execute one localized plan directly
 - **Coverage key:** `orchestration/plan/direct-execution`
 - **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-routing/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
-- **Preconditions:** In a clean copied Java fixture, use `deep-planner` to create a localized plan for `Order.lineCount()` and record its checksum.
+- **Preconditions:** In a clean copied Java fixture, ask `orchestraitor` to save a light plan (`oc-plan-light`) for `Order.lineCount()` and record its path and checksum.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-path>`.
   2. Inspect implementation and focused coverage, rerun the named check, and compare the plan checksum.
@@ -71,7 +84,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
   2. Request an adjustment. Inspect the revised contract, then explicitly approve it. Repeat in a fresh copy using an explicit chat response approving the presented contract. Complete once with `working-tree` and once with explicitly requested `commit-per-unit`.
   3. In separate copies, cancel at the gate and interrupt before approval. On return from interruption, inspect the re-presented contract before answering.
   4. Start with a Direct change, then introduce dependencies or a public-contract change requiring SDD. Inspect the route explanation and approve the presented contract once.
-- **Expected result:** Outcome, Scope, every WHEN/THEN scenario, Approach, and Verify are visible without omitted acceptance criteria. Before approval, only exploration and conversation drafting occur: no run, implementation edits, `sdd-implement`, staging, or commits, including via other agents. Adjustments do not authorize the revision, cancellation starts no implementation, and interruption does not invent approval. Direct → SDD asks once for both route and contract. Approval records `Approval: explicit`, the actual approving response, and the full approved contract including Scope and Approach in `run.md`; implementation then continues automatically through focused checks, optional serial commits, global cold verification, any required canonical merge, and archive, without duplicate approval or changed worker responsibilities. Contract sections stay unchanged while execution state advances.
+- **Expected result:** Intent, Scope, every WHEN/THEN scenario, Approach, and Done means are visible without omitted acceptance criteria. Before approval, only exploration and conversation drafting occur: no run, implementation edits, `oc-sdd-implement` worker, staging, or commits, including via other agents. Adjustments do not authorize the revision, cancellation starts no implementation, and interruption does not invent approval. Direct → SDD asks once for both route and contract. Approval records `Approval: explicit`, the actual approving response, and the full approved contract including Scope and Approach in `run.md`; implementation then continues automatically through focused checks, optional serial commits, global cold verification, any required canonical merge, and archive, without duplicate approval or changed worker responsibilities. Contract sections stay unchanged while execution state advances.
 - **Essential negative variant:** Leave the question unanswered or respond with approval plus a behavior change; neither authorizes the revised contract. If implementation reveals a required scope, behavior, or acceptance change after approval, it stops and communicates the change without silently rewriting the contract.
 - **Cleanup:** Delete the disposable projects and generated state without pushing.
 
@@ -79,19 +92,19 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Complete and archive one verified SDD run
 - **Coverage key:** `orchestration/sdd/verified-archive`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-explore.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/agents/sdd-canonical-merge.md`, `domains/orchestration/skills/oc-sdd-verify/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-explore/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-merge/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
 - **Preconditions:** Copy the Java fixture, restore both state seeds under `.ai/`, ensure the baseline passes, and record the plan checksum.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-seeded-plan-path>`, and wait through implementation, cold verification, and canonical merge.
-  2. Rerun the plan's verification, inspect the archived run and canonical delta, and compare the plan checksum and Git state.
-- **Expected result:** No additional approval is requested; the archived run retains `Approval: plan-execution` and the actual instruction as evidence. Matching scoped workers implement tests alongside the change, every source scenario and check is counted once, the completed run is archived, canonical behavior has no stale row, the plan is unchanged, and no Git mutation occurs.
+  2. Rerun the plan's Done means, inspect the archived run and canonical delta, and compare the plan checksum and Git state.
+- **Expected result:** No additional approval is requested; the archived run retains `Approval: plan-execution` and the actual instruction as evidence. Matching scoped workers implement tests alongside the change, every source Scenario and Done means item is counted once, the completed run is archived, canonical behavior has no stale row, the plan is unchanged, and no Git mutation occurs.
 - **Cleanup:** Delete the copied fixture and all generated state.
 
 ### MT-ORCHESTRATION-SDD-COMMITS
 
 - **Title:** Resume serial SDD commits after an honest hook failure
 - **Coverage key:** `orchestration/delivery/sdd-commits`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/skills/oc-sdd-verify/**`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** Prepare two Git-backed fixture copies with a green baseline, the complex plan under `.ai/`, its checksum, an unrelated staged `notes.txt`, and executable `.git/hooks/pre-commit` copied from `hooks/reject-order-pricing-pre-commit`.
 - **Steps:**
   1. Request `ejecuta el plan <exact-path>` with `commit-per-unit`: keep the plan's groups as separate units in one copy and combine them into one verified unit in the other. Wait for the pricing hook rejection in each.
@@ -106,7 +119,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Resume the exact active SDD run
 - **Coverage key:** `orchestration/sdd/exact-resume`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
 - **Preconditions:** Interrupt an approved disposable run after one completed group with one group pending. Require valid delivery controls, `Approval` and actual `Approval evidence`, and an immutable external plan hash when present; record contract sections, progress, paths, and Git state. Repeat for generated-contract approval and existing-plan execution.
 - **Steps:**
   1. Start a fresh session and tell `orchestraitor`, `continúa <exact-run-path>`.
@@ -133,7 +146,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Parallelize only disjoint ready work
 - **Coverage key:** `orchestration/sdd/disjoint-wave`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
 - **Preconditions:** Use a disposable plan with two dependency-free groups on disjoint files and a third group depending on both; enable visible task timing.
 - **Steps:**
   1. Explicitly run the plan with SDD and observe task start/end times for the first wave.
@@ -150,7 +163,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 - **Steps:**
   1. Run `on --dry-run`, then `on --target <target>`, `show`, a second `on`, and `off`.
   2. Inspect the backup, per-agent states, frontmatter-deny preservation, unrelated setting, and final config.
-- **Expected result:** Dry run writes nothing; on creates complete discovered-agent blocks and reports `on`; the second on is idempotent; off removes managed permissions while preserving unrelated configuration.
+- **Expected result:** Dry run writes nothing; on creates complete blocks for the discovered `orchestraitor` and `general` and reports `on`; the second on is idempotent; off removes managed permissions, including retired `sdd-*` blocks, while preserving unrelated configuration.
 - **Essential negative variant:** Add a JSONC comment and confirm `on` fails clearly before backup or mutation because this helper requires valid JSON.
 - **Cleanup:** Remove the disposable target.
 

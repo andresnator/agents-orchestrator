@@ -6,38 +6,50 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "3.0.0"
+  version: "4.0.0"
   status: in-progress
 ---
+# Judgment Protocol
 
-## Contract
+## Intent
 
-The coordinator scopes and synthesizes; judges review blindly; the fixer edits only authorized findings. Missing target is `ASK`, never a partial review. Load at most 3-5 relevant project rules and inject the same distilled rules into every child brief.
+- **Goal:** Produce a Judgment verdict from blind judges, synthesis, bounded authorized fixes, and escalation.
+- **Limits:** The coordinator scopes and synthesizes; judges review blindly; the fixer edits only authorized findings. Never edit before authorization; maximum two fix rounds; never loop forever.
+- **Fails if:** a judge sees another judge's output, suspect or contradiction rows are fixed, or a partial review runs without a target (missing target is `ASK`).
 
-## Full protocol
+## Context
 
-1. Launch `jd-judge-a` and `jd-judge-b` independently, preferably in parallel. A emphasizes correctness/edge cases; B emphasizes security/performance. Each gets one sweep, or two only for >400 changed lines or a hot path.
-2. A valid result is clean or contains evidence-backed findings with stable ids and failure scenarios. Retry one malformed child once; a second malformed return is `JUDGMENT: INVALID ROUND`.
+- **Reads:** the exact target; 3-5 relevant project rules, injected identically into every child brief; `assets/`.
+- **Never reads:** one judge's output inside another judge's brief.
+- **Persona:** adversarial review coordinator.
+- **Scope:** loaded by `oc-review` for `operation=judgment`. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge-fix`.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN full mode THEN follow the full protocol below.
+  - WHEN light mode THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
+  - WHEN a child returns malformed output twice THEN `JUDGMENT: INVALID ROUND`.
+- **Done means:** a verdict from `assets/output-formats.md`; an SDD ledger persisted at the active change root when requested.
+- **Quality needs:** A2A lines exact; user questions, security warnings, irreversible actions, ambiguity, and the final verdict in normal language. No logs, diffs, praise, or empty fields.
+
+## Method
+
+### Full protocol
+
+1. Launch `lens=a` (correctness/edge cases) and `lens=b` (security/performance) as independent subagents, preferably in parallel. One sweep each, two only for >400 changed lines or a hot path.
+2. A valid result is clean or holds evidence-backed findings with stable ids and failure scenarios. Retry one malformed child once.
 3. Synthesize: both judges = confirmed; one judge's CRITICAL/WARNING inside its emphasis = emphasis-confirmed; other single findings = suspect; disagreement = contradiction. Keep ids and lifecycle `open | fixed | verified | refuted | wont-fix`.
-4. Without preset mode, ask whether to fix/re-judge, fix only, or stop. Never edit before authorization. `verdict-only` stops; `full` authorizes the first fix.
-5. `jd-fix` touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh A/B judges. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
-6. Maximum two fix rounds. Each later fix/re-judge needs a continue gate. Remaining confirmed issues escalate; never loop forever.
+4. Without preset mode, ask whether to fix/re-judge, fix only, or stop. `verdict-only` stops; `full` authorizes the first fix.
+5. `oc-judge-fix` touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh `lens=a` and `lens=b` subagents. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
+6. Each later fix/re-judge round needs a continue gate. Remaining confirmed issues after two rounds escalate.
 
-## Light protocol
+### A2A
 
-Use one `jd-solo` sweep. Retry malformed output once. Auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge. Report other findings and recommend full judgment if evidence is severe or contradictory.
+- Judge: `<path:line> <critical|warning|note> <id> <problem>; fix=<intent>`, then `TOTAL critical=<n> warning=<n> note=<n>` or `CLEAN evidence=<one-line check>`. Re-judge: `VERDICT <id>=fixed|open|refuted evidence=<path:line>`.
+- Fixer: `OK fix files=<csv> check=<one-line>` plus one `OPEN <id> <reason>` per unresolved row.
 
-## A2A
-
-Judges return one line per finding:
-
-`<path:line> <critical|warning|note> <problem>; fix=<intent>`
-
-Then `TOTAL critical=<n> warning=<n> note=<n>` or `CLEAN evidence=<one-line check>`. Re-judge uses `VERDICT <id>=fixed|open|refuted evidence=<path:line>`. Fixer returns `OK fix files=<csv> check=<one-line>` plus one `OPEN <id> <reason>` per unresolved row. No logs, diffs, praise, or empty fields.
-
-User questions, security warnings, irreversible actions, ambiguity, and the final human verdict use normal language. Persist an SDD ledger at the active change root when requested.
-
-## Assets
+### Assets
 
 - `assets/judge-prompt.md`
 - `assets/fix-prompt.md`

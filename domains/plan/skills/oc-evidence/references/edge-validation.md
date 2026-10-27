@@ -51,7 +51,7 @@ Walk each branch of the design against these categories before closing the plan.
 Every edge surfaced above ends in exactly one destination — never silently dropped:
 
 1. **handled** — the design covers it; the matrix says where.
-2. **out of scope** — explicitly excluded, with the exclusion visible in the plan.
+2. **out of scope** — explicitly excluded, with the exclusion visible in the plan `Limits`.
 3. **open question** — only the user can decide; discovery may retain it, but resolve it before a final plan or executable handoff.
 
 ## Edge Case Matrix format
@@ -59,5 +59,5 @@ Every edge surfaced above ends in exactly one destination — never silently dro
 | Edge | Decision | Where |
 |---|---|---|
 | Empty input list | handled | `validate()` guard, Decisions section |
-| Concurrent double-submit | out of scope | single-user tool, noted in Out of scope |
+| Concurrent double-submit | out of scope | single-user tool, noted in Limits |
 | Retention of failed rows | open question → resolved: keep 30 days | user decision, Decisions section |

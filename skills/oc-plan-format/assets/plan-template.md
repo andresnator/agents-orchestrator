@@ -1,62 +1,60 @@
 # Plan: <verb-led outcome>
 <!-- Explicit delivery only: replace with Delivery: <working-tree|commit-per-unit|tcr>, choosing one value. Otherwise remove. -->
 
-## Outcome
+## Intent
 
-<User-visible or operational result.>
+- **Goal:** <user-visible or operational outcome>
+- **Limits:** <out-of-scope work and forbidden changes>
+- **Fails if:** <observable failure or rollback conditions>
 
-## Scope
+## Context
 
-- In: <bounded work>
-- Out: <explicit exclusions>
+- **Reads:**
+  - `<path:line>`: <evidence that changes execution, or `hypothesis`>
+- **Never reads:** <excluded sources, or `none`>
+- **Persona:** <executor stance, e.g. behavior-preserving Java implementer>
+- **Scope:**
+  - `<path>`: <planned responsibility>
 
-## Evidence
+## Expectations
 
-- `<path:line>`: <fact that changes execution, or `hypothesis`>
+### Scenarios
 
-## Behavior
-
-### ADD|MODIFY|REMOVE <capability>/<requirement> | RENAME <old-capability>/<old-requirement> -> <new-capability>/<new-requirement>
+#### ADD|MODIFY|REMOVE <capability>/<requirement> | RENAME <old-capability>/<old-requirement> -> <new-capability>/<new-requirement>
 
 - WHEN <condition>
 - THEN <observable result>
 
-## Approach
+### Done means
 
-<Chosen implementation shape, dependencies, constraints, and rejected alternatives that matter.>
+- <command or observable check>
 
-## Work groups
+### Quality needs
 
-### Group 1: <goal>
+- <non-functional bar, or `none beyond repository conventions`>
+
+## Method
+
+### Approach
+
+<Chosen shape, constraints, rejected alternatives that matter.>
+
+### Work groups
+
+#### Group 1: <goal>
 
 Files: <paths>
-Skills: <comma-separated skill names or none>
+Skills: <comma-separated oc-* names or none>
 Depends on: none | <group ids>
 
 - [ ] <small verifiable task>
 
-## Dependencies
-
-- <external, ordering, or environment dependency>
-
-## Files
-
-- `<path>`: <planned responsibility>
-
-## Skills
-
-- <group>: <comma-separated skill names or none>
-
-## Verify
-
-- <command or observable check>
-
-## Risks and open questions
+### Risks and open questions
 
 - <real risk, rollback condition, or unresolved decision>
 
-## Execution guidance
+### Execution guidance
 
 Route: direct | SDD
-Reason: <why this route fits the risk and coordination needs>
+Reason: <why>
 Run: `ejecuta el plan <path>`

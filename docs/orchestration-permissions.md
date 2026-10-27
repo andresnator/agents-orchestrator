@@ -1,6 +1,6 @@
 # Orchestration Permissions
 
-The helper writes complete OpenCode permission blocks for `orchestraitor`, its SDD workers, and optionally `general`.
+The helper writes complete OpenCode permission blocks for `orchestraitor`, the only orchestration agent, and optionally `general`, which runs SDD workers through `oc-sdd-*` skills.
 
 ## Quick path
 
@@ -15,7 +15,7 @@ Use `--project` for `./.opencode` or `--target <dir>` for an explicit target. Us
 
 ## Boundaries
 
-The script discovers agents under `domains/orchestration/agents/`. Frontmatter denies override automatic allows. Workflow confirmations remain unchanged.
+The script discovers agents under `domains/orchestration/agents/`. Frontmatter denies override automatic allows. `off` also removes blocks left for the retired `sdd-*` and `jd-*` agents. Workflow confirmations remain unchanged.
 
 The script rejects JSONC comments because it uses `jq`. It creates a timestamped backup before changing an existing config.
 

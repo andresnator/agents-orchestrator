@@ -17,7 +17,7 @@ PERMISSION_KEYS=(
 
 # Cleanup-only names written by older automation releases. ON and SHOW never
 # manage them, but OFF removes their retired permission blocks.
-RETIRED_OFF_AGENTS=(jd-fix jd-judge-a jd-judge-b jd-solo)
+RETIRED_OFF_AGENTS=(jd-fix jd-judge-a jd-judge-b jd-solo sdd-canonical-merge sdd-explore sdd-implement sdd-verify)
 
 ACTION=""
 DRY_RUN=0
