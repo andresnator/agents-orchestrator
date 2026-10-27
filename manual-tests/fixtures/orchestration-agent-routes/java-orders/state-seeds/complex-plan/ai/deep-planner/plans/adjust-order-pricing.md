@@ -31,7 +31,7 @@ Add focused protection before changing the public pricing result. Preserve two-d
 ### Group 1: Protect current pricing
 
 Files: src/test/java/com/example/orders/OrderPricingTest.java
-Skills: code-conventions, java-testing, behavior-characterization
+Skills: oc-conventions, oc-java-test, oc-characterize
 Depends on: none
 
 - [ ] Add focused subtotal, threshold, and rounding scenarios.
@@ -39,7 +39,7 @@ Depends on: none
 ### Group 2: Expose per-line discounts
 
 Files: src/main/java/com/example/orders/OrderPricing.java, src/test/java/com/example/orders/OrderPricingTest.java
-Skills: code-conventions, java-testing
+Skills: oc-conventions, oc-java-test
 Depends on: Group 1
 
 - [ ] Add the public result and verify proportional rounding.
@@ -55,8 +55,8 @@ Depends on: Group 1
 
 ## Skills
 
-- Group 1: code-conventions, java-testing, behavior-characterization.
-- Group 2: code-conventions, java-testing.
+- Group 1: oc-conventions, oc-java-test, oc-characterize.
+- Group 2: oc-conventions, oc-java-test.
 
 ## Verify
 

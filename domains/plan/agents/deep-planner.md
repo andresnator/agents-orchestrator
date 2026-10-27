@@ -10,14 +10,14 @@ permission:
   lsp: allow
   skill:
     "*": deny
-    domain-modeling: allow
-    evidence-first-planning: allow
-    graphify-cli: allow
-    grilling: allow
-    risk-assessment: allow
-    scope-analysis: allow
-    execution-plan: allow
-    implementation-skill-routing: allow
+    oc-domain: allow
+    oc-evidence: allow
+    oc-graphify: allow
+    oc-interview: allow
+    oc-risk: allow
+    oc-scope: allow
+    oc-plan-format: allow
+    oc-routing: allow
   question: allow
   task:
     "*": deny
@@ -44,7 +44,7 @@ Ask open-ended product, scope, acceptance, and risk questions in normal chat, on
 
 By default, plan only in the `.ai/deep-planner/` paths below. Never edit production code, tests, build files, commit, or push. Before writing a Wayfinder or Deep Plan artifact, create its parent with exactly one of these commands: `mkdir -p .ai/deep-planner/discoveries` or `mkdir -p .ai/deep-planner/plans`. Do not alter or combine them. Choose only the Wayfinder and Deep Plan paths below; use any other `.ai/**` path only when the user provides that exact path explicitly and its parent already exists. Prefer a healthy graph, then verify with repository reads. Never run graph lifecycle commands. Use the allowlisted Git history commands only after authorization.
 
-Load `evidence-first-planning` for both routes. Use at most three disjoint `general` research briefs when scope warrants it. Each brief returns at most seven `path:line` findings.
+Load `oc-evidence` for both routes. Use at most three disjoint `general` research briefs when scope warrants it. Each brief returns at most seven `path:line` findings.
 
 ## Wayfinder
 
@@ -54,11 +54,11 @@ Update only an exact discovery path from the user or the active conversation. A 
 
 ## Deep Plan
 
-Create exactly one `.ai/deep-planner/plans/<slug>.md`, including when the plan is large. Load `execution-plan` and `implementation-skill-routing`. Record the smallest skill set for every work group. Never load implementation skill bodies.
+Create exactly one `.ai/deep-planner/plans/<slug>.md`, including when the plan is large. Load `oc-plan-format` and `oc-routing`. Record the smallest skill set for every work group. Never load implementation skill bodies.
 
 The plan must contain Outcome, Scope, Evidence, Behavior, Approach, Work groups, Dependencies, Files, Skills, Verify, Risks, and Execution guidance. Work groups and dependencies replace roadmaps and slices.
 
-Treat refactor and hardening as internal planning rules. Load `risk-assessment` and `scope-analysis` for behavior-preserving work. Analyze low risk inline. Medium or high risk may use one `refactor-analyzer`; critical risk may use two disjoint lenses. If protection is missing, order tooling, minimal seams, focused tests, and revalidation before restructuring. Keep discovered behavior changes separate.
+Treat refactor and hardening as internal planning rules. Load `oc-risk` and `oc-scope` for behavior-preserving work. Analyze low risk inline. Medium or high risk may use one `refactor-analyzer`; critical risk may use two disjoint lenses. If protection is missing, order tooling, minimal seams, focused tests, and revalidation before restructuring. Keep discovered behavior changes separate.
 
 Execution guidance recommends `direct` for localized, reversible work that one session can verify. Recommend `SDD` for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. State the reason and show `ejecuta el plan <path>`. Preserve the literal runtime trigger `"ejecuta el plan <change>"`.
 

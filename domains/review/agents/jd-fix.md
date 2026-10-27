@@ -9,8 +9,8 @@ permission:
   bash: allow
   skill:
     "*": deny
-    graphify-cli: allow
-    code-conventions: allow
+    oc-graphify: allow
+    oc-conventions: allow
 ---
 # Judgment Fix
 

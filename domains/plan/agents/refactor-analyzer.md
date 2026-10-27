@@ -10,36 +10,36 @@ permission:
   lsp: allow
   skill:
     "*": deny
-    architecture-impact-review: allow
-    behavior-characterization: allow
-    characterization-test-scoping: allow
-    code-conventions: allow
-    cohesion-coupling: allow
-    complexity-big-o: allow
-    dependency-inversion: allow
-    dependency-seam-detection: allow
-    design-patterns-pragmatic: allow
-    dry-business-knowledge: allow
-    general-naming-readability: allow
-    god-object-detection: allow
-    input-validation-preconditions: allow
-    java-api-design: allow
-    java-exception-robustness: allow
-    java-immutability-modeling: allow
-    java-naming-readability: allow
-    java-secure-coding: allow
-    java-testing: allow
-    kiss-yagni: allow
-    legacy-code-safety: allow
-    logging-observability: allow
-    null-safety: allow
-    open-closed-principle: allow
+    oc-arch-impact: allow
+    oc-characterize: allow
+    oc-char-scope: allow
+    oc-conventions: allow
+    oc-coupling: allow
+    oc-big-o: allow
+    oc-dip: allow
+    oc-seams: allow
+    oc-patterns: allow
+    oc-dry: allow
+    oc-naming: allow
+    oc-god-object: allow
+    oc-preconditions: allow
+    oc-java-api: allow
+    oc-java-errors: allow
+    oc-java-immutable: allow
+    oc-java-naming: allow
+    oc-java-security: allow
+    oc-java-test: allow
+    oc-kiss: allow
+    oc-legacy: allow
+    oc-logging: allow
+    oc-null-safety: allow
+    oc-ocp: allow
     refactor: allow
-    single-responsibility: allow
-    spaghetti-code-detection: allow
-    tooling-audit: allow
-    tooling-compatibility-matrix: allow
-    type-contracts: allow
+    oc-srp: allow
+    oc-spaghetti: allow
+    oc-tooling-audit: allow
+    oc-tooling-matrix: allow
+    oc-types: allow
   question: deny
   edit: deny
   bash: deny

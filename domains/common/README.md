@@ -26,7 +26,7 @@ With no saved selection, Caveman uses `lite`. `/caveman lite|full|ultra|wenyan` 
 
 The selection applies on the next response of every existing and new primary and subagent session sharing the same global OpenCode configuration directory, including other processes. It does not affect earlier responses, other machines, or independent configuration directories. Invalid arguments preserve the saved level and show valid syntax; state errors are reported rather than silently reset.
 
-Quit and restart OpenCode after installing or changing plugin code or configuration-time files. Once loaded, mode changes need no restart. See [Caveman guidance](skills/caveman/SKILL.md) for levels and storage details and [the manual test](manual-tests.md#mt-common-caveman) for real-process verification.
+Quit and restart OpenCode after installing or changing plugin code or configuration-time files. Once loaded, mode changes need no restart. See [Caveman guidance](skills/oc-caveman/SKILL.md) for levels and storage details and [the manual test](manual-tests.md#mt-common-caveman) for real-process verification.
 
 ## Components
 
@@ -35,35 +35,35 @@ Quit and restart OpenCode after installing or changing plugin code or configurat
 | Command | `/caveman` | Saves global response compression |
 | Command | `/graphify-index` | Indexes Graphify after explicit consent |
 | Command | `/grill` | Routes focused interview modes |
-| Skill | `caveman` | Preserves meaning during response compression |
-| Skill | `chained-pr` | Splits oversized work into reviewable slices |
-| Skill | `code-conventions` | Applies code and test conventions |
-| Skill | `cognitive-output-refiner` | Condenses output without losing meaning |
-| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
-| Skill | `complexity-big-o` | Evaluates algorithmic and control complexity |
-| Skill | `dependency-inversion` | Detects concrete dependency boundary risks |
-| Skill | `design-patterns-pragmatic` | Applies patterns to evidenced forces |
-| Skill | `domain-modeling` | Builds and sharpens domain models |
-| Skill | `dry-business-knowledge` | Distinguishes knowledge duplication from similarity |
-| Skill | `general-naming-readability` | Improves language-neutral naming and readability |
-| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
-| Skill | `graphify-cli` | Queries Graphify code graphs read-only |
-| Skill | `grill` | Selects focused interview modes |
-| Skill | `grilling` | Stress-tests plans through focused interviews |
-| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
-| Skill | `judgment-day` | Runs dual blind adversarial reviews |
-| Skill | `kiss-yagni` | Prevents speculative refactor complexity |
-| Skill | `logging-observability` | Evaluates operational logging and observability |
-| Skill | `open-closed-principle` | Detects extension pressure without speculation |
-| Skill | `programming-practices-core` | Evaluates language-neutral code quality |
-| Skill | `risk-assessment` | Classifies technical and functional risk |
-| Skill | `execution-plan` | Drafts one neutral execution plan |
-| Skill | `implementation-skill-routing` | Selects skills for implementation work |
-| Skill | `single-responsibility` | Detects multiple reasons to change |
-| Skill | `small-functions` | Detects oversized and extractable functions |
-| Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
-| Skill | `systematic-debugging` | Finds root causes before fixes |
-| Skill | `tcr` | Runs test-commit-revert micro-cycles |
-| Skill | `work-unit-commits` | Plans reviewable and cohesive commits |
+| Skill | `oc-caveman` | Preserves meaning during response compression |
+| Skill | `oc-chained-pr` | Splits oversized work into reviewable slices |
+| Skill | `oc-conventions` | Applies code and test conventions |
+| Skill | `oc-refine-output` | Condenses output without losing meaning |
+| Skill | `oc-coupling` | Detects cohesion and coupling problems |
+| Skill | `oc-big-o` | Evaluates algorithmic and control complexity |
+| Skill | `oc-dip` | Detects concrete dependency boundary risks |
+| Skill | `oc-patterns` | Applies patterns to evidenced forces |
+| Skill | `oc-domain` | Builds and sharpens domain models |
+| Skill | `oc-dry` | Distinguishes knowledge duplication from similarity |
+| Skill | `oc-naming` | Improves language-neutral naming and readability |
+| Skill | `oc-god-object` | Detects oversized multi-responsibility objects |
+| Skill | `oc-graphify` | Queries Graphify code graphs read-only |
+| Skill | `oc-grill` | Selects focused interview modes |
+| Skill | `oc-interview` | Stress-tests plans through focused interviews |
+| Skill | `oc-preconditions` | Detects missing or duplicated preconditions |
+| Skill | `oc-judgment` | Runs dual blind adversarial reviews |
+| Skill | `oc-kiss` | Prevents speculative refactor complexity |
+| Skill | `oc-logging` | Evaluates operational logging and observability |
+| Skill | `oc-ocp` | Detects extension pressure without speculation |
+| Skill | `oc-practices` | Evaluates language-neutral code quality |
+| Skill | `oc-risk` | Classifies technical and functional risk |
+| Skill | `oc-plan-format` | Drafts one neutral execution plan |
+| Skill | `oc-routing` | Selects skills for implementation work |
+| Skill | `oc-srp` | Detects multiple reasons to change |
+| Skill | `oc-small-fn` | Detects oversized and extractable functions |
+| Skill | `oc-spaghetti` | Detects tangled flow and hidden ordering |
+| Skill | `oc-debug` | Finds root causes before fixes |
+| Skill | `oc-tcr` | Runs test-commit-revert micro-cycles |
+| Skill | `oc-commits` | Plans reviewable and cohesive commits |
 | Plugin | `caveman-mode` | Persists global mode and reads it before every primary/subagent response |
 | External npm server plugin | `opencode-graphify-init` | Refreshes approved Graphify indexes |

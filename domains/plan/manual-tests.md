@@ -12,7 +12,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Emit delivery only from explicit intent
 - **Coverage key:** `plan/delivery/explicit-control`
-- **Applies to:** `domains/plan/skills/execution-plan/**`
+- **Applies to:** `domains/plan/skills/oc-plan-format/**`
 - **Preconditions:** Prepare fresh Git-backed copies of the Java fixture with the same clean baseline and no `.ai/deep-planner/` state.
 - **Steps:**
   1. In separate copies, request the same executable plan with no Git language, with no commits, with commits per cohesive unit, and with TCR.
@@ -25,7 +25,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Create one plan for a clear request
 - **Coverage key:** `plan/routing/clear-plan-request`
-- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/evidence-first-planning/**`, `domains/plan/skills/execution-plan/**`, `domains/plan/skills/implementation-skill-routing/**`
+- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/oc-evidence/**`, `domains/plan/skills/oc-plan-format/**`, `domains/plan/skills/oc-routing/**`
 - **Preconditions:** Use the copied Java fixture and request one localized public method with focused coverage and no open product decision.
 - **Steps:**
   1. Ask `deep-planner` to create the execution plan.
@@ -49,7 +49,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Explore an open destination without a plan
 - **Coverage key:** `plan/wayfinder/open-discovery`
-- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/evidence-first-planning/**`, `domains/plan/skills/domain-modeling/**`, `domains/plan/skills/grilling/**`
+- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/oc-evidence/**`, `domains/plan/skills/oc-domain/**`, `domains/plan/skills/oc-interview/**`
 - **Preconditions:** Use the copied Java fixture and an idea whose currencies, rate ownership, and rounding rules remain open.
 - **Steps:**
   1. Ask `deep-planner` to explore multi-currency pricing and answer one decision question at a time.
@@ -61,7 +61,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Convert one discovery without rewriting it
 - **Coverage key:** `plan/discovery/plan-conversion`
-- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/evidence-first-planning/**`, `domains/plan/skills/execution-plan/**`, `domains/plan/skills/implementation-skill-routing/**`
+- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/oc-evidence/**`, `domains/plan/skills/oc-plan-format/**`, `domains/plan/skills/oc-routing/**`
 - **Preconditions:** Complete a Wayfinder discovery in a disposable repository and record its checksum after resolving every material question.
 - **Steps:**
   1. Ask `deep-planner` to convert that exact discovery into a plan.
@@ -73,7 +73,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Keep a large plan in one artifact
 - **Coverage key:** `plan/planning/grouped-large-plan`
-- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/evidence-first-planning/**`, `domains/plan/skills/execution-plan/**`, `domains/plan/skills/implementation-skill-routing/**`
+- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/skills/oc-evidence/**`, `domains/plan/skills/oc-plan-format/**`, `domains/plan/skills/oc-routing/**`
 - **Preconditions:** Use a disposable repository and request coupons, validation, reporting, and test migration with explicit dependencies.
 - **Steps:**
   1. Ask `deep-planner` for an executable plan and resolve any material dependency question.
@@ -85,7 +85,7 @@ Run these cases with `deep-planner` in a disposable repository. Planning may wri
 
 - **Title:** Order protection before legacy refactoring
 - **Coverage key:** `plan/refactor/safety-sequencing`
-- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/agents/refactor-analyzer.md`, `domains/plan/skills/architecture-impact-review/**`, `domains/plan/skills/behavior-characterization/**`, `domains/plan/skills/characterization-test-scoping/**`, `domains/plan/skills/code-conventions/**`, `domains/plan/skills/cohesion-coupling/**`, `domains/plan/skills/complexity-big-o/**`, `domains/plan/skills/dependency-*/**`, `domains/plan/skills/design-patterns-pragmatic/**`, `domains/plan/skills/dry-business-knowledge/**`, `domains/plan/skills/general-naming-readability/**`, `domains/plan/skills/god-object-detection/**`, `domains/plan/skills/input-validation-preconditions/**`, `domains/plan/skills/java-*/**`, `domains/plan/skills/kiss-yagni/**`, `domains/plan/skills/legacy-code-safety/**`, `domains/plan/skills/logging-observability/**`, `domains/plan/skills/null-safety/**`, `domains/plan/skills/open-closed-principle/**`, `domains/plan/skills/refactor/**`, `domains/plan/skills/risk-assessment/**`, `domains/plan/skills/scope-analysis/**`, `domains/plan/skills/single-responsibility/**`, `domains/plan/skills/spaghetti-code-detection/**`, `domains/plan/skills/tooling-*/**`, `domains/plan/skills/type-contracts/**`
+- **Applies to:** `domains/plan/agents/deep-planner.md`, `domains/plan/agents/refactor-analyzer.md`, `domains/plan/skills/oc-arch-impact/**`, `domains/plan/skills/oc-characterize/**`, `domains/plan/skills/oc-char-scope/**`, `domains/plan/skills/oc-conventions/**`, `domains/plan/skills/oc-coupling/**`, `domains/plan/skills/oc-big-o/**`, `domains/plan/skills/oc-dip/**`, `domains/plan/skills/oc-seams/**`, `domains/plan/skills/oc-patterns/**`, `domains/plan/skills/oc-dry/**`, `domains/plan/skills/oc-naming/**`, `domains/plan/skills/oc-god-object/**`, `domains/plan/skills/oc-preconditions/**`, `domains/plan/skills/oc-java-*/**`, `domains/plan/skills/oc-kiss/**`, `domains/plan/skills/oc-legacy/**`, `domains/plan/skills/oc-logging/**`, `domains/plan/skills/oc-null-safety/**`, `domains/plan/skills/oc-ocp/**`, `domains/plan/skills/oc-refactor/**`, `domains/plan/skills/oc-risk/**`, `domains/plan/skills/oc-scope/**`, `domains/plan/skills/oc-srp/**`, `domains/plan/skills/oc-spaghetti/**`, `domains/plan/skills/oc-tooling-*/**`, `domains/plan/skills/oc-types/**`
 - **Preconditions:** Use a disposable legacy project with observable behavior, weak or absent focused tests, and one medium-risk refactor target.
 - **Steps:**
   1. Ask `deep-planner` for a behavior-preserving refactor plan.

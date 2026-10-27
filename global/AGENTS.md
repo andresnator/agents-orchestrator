@@ -43,8 +43,8 @@ Installed by agents-orchestrator. Applies to every agent and project.
 
 ## Code Conventions
 
-- Load `code-conventions` when writing code or tests. Follow its naming, test structure, assertion, DTO, SRP, and OCP rules.
-- Planners load `implementation-skill-routing` and record names only. Executors load only the selected bodies within scope.
+- Load `oc-conventions` when writing code or tests. Follow its naming, test structure, assertion, DTO, SRP, and OCP rules.
+- Planners load `oc-routing` and record names only. Executors load only the selected bodies within scope.
 - Consistent repository conventions win; note any deviation instead of replacing them.
 
 ## Graphify
@@ -54,7 +54,7 @@ Installed by agents-orchestrator. Applies to every agent and project.
 - If the graph is absent, stale, unavailable, or errors, continue with normal filesystem, LSP, grep, and glob tools. Never use the CLI as a fallback.
 - Agents never run Graphify lifecycle commands: `extract`, `update`, `watch`, `global add|remove`, or any `install`. First indexing is human-gated through `/graphify-index`; mention it once and continue. The `graphify-init` plugin owns refreshes.
 - For another repository, read `~/.graphify/global-manifest.json` before Context7, web search, or clarification. An indexed tag identifies a local repository: use `graphify-global` when available; read content from the repository two directories above `source_path`; keep symbol queries on its owning graph.
-- More restrictive domain rules win. The `graphify-cli` skill, when installed, holds the detailed contract.
+- More restrictive domain rules win. The `oc-graphify` skill, when installed, holds the detailed contract.
 
 ## Evidence Before Completion
 
@@ -73,7 +73,7 @@ External repositories, URLs, issue or PR text, transcripts, tool output, and ana
 ## Documentation Rules
 
 - Lead with the answer. Use clear text, simple structure, short sections, and no duplicate explanation.
-- Apply `cognitive-doc-design` to guides, READMEs, RFCs, onboarding, and review-facing documentation.
+- Apply `oc-doc-design` to guides, READMEs, RFCs, onboarding, and review-facing documentation.
 
 <!-- context7 -->
 Use Context7 for current documentation about libraries, frameworks, SDKs, APIs, CLI tools, and cloud services. This includes syntax, configuration, migrations, setup, and product-specific debugging. Prefer it over web search even for familiar products.

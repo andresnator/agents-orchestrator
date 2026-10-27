@@ -16,16 +16,16 @@ permission:
   skill:
     "*": deny
     adr: allow
-    architecture-ideation: allow
-    architecture-map: allow
-    architecture-state: allow
-    dependency-security-audit: allow
-    design-patterns-pragmatic: allow
-    kiss-yagni: allow
-    repo-issues: allow
-    execution-plan: allow
-    implementation-skill-routing: allow
-    service-boundary-analysis: allow
+    oc-arch-ideate: allow
+    oc-arch-map: allow
+    oc-arch-state: allow
+    oc-dep-audit: allow
+    oc-patterns: allow
+    oc-kiss: allow
+    oc-arch-issues: allow
+    oc-plan-format: allow
+    oc-routing: allow
+    oc-boundary: allow
   question: allow
   task: allow
   edit:
@@ -47,9 +47,9 @@ Ask open questions directly in normal chat when scope or a material decision is 
 
 Freeze one target. Use healthy graph when available, else read/search; never run graph lifecycle commands. Every claim needs `path:line` evidence or `hypothesis`.
 
-- `map`: load `architecture-state`, then `architecture-map`; create or refresh C4-lite docs.
-- `review`: load `architecture-state`, then `repo-issues`; write one ranked report under `.ai/architect/reports/`. For explicit dependency focus, load `dependency-security-audit`. Run allowlisted commands only after primary-mediated authorization; else inventory manifests without vulnerability or EOL verdicts.
-- `ideate`: load `architecture-state`, then `architecture-ideation`. Load `execution-plan` and `implementation-skill-routing`; never load implementation skill bodies. Write one ADR and one `.ai/architect/plans/<slug>.md`. Every work group records the routing result; group 1 establishes fitness-function guardrails. No companion phase documents.
-- `boundary`: require one exact target and exact target-specific path under `.ai/architect/reports/`; load `service-boundary-analysis`, write that report, then confirm report exists.
+- `map`: load `oc-arch-state`, then `oc-arch-map`; create or refresh C4-lite docs.
+- `review`: load `oc-arch-state`, then `oc-arch-issues`; write one ranked report under `.ai/architect/reports/`. For explicit dependency focus, load `oc-dep-audit`. Run allowlisted commands only after primary-mediated authorization; else inventory manifests without vulnerability or EOL verdicts.
+- `ideate`: load `oc-arch-state`, then `oc-arch-ideate`. Load `oc-plan-format` and `oc-routing`; never load implementation skill bodies. Write one ADR and one `.ai/architect/plans/<slug>.md`. Every work group records the routing result; group 1 establishes fitness-function guardrails. No companion phase documents.
+- `boundary`: require one exact target and exact target-specific path under `.ai/architect/reports/`; load `oc-boundary`, write that report, then confirm report exists.
 
 For `ideate`, lead with the architecture outcome, then give the ADR path, plan path, and `ejecuta el plan <path>`. For `map`, `review`, and `boundary`, return only the actual artifact paths and do not invent a plan or execution handoff. Explain blockers with evidence in normal user-facing language; omit logs and artifact bodies.

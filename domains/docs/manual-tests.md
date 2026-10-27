@@ -12,7 +12,7 @@ Run these cases after changing documentation commands or their routed skills. Us
 
 - **Title:** Route a document to one specific skill
 - **Coverage key:** `docs/routing/specific-skill`
-- **Applies to:** `domains/docs/commands/doc.md`, `domains/docs/skills/buildable-issue/**`, `domains/docs/skills/cognitive-doc-design/**`, `domains/docs/skills/jira-spike/**`, `domains/docs/skills/jira-task/**`, `domains/docs/skills/jira-user-story/**`, `domains/docs/skills/rfc/**`, `domains/docs/skills/slidev-retro-deck/**`, `domains/docs/skills/summarize/**`, `domains/docs/skills/usm/**`, `domains/docs/skills/whisper-extract/**`
+- **Applies to:** `domains/docs/commands/doc.md`, `domains/docs/skills/oc-issue/**`, `domains/docs/skills/oc-doc-design/**`, `domains/docs/skills/oc-jira-spike/**`, `domains/docs/skills/oc-jira-task/**`, `domains/docs/skills/oc-jira-story/**`, `domains/docs/skills/oc-rfc/**`, `domains/docs/skills/oc-slides/**`, `domains/docs/skills/oc-summarize/**`, `domains/docs/skills/oc-usm/**`, `domains/docs/skills/oc-whisper/**`
 - **Preconditions:** Use a disposable repository and a clear request for one supported document type, such as an implementation-ready issue.
 - **Steps:**
   1. Run `/doc <clear-request>` and answer only information required by that document type.
@@ -24,12 +24,12 @@ Run these cases after changing documentation commands or their routed skills. Us
 
 - **Title:** Route an MVP request to a lightweight PRD
 - **Coverage key:** `docs/prd/light-routing`
-- **Applies to:** `domains/docs/commands/prd.md`, `domains/docs/skills/prd/**`, `domains/docs/skills/prd-light/**`
+- **Applies to:** `domains/docs/commands/prd.md`, `domains/docs/skills/oc-prd/**`, `domains/docs/skills/oc-prd-light/**`
 - **Preconditions:** Use a disposable repository and a clear early-stage MVP request with no regulated or cross-team constraints.
 - **Steps:**
   1. Run `/prd <mvp-request>`.
   2. Complete the selected interview and inspect the resulting PRD structure.
-- **Expected result:** The command loads `prd-light` immediately, asks no routing question when the signal is clear, and leaves interview, draft, and write behavior to that skill.
+- **Expected result:** The command loads `oc-prd-light` immediately, asks no routing question when the signal is clear, and leaves interview, draft, and write behavior to that skill.
 - **Essential negative variant:** Submit a request whose scope omits whether it is lightweight or formal and confirm one plain-language triage question appears before either skill loads.
 - **Cleanup:** Remove the generated PRD and disposable repository.
 
@@ -37,7 +37,7 @@ Run these cases after changing documentation commands or their routed skills. Us
 
 - **Title:** Record one technical decision as an ADR
 - **Coverage key:** `docs/adr/decision-record`
-- **Applies to:** `domains/docs/commands/adr.md`, `domains/docs/skills/adr/**`
+- **Applies to:** `domains/docs/commands/adr.md`, `domains/docs/skills/oc-adr/**`
 - **Preconditions:** Use a disposable repository with a concrete technical decision, two real options, and a documentation destination.
 - **Steps:**
   1. Run `/adr <decision>` and answer only unresolved context or trade-off questions.
