@@ -6,40 +6,39 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: null safety, nullability, Optional, NPE.
+# oc-null-safety
 
-## Hard Rules
+## Intent
 
-- Flag dereferences without clear guarantees, nullable returns, and ambiguous null semantics.
-- Prefer boundary checks, NonNull annotations where used, clear defaults, or Null Object only when justified.
-- Do not introduce Optional in fields, parameters, or DTOs without explicit reason.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Null hazards found and fixed with conservative Java null-safety refactors.
+- **Limits:**
+  - Prefer boundary checks, NonNull annotations where used, clear defaults, or Null Object only when justified.
+  - Do not introduce Optional in fields, parameters, or DTOs without explicit reason.
+  - Preserve observable behavior; label functional changes as follow-up.
+- **Fails if:** a finding lacks evidence and is not marked hypothesis.
 
-## Decision Gates
+## Context
+
+- **Reads:** the target and nearby tests, as needed.
+- **Never reads:** `none`.
+- **Persona:** Java refactor reviewer.
+- **Scope:** load when reviewing refactor plans for: null safety, nullability, Optional, NPE.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN a dereference lacks a clear guarantee, a return is nullable, or null semantics are ambiguous THEN flag it with evidence.
+- **Done means:** findings in the calling contract's format (it wins); each has `file:line` evidence or is marked hypothesis; `no_findings` when nothing is material.
+- **Quality needs:** note validation and rollback implications where material; the caller decides where they land.
+
+## Method
 
 | Signal | Action |
 |---|---|
 | Concrete evidence exists | Create a finding with `file:line` evidence and the smallest safe refactor. |
 | Evidence is incomplete | Mark as hypothesis and lower confidence. |
 | Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
-
-## Execution Steps
-
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Note validation and rollback implications where material; the calling agent decides where they land.
-
-## Output Contract
-
-Return findings in the calling agent's output contract — that contract wins over any field list here. Every finding carries `file:line` evidence or is marked hypothesis. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.

@@ -5,43 +5,34 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
-# Skill: oc-java-immutable
+# oc-java-immutable
 
-## Activation Contract
+## Intent
 
-Use this skill when modeling Java data with records, value objects, immutable classes, defensive copies, collection ownership, equality, and state validation.
+- **Goal:** Java data modeled safely: invariants enforced at construction and no accidental mutable exposure.
+- **Limits:**
+  - Teaches state modeling only; does not call other skills, impose immutability everywhere, or choose framework annotations unless context requires them.
+  - Prefer immutable data for values, messages, events, and DTOs unless mutation is required.
+  - Use records for transparent immutable aggregates when they match the domain and Java version; avoid them for entities that require identity, lazy mutation, or framework lifecycle constraints unless explicitly supported.
+- **Fails if:** invariants are not validated at construction, mutable inputs/outputs are not defensively copied when ownership is not transferred, or mutable internals are exposed.
 
-Do **not** use this skill for persistence mapping only, serialization-only configuration, generic DTO naming, or non-Java data modeling.
+## Context
 
-## Responsibility
+- **Reads:** Java version; type role (domain model, value object, DTO, event, command, or persistence entity); mutability requirements and collection ownership; equality/hashCode expectations.
+- **Never reads:** sources unrelated to the type under review.
+- **Persona:** Java data modeler.
+- **Scope:** modeling Java data with records, value objects, immutable classes, defensive copies, collection ownership, equality, and state validation. Not for persistence mapping only, serialization-only configuration, generic DTO naming, or non-Java data modeling.
 
-This skill teaches safe Java state modeling. It does not call other skills, impose immutability everywhere, or choose framework annotations unless context requires them.
+## Expectations
 
-## Required Context
+- **Scenarios:** WHEN the data role and mutability needs are known THEN choose record vs class by invariants, identity, and framework constraints, define construction validation, protect mutable components, and clarify equality and serialization implications when relevant.
+- **Done means:** modeling choice (record, immutable class, mutable class, or other); invariants and validation point; mutability/ownership policy; equality/hashCode implications; example shape when useful.
+- **Quality needs:** the choice fits the Java version and framework constraints.
 
-- Java version.
-- Whether the type is domain model, value object, DTO, event, command, or persistence entity.
-- Mutability requirements and ownership of collections.
-- Equality/hashCode expectations.
-
-## Context Budget
-
-- Keep this `SKILL.md` focused on modeling decisions.
-- Use `references/java-immutability.md` for records and defensive-copy details.
-
-## Hard Rules
-
-- Prefer immutable data for values, messages, events, and DTOs unless mutation is required.
-- Validate invariants at construction time.
-- Make defensive copies of mutable inputs and outputs when ownership is not transferred.
-- Do not expose mutable internals accidentally.
-- Use records for transparent immutable aggregates when they match the domain and Java version.
-- Avoid records for entities that require identity, lazy mutation, or framework lifecycle constraints unless explicitly supported.
-
-## Decision Gates
+## Method
 
 | Condition | Action |
 |---|---|
@@ -51,28 +42,4 @@ This skill teaches safe Java state modeling. It does not call other skills, impo
 | Type has identity/lifecycle mutation | Prefer class over record. |
 | Collection is returned | Return immutable copy/view based on ownership contract. |
 
-## Execution Steps
-
-1. Identify the data role and mutability needs.
-2. Choose record vs class based on invariants, identity, and framework constraints.
-3. Define construction validation.
-4. Protect mutable components.
-5. Clarify equality and serialization implications when relevant.
-
-## Output Contract
-
-Return:
-
-- Modeling choice: record, immutable class, mutable class, or other.
-- Invariants and validation point.
-- Mutability/ownership policy.
-- Equality/hashCode implications.
-- Example shape when useful.
-
-## References
-
-- `references/java-immutability.md` — Records, defensive copies, and modeling choices.
-
-## Assets
-
-- None.
+Reference: `references/java-immutability.md` — records, defensive copies, and modeling choices.

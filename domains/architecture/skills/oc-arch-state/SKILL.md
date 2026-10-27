@@ -6,30 +6,34 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.1.0"
   status: testing
 ---
 
 # Architecture State
 
-## Contract
+## Intent
 
-Record current architecture facts. Do not rank problems, propose changes, inspect code style; `oc-arch-issues` owns judgments and fitness functions.
+- **Goal:** A verified `project_state` snapshot of architecture facts.
+- **Limits:** No ranking, proposals, or code style; `oc-arch-issues` owns judgments and fitness functions.
+- **Fails if:** A claim lacks `file:line`; versions, edges, or styles are guessed; one style is assigned to a multi-project workspace.
 
-Every claim needs `file:line`. Manifests, build files, configs, imports, deployment descriptors beat README claims; README-only facts `aspirational`.
+## Context
 
-## Inspect
+- **Reads:** Manifests, build files, lockfiles, configs, imports, deployment descriptors, healthy graph, `.git` entries.
+- **Never reads:** README claims as facts; README-only facts are `aspirational`.
+- **Persona:** Neutral recorder.
+- **Scope:** Activation per description.
 
-- Languages, declared runtime versions.
-- Build and dependency tooling, including lockfiles.
-- Frameworks, platforms from dependencies.
-- Modules, dependency edges from manifests, imports, or healthy code graph.
-- Nested manifests, `.git` entries. Multiple independent projects require per-project facts.
-- Tests, CI, existing architecture checks.
+## Expectations
 
-Classify each project's dominant style as `layered`, `hexagonal/ports-adapters`, `modular monolith`, `microservices`, `event-driven`, or `big-ball-of-mud`. Name evidence, strongest counter-evidence. Multi-project targets: also classify workspace composition as `monorepo`, `aggregator`, `app-plus-tooling`; never assign one project style to whole workspace.
+- **Scenarios:**
+  - WHEN one project THEN record languages/declared runtime versions, tooling (incl. lockfiles), frameworks/platforms from dependencies, modules and edges, tests, CI, architecture checks, and dominant style (`layered`, `hexagonal/ports-adapters`, `modular monolith`, `microservices`, `event-driven`, `big-ball-of-mud`) with evidence and strongest counter-evidence.
+  - WHEN multiple projects (nested manifests) THEN record per-project facts; classify workspace `monorepo`, `aggregator`, or `app-plus-tooling`.
+- **Done means:** YAML below; uncertainty in `unknowns`.
+- **Quality needs:** No duplicate prose.
 
-## Output
+## Method
 
 ```yaml
 project_state:
@@ -43,5 +47,3 @@ project_state:
   projects: [{name, path, languages, toolchain, style}] # multi-project only
 unknowns: []
 ```
-
-No duplicate prose. Preserve uncertainty in `unknowns`; never guess missing versions, edges, styles.

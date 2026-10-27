@@ -15,120 +15,61 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Whisper Extract
 
-Transcribe audio or video with Whisper, then produce a `.md` file containing an AI summary
-followed by the complete literal transcript.
+## Intent
 
-## Prerequisite check
+- **Goal:** A `.md` file containing an AI summary followed by the complete literal transcript of an audio or video file, produced with Whisper.
+- **Limits:**
+  - Verify Whisper first (`whisper --help > /dev/null 2>&1 && echo "OK" || echo "NOT FOUND"`). If missing, tell the user to run `pipx install openai-whisper` (and `brew install ffmpeg` if ffmpeg is missing), then stop and wait until Whisper is available. The `turbo` model requires `openai-whisper` >= 20240930 (`pipx upgrade openai-whisper`).
+  - Ask for missing inputs once, in a single message; never ask for things already mentioned. Wait for answers before transcribing.
+  - Never paraphrase, clean up, or invent speaker turns in the transcript; do not split into speaker turns unless Whisper detected them.
+  - Do not dump the full transcript in chat — it lives in the file.
+- **Fails if:** the transcript differs from Whisper's raw text, a stale file from a previous run is used, the Whisper command is split across lines, or a Whisper error is not reported with a suggested fix.
 
-Before doing anything else, verify that Whisper is installed:
+## Context
 
-```bash
-whisper --help > /dev/null 2>&1 && echo "OK" || echo "NOT FOUND"
-```
+- **Reads:** the user's file; the Whisper JSON in `/tmp/whisper-extract-temp/` whose basename matches the input (its `text` field is the full raw transcript).
+- **Never reads:** leftovers from earlier runs (clear `/tmp/whisper-extract-temp` before each run).
+- **Persona:** concise, factual transcriber; the transcript is the source of truth, the summary is the lens.
+- **Scope:** transcribing audio/video, extracting what was said, transcripts or summaries of meetings, interviews, lectures, podcasts; files like .mp3, .mp4, .wav, .m4a, .ogg, .flac, .webm, .mkv, .mov (English and Spanish triggers in the description).
 
-If not found, tell the user to run:
+## Expectations
 
-```bash
-pipx install openai-whisper
-brew install ffmpeg   # if ffmpeg is missing
-```
+- **Scenarios:**
+  - WHEN the file is longer than 1 hour THEN tell the user: "Starting transcription — this may take a few minutes depending on file length and model."
+  - WHEN Whisper fails THEN report the exact error and the fix from the error table before continuing.
+  - WHEN today's date is unknown THEN use the file's modification date via `stat`, or drop the date prefix.
+- **Done means:** the file `YYYY-MM-DD-<slugified-context>.md` (e.g. `2026-04-14-team-meeting-q3-roadmap.md`) saved in the output directory, and chat shows its full path, the summary section, and `Transcript: ~N words`.
+- **Quality needs:** summary of 150-300 words without padding, in the recording language (or the requested output language); transcript wrapped into readable paragraphs with a blank line roughly every 10-15 sentences, content unchanged.
 
-The `turbo` model requires `openai-whisper` >= 20240930; if the install is older, tell the
-user to run `pipx upgrade openai-whisper`.
+## Method
 
-Then stop and wait — do not proceed until Whisper is available.
+### Inputs
 
----
+- **Required:** file path (mp3, mp4, wav, m4a, ogg, flac, webm, mkv, mov, mpeg, mpga, oga, wma); language (e.g. `Spanish`, `English`, `Portuguese`, or "auto-detect", slower); recording context (e.g. "team meeting about Q3 roadmap", "lecture on clean architecture"), used for a better summary.
+- **Optional (ask only if not obvious):** Whisper model, default `turbo` (recommended speed/accuracy balance; `tiny` fastest/less accurate, `large-v3` most accurate/slower; also `base`, `small`, `medium`) — ask only if the user wants a different speed/accuracy trade-off; output directory, default the audio file's directory; summary language, default the recording language.
 
-## Step 1: Gather required information
-
-Ask the following in a **single message** if the user has not already provided them.
-Never ask more than once, and never ask for things already mentioned in the conversation.
-
-**Required:**
-- **Audio/video file path** — absolute or relative path to the file (mp3, mp4, wav, m4a, ogg, flac, webm, mkv, mov, mpeg, mpga, oga, wma).
-- **Language** — spoken language in the recording. Examples: `Spanish`, `English`, `Portuguese`. If unsure, say "auto-detect" and Whisper will figure it out (slower).
-- **Recording context** — a short description of what this is (e.g., "team meeting about Q3 roadmap", "interview with a candidate", "product demo call", "lecture on clean architecture"). This is used to write a better summary.
-
-**Optional (ask only if not obvious):**
-- **Whisper model** — default is `turbo` (recommended speed/accuracy balance). Options: `tiny` (fastest, less accurate), `base`, `small`, `medium`, `turbo`, `large-v3` (most accurate, slower). Ask only if the user wants a different speed/accuracy trade-off.
-- **Output directory** — where to save the `.md` file. Default: same directory as the audio file.
-- **Output language for summary** — language for the summary and headings. Default: same as the recording language. If the user wants the summary in a different language, note it.
-
-Wait for the user's answers before proceeding to Step 2.
-
----
-
-## Step 2: Transcribe with Whisper
-
-Run Whisper on the provided file. Use the `--output_format json` flag to capture word-level
-timing and text cleanly, and `--output_dir` to control where the raw output goes. Clear
-`/tmp/whisper-extract-temp` first so leftovers from a previous run cannot be picked up.
+### Transcription
 
 ```bash
 whisper "<file_path>" --model <model> --language <language_code_or_auto> --output_format json --output_dir /tmp/whisper-extract-temp
 ```
 
-> **Important:** Always emit this as a **single line** — never split with `\` continuations.
-> A trailing space after `\` is not a line continuation in zsh; it becomes an escaped space
-> that Whisper receives as a second (empty) file path, causing ffmpeg to fail with
-> `Error opening input file  .`
+Always emit this as a **single line** — never split with `\` continuations: in zsh a trailing space after `\` becomes an escaped space that Whisper receives as a second (empty) path, and ffmpeg fails with `Error opening input file  .` Language codes: `es`, `en`, `pt`, `fr`, etc.; for auto-detect omit `--language`.
 
-Language codes: `es` for Spanish, `en` for English, `pt` for Portuguese, `fr` for French, etc.
-For auto-detect, omit `--language` entirely.
-
-**If the file is large (> 1 hour):** Whisper will take several minutes. Tell the user:
-> "Starting transcription — this may take a few minutes depending on file length and model."
-
-After the command completes, read the JSON file in `/tmp/whisper-extract-temp/` whose basename
-matches the input file, and extract the `text` field. This is the full raw transcript.
-
-If Whisper fails (file not found, unsupported format, ffmpeg missing), report the exact error
-and suggest a fix before continuing.
-
----
-
-## Step 3: Generate the summary
-
-Given the full transcript text and the recording context provided by the user, produce a
-structured summary. Write it in the output language chosen in Step 1.
-
-The summary must cover:
+### Summary contents
 
 1. **What this recording is about** — one or two sentences.
-2. **Key topics discussed** — bulleted list of the main themes or agenda items covered.
-3. **Key decisions or conclusions** — if any were reached (skip this section if the recording is
-   a lecture or monologue with no decisions).
-4. **Action items** — concrete next steps mentioned, with owner if stated (skip if none mentioned).
-5. **Notable quotes or moments** — 1-3 verbatim fragments that best capture the essence of the
-   conversation (optional but highly recommended for interviews and meetings).
+2. **Key topics discussed** — bulleted themes or agenda items.
+3. **Key decisions or conclusions** — skip for lectures or monologues without decisions.
+4. **Action items** — with owner if stated; skip if none.
+5. **Notable quotes or moments** — 1-3 verbatim fragments (optional, highly recommended for interviews and meetings).
 
-Keep the summary concise: aim for 150-300 words. Do not pad it.
-
----
-
-## Step 4: Write the .md file
-
-Construct and save the output Markdown file.
-
-### File naming
-
-Use this pattern: `YYYY-MM-DD-<slugified-context>.md`
-
-Examples:
-- `2026-04-14-team-meeting-q3-roadmap.md`
-- `2026-04-14-candidate-interview-backend.md`
-- `2026-04-14-lecture-clean-architecture.md`
-
-If today's date is available in context, use it. Otherwise, use the file's modification date
-via `stat` or just omit the date prefix and use the slugified context alone.
-
-### File structure
+### File template
 
 Use this exact template:
 
@@ -146,7 +87,7 @@ duration: "<approximate duration if available>"
 
 ## Summary
 
-<The summary generated in Step 3>
+<The summary from Summary contents>
 
 ---
 
@@ -155,30 +96,7 @@ duration: "<approximate duration if available>"
 <The complete literal transcript from Whisper, paragraph-formatted>
 ```
 
-**Transcript formatting rules:**
-- Do NOT split the transcript into fake speaker turns unless Whisper detected them.
-- Preserve the raw text exactly as Whisper returned it — do not paraphrase or clean up grammar.
-- Wrap long monolithic output into readable paragraphs by inserting a blank line roughly every
-  10-15 sentences. This makes the file easier to navigate without altering the content.
-
-Save the file to the chosen output directory using the current runtime's file-write capability.
-
----
-
-## Step 5: Confirm and show the result
-
-After saving, show the user:
-
-1. Full path to the `.md` file.
-2. The summary section (so they can read it immediately without opening the file).
-3. A one-line note about transcript length: `Transcript: ~N words`.
-
-Do not dump the entire transcript in the chat — it's in the file. If the user wants to
-search or quote from the transcript, they can open the file.
-
----
-
-## Error handling
+### Error handling
 
 | Problem | Action |
 |---|---|
@@ -189,11 +107,3 @@ search or quote from the transcript, they can open the file.
 | Transcription empty / very short | Warn user — likely a silent file or wrong path |
 | Unknown model `turbo` | Tell user to run `pipx upgrade openai-whisper` (needs >= 20240930) |
 | Out of memory | Suggest a smaller model (`medium`, `small`) |
-
----
-
-## Tone
-
-Write the summary in the same language as the recording (or the output language if specified).
-Be concise and factual — the summary serves as a quick reference, not a narrative essay.
-The transcript is the source of truth; the summary is the lens.

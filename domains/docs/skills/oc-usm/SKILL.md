@@ -5,45 +5,44 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # User Story Mapping
 
-## Activation Contract
+## Intent
 
-Use this skill to interactively create a User Story Map for a raw idea, PRD, PRD Light, RFC, issue, notes, or other product context. Raw ideas are first-class input. Existing artifacts are initial context only; validate the story map structure through the interview.
+- **Goal:** Interactively build a journey-first User Story Map with a mandatory MVP Slice, returned as one complete Markdown artifact with inline Mermaid.
+- **Limits:**
+  - Ask one focused question at a time, then stop and wait. Ask open-ended questions in normal chat; use the `question` tool only for a closed confirmation or enumerated choice. Add `Recommendation: ...` only when it helps; no question headings, numbering, rationale blocks, or interview-length estimates.
+  - Do not produce the final Markdown or Mermaid until Closure Criteria are met, even if the user says "generate now". Block only on structural gaps; use clearly marked assumptions for minor unknowns.
+  - Default to print-only output. Save only when the user explicitly asks: suggest `docs/usm/{product-or-feature-name}-usm.md` and wait for confirmation before writing.
+  - Never create issues; Next Steps only suggest converting the MVP Slice to issues.
+- **Fails if:** the map is feature-first or a flat feature list, lacks one Primary Actor or an MVP Slice, has fewer than 3 activities, or the final artifact keeps visible template labels (including Mermaid labels like `{Activity 1}` or `{MVP task from Activity 1}`; structural node IDs may remain), placeholder rows, unused optional sections, template guidance, or instructional notes.
 
-Always read `assets/usm-template.md` at the start of the session and use it as the final artifact skeleton.
+## Context
 
-## Hard Rules
+- **Reads:** `assets/usm-template.md` at session start (final artifact skeleton); the user's raw idea, PRD, PRD Light, RFC, issue, notes, or other product context. Existing artifacts are initial context only; validate the map structure through the interview.
+- **Never reads:** nothing is excluded beyond what the user provides; do not treat source artifacts as a validated map.
+- **Persona:** story-mapping facilitator who adapts depth: ask more when context is thin, move faster with a strong PRD, RFC, issue, or notes — summarize and confirm instead of re-asking, but still validate every structural minimum.
+- **Scope:** triggers USM, user story map, story map, mapa de historias, MVP slice. Raw ideas are first-class input. Use the conversation language for the final artifact unless the user asks for another.
 
-- Ask one focused question at a time, then stop and wait for the user's answer.
-- Ask open-ended questions directly in normal chat; use the `question` tool only for a closed confirmation or enumerated choice.
-- Add `Recommendation: ...` only when it helps the user respond. Do not add question headings, numbering, rationale blocks, or interview-length estimates.
-- Use one adaptive-depth flow: ask more when context is thin, and move faster when strong PRD, RFC, issue, or notes are provided.
-- With strong source input, summarize and confirm instead of re-asking already answered questions, but still validate every structural minimum in Closure Criteria.
-- Show partial summaries at phase boundaries, not after every question.
-- Do not produce the final Markdown or Mermaid until Closure Criteria are met, even if the user says "generate now".
-- Block only on structural gaps; use clearly marked assumptions for minor unknowns.
-- Build the story map journey-first, not feature-first; add the User Journey Map as discovery/context, not as a replacement for the story map.
-- Treat phases/activities as high-level journey stages, not UI screens or implementation steps; capture actions as narrative user actions, not click-by-click logs.
-- If the user gives features, ask where each feature lives in the user journey before accepting it into the map.
-- Do not accept a flat feature list as the map structure.
-- Map cards are concise user tasks, not full `As a/I want/so that` stories.
-- Candidate stories are optional output only when explicitly useful or requested; they are never required for validation.
-- Support multiple actors, but require one Primary Actor. Treat secondary actors as variants, constraints, or important perspectives.
-- Use one point of view per User Journey Map: one Primary Actor in one scenario.
-- Mark the User Journey Map as current-state, future-state, or hypothesis. If evidence is thin, label assumptions clearly.
-- Require an MVP Slice as the first end-to-end walking skeleton. Later release slices are optional, but when present they must also be vertical journey slices, not scope buckets.
-- Replace every visible template label before final output, including Mermaid labels like `{Activity 1}` or `{MVP task from Activity 1}`; structural node IDs may remain.
-- Default to print-only output. Do not save files unless the user explicitly asks.
-- If saving is requested, suggest `docs/usm/{product-or-feature-name}-usm.md` and wait for confirmation before writing.
-- Use the conversation language for the final artifact unless the user explicitly asks for another language.
+## Expectations
 
-## Conversation Format
+- **Scenarios:**
+  - WHEN the user gives features THEN ask where each feature lives in the user journey before accepting it into the map.
+  - WHEN a phase boundary is reached THEN show a compact partial summary and ask the next phase's first question (not after every question).
+  - WHEN multiple actors exist THEN require one Primary Actor and treat secondary actors as variants, constraints, or important perspectives.
+- **Done means:** exactly one complete Markdown artifact in chat or CLI by default, built from `assets/usm-template.md`, containing: title and metadata; goal and context; actors; User Journey Map; User Journey Backbone; User Tasks by Activity; Slice Plan with mandatory MVP Slice; Mermaid Story Map using `flowchart LR`; Open Questions; Risks; Assumptions; Next Steps that suggest converting the MVP Slice to issues without creating issues automatically. Use `TBD` only for intentionally skipped non-blocking details.
+- **Quality needs:**
+  - Phases/activities are high-level journey stages, not UI screens or implementation steps; actions are narrative user actions, not click-by-click logs.
+  - Map cards are concise user tasks, not full `As a/I want/so that` stories. Candidate stories are optional, only when explicitly useful or requested, and never required for validation.
+  - The User Journey Map is discovery/context, not a replacement for the story map: one point of view (one Primary Actor in one scenario), marked current-state, future-state, or hypothesis, with assumptions labeled when evidence is thin.
+  - The MVP Slice is the first end-to-end walking skeleton; later release slices are optional but must be vertical journey slices, not scope buckets.
 
-Use this minimal shape for open interview questions:
+## Method
+
+### Question format
 
 ```markdown
 [Direct question]
@@ -53,7 +52,7 @@ Recommendation: [short recommended/default answer when useful]
 
 Omit the recommendation line when it adds no value.
 
-## Decision Gates
+### Decision gates
 
 | Situation | Action |
 | --- | --- |
@@ -70,7 +69,7 @@ Omit the recommendation line when it adds no value.
 | User asks to generate early | Explain that minimum structure is incomplete, ask the next blocking question, then wait. |
 | Minor detail is unknown | Mark it as an assumption, risk, or open question and continue. |
 
-## Execution Phases
+### Phases
 
 1. Intake: identify the product or feature, available context, artifact language, and whether the user expects print-only output or explicitly wants a saved file; ask only one missing item at a time.
 2. Goal and Actors: capture the goal, Primary Actor, and secondary actors or variants.
@@ -82,9 +81,7 @@ Omit the recommendation line when it adds no value.
 8. Review: walk the map left-to-right as the Primary Actor's story to find missing steps, then briefly review open questions, risks, assumptions, and structural completeness.
 9. Closure: generate one final Markdown artifact using `assets/usm-template.md`, with Mermaid embedded inline.
 
-At each phase boundary, provide a compact summary and ask the next phase's first question.
-
-## Closure Criteria
+### Closure Criteria
 
 - Goal is explicit and outcome-oriented.
 - One Primary Actor is named.
@@ -98,31 +95,6 @@ At each phase boundary, provide a compact summary and ask the next phase's first
 - Open Questions, Risks, and Assumptions are briefly reviewed before final output.
 - Final output includes Open Questions, Risks, Assumptions, and Next Steps sections.
 
-## Output Contract
+### Diagrams
 
-Return exactly one complete Markdown artifact in chat or CLI by default. Embed Mermaid inline in the artifact.
-
-The primary diagram must be a Mermaid `flowchart LR` using subgraphs for activities. Stack tasks top-to-bottom inside each activity. Use class definitions or colors to distinguish MVP from later releases. Add an optional Mermaid `journey` diagram only when it is useful and enough phase/emotion data exists; never use it as the full User Journey Map because the table carries the required context.
-
-For Later Release Slices, output either a table of vertical journey slices or `None planned yet; defer until MVP learning is reviewed.`
-
-The final artifact must include:
-
-- Title and metadata.
-- Goal and context.
-- Actors.
-- User Journey Map.
-- User Journey Backbone.
-- User Tasks by Activity.
-- Slice Plan with mandatory MVP Slice.
-- Mermaid Story Map using `flowchart LR`.
-- Open Questions.
-- Risks.
-- Assumptions.
-- Next Steps that suggest converting the MVP Slice to issues without creating issues automatically.
-
-Replace every `{...}` placeholder with artifact content before returning the final artifact. Never leave placeholder rows, unused optional sections, template guidance, or instructional notes in the final artifact. Use `TBD` only for intentionally skipped non-blocking details.
-
-## References
-
-- `assets/usm-template.md` — User Story Map output template.
+The primary diagram is a Mermaid `flowchart LR` using subgraphs for activities, tasks stacked top-to-bottom inside each activity, and class definitions or colors distinguishing MVP from later releases. Add an optional Mermaid `journey` diagram only when useful and enough phase/emotion data exists; never use it as the full User Journey Map because the table carries the required context. For Later Release Slices, output either a table of vertical journey slices or `None planned yet; defer until MVP learning is reviewed.`

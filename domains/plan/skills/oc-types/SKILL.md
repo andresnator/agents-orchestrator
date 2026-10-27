@@ -6,40 +6,39 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: type contracts, Object, Map<String,Object>, primitive obsession.
+# oc-types
 
-## Hard Rules
+## Intent
 
-- Flag Object, raw types, Map<String,Object>, stringly typed values, magic strings, casts, and primitive obsession.
-- Prefer value objects, enums, records, or typed DTOs when they clarify contracts.
-- Keep public API changes as follow-up unless approved.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Weak or implicit Java type contracts made explicit.
+- **Limits:**
+  - Prefer value objects, enums, records, or typed DTOs when they clarify contracts.
+  - Keep public API changes as follow-up unless approved.
+  - Preserve observable behavior; label functional changes as follow-up.
+- **Fails if:** a finding lacks evidence and is not marked hypothesis, or a public API change is proposed as in-scope without approval.
 
-## Decision Gates
+## Context
+
+- **Reads:** target and nearby tests, as needed.
+- **Never reads:** `none`.
+- **Persona:** refactor reviewer.
+- **Scope:** load when reviewing refactor plans for: type contracts, Object, Map<String,Object>, primitive obsession.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN Object, raw types, Map<String,Object>, stringly typed values, magic strings, casts, or primitive obsession appear THEN flag them.
+- **Done means:** findings in the calling contract's format (it wins); each has `file:line` evidence or is marked hypothesis; `no_findings` when nothing is material.
+- **Quality needs:** note validation and rollback implications where material; the caller decides where they land.
+
+## Method
 
 | Signal | Action |
 |---|---|
 | Concrete evidence exists | Create a finding with `file:line` evidence and the smallest safe refactor. |
 | Evidence is incomplete | Mark as hypothesis and lower confidence. |
 | Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
-
-## Execution Steps
-
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Note validation and rollback implications where material; the calling agent decides where they land.
-
-## Output Contract
-
-Return findings in the calling agent's output contract — that contract wins over any field list here. Every finding carries `file:line` evidence or is marked hypothesis. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.

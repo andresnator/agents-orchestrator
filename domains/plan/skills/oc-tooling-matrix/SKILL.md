@@ -6,22 +6,36 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
 # Tooling Compatibility Matrix
-Offline baseline for hardening and high or critical refactor tooling recommendations. This skill never fetches versions. Every emitted version must include `verify-latest-at-execution: true` and an executor task to verify that the chosen version is current and CVE-free before installation.
 
-## Standing rules
+## Intent
 
-- Prefer existing project conventions when present.
-- Use this matrix for deterministic first-pass versions and compatibility notes.
-- Pair every install task with a build verification command.
-- If a version or plugin compatibility is uncertain, mark it as `hypothesis` and require verification before install.
-- Web fetch remains denied for harness workers.
+- **Goal:** Provide deterministic first-pass versions and compatibility notes for test, coverage, and mutation tooling.
+- **Limits:** Never fetch versions; web fetch remains denied for harness workers. Prefer existing project conventions when present.
+- **Fails if:** An emitted version lacks `verify-latest-at-execution: true` and an executor task to verify it is current and CVE-free before installation, an install task lacks a build verification command, or uncertain compatibility is not marked `hypothesis`.
 
-## Java matrix
+## Context
+
+- **Reads:** The detected stack from `oc-tooling-audit`.
+- **Never reads:** Network sources.
+- **Persona:** Offline tooling baseline.
+- **Scope:** Hardening and high or critical refactor tooling recommendations.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN a stack is detected THEN pick the matching row and snippet template.
+  - WHEN version or plugin compatibility is uncertain THEN mark it `hypothesis` and require verification before install.
+- **Done means:** Each install task names tooling from the matrix plus its verification command.
+- **Quality needs:** Do not migrate tests or runners as safety-plan work unless required for execution.
+
+## Method
+
+### Java matrix
 
 | Detected stack | Baseline tooling | Compatibility notes |
 | --- | --- | --- |
@@ -29,7 +43,7 @@ Offline baseline for hardening and high or critical refactor tooling recommendat
 | Java 11+ + Maven/Gradle | JUnit 5.x via `junit-bom`, AssertJ 3.x, Mockito, ApprovalTests when snapshots help, JaCoCo 0.8.x, current PIT + `pitest-junit5-plugin` | PIT >=1.15 requires Java 11+; plugin must match JUnit 5.x. |
 | Existing JUnit 4 | Keep JUnit 4 characterization if cheapest; add JUnit Vintage only when running JUnit 4 tests under JUnit Platform is required | Do not migrate tests as part of refactor safety unless required for execution. |
 
-### Maven snippet templates
+#### Maven snippet templates
 
 ```xml
 <dependencyManagement>
@@ -64,7 +78,7 @@ Offline baseline for hardening and high or critical refactor tooling recommendat
 </plugin>
 ```
 
-### Gradle snippet templates
+#### Gradle snippet templates
 
 ```gradle
 dependencies {
@@ -78,7 +92,7 @@ test {
 }
 ```
 
-## JavaScript and TypeScript matrix
+### JavaScript and TypeScript matrix
 
 | Detected stack | Baseline tooling | Compatibility notes |
 | --- | --- | --- |
@@ -86,7 +100,7 @@ test {
 | Jest present or non-Vite project | Jest, Testing Library when UI is present, `@stryker-mutator/core` + Jest runner/plugin | Keep Jest if already configured; avoid runner migration as safety-plan work. |
 | No runner detected | Prefer Vitest for modern ESM/Vite projects; prefer Jest for existing CommonJS or Jest ecosystem clues | Record heuristic and verification task. |
 
-### `package.json` snippet template
+#### `package.json` snippet template
 
 ```json
 {
@@ -100,7 +114,7 @@ test {
 }
 ```
 
-## Python matrix
+### Python matrix
 
 | Detected stack | Baseline tooling | Compatibility notes |
 | --- | --- | --- |
@@ -108,7 +122,7 @@ test {
 | parallel or distributed mutation need | pytest, coverage.py, cosmic-ray | cosmic-ray is heavier; use only when parallel execution materially matters. |
 | unittest-only project | Keep unittest characterization initially; add pytest only if it lowers execution friction | Do not migrate tests for style alone. |
 
-### Python snippet templates
+#### Python snippet templates
 
 ```toml
 [project.optional-dependencies]
@@ -128,7 +142,7 @@ coverage==${coverageVersion}
 mutmut==${mutmutVersion}
 ```
 
-## Characterization tooling
+### Characterization tooling
 
 | Need | Baseline option | Notes |
 | --- | --- | --- |
@@ -136,7 +150,7 @@ mutmut==${mutmutVersion}
 | Characterizing persistence or external boundaries | Testcontainers | Real dependency in a disposable container; heavier — prefer at pinch points, not per unit. |
 | Comparing JSON outputs | JsonUnit (Java) or snapshot testing in JS/TS | Whole-document asserts with ignorable fields; aligns with whole-object assert conventions. |
 
-## Verification commands
+### Verification commands
 
 | Build tool | Verification command |
 | --- | --- |

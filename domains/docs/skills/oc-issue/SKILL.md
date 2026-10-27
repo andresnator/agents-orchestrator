@@ -12,41 +12,35 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # Skill: oc-issue
 
-## Activation Contract
+## Intent
 
-Use this skill when the user needs a GitHub issue that another agent or human can implement without guessing.
+- **Goal:** Create or enrich a GitHub issue that another agent or human can implement without guessing: intent, type, scope, acceptance scenarios, technical context, constraints, and priority.
+- **Limits:** Do not run the implementation, orchestrate SDD phases, or invent missing product decisions; interview the user (at most one question at a time) when critical fields are missing. Search existing issues for likely duplicates before creating a new one.
+- **Fails if:** any section is missing or keeps placeholder text, an in-scope item lacks observable Given/When/Then acceptance scenarios, scope lacks in-scope or out-of-scope boundaries, or no issue URL/reference is returned.
 
-This is the renamed public capability for the older `sdd-issue` wording. Treat legacy phrases like “SDD-ready issue” as compatible triggers, but prefer `oc-issue` in new documentation.
+## Context
 
-## Responsibility
+- **Reads:** the target repository or project; the intended change, bug, refactor, or chore; known constraints, affected files/modules, and acceptance expectations; the existing issue when enriching; repository conventions.
+- **Never reads:** unrelated issues beyond a focused duplicate query.
+- **Persona:** issue author preparing buildable, orchestrator-ready work.
+- **Scope:** creating a buildable issue, implementation-ready ticket, SDD-ready issue, or preparing work for an orchestrator ("create an issue", "write a ticket", "I need to build X"), or enriching a referenced issue. This is the renamed capability for the older `sdd-issue` wording; treat legacy phrases like "SDD-ready issue" as compatible triggers, but prefer `oc-issue` in new documentation.
 
-Create or enrich GitHub issues with enough structure for implementation: intent, type, scope, acceptance scenarios, technical context, constraints, and priority.
+## Expectations
 
-Do not run the implementation, orchestrate SDD phases, or invent missing product decisions. Interview the user when critical fields are missing.
+- **Scenarios:**
+  - WHEN creating THEN clarify gaps, search duplicates, fill every template section, validate scenarios per in-scope item, and create the issue with a conventional title and labels.
+  - WHEN the user references an issue number THEN fetch it, preserve useful existing content, interview for missing sections, replace or append the structured body, and add `sdd-ready` once the structure is complete.
+- **Done means:** return the issue URL or updated issue reference, labels applied, a duplicate search result summary, a short summary of what made it buildable, and any remaining assumptions or follow-up questions.
+- **Quality needs:** intent explains why the change matters; type is one of `feature`, `bugfix`, `refactor`, or `chore`; technical context names affected areas or says they are unknown; constraints and priority are filled; no placeholder text remains.
 
-## Required Context
+## Method
 
-- Repository or project where the issue belongs.
-- Intended change, bug, refactor, or chore.
-- Known constraints, affected files/modules, and acceptance expectations.
-- Existing issue number when enriching rather than creating.
-
-## Hard Rules
-
-- Search existing issues for likely duplicates before creating a new issue.
-- Fill all issue sections; do not leave placeholder text behind.
-- Every in-scope item needs observable acceptance scenarios.
-- Acceptance scenarios use Given/When/Then language.
-- Scope must include both in-scope and out-of-scope boundaries.
-- Apply the `sdd-ready` label when the issue is structured for automated SDD consumption.
-- Return the issue URL or updated issue reference when done.
-
-## Issue Template
+### Issue template
 
 ````markdown
 ## Intent
@@ -93,24 +87,9 @@ Do not run the implementation, orchestrate SDD phases, or invent missing product
 <critical | high | medium | low>
 ````
 
-## Workflow
+### Title and labels
 
-1. Clarify missing critical context with at most one question at a time.
-2. Search for duplicates with a focused GitHub issue query.
-3. Fill every template section using the user's context and repository conventions.
-4. Validate that each in-scope item has acceptance scenarios.
-5. Create or update the issue with appropriate labels.
-6. Return the issue URL and a short summary of what made it buildable.
-
-## Creating the Issue
-
-Use a conventional title:
-
-```text
-<type>(<scope>): <concise description>
-```
-
-Recommended labels:
+Title: `<type>(<scope>): <concise description>`. Apply `sdd-ready` when the issue is structured for automated SDD consumption.
 
 | Type | Labels |
 |---|---|
@@ -118,32 +97,3 @@ Recommended labels:
 | bugfix | `bug`, `sdd-ready` |
 | refactor | `refactor`, `sdd-ready` |
 | chore | `chore`, `sdd-ready` |
-
-## Enriching an Existing Issue
-
-When the user references an issue number:
-
-1. Fetch the issue.
-2. Preserve useful existing content.
-3. Interview for missing template sections.
-4. Replace or append the structured issue body.
-5. Add the `sdd-ready` label when the structure is complete.
-
-## Quality Checklist
-
-- [ ] Intent explains why the change matters.
-- [ ] Type is one of `feature`, `bugfix`, `refactor`, or `chore`.
-- [ ] Scope has explicit in-scope and out-of-scope lists.
-- [ ] Acceptance scenarios are observable and use Given/When/Then.
-- [ ] Technical context names affected areas or says they are unknown.
-- [ ] Constraints and priority are filled.
-- [ ] No placeholder text remains.
-
-## Output Contract
-
-Return:
-
-- issue URL or updated issue reference;
-- labels applied;
-- duplicate search result summary;
-- any remaining assumptions or follow-up questions.

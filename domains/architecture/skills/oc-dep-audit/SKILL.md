@@ -6,26 +6,32 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.1.0"
   status: testing
 ---
 
 # Dependency Security Audit
 
-## Contract
+## Intent
 
-Audit dependency advisories plus declared runtime support. Do not inspect application security, secrets, logging, compliance, or exploits.
+- **Goal:** A short table of dependency advisories and runtime support risks.
+- **Limits:** Only explicitly authorized read-only audit/inventory commands; never install, fix, upgrade, or edit manifests/lockfiles.
+- **Fails if:** An advisory lacks current tool output plus CVE/GHSA/OSV id; versions are guessed; trees or manifests prove vulnerability.
 
-- Run only explicitly authorized read-only audit or inventory commands. Never install tools, fix, upgrade, edit manifests/lockfiles.
-- Advisory findings require current tool output plus CVE/GHSA/OSV identifier. Dependency trees and manifests prove versions only, never vulnerability status.
-- Missing or denied audit tooling uses `method: inventory-only`; list observed versions and required authoritative check, but no vulnerability or EOL verdict.
-- Quote command, file, line; never guess versions or advisories.
+## Context
 
-Command and fallback rules live in `references/ecosystem-commands.md`.
+- **Reads:** Manifests, lockfiles, audit output; command and fallback rules live in `references/ecosystem-commands.md`.
+- **Never reads:** Application security, secrets, logging, compliance, or exploit material.
+- **Persona:** Conservative auditor.
+- **Scope:** Activation per description.
 
-## Output
+## Expectations
+
+- **Scenarios:** WHEN tooling is missing or denied THEN use `method: inventory-only`, list observed versions and the required authoritative check, no vulnerability/EOL verdict.
+- **Done means:** Table (max seven, `Severity`: critical/high/medium/low/unknown), then ecosystems, commands, inventory-only gaps, out-of-scope notes.
+- **Quality needs:** Quote command, file, line.
+
+## Method
 
 | Dependency/runtime | Finding | Severity | Evidence | Method | Advisory/check |
 |---|---|---|---|---|---|
-
-`Severity` is `critical`, `high`, `medium`, `low`, or `unknown`. Close with ecosystems inspected, commands run, inventory-only gaps, explicit out-of-scope notes. Maximum seven findings.
