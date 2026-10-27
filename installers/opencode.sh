@@ -52,6 +52,8 @@ Filters:
               plan, review).
               Exclusive skills live in their domain; shared skills use relative
               symlinks to the top-level skills/ directory.
+              A selected command also selects the repository agent named in its
+              `agent:` frontmatter, even from an unselected domain.
   --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
               Agents, commands, plugins, external plugins, and TUI plugins are not
