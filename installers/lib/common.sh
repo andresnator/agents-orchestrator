@@ -222,6 +222,28 @@ discover_components() {
       done
     fi
   done
+
+  add_command_agents "$out"
+}
+
+# A selected command's `agent:` frontmatter is an install dependency: when that
+# repository agent lives in an unselected domain, select it too. Built-in
+# OpenCode agents (no repository file) are left to OpenCode.
+add_command_agents() {
+  local out agent file agent_domain src
+  out="$1"
+  awk -F '\t' '$1 == "commands" { print $5 }' "$out" | while IFS= read -r file; do
+    agent="$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } /^agent:[[:space:]]*/ { sub(/^agent:[[:space:]]*/, ""); gsub(/["'"'"'[:space:]]/, ""); print; exit }' "$file")"
+    [ -n "$agent" ] || continue
+    awk -F '\t' -v name="$agent.md" '$1 == "agents" && $2 == name { found = 1 } END { exit found ? 0 : 1 }' "$out" && continue
+    for src in "$REPO_ROOT"/domains/*/agents/"$agent.md"; do
+      [ -f "$src" ] || continue
+      agent_domain="$(basename "$(dirname "$(dirname "$src")")")"
+      src="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
+      printf '%s\t%s\t%s\t%s\t%s\n' "agents" "$agent.md" "$agent_domain" "-" "$src" >> "$out"
+      break
+    done
+  done
 }
 
 check_collisions() {
