@@ -39,7 +39,7 @@ Runs live at `.ai/orchestration/runs/<slug>/run.md` and retain the external plan
 
 In `commit-per-unit`, units run serially: save pending delivery before staging and hooks, then record each verified commit. Resume requires matching `HEAD` and saved Git state, including when the first hook fails. Cold verification checks exactly `<Baseline>..HEAD`; completion archives the run with no pending unit.
 
-Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [orchestraitor](agents/orchestraitor.md) for the run controls.
+Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [oc-sdd](skills/oc-sdd/SKILL.md) for the approval gate, run controls, and execution rules.
 
 Push, PRs, merge, Review, and Judgment remain separate from delivery; request a review explicitly to load `oc-review`. Validate changes with the [Orchestration manual tests](manual-tests.md).
 
@@ -48,6 +48,7 @@ Push, PRs, merge, Review, and Judgment remain separate from delivery; request a 
 | Type | Name | Purpose |
 |---|---|---|
 | Agent (primary) | `orchestraitor` | Routes, executes, and owns Git delivery |
+| Skill | `oc-sdd` | Coordinates approved durable SDD runs |
 | Skill | `oc-sdd-explore` | Explores code read-only |
 | Skill | `oc-sdd-implement` | Implements scoped units without Git authority |
 | Skill | `oc-sdd-merge` | Merges verified canonical spec deltas |

@@ -17,7 +17,7 @@ Select `orchestraitor` in OpenCode for every route.
 |---|---|---|
 | Quick plan for localized work | `oc-plan-light` | Natural request (light plan, plan rápido) |
 | Discover or plan in depth | `oc-plan-deep` | Natural request (deep plan, plan profundo, wayfinder) |
-| Change, execute plan, or resume | direct or `oc-sdd-*` | Natural request, `ejecuta el plan <path>`, `continúa <run>` |
+| Change, execute plan, or resume | direct, `oc-sdd`, `oc-sdd-*` | Natural request, `ejecuta el plan <path>`, `continúa <run>` |
 | Review or defend | `oc-review`, `oc-judge`, `oc-judge-fix` | Natural request or `/review` |
 | Map or decide architecture | `oc-arch` | Natural request or `/arch` |
 

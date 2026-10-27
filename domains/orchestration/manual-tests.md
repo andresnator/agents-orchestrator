@@ -64,7 +64,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Execute an existing SDD plan without another confirmation
 - **Coverage key:** `orchestration/sdd/confirmation-gate`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/complex-plan/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/complex-plan/**`
 - **Preconditions:** Copy the Java fixture and restore the `complex-plan/ai/` seed as `.ai/`; record the plan SHA-256 and do not explicitly request SDD.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan .ai/deep-planner/plans/adjust-order-pricing.md`.
@@ -77,7 +77,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Approve the generated SDD contract before implementation
 - **Coverage key:** `orchestration/sdd/contract-approval`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`
 - **Preconditions:** Use fresh Git-backed Java fixture copies with a passing baseline and no run state. Record source, index, and HEAD before each variant; enable conversation/tool and worker activity inspection.
 - **Steps:**
   1. Request SDD directly for a pricing behavior change without supplying a plan. Inspect the presented contract and native Approve / Request adjustments / Cancel choice before responding.
@@ -92,7 +92,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Complete and archive one verified SDD run
 - **Coverage key:** `orchestration/sdd/verified-archive`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-explore/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-merge/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`, `domains/orchestration/skills/oc-sdd-explore/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-merge/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
 - **Preconditions:** Copy the Java fixture, restore both state seeds under `.ai/`, ensure the baseline passes, and record the plan checksum.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-seeded-plan-path>`, and wait through implementation, cold verification, and canonical merge.
@@ -104,7 +104,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Resume serial SDD commits after an honest hook failure
 - **Coverage key:** `orchestration/delivery/sdd-commits`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** Prepare two Git-backed fixture copies with a green baseline, the complex plan under `.ai/`, its checksum, an unrelated staged `notes.txt`, and executable `.git/hooks/pre-commit` copied from `hooks/reject-order-pricing-pre-commit`.
 - **Steps:**
   1. Request `ejecuta el plan <exact-path>` with `commit-per-unit`: keep the plan's groups as separate units in one copy and combine them into one verified unit in the other. Wait for the pricing hook rejection in each.
@@ -119,7 +119,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Resume the exact active SDD run
 - **Coverage key:** `orchestration/sdd/exact-resume`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
 - **Preconditions:** Interrupt an approved disposable run after one completed group with one group pending. Require valid delivery controls, `Approval` and actual `Approval evidence`, and an immutable external plan hash when present; record contract sections, progress, paths, and Git state. Repeat for generated-contract approval and existing-plan execution.
 - **Steps:**
   1. Start a fresh session and tell `orchestraitor`, `continúa <exact-run-path>`.
@@ -146,7 +146,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Parallelize only disjoint ready work
 - **Coverage key:** `orchestration/sdd/disjoint-wave`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-sdd/**`, `domains/orchestration/skills/oc-sdd-implement/**`, `domains/orchestration/skills/oc-sdd-verify/**`
 - **Preconditions:** Use a disposable plan with two dependency-free groups on disjoint files and a third group depending on both; enable visible task timing.
 - **Steps:**
   1. Explicitly run the plan with SDD and observe task start/end times for the first wave.
