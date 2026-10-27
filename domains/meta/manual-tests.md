@@ -8,6 +8,20 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 2. Run the affected IDs from the catalog summary.
 3. Inspect only the named report, skill, registry, or configuration target.
 
+### MT-META-ASK-ME
+
+- **Title:** Recommend harness skills for a use case
+- **Coverage key:** `meta/ask-me/skill-recommendation`
+- **Applies to:** `domains/meta/commands/ask-me.md`
+- **Preconditions:** Install all domains into a disposable target and start OpenCode once so `.ai/atl/skill-registry.md` exists; have at least one non-`oc-` skill available.
+- **Steps:**
+  1. Run `/ask-me quiero revisar mi diff antes del PR`.
+  2. Run `/ask-me` with no arguments, then answer its question with a planning use case.
+  3. Run `/ask-me deploy to Kubernetes`.
+- **Expected result:** Step 1 recommends `oc-review` first with `/judgment` as usage; step 2 asks one question, then recommends `oc-plan-light` or `oc-plan-deep`; step 3 says no harness skill fits. Every recommendation is an `oc-*` skill from the runtime catalog, no skill body is loaded, and no work starts.
+- **Essential negative variant:** Delete `.ai/atl/skill-registry.md`; recommendations still come from the native catalog filtered to `oc-`.
+- **Cleanup:** Remove the disposable target.
+
 ### MT-META-ABSORB
 
 - **Title:** Compare an external agent harness
