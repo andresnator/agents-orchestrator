@@ -11,7 +11,7 @@ PROFILE_CONTRACT="multi-primary-profile/v1"
 PROFILE_DOMAINS="plan,orchestration,architecture,review,common"
 PREVIOUS_PROFILE_DOMAINS="plan,sdd,architecture,review,common"
 EARLIER_PROFILE_DOMAINS="plan,sdd,architecture,sdd-lite,review,common"
-PRIMARY_AGENTS="deep-planner architect orchestraitor review-coordinator"
+PRIMARY_AGENTS="orchestraitor"
 MANAGED_SUBAGENT_DEPTH='1'
 
 ACTION=""
@@ -395,8 +395,8 @@ validate_installer_contents() {
     [ "$question" != allow ] || question_owner_count=$((question_owner_count + 1))
     [ -n "$question" ] || die "profile agent omits its question permission: $path"
   done < "$TMP_THREE"
-  [ "$primary_count" -eq 4 ] || die "expected exactly four repo-owned primaries, found $primary_count"
-  [ "$question_owner_count" -eq 4 ] || die "expected exactly four direct question owners, found $question_owner_count"
+  [ "$primary_count" -eq 1 ] || die "expected exactly one repo-owned primary, found $primary_count"
+  [ "$question_owner_count" -eq 1 ] || die "expected exactly one direct question owner, found $question_owner_count"
   local primary
   for primary in $PRIMARY_AGENTS; do
     grep -Fq "$TARGET/agents/$primary.md" "$TMP_THREE" ||
@@ -529,7 +529,7 @@ run_status() {
       "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
     return 0
   fi
-  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 4\nquestion owners: 4\n' \
+  printf 'status: installed\nproject-root: %s\nconfig-file: %s\ndefault_agent: preserved\nsubagent_depth: 1\nrepo-owned primaries: 1\nquestion owners: 1\n' \
     "$PROJECT_ROOT" "$PROFILE_CONFIG_FILE"
 }
 

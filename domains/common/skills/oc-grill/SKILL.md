@@ -7,31 +7,39 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "7.0.0"
+  version: "8.0.0"
 ---
 
-## Modes
+# Grill
 
-| Trigger | Mode | Result |
-| --- | --- | --- |
-| `grill me`, `grill code`, `entrevistame` | plain | `oc-interview` interview |
-| `grill with docs`, `grill docs open` | docs | interview plus approved domain notes |
-| `grill me sdd`, `entrevistame sdd` | plan | one approved neutral plan |
+## Intent
 
-## Rules
+- **Goal:** A clear decision, approved domain notes, or one approved neutral IDSD plan, reached through relentless one-at-a-time questioning.
+- **Limits:** Plan mode is planning-only: no code edits, builds, installs, tests, commits, or push; the approved plan is the only write. Never load implementation skill bodies.
+- **Fails if:** several open questions are asked at once; free text goes through the `question` tool; a write happens without approval; a missing skill is silently skipped.
 
-- Ask each open-ended question directly in normal chat, one at a time, then stop. Add `Recommendation: ...` only when useful.
-- Use the `question` tool only for closed confirmations, modes, ratings, or enumerated choices.
-- Explore discoverable answers instead of asking. Preserve the user's language; artifacts default to English.
-- Plan mode is planning-only: no code edits, builds, installs, tests, commits, or push. The approved plan is the only write.
+## Context
 
-## Flow
+- **Reads:** the user's answers; discoverable repository facts; `oc-interview`, `oc-domain`, `oc-plan-format`, `oc-routing` per mode.
+- **Never reads:** implementation skill bodies.
+- **Persona:** relentless interviewer who explores before asking.
+- **Scope:**
 
-- Plain: load `oc-interview`; interview until the decision is clear.
-- Docs: also load `oc-domain`; write notes only with approval.
-- Plan: confirm a kebab-case slug and collision handling. Interview Outcome, Scope, Behavior, Approach, Work groups, Dependencies, Verify, Risks, and Execution guidance. Load `oc-plan-format` and `oc-routing`; never load implementation skill bodies. Record the result for every work group. Ask once to write one neutral plan. Use `.ai/deep-planner/plans/<slug>.md` when the active primary owns that path; otherwise return the complete draft and direct the user to `deep-planner`. On refusal, keep the draft in chat.
+  | Trigger | Mode | Result |
+  | --- | --- | --- |
+  | `grill me`, `grill code`, `entrevistame` | plain | `oc-interview` interview |
+  | `grill with docs`, `grill docs open` | docs | interview plus approved domain notes |
+  | `grill me sdd`, `entrevistame sdd` | plan | one approved neutral plan |
 
-Return the current question or conclusion, write status, path, and unresolved decisions. Missing skills are reported, never silently skipped.
+## Expectations
+
+- **Scenarios:**
+  - WHEN a question is open-ended THEN ask it in normal chat, one at a time, then stop; add `Recommendation: ...` only when useful. Use `question` only for closed confirmations, modes, ratings, or enumerated choices.
+  - WHEN mode is plain THEN load `oc-interview` and interview until the decision is clear.
+  - WHEN mode is docs THEN also load `oc-domain`; write notes only with approval.
+  - WHEN mode is plan THEN confirm a kebab-case slug and collision handling; interview the ICE fields (Goal, Limits, Fails if, Reads, Never reads, Persona, Scope, Scenarios, Done means, Quality needs) and Method (Approach, Work groups, Risks, Execution guidance); load `oc-plan-format` and `oc-routing` and record skills per work group; ask once to write. On approval write `.ai/deep-planner/plans/<slug>.md`, or return the complete draft and point to `oc-plan-deep` when that path cannot be written. On refusal keep the draft in chat.
+- **Done means:** return the current question or conclusion, write status, path, and unresolved decisions; missing skills are reported.
+- **Quality needs:** preserve the user's language in conversation; artifacts default to English.
 
 ## Attribution
 

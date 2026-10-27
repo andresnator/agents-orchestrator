@@ -14,7 +14,7 @@
 
 ## Open questions
 
-- <user-owned decision; omit this section when Status is final>
+- <user-owned decision; omit this section when none remain>
 
 ## Next
 

@@ -5,7 +5,7 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 ## Quick path
 
 1. Install `architecture` or the multi-primary profile.
-2. Select `architect` or use an entry point below.
+2. Use an entry point below, or ask `orchestraitor` to load `oc-arch`.
 3. Review files under `<docfolder>/architecture/` or `.ai/architect/`; execute any plan through `orchestraitor`.
 
 ## Entry points
@@ -19,7 +19,7 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 ```mermaid
 flowchart LR
-    request[Architecture request] --> architect{Architect operation}
+    request[Architecture request] --> architect{oc-arch operation}
     architect -->|Map| map[C4-lite documentation]
     architect -->|Review| review[Ranked risks and fitness functions]
     architect -->|Ideate| ideate[ADR and execution plan]
@@ -27,7 +27,7 @@ flowchart LR
     ideate --> execute[Execute through Orchestraitor]
 ```
 
-`architect` executes each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
+`orchestraitor` loads `oc-arch`, which runs each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
 
 After changing this domain, run the affected [Architecture manual tests](manual-tests.md).
 
@@ -35,11 +35,11 @@ After changing this domain, run the affected [Architecture manual tests](manual-
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `architect` | Coordinates all architecture operations directly |
 | Command | `/arch-ideate` | Produces ADR and executable change |
 | Command | `/arch-map` | Generates or refreshes C4-lite docs |
 | Command | `/arch-review` | Ranks architecture and dependency risks |
 | Command | `/boundary-inspector` | Maps one service boundary |
+| Skill | `oc-arch` | Coordinates all architecture operations |
 | Skill | `oc-adr` | Records architecture decisions |
 | Skill | `oc-arch-ideate` | Designs target architecture and work |
 | Skill | `oc-arch-map` | Creates evidence-backed C4-lite docs |

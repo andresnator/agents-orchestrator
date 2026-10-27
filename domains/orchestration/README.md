@@ -1,6 +1,6 @@
 # Orchestration Domain
 
-`orchestraitor` executes local changes directly or coordinates durable SDD runs. Git delivery is opt-in; the default is a verified, uncommitted diff.
+`orchestraitor` is the single primary agent: it plans, executes changes directly or through durable SDD runs, and loads review or architecture skills on request. Git delivery is opt-in; the default is a verified, uncommitted diff.
 
 ## Quick path
 
@@ -12,6 +12,8 @@
 
 | Request | Route | Result |
 |---|---|---|
+| Planning request | `oc-plan-light` or `oc-plan-deep` | Plan only, no implementation |
+| Review or architecture request | `oc-review` or `oc-arch` | Skill result, never delivery |
 | Clear localized change | Direct | Verified working-tree change by default |
 | Explicit commits | Direct or SDD | Cohesive commits after focused checks pass |
 | Explicit TCR | Direct only | Commit green microsteps; revert attributable red changes |
@@ -19,9 +21,9 @@
 | `ejecuta el plan <path>` | Plan execution | Direct or SDD without another approval |
 | `continúa <run>` | Resume | Continue the approved run without reconfirmation |
 
-Direct handles localized, reversible work without `.ai/` state or workers. Use SDD for dependencies, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs; generated contracts require approval before implementation.
+Direct handles localized, reversible work without `.ai/` state or workers. SDD workers are `general` subagents briefed to load an `oc-sdd-*` skill. Use SDD for dependencies, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs; generated contracts require approval before implementation.
 
-Present Outcome, Scope, all WHEN/THEN scenarios, Approach, and Verify with native Approve / Request adjustments / Cancel choices; an explicit response approving the presented contract also counts. Direct → SDD uses one informed approval for both contract and route. Adjustments require presenting and approving the revised draft; silence and initial SDD intent do not count. Before approval, only exploration and drafting in conversation are allowed, with no run creation, implementation workers, implementation edits, staging, or commits. On interruption, present the unapproved draft again.
+Present Intent, Scope, all WHEN/THEN scenarios, Approach, and Done means with native Approve / Request adjustments / Cancel choices; an explicit response approving the presented contract also counts. Direct → SDD uses one informed approval for both contract and route. Adjustments require presenting and approving the revised draft; silence and initial SDD intent do not count. Before approval, only exploration and drafting in conversation are allowed, with no run creation, implementation workers, implementation edits, staging, or commits. On interruption, present the unapproved draft again.
 
 Executing an exact existing plan skips this gate and content reapproval while retaining structural validation and checksum checks. TCR requires safe Direct work; otherwise choose `commit-per-unit` for SDD or reduce scope before editing.
 
@@ -39,17 +41,16 @@ In `commit-per-unit`, units run serially: save pending delivery before staging a
 
 Working-tree SDD permits disjoint, dependency-ready units in parallel and verifies the scoped working-tree diff. See [orchestraitor](agents/orchestraitor.md) for the run controls.
 
-Push, PRs, merge, Review, and Judgment remain separate workflows. For later evaluation, select `review-coordinator`. Validate changes with the [Orchestration manual tests](manual-tests.md).
+Push, PRs, merge, Review, and Judgment remain separate from delivery; request a review explicitly to load `oc-review`. Validate changes with the [Orchestration manual tests](manual-tests.md).
 
 ## Components
 
 | Type | Name | Purpose |
 |---|---|---|
-| Agent (primary) | `orchestraitor` | Executes changes and opt-in Git delivery |
-| Agent (subagent) | `sdd-explore` | Explores code read-only |
-| Agent (subagent) | `sdd-implement` | Implements scoped units without Git authority |
-| Agent (subagent) | `sdd-canonical-merge` | Merges verified canonical spec deltas |
-| Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
+| Agent (primary) | `orchestraitor` | Routes, executes, and owns Git delivery |
+| Skill | `oc-sdd-explore` | Explores code read-only |
+| Skill | `oc-sdd-implement` | Implements scoped units without Git authority |
+| Skill | `oc-sdd-merge` | Merges verified canonical spec deltas |
 | Skill | `oc-characterize` | Captures current behavior during hardening |
 | Skill | `oc-conventions` | Applies code and test conventions |
 | Skill | `oc-doc-design` | Keeps human-facing documentation clear |
@@ -61,3 +62,10 @@ Push, PRs, merge, Review, and Judgment remain separate workflows. For later eval
 | Skill | `oc-debug` | Finds root causes before fixes |
 | Skill | `oc-tcr` | Commits green microsteps; reverts attributable failures |
 | Skill | `oc-commits` | Delivers cohesive verified units as commits |
+| Skill | `oc-plan-light` | Quick IDSD plan for localized work |
+| Skill | `oc-plan-deep` | Evidence-first deep plans and discoveries |
+| Skill | `oc-refactor-lens` | Behavior-preserving refactor analysis |
+| Skill | `oc-review` | Coordinates review, judgment, and defend |
+| Skill | `oc-judge` | Independent judge lenses a, b, solo |
+| Skill | `oc-judge-fix` | Applies accepted judgment fixes |
+| Skill | `oc-arch` | Architecture map, review, ideate, boundary |
