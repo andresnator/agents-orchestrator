@@ -51,3 +51,15 @@ Run these cases after changing Common commands, plugins, or the directly named s
   2. Run `/grill sdd <proposal>`, approve plan creation, and inspect the resulting neutral plan.
 - **Expected result:** Plain mode revises the outcome without writing files; `sdd` mode writes at most one approved `.ai/deep-planner/plans/<slug>.md` and never edits code, build files, tests, or Git.
 - **Cleanup:** Remove the generated plan and disposable repository.
+
+### MT-COMMON-SKILL-NAMES
+
+- **Title:** Load renamed common skills by their oc- names
+- **Coverage key:** `common/skills/oc-names`
+- **Applies to:** `domains/common/skills/oc-chained-pr/**`, `domains/common/skills/oc-refine-output/**`, `domains/common/skills/oc-small-fn/**`, `skills/oc-debug/**`, `skills/oc-dip/**`
+- **Preconditions:** Install the `common` domain into a disposable OpenCode target.
+- **Steps:**
+  1. List the installed skills and confirm `oc-chained-pr`, `oc-refine-output`, `oc-small-fn`, `oc-debug`, and `oc-dip` appear once each with no legacy names.
+  2. Ask for one request matching each skill's frontmatter triggers and confirm the native loader selects that `oc-*` skill.
+- **Expected result:** Every skill loads by its `oc-*` name, its frontmatter `name` equals its directory, and its documented output contract is unchanged.
+- **Cleanup:** Uninstall the disposable target.
