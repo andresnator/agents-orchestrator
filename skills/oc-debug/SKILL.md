@@ -6,45 +6,35 @@ metadata:
   author: obra
   adapted_by: andresnator
   source: obra/superpowers
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
 # Systematic Debugging
 
-Debug by finding the cause, not by trying fixes. One loop: reproduce → evidence → hypothesis → minimal fix. Skip a phase only when you can state why its output is already known.
+## Intent
 
-## Phase 1 — Reproduce
+- **Goal:** Find and fix the verified root cause of a failure with a minimal fix.
+- **Limits:** No fix before a reproduction exists; without one, the work is still investigation. Never dump environment variables, credentials, tokens, or full config files into output or logs; for sensitive values log names, lengths, or shapes, not contents. Skip a phase only when you can state why its output is already known.
+- **Fails if:** Shotgun debugging (changing several things at once to "see if it helps"); stacking a second speculative fix on an unverified first one; silencing the symptom (catch-and-ignore, retry loops, widened timeouts) while the cause is unknown; declaring "fixed" without a fresh run of the original reproduction.
 
-- Get a failing reproduction before changing anything: the exact command or interaction, its full output, and the exit status.
-- Shrink it to the smallest input and scope that still fails.
-- If the failure is intermittent, record the observed frequency and conditions instead of pretending it is deterministic.
-- No reproduction yet means the work is still investigation, not fixing.
+## Context
 
-## Phase 2 — Gather Evidence
+- **Reads:** The actual error, stack trace, and logs (quote the relevant lines, not a paraphrase); a known-working state such as recent diffs, a passing sibling case, or another environment.
+- **Never reads:** Secret values.
+- **Persona:** Disciplined investigator.
+- **Scope:** Debugging and root-cause analysis, including intermittent failures and shotgun fixes.
 
-- Read the actual error, stack trace, and logs before forming opinions; quote the relevant lines, not a paraphrase.
-- Compare against a known-working state: recent diffs, a passing sibling case, another environment.
-- Evidence stays boundary-safe: never dump environment variables, credentials, tokens, or full config files into output or logs. For sensitive values, log names, lengths, or shapes — not contents.
-- Locate the failure boundary: the last point where state is known good and the first point where it is wrong.
+## Expectations
 
-## Phase 3 — One Hypothesis, Tested Minimally
+- **Scenarios:**
+  - WHEN a failure is reported THEN capture the exact command or interaction, its full output, and exit status, then shrink it to the smallest failing input and scope.
+  - WHEN the failure is intermittent THEN record the observed frequency and conditions instead of treating it as deterministic.
+  - WHEN three consecutive hypotheses are refuted THEN stop and reassess: question the layer, widen the evidence, or surface what you know and ask the user.
+- **Done means:** The verified cause is fixed with one coherent change; the original reproduction is re-run and its fresh result cited; a regression test is added, or its absence is stated explicitly (no harness, out-of-scope infrastructure); experiment leftovers (probes, temporary logging, disabled checks) are reverted.
+- **Quality needs:** A fix claim needs the evidence standard of any completion claim.
 
-- State exactly one falsifiable hypothesis: "X causes this; if true I will observe A, if false I will observe B."
-- Test it with the smallest probe that can refute it (a log line, a focused test, a narrowed input) — not a speculative code change.
-- Record the result before moving on. A refuted hypothesis is progress; an untested one is noise.
-- After three consecutive refuted hypotheses, stop and reassess: question the layer you are looking at, widen the evidence, or surface what you know and ask the user. Do not keep guessing.
+## Method
 
-## Phase 4 — Fix the Cause Once
-
-- Fix the verified cause, not the symptom, with one coherent change.
-- Re-run the original reproduction and cite its fresh result; the fix claim needs the same evidence standard as any completion claim.
-- Add a regression test when feasible; when it is not (no harness, out-of-scope infrastructure), say so explicitly.
-- Revert experiment leftovers: probes, temporary logging, disabled checks.
-
-## Anti-Patterns
-
-- Shotgun debugging: changing several things at once and re-running to "see if it helps."
-- Stacking a second speculative fix on top of an unverified first one.
-- Silencing the symptom (catch-and-ignore, retry loops, widened timeouts) while the cause is unknown.
-- Declaring "fixed" without a fresh run of the original reproduction.
+1. **Gather evidence:** locate the failure boundary, the last point where state is known good and the first point where it is wrong.
+2. **One hypothesis:** state exactly one falsifiable hypothesis ("X causes this; if true I will observe A, if false B"). Test it with the smallest probe that can refute it (a log line, a focused test, a narrowed input), not a speculative code change. Record the result; a refuted hypothesis is progress, an untested one is noise.

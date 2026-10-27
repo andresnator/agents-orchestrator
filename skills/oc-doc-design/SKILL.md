@@ -7,34 +7,42 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
+# Documentation design
 
-## When to Use
+## Intent
 
-Load this skill when creating or editing documentation that people need to understand quickly, retain, or use during review.
+- **Goal:** Low-cognitive-load docs people understand quickly, retain, and use in review.
+- **Limits:** Prefer the repository's own template when it is stronger than the default shape below.
+- **Fails if:** any Quality needs pattern is violated or the PR scenario is unmet.
 
-Use it especially for:
+## Context
 
-- PR descriptions and review notes.
-- Contributor or maintainer guides.
-- Architecture, workflow, or onboarding docs.
-- Any doc that currently feels long, dense, or hard to scan.
+- **Reads:** The doc, repository templates, and for PRs the changed files and line counts.
+- **Never reads:** none.
+- **Persona:** Documentation designer with review empathy.
+- **Scope:** Frontmatter triggers, plus PR descriptions, review notes, workflow docs, and any doc that is dense or hard to scan.
 
-## Critical Patterns
+## Expectations
 
-| Pattern | Rule |
-|---------|------|
-| Lead with the answer | Put the decision, action, or outcome first. Context comes after. |
-| Progressive disclosure | Start with the happy path, then add details, edge cases, and references. |
-| Chunking | Group related information into small sections. Keep flat lists short. |
-| Signposting | Use headings, labels, callouts, and summaries so readers know where they are. |
-| Recognition over recall | Prefer tables, checklists, examples, and templates over prose that must be remembered. |
-| Review empathy | Design docs so reviewers can verify intent without reconstructing the whole story. |
+- **Scenarios:**
+  - WHEN documenting a PR THEN state what to review first and what is out of scope, link previous and next PR when chained, keep one decision or unit per section, and use checklists for acceptance and verification.
+- **Done means:** the doc applies the patterns below.
+- **Quality needs:**
 
-## Documentation Shape
+  | Pattern | Rule |
+  |---------|------|
+  | Lead with the answer | Decision, action, or outcome first; context after. |
+  | Progressive disclosure | Happy path first, then details, edge cases, references. |
+  | Chunking | Small related sections; short flat lists. |
+  | Signposting | Headings, labels, callouts, summaries show where readers are. |
+  | Recognition over recall | Tables, checklists, examples, templates over remembered prose. |
+  | Review empathy | Design docs so reviewers can verify intent without reconstructing the whole story. |
 
-Use this default structure unless the repo already provides a stronger template:
+## Method
+
+### Default shape
 
 ```markdown
 # <Outcome-oriented title>
@@ -63,17 +71,7 @@ Use this default structure unless the repo already provides a stronger template:
 <Link or action that continues the workflow.>
 ```
 
-## PR and Review Docs
-
-When documenting a PR, reduce reviewer burnout by making the review path explicit:
-
-- State what to review first.
-- State what is intentionally out of scope.
-- Link the previous and next PR when work is chained.
-- Keep each section focused on one decision or unit of work.
-- Use checklists for acceptance criteria and verification.
-
-## Commands
+### Commands
 
 ```bash
 # Check markdown files changed in the current branch

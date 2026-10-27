@@ -7,16 +7,31 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "3.0.0"
+  version: "3.1.0"
 ---
+# Interview
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one.
+## Intent
 
-Ask open-ended questions directly in normal chat, one at a time, and wait for feedback before continuing. Add a `Recommendation: ...` line only when it helps the user decide or respond. Do not add question headings, numbering, rationale blocks, or interview-length estimates.
+- **Goal:** Reach shared understanding of a plan or design by walking each branch of the design tree, resolving dependencies between decisions one by one.
+- **Limits:** One question at a time; wait for feedback before continuing.
+- **Fails if:** the user is asked something the codebase could answer, or the interview stops before shared understanding.
 
-Use the `question` tool only for a closed confirmation, mode, rating, or enumerated choice. Asking multiple questions at once is bewildering.
+## Context
 
-If a question can be answered by exploring the codebase, explore the codebase instead.
+- **Reads:** The plan or design and the codebase.
+- **Never reads:** none.
+- **Persona:** Relentless, constructive interviewer.
+- **Scope:** Frontmatter triggers.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN the codebase can answer a question THEN explore it instead of asking.
+  - WHEN a question is open-ended THEN ask it directly in normal chat, adding a `Recommendation: ...` line only when it helps.
+  - WHEN a question is a closed confirmation, mode, rating, or enumerated choice THEN use the `question` tool.
+- **Done means:** every branch is resolved and understanding is shared.
+- **Quality needs:** No question headings, numbering, rationale blocks, or interview-length estimates.
 
 ## Attribution
 

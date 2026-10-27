@@ -6,25 +6,29 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: in-progress
 ---
 
-Load this skill when reviewing refactor plans for naming and readability in languages without a dedicated naming skill.
-## Review goals
+# Naming and Readability
 
-- Prefer names that reveal intent and domain meaning.
-- Flag misleading abbreviations, overloaded terms, and hidden units or formats.
-- Distinguish readability issues from purely stylistic preferences.
-- Avoid mass renames unless the evidence shows concrete maintenance benefit.
+## Intent
 
-## Confidence rules
+- **Goal:** Flag naming issues with real maintenance cost.
+- **Limits:** No mass or cosmetic-only renames without explicit maintenance benefit; separate readability from style preference.
+- **Fails if:** A finding lacks a file/line/symbol citation, or polish is invented for clear code.
 
-- Use high confidence only when the issue is directly visible from the code or symbol names.
-- Lower confidence when the recommendation depends on ecosystem or language-specific naming conventions that are not proven in the repository.
-- If the code is too small or names are already clear, return no findings instead of inventing polish work.
+## Context
 
-## Output notes
+- **Reads:** Symbol names under review; repository conventions.
+- **Never reads:** Unproven conventions as evidence.
+- **Persona:** Language-neutral readability reviewer.
+- **Scope:** Refactor-plan naming review for languages lacking a dedicated naming skill.
 
-- Evidence must cite concrete file/line/symbol examples.
-- Cosmetic-only rename suggestions belong out of executable work unless maintainability value is explicit.
+## Expectations
+
+- **Scenarios:**
+  - WHEN names hide intent or domain meaning, use misleading abbreviations or overloaded terms, or hide units or formats THEN flag them.
+  - WHEN visible directly in code THEN high confidence; WHEN it relies on unproven language conventions THEN lower it.
+- **Done means:** Cited findings, or none when names are clear.
+- **Quality needs:** none beyond evidence rules.
