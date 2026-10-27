@@ -7,7 +7,7 @@ Use one file by default. Split only when node or line budgets require it.
 ````markdown
 # {System} Architecture
 
-Generated: {YYYY-MM-DD} · Source commit: `{short-sha}` · Regenerate with `/arch-map`.
+Generated: {YYYY-MM-DD} · Source commit: `{short-sha}` · Regenerate with `/arch map`.
 
 ## System Context
 

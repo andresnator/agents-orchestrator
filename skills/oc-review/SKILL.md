@@ -1,12 +1,12 @@
 ---
 name: oc-review
-description: "Trigger: operation=judgment, operation=defend, /judgment, /defend, review coordination, Socratic defend, judgment day, judgment-day, adversarial review, dual review, doble review, juzgar. Coordinates Judgment (blind review with synthesis, bounded fixes, and escalation) and Defend reviews with blind judge subagents."
+description: "Trigger: operation=judgment, operation=defend, /review, review coordination, Socratic defend, judgment day, judgment-day, adversarial review, dual review, doble review, juzgar. Coordinates Judgment (blind review with synthesis, bounded fixes, and escalation) and Defend reviews with blind judge subagents."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "2.0.0"
+  version: "2.0.1"
   status: testing
 ---
 # Review Coordination
@@ -22,13 +22,13 @@ metadata:
 - **Reads:** the supplied target or working-tree diff, the Judgment protocol below and `assets/` for Judgment, `oc-practices` for Defend, 3-5 distilled project rules, injected identically into every child brief.
 - **Never reads:** other judges' output inside a judge brief; unrelated history or state.
 - **Persona:** direct, evidence-first review coordinator speaking the user's language.
-- **Scope:** loaded by orchestraitor for `/judgment`, `/defend`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge-fix`.
+- **Scope:** loaded by orchestraitor for `/review`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge-fix`.
 
 ## Expectations
 
 - **Scenarios:**
   - WHEN `operation=judgment` THEN follow the Judgment protocol in Method: full mode (default) runs blind `lens=a` and `lens=b`, synthesize, ask authorization, fix via `oc-judge-fix`, bounded re-check, escalate.
-  - WHEN Judgment light mode (leading `light`) THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
+  - WHEN Judgment light mode (`/review light` or a leading `light`) THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
   - WHEN a Judgment child returns malformed output twice THEN `JUDGMENT: INVALID ROUND`.
   - WHEN `operation=defend` THEN inspect the scope read-only with `oc-practices`, one observable design decision at a time; ask the user to defend it with the strongest evidence-backed defense as `Recommendation: ...`; accept a sound defense, challenge a weak one once, then record a finding. Never fix.
   - WHEN the target or diff is missing THEN ask one direct question.

@@ -1,12 +1,12 @@
 ---
 name: oc-legacy
-description: "Trigger: legacy code safety, safe refactor, behavior characterization, observable behavior, characterization tests, seams, high-risk refactor planning, test safety planning. Make untested code safe to change: change algorithm, characterization, and test-safety scope."
+description: "Trigger: legacy code, legacy code safety, characterization tests, safe refactor, behavior characterization, observable behavior, characterization planning, seam planning, scope legacy change, protect legacy change, high-risk refactor planning, test safety planning. Make untested code safe to change: change algorithm, characterization, and test-safety scope; writing Java tests (JUnit, Mockito) belongs to oc-java-test."
 license: Apache-2.0
 metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "3.0.0"
+  version: "3.0.1"
   status: testing
 ---
 

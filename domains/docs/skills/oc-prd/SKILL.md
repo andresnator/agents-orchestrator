@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "4.0.0"
+  version: "4.1.0"
 ---
 
 # PRD
@@ -14,7 +14,7 @@ metadata:
 
 - **Goal:** A PRD in the selected mode: `mode=full` builds a complete, traceable technical PRD through a phase-by-phase interview filled into `assets/prd-template.md`; `mode=light` produces a useful lightweight PRD quickly, filled into `assets/prd-light-template.md`.
 - **Limits:**
-  - Use the given `mode`. Without one, choose `light` for explicit light or quick requests, MVPs, early ideas, internal tools, or small-to-medium features, and `full` for PRD, product requirements, technical product spec, or high-stakes, cross-team, regulated, or security-sensitive work; when still ambiguous, ask one plain-language triage question.
+  - Use the given `mode`. Without one, choose `light` for explicit light or quick requests, MVPs, early ideas, internal tools, or small-to-medium features, and `full` for explicit full or formal requests or high-stakes, cross-team, security-sensitive, compliance-heavy, API-heavy, regulated, or approval-heavy work. The bare word PRD (or product requirements) is not a depth signal; light signals win unless a full signal is present. When the request is missing or the choice is still ambiguous, ask one plain-language triage question, then continue in the answered mode with no further confirmation.
   - Ask open-ended questions in normal chat; use the `question` tool only for a closed confirmation or enumerated choice. No question headings, numbering, rationale blocks, or interview-length estimates.
   - Do not invent unknown facts; keep uncertainty as open questions, assumptions, or explicit `TBD`.
   - Full:

@@ -30,11 +30,11 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | Domain | Purpose | Entry points |
 |---|---|---|
 | [plan](domains/plan/README.md) | Evidence-first discovery and IDSD execution plans | `oc-plan-light`, `oc-plan-deep` skills |
-| [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `oc-arch` skill, `/arch-*`, `/boundary-inspector` |
+| [architecture](domains/architecture/README.md) | Maps, reviews, target decisions, and service boundaries | `oc-arch` skill, `/arch` |
 | [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` agent (the only agent) |
-| [review](domains/review/README.md) | Adversarial review and Socratic design defense | `oc-review` skill, `/judgment`, `/defend` |
-| [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
-| [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/ask-me`, `/absorb` |
+| [review](domains/review/README.md) | Adversarial review and Socratic design defense | `oc-review` skill, `/review` |
+| [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/doc` |
+| [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/ask-me` |
 | [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
 
 ## Repository shape

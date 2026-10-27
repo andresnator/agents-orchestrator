@@ -12,10 +12,10 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 | Entry | Use | Result |
 |---|---|---|
-| `/arch-map` | Document current architecture | Adaptive C4-lite documentation |
-| `/arch-review` | Rank architecture risks | Issues and fitness functions |
-| `/arch-ideate` | Choose a target architecture | ADR and neutral execution plan |
-| `/boundary-inspector` | Inspect one service | Evidence-backed boundary map |
+| `/arch map` | Document current architecture | Adaptive C4-lite documentation |
+| `/arch review` | Rank architecture risks | Issues and fitness functions |
+| `/arch ideate` | Choose a target architecture | ADR and neutral execution plan |
+| `/arch boundary` | Inspect one service | Evidence-backed boundary map |
 
 ```mermaid
 flowchart LR
@@ -35,10 +35,7 @@ After changing this domain, run the affected [Architecture manual tests](manual-
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/arch-ideate` | Produces ADR and executable change |
-| Command | `/arch-map` | Generates or refreshes C4-lite docs |
-| Command | `/arch-review` | Ranks architecture and dependency risks |
-| Command | `/boundary-inspector` | Maps one service boundary |
+| Command | `/arch` | Runs map, review, ideate, or boundary |
 | Skill | `oc-arch` | Coordinates all architecture operations |
 | Skill | `oc-adr` | Records architecture decisions |
 | Skill (handoff-only) | `oc-conventions` | Names implementation conventions for SDD |

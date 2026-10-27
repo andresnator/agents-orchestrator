@@ -1,11 +1,11 @@
 ---
 name: oc-practices
-description: "Trigger: programming best practices, clean code, DRY, KISS, YAGNI, readability, maintainability. Evaluate general code quality without depending on language-specific skills."
+description: "Trigger: programming best practices, clean code, DRY, KISS, YAGNI, maintainability, general code quality. Evaluate general code quality without depending on language-specific skills."
 license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 # Programming practices
 

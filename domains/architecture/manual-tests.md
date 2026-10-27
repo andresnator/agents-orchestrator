@@ -12,10 +12,10 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Map current architecture without implementation
 - **Coverage key:** `architecture/map/current-state`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-map.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/map.md`, `skills/oc-arch/assets/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/map.md`, `skills/oc-arch/assets/**`
 - **Preconditions:** Use a small disposable repository with source code and either `docs/` or no documentation directory.
 - **Steps:**
-  1. Run `/arch-map` for one explicit module and answer only material scope questions.
+  1. Run `/arch map` for one explicit module and answer only material scope questions.
   2. Inspect the returned paths and compare claims with the cited source lines.
 - **Expected result:** `oc-arch` creates or refreshes C4-lite files under the existing documentation root, cites verified evidence or labels hypotheses, and creates no plan or source diff.
 - **Cleanup:** Delete generated architecture documents and the disposable repository.
@@ -24,10 +24,10 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Rank architecture risks with evidence
 - **Coverage key:** `architecture/review/ranked-risks`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-review.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/issues.md`, `skills/oc-arch/references/fitness-functions.md`, `domains/architecture/skills/oc-dep-audit/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/issues.md`, `skills/oc-arch/references/fitness-functions.md`, `domains/architecture/skills/oc-dep-audit/**`
 - **Preconditions:** Use a disposable repository with at least one observable module boundary and dependency manifest.
 - **Steps:**
-  1. Run `/arch-review` on the repository without authorizing dependency commands.
+  1. Run `/arch review` on the repository without authorizing dependency commands.
   2. Inspect the single report under `.ai/architect/reports/` and the final response.
 - **Expected result:** The report ranks risks and fitness functions with `path:line` evidence, treats unaudited dependency conclusions as inventory or hypotheses, and returns no execution plan.
 - **Cleanup:** Remove `.ai/architect/` and the disposable repository.
@@ -36,10 +36,10 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Produce one architecture decision and plan
 - **Coverage key:** `architecture/ideate/adr-plan-handoff`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-ideate.md`, `skills/oc-arch/references/ideate.md`, `skills/oc-arch/references/state.md`, `domains/architecture/skills/oc-adr/**`, `domains/architecture/skills/oc-patterns/**`, `domains/architecture/skills/oc-refactor-lens/**`, `domains/architecture/skills/oc-plan-format/**`, `domains/architecture/skills/oc-routing/**`, `domains/architecture/skills/oc-conventions/**`, `domains/architecture/skills/oc-java-test/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch.md`, `skills/oc-arch/references/ideate.md`, `skills/oc-arch/references/state.md`, `domains/architecture/skills/oc-adr/**`, `domains/architecture/skills/oc-patterns/**`, `domains/architecture/skills/oc-refactor-lens/**`, `domains/architecture/skills/oc-plan-format/**`, `domains/architecture/skills/oc-routing/**`, `domains/architecture/skills/oc-conventions/**`, `domains/architecture/skills/oc-java-test/**`
 - **Preconditions:** Use a disposable repository with one concrete architecture concern and an existing documentation root.
 - **Steps:**
-  1. Run `/arch-ideate <concern>` and resolve the material target decision.
+  1. Run `/arch ideate <concern>` and resolve the material target decision.
   2. Inspect the ADR, `.ai/architect/plans/<slug>.md`, and the final handoff.
 - **Expected result:** Exactly one ADR and one neutral plan are created, group 1 establishes fitness guardrails, each group names routed skills, and the response shows `ejecuta el plan <path>` without editing source.
 - **Cleanup:** Remove the generated ADR, `.ai/architect/`, and the disposable repository.
@@ -48,10 +48,10 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Inspect one service boundary
 - **Coverage key:** `architecture/boundary/static-report`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/boundary-inspector.md`, `domains/architecture/skills/oc-boundary/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch.md`, `domains/architecture/skills/oc-boundary/**`
 - **Preconditions:** Use a disposable repository with one identifiable service or module path.
 - **Steps:**
-  1. Run `/boundary-inspector <exact-target>`.
+  1. Run `/arch boundary <exact-target>`.
   2. Inspect the target-specific report under `.ai/architect/reports/` and compare inputs and outputs with source evidence.
 - **Expected result:** Exactly one static boundary report is created for the named target, production files remain unchanged, and no plan or execution handoff is invented.
 - **Essential negative variant:** Omit the target and confirm `oc-arch` asks one blocking target question before writing a report.

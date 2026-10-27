@@ -4,7 +4,7 @@ Adversarial Judgment and Socratic Defend run through orchestraitor loading `oc-r
 
 ## Quick path
 
-1. Run `/judgment` or `/defend`.
+1. Run `/review judgment`, `/review light`, or `/review defend`.
 2. Answer authorization or defense questions directly.
 3. Review the verdict, ledger, and changed paths.
 
@@ -12,8 +12,8 @@ Adversarial Judgment and Socratic Defend run through orchestraitor loading `oc-r
 
 | Entry | Use | Result |
 |---|---|---|
-| `/judgment` | Review code adversarially | Findings and bounded authorized fixes |
-| `/defend` | Challenge design decisions | Evidence-backed defense verdict |
+| `/review judgment` or `/review light` | Review code adversarially | Findings and bounded authorized fixes |
+| `/review defend` | Challenge design decisions | Evidence-backed defense verdict |
 
 Full Judgment runs blind A/B judges, synthesizes evidence, and fixes only authorized confirmed findings. Light Judgment uses one solo judge (`oc-judge lens=solo`); Defend remains read-only.
 
@@ -23,8 +23,7 @@ After changing this domain, run the affected [Review manual tests](manual-tests.
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/defend` | Starts Socratic design defense |
-| Command | `/judgment` | Starts adversarial code review |
+| Command | `/review` | Starts Judgment or Defend review |
 | Skill | `oc-conventions` | Applies code and test conventions |
 | Skill | `oc-graphify` | Queries code graphs read-only |
 | Skill | `oc-judge` | Runs one blind lens review |

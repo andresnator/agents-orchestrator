@@ -1,6 +1,7 @@
 ---
 name: oc-absorb
 description: >
+  Trigger: absorb, analyze external harness, compare agent harness, absorber.
   Analyze one or more external projects (git URL or local path) to extract
   AI-harness practices, agent patterns, or instruction logic and contrast them
   against this repository's harness. Not for application code review.
@@ -9,7 +10,7 @@ metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "2.1.0"
+  version: "2.2.0"
   status: testing
 ---
 
@@ -30,7 +31,7 @@ metadata:
 ## Context
 
 - **Reads:**
-  - Targets: git URL(s) and/or local path(s); optional focus (skills, agents, prompts, workflows, installer patterns, comparison themes). Ask for a valid target when none is given.
+  - Targets: git URL(s) and/or local path(s); optional focus (skills, agents, prompts, workflows, installer patterns, comparison themes). When no git URL or local path is given, ask for at least one before starting; treat remaining arguments as the analysis focus.
   - External AI entrypoints: `AGENTS.md`, `CLAUDE.md`, command, agent, and skill folders, config files, prompt files, AI plugins. A repo is a valid harness even without `AGENTS.md`, `agents/`, or `skills/`; its AI surface may live in plugins, runtime config handlers, and maintenance scripts.
   - Repo-native contrast: `AGENTS.md`, `.ai/atl/skill-registry.md`, `domains/*/README.md`, `domains/*/skills/*/SKILL.md`, `skills/*/SKILL.md`, relevant local artifacts.
 - **Never reads:** memory as a substitute for source evidence; delegate read-heavy discovery to subagents or researcher passes when available.

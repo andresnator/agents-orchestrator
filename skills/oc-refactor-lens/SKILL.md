@@ -1,10 +1,10 @@
 ---
 name: oc-refactor-lens
-description: "Trigger: refactor lens, refactor analysis, analyze unit with lens, SRP, DRY, KISS, YAGNI, OCP, DIP, coupling, cohesion, Big O, God Object, spaghetti code, long method, logging lens, preconditions. Read-only refactor analysis of one unit through catalog lenses supplied by the planner brief."
+description: "Trigger: refactor lens, refactor analysis, analyze unit with lens, SRP, OCP, DIP, coupling, cohesion, Big O, God Object, spaghetti code, long method, logging lens, preconditions. Read-only refactor analysis of one unit through catalog lenses supplied by the planner brief (including DRY, KISS, and YAGNI lenses); general DRY/KISS/YAGNI evaluation belongs to oc-practices."
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "2.0.1"
   status: testing
 ---
 

@@ -1,11 +1,11 @@
 ---
 name: oc-java-test
-description: "Trigger: Java tests, JUnit, Mockito, AssertJ, legacy code, characterization tests, seams. Generate and retrofit Java tests safely."
+description: "Trigger: Java tests, JUnit, Mockito, AssertJ, Java legacy tests, Java characterization tests, Java seams. Generate and retrofit Java tests safely; planning the scope and protection of a legacy change belongs to oc-legacy."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.1.0"
+  version: "4.1.1"
 ---
 
 # Java Testing Skill
