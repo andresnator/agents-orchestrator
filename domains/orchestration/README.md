@@ -51,13 +51,12 @@ Push, PRs, merge, Review, and Judgment remain separate from delivery; request a 
 | Skill | `oc-sdd-explore` | Explores code read-only |
 | Skill | `oc-sdd-implement` | Implements scoped units without Git authority |
 | Skill | `oc-sdd-merge` | Merges verified canonical spec deltas |
-| Skill | `oc-characterize` | Captures current behavior during hardening |
 | Skill | `oc-conventions` | Applies code and test conventions |
 | Skill | `oc-doc-design` | Keeps human-facing documentation clear |
 | Skill | `oc-graphify` | Queries code graphs read-only |
 | Skill | `oc-routing` | Selects implementation skills without delivery skills |
 | Skill | `oc-java-test` | Implements focused Java tests |
-| Skill | `oc-legacy` | Protects behavior during legacy changes |
+| Skill | `oc-legacy` | Characterizes and protects legacy behavior |
 | Skill | `oc-sdd-verify` | Verifies `working-tree` or the recorded commit range |
 | Skill | `oc-debug` | Finds root causes before fixes |
 | Skill | `oc-tcr` | Commits green microsteps; reverts attributable failures |

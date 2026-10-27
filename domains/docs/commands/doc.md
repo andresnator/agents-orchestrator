@@ -2,7 +2,7 @@
 description: Route documentation work to the right skill
 argument-hint: "[what to document]"
 ---
-aw arguments: `$ARGUMENTS`
+Raw arguments: `$ARGUMENTS`
 
 Select the single most specific documentation skill whose activation contract matches the request, then load and follow it. Ask one question only when missing or ambiguous intent would materially change the artifact. If no exact skill matches, use `oc-doc-design` for general documentation; redirect non-documentation work.
 

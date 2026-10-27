@@ -18,7 +18,7 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
   1. Run `/ask-me quiero revisar mi diff antes del PR`.
   2. Run `/ask-me` with no arguments, then answer `plan a small localized change`.
   3. Run `/ask-me deploy to Kubernetes`.
-- **Expected result:** Step 1 asks nothing and recommends `oc-review` first with `/judgment` as usage, listing `oc-judgment` only as complementary. Step 2 asks exactly one question, then recommends `oc-plan-light` first. Step 3 says no harness skill fits. Every recommendation is an available `oc-*` skill from the runtime catalog, no skill body is loaded, and no work starts.
+- **Expected result:** Step 1 asks nothing and recommends `oc-review` first with `/review` as usage. Step 2 asks exactly one question, then recommends `oc-plan-light` first. Step 3 says no harness skill fits. Every recommendation is an available `oc-*` skill from the runtime catalog, no skill body is loaded, and no work starts.
 - **Essential negative variant:** After startup, delete `.ai/atl/skill-registry.md` without restarting OpenCode, rerun step 1, and confirm the recommendation still comes from the native catalog filtered to `oc-`.
 - **Cleanup:** Remove the disposable target.
 
@@ -26,10 +26,10 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Compare an external agent harness
 - **Coverage key:** `meta/absorb/adoption-report`
-- **Applies to:** `domains/meta/commands/absorb.md`, `domains/meta/skills/oc-absorb/**`
+- **Applies to:** `domains/meta/skills/oc-absorb/**`
 - **Preconditions:** Prepare a small local external repository with one visible agent or prompt convention and use a disposable target repository.
 - **Steps:**
-  1. Run `/absorb <external-path>` and authorize only read access to the named project.
+  1. Ask `orchestraitor` to absorb `<external-path>` and authorize only read access to the named project.
   2. Inspect the evidence-backed comparison and selective adoption recommendations.
 - **Expected result:** The result analyzes AI-harness practices rather than application code, contrasts them with this repository, labels unsupported claims, and makes no implementation or external-repository change.
 - **Cleanup:** Remove any local report created for the disposable comparison and delete the disposable repositories.

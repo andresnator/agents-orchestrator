@@ -1,10 +1,10 @@
 ---
 name: oc-plan-format
-description: "Trigger: execution plan, executable plan, deep plan, light plan. Draft one neutral IDSD plan for direct or SDD execution."
+description: "Trigger: execution plan, executable plan. Shared template drafting one neutral IDSD plan for direct or SDD execution; light and deep planning reach it through oc-plan-light and oc-plan-deep."
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "4.0.1"
   status: testing
 ---
 

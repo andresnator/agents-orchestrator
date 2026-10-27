@@ -39,29 +39,17 @@ Quit and restart OpenCode after installing or changing plugin code or configurat
 | Skill | `oc-chained-pr` | Splits oversized work into reviewable slices |
 | Skill | `oc-conventions` | Applies code and test conventions |
 | Skill | `oc-refine-output` | Condenses output without losing meaning |
-| Skill | `oc-coupling` | Detects cohesion and coupling problems |
-| Skill | `oc-big-o` | Evaluates algorithmic and control complexity |
-| Skill | `oc-dip` | Detects concrete dependency boundary risks |
 | Skill | `oc-patterns` | Applies patterns to evidenced forces |
 | Skill | `oc-domain` | Builds and sharpens domain models |
-| Skill | `oc-dry` | Distinguishes knowledge duplication from similarity |
-| Skill | `oc-naming` | Improves language-neutral naming and readability |
-| Skill | `oc-god-object` | Detects oversized multi-responsibility objects |
+| Skill | `oc-naming` | Improves naming, including Java conventions |
 | Skill | `oc-graphify` | Queries Graphify code graphs read-only |
 | Skill | `oc-grill` | Selects focused interview modes |
 | Skill | `oc-interview` | Stress-tests plans through focused interviews |
-| Skill | `oc-preconditions` | Detects missing or duplicated preconditions |
-| Skill | `oc-judgment` | Runs dual blind adversarial reviews |
-| Skill | `oc-kiss` | Prevents speculative refactor complexity |
-| Skill | `oc-logging` | Evaluates operational logging and observability |
-| Skill | `oc-ocp` | Detects extension pressure without speculation |
 | Skill | `oc-practices` | Evaluates language-neutral code quality |
-| Skill | `oc-risk` | Classifies technical and functional risk |
+| Skill | `oc-risk-scope` | Classifies risk and delimits target scope |
+| Skill | `oc-refactor-lens` | Applies catalog refactor lenses read-only |
 | Skill | `oc-plan-format` | Drafts one neutral execution plan |
 | Skill | `oc-routing` | Selects skills for implementation work |
-| Skill | `oc-srp` | Detects multiple reasons to change |
-| Skill | `oc-small-fn` | Detects oversized and extractable functions |
-| Skill | `oc-spaghetti` | Detects tangled flow and hidden ordering |
 | Skill | `oc-debug` | Finds root causes before fixes |
 | Skill | `oc-tcr` | Runs test-commit-revert micro-cycles |
 | Skill | `oc-commits` | Plans reviewable and cohesive commits |

@@ -18,8 +18,8 @@ Select `orchestraitor` in OpenCode for every route.
 | Quick plan for localized work | `oc-plan-light` | Natural request (light plan, plan rápido) |
 | Discover or plan in depth | `oc-plan-deep` | Natural request (deep plan, plan profundo, wayfinder) |
 | Change, execute plan, or resume | direct or `oc-sdd-*` | Natural request, `ejecuta el plan <path>`, `continúa <run>` |
-| Review or defend | `oc-review`, `oc-judge`, `oc-judge-fix` | Natural request or `/judgment`, `/defend` |
-| Map or decide architecture | `oc-arch` | Natural request or `/arch-*` |
+| Review or defend | `oc-review`, `oc-judge`, `oc-judge-fix` | Natural request or `/review` |
+| Map or decide architecture | `oc-arch` | Natural request or `/arch` |
 
 Orchestraitor picks light versus deep planning from explicit user words, then by size and risk, and never implements while planning. For specialized work, orchestraitor loads the skill itself or briefs the built-in `general` subagent with the exact skill to load (one delegation level). Planning and orchestration have no public commands.
 

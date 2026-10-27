@@ -1,7 +1,7 @@
 ---
 name: oc-summarize
 description: |
-  Expert in pedagogical book chapter synthesis. Use this skill WHENEVER the user wants to summarize a book chapter, analyze text or document content, study a chapter, extract key ideas from a reading, or when they mention words like "summary", "chapter", "book", "analyze this text", "summarize this", "cornell", "TL;DR" of long-form content. Also trigger when the user uploads a PDF, EPUB, or document and asks to understand or study it in parts.
+  Expert in pedagogical book chapter synthesis. Use this skill WHENEVER the user wants to summarize a book chapter, analyze text or document content, study a chapter, extract key ideas from a reading, or when they mention words like "chapter summary", "chapter", "book", "analyze this text", "summarize this chapter", "summarize this document", "cornell", "TL;DR" of long-form content. Tool, log, or chat output belongs to oc-refine-output. Also trigger when the user uploads a PDF, EPUB, or document and asks to understand or study it in parts.
   También se activa en castellano: "resumen", "resumen del capítulo", "resumir esto",
   "resumir el capítulo", "analizar este texto", "capítulo", "libro", "ideas clave",
   "resumen del libro", "estudiar el capítulo", "síntesis", "notas cornell",
@@ -11,7 +11,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 
 # Book Chapter Summary

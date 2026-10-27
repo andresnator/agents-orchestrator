@@ -1,13 +1,13 @@
 ---
 name: oc-interview
-description: "Interview the user relentlessly about a plan or design. Use when the user wants to stress-test a plan before building, or uses any 'grill' trigger phrases."
+description: "Interview the user relentlessly about a plan or design. Engine loaded by oc-grill and oc-plan-deep; use directly only when the user asks to stress-test a plan or design before building."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "3.1.0"
+  version: "3.1.1"
 ---
 # Interview
 

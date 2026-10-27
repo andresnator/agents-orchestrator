@@ -46,7 +46,7 @@ Add focused protection before changing the public pricing result. Preserve two-d
 #### Group 1: Protect current pricing
 
 Files: src/test/java/com/example/orders/OrderPricingTest.java
-Skills: oc-conventions, oc-java-test, oc-characterize
+Skills: oc-conventions, oc-java-test, oc-legacy
 Depends on: none
 
 - [ ] Add focused subtotal, threshold, and rounding scenarios.

@@ -12,10 +12,10 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 
 | Entry | Use | Result |
 |---|---|---|
-| `/arch-map` | Document current architecture | Adaptive C4-lite documentation |
-| `/arch-review` | Rank architecture risks | Issues and fitness functions |
-| `/arch-ideate` | Choose a target architecture | ADR and neutral execution plan |
-| `/boundary-inspector` | Inspect one service | Evidence-backed boundary map |
+| `/arch map` | Document current architecture | Adaptive C4-lite documentation |
+| `/arch review` | Rank architecture risks | Issues and fitness functions |
+| `/arch ideate` | Choose a target architecture | ADR and neutral execution plan |
+| `/arch boundary` | Inspect one service | Evidence-backed boundary map |
 
 ```mermaid
 flowchart LR
@@ -35,21 +35,14 @@ After changing this domain, run the affected [Architecture manual tests](manual-
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/arch-ideate` | Produces ADR and executable change |
-| Command | `/arch-map` | Generates or refreshes C4-lite docs |
-| Command | `/arch-review` | Ranks architecture and dependency risks |
-| Command | `/boundary-inspector` | Maps one service boundary |
+| Command | `/arch` | Runs map, review, ideate, or boundary |
 | Skill | `oc-arch` | Coordinates all architecture operations |
 | Skill | `oc-adr` | Records architecture decisions |
-| Skill | `oc-arch-ideate` | Designs target architecture and work |
-| Skill | `oc-arch-map` | Creates evidence-backed C4-lite docs |
-| Skill | `oc-arch-state` | Records verified current architecture |
 | Skill (handoff-only) | `oc-conventions` | Names implementation conventions for SDD |
 | Skill (handoff-only) | `oc-java-test` | Names Java testing guidance for implementation |
 | Skill | `oc-dep-audit` | Audits current dependency evidence |
 | Skill | `oc-patterns` | Applies patterns to evidenced forces |
-| Skill | `oc-kiss` | Rejects speculative architecture complexity |
-| Skill | `oc-arch-issues` | Ranks gaps and fitness functions |
+| Skill | `oc-refactor-lens` | Supplies the `kiss` lens for ideation |
 | Skill | `oc-plan-format` | Drafts one neutral execution plan |
 | Skill | `oc-routing` | Selects skills for implementation work |
 | Skill | `oc-boundary` | Maps service contracts |
