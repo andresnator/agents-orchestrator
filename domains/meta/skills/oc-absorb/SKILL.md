@@ -9,131 +9,58 @@ metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
 # Absorb
 
-## Activation Contract
+## Intent
 
-Use this skill when the user wants to inspect an external repository or local project to learn from its AI-harness setup: agents, skills, prompts, orchestration rules, or instruction patterns.
+- **Goal:** Produce a verified, contrasted adoption shortlist of external AI-harness practices for this repository.
+- **Limits:**
+  - Analyze harness and agent configuration, not the external project's business code quality.
+  - Clone or update a git URL only with user awareness and to a clearly stated local destination.
+  - Never auto-adopt, auto-commit, or silently edit this repository as a result of the audit.
+- **Fails if:**
+  - A README claim is promoted as proven behavior without source, activation-point, or wiring evidence.
+  - A practice is recommended without contrast against this repository.
+  - Findings are fabricated when a red flag applies: the path does not exist, the user wants general code review, no AI-config surface exists, or practices are documented but not wired. Surface these explicitly.
 
-Do not use it for application code review, bug hunting, architecture review of the product itself, or test-quality audits.
+## Context
 
-## Required Input
+- **Reads:**
+  - Targets: git URL(s) and/or local path(s); optional focus (skills, agents, prompts, workflows, installer patterns, comparison themes). Ask for a valid target when none is given.
+  - External AI entrypoints: `AGENTS.md`, `CLAUDE.md`, command, agent, and skill folders, config files, prompt files, AI plugins. A repo is a valid harness even without `AGENTS.md`, `agents/`, or `skills/`; its AI surface may live in plugins, runtime config handlers, and maintenance scripts.
+  - Repo-native contrast: `AGENTS.md`, `.ai/atl/skill-registry.md`, `domains/*/README.md`, `domains/*/skills/*/SKILL.md`, `skills/*/SKILL.md`, relevant local artifacts.
+- **Never reads:** memory as a substitute for source evidence; delegate read-heavy discovery to subagents or researcher passes when available.
+- **Persona:** skeptical harness auditor that avoids cargo-cult adoption.
+- **Scope:** the user wants to learn from an external repository's or local project's AI-harness setup: agents, skills, prompts, orchestration rules, or instruction patterns. Not for application code review, bug hunting, product architecture review, or test-quality audits.
 
-- One or more targets: git URL(s) and/or local path(s).
-- Optional focus: skills, agents, prompts, workflows, installer patterns, or comparison themes.
+## Expectations
 
-If no valid target is provided, ask for it before continuing.
+- **Scenarios:**
+  - WHEN targets are given THEN they are resolved (local paths verified) and the list confirmed before deep analysis.
+  - WHEN this repository already covers a practice well THEN it is marked `no adoption needed`.
+  - WHEN the user explicitly asks not to persist THEN the file is skipped and the same structure returns as a concise chat summary.
+- **Done means:** the report exists at `.ai/absorb/YYYY-MM-DD-<slug>.md` (`<slug>` is short kebab-case focus or target; fallback `external-practices`; create `.ai/absorb/` if missing), unless chat-only was requested. Return: resolved targets; key verified practices; rejected or conditional practices with reasons; our advantages; shortlist with proposed target paths in this repository; report path (always, unless the user opted out of persistence).
+- **Quality needs:** each recommended practice has file-level evidence; at least one `no adoption needed` or `Our Advantages` item; no unverified README-only claims in the shortlist; no commit or automatic adoption.
 
-## Hard Rules
+## Method
 
-- Analyze harness and agent configuration, not the external project's business code quality.
-- Verify practices from source files, activation points, or wiring; do not promote README claims as proven behavior.
-- Contrast every candidate practice against this repository before recommending adoption.
-- Prefer repo-native context for the contrast step: `AGENTS.md`, `.ai/atl/skill-registry.md`, `domains/*/README.md`, `domains/*/skills/*/SKILL.md`, `skills/*/SKILL.md`, and relevant local artifacts.
-- When available, delegate read-heavy discovery to subagents or researcher passes instead of relying on memory.
-- Never auto-adopt, auto-commit, or silently edit this repository as a result of the audit.
+1. **Map each harness.** Record how each candidate practice is triggered or wired, and per practice:
 
-## Workflow
+   | Field | What to record |
+   | --- | --- |
+   | Practice | Clear name |
+   | Mechanism | File path and concrete evidence |
+   | Status | Verified / partial / aspirational |
+   | Strength | Why it helps |
+   | Weakness | Limitation or trade-off |
 
-### 1. Scope and resolve targets
-
-For each target:
-
-- If it is a local path, verify it exists.
-- If it is a git URL, clone or update it only with user awareness and to a clearly stated local destination.
-- Confirm the resolved target list before deep analysis.
-
-### 2. Map each external harness
-
-For each resolved target, extract:
-
-- AI entrypoints such as `AGENTS.md`, `CLAUDE.md`, command folders, agent folders, skill folders, config files, prompt files, and AI-related plugins.
-- A repo counts as a valid harness even without `AGENTS.md`, `agents/`, or `skills/` trees: its AI surface may live primarily in plugins, runtime config handlers, and maintenance scripts.
-- How each candidate practice is triggered or wired.
-- Which practices are verified versus aspirational.
-
-For every candidate practice, capture:
-
-| Field | What to record |
-| --- | --- |
-| Practice | Clear name |
-| Mechanism | File path and concrete evidence |
-| Status | Verified / partial / aspirational |
-| Strength | Why it helps |
-| Weakness | Limitation or trade-off |
-
-### 3. Contrast with this repository
-
-For each candidate practice:
-
-- Check whether this repository already has an equivalent or better approach.
-- Mark `no adoption needed` when the current harness already covers the need well.
-- Carry forward only genuinely better or meaningfully missing practices.
-
-Also record at least three **Our Advantages** points to avoid cargo-cult adoption.
-
-### 4. Adversarial filter
-
-Challenge each surviving practice:
-
-- Is it truly verified?
-- Is it better, or just different?
-- Does it fit this repo's OpenCode-only, compact, contract-focused conventions?
-- Is the adoption cost proportional to the benefit?
-
-Keep only `ADOPT` or `CONDITIONAL` items in the shortlist.
-
-### 5. Deliver
-
-Always write the report to:
-
-`.ai/absorb/YYYY-MM-DD-<slug>.md`
-
-where `<slug>` is a short kebab-case name of the analysis focus or target (fallback: `external-practices`). Create `.ai/absorb/` if it does not exist.
-
-The report should include:
-
-1. Sources analyzed.
-2. One section per external project.
-3. Verified strengths.
-4. Our Advantages.
-5. Ranked adoption shortlist with target file paths in this repository.
-6. Immediate text-only wins vs. larger follow-up work.
-
-Only when the user explicitly asks not to persist, skip the file and return the same structure as a concise chat summary.
-
-## Red Flags
-
-- The provided path does not exist.
-- The user asks for general code quality review instead of harness analysis.
-- No AI-config surface is found in the external project.
-- Candidate practices are documented but not wired anywhere.
-
-Surface these explicitly; do not fabricate findings.
-
-## Verification
-
-- Targets were resolved before deep analysis.
-- Each recommended practice has file-level evidence.
-- At least one `no adoption needed` or `Our Advantages` item was recorded.
-- The shortlist excludes unverified README-only claims.
-- The report file exists at the stated path (unless the user explicitly requested chat-only).
-- No commit or automatic adoption was performed.
-
-## Output Contract
-
-Return:
-
-- resolved targets;
-- key verified practices;
-- rejected or conditional practices with reasons;
-- our advantages;
-- shortlist with proposed target paths in this repository;
-- report path (always, unless the user opted out of persistence).
+2. **Contrast.** Carry forward only genuinely better or meaningfully missing practices. Record at least three **Our Advantages** points.
+3. **Adversarial filter.** Is it truly verified? Better, or just different? Does it fit this repo's OpenCode-only, compact, contract-focused conventions? Is adoption cost proportional to benefit? Keep only `ADOPT` or `CONDITIONAL` items.
+4. **Report sections:** sources analyzed; one section per external project; verified strengths; Our Advantages; ranked adoption shortlist with target file paths in this repository; immediate text-only wins vs. larger follow-up work.
 
 ## Attribution
 

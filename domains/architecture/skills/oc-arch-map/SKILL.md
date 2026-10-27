@@ -6,37 +6,33 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.1.0"
   status: testing
 ---
 
 # Architecture Map
 
-## Contract
+## Intent
 
-Create system context, containers, representative runtime flows from verified code evidence. No code-level design, user story mapping, or AI-harness analysis.
+- **Goal:** Evidence-backed C4-lite docs: context, containers, key runtime flows.
+- **Limits:** No code-level design, story mapping, or AI-harness analysis. Never remove manually owned files.
+- **Fails if:** A node/edge lacks evidence and no `hypothesis` mark; a diagram exceeds ~30 nodes or a file 120 lines; Mermaid unbalanced; split files lack cross-links.
 
-- Each node and edge cites manifest, config, import, entrypoint, deployment descriptor, or underlying `file:line` resolved through healthy graph. Mark anything else `hypothesis`.
-- Use GitHub-renderable Mermaid `flowchart` and `sequenceDiagram` only.
-- Maximum about 30 nodes per diagram and 120 lines per file. Split before exceeding either.
-- Write to `docs/architecture/` when `docs/` exists; create that child as needed. Otherwise use existing `doc/architecture/`, or create it when neither root exists.
+## Context
 
-## Shape
+- **Reads:** Manifests, configs, imports, entrypoints, deployment descriptors, `file:line` via healthy graph.
+- **Never reads:** Per-project graph as proof of cross-project edges (need manifest, config, deployment, topic, URL, or shared-schema evidence).
+- **Persona:** Evidence-first documentarian.
+- **Scope:** Architecture map, C4/container diagram, flow map, architecture docs, drift.
 
-Default: one `index.md` containing system context, containers, 1-3 key flows. Use skeleton in `assets/architecture-doc-set.md`.
+## Expectations
 
-Split only when the default exceeds a budget:
+- **Scenarios:**
+  - WHEN `docs/` exists THEN write `docs/architecture/`; else existing `doc/architecture/`, or create it.
+  - WHEN refreshing THEN regenerate, diff against recorded source commit, update changed files only, report added/removed containers, dependency and flow changes.
+- **Done means:** Return folder, files written or updated, `initial generation` or drift summary, hypotheses; source commit recorded.
+- **Quality needs:** GitHub-renderable Mermaid `flowchart`/`sequenceDiagram` only.
 
-- Move context and containers to `overview.md`.
-- Move flows to `flows.md`.
-- For multiple deployables, keep workspace context in `index.md`; add `projects/<name>.md` only when one diagram cannot stay within budget.
+## Method
 
-Cross-project edges need manifest, config, deployment, topic, URL, or shared-schema evidence. Per-project graph never proves them.
-
-## Refresh
-
-Regenerate from current evidence; diff against recorded source commit; update changed files only; never remove manually owned files. Report added/removed containers, dependency changes, flow changes.
-
-## Output
-
-Return docfolder, files written or updated, `initial generation` or drift summary, hypotheses. Verify balanced Mermaid blocks, cross-links when split, budgets, source commit.
+Default one `index.md` from the skeleton in `assets/architecture-doc-set.md`: context, containers, 1-3 flows. Over budget: context and containers to `overview.md`, flows to `flows.md`. Multiple deployables: workspace context in `index.md`; `projects/<name>.md` only when one diagram exceeds budget.

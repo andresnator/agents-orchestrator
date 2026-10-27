@@ -6,37 +6,39 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
 # Tooling Audit
-Read-only detection skill for hardening and refactor planning at high or critical risk. Use it to identify existing test infrastructure, missing safety tooling, installation tasks, verification commands, and compatibility checks.
 
-## Shared contract
+## Intent
 
-Load the oc-tooling-matrix skill. The matrix owns offline version/tool baselines.
+- **Goal:** Identify existing test infrastructure, missing safety tooling, installation tasks, verification commands, and compatibility checks.
+- **Limits:** Read-only detection. The `oc-tooling-matrix` skill owns offline version/tool baselines; load it.
+- **Fails if:** A gap lacks an install task with an exact verify command, more than 5 gaps are emitted, or a version without evidence is not marked `hypothesis`.
 
-## Files to inspect
+## Context
 
-Prefer direct reads/globs for these files only when they are in or above the resolved target scope:
+- **Reads:** Prefer direct reads/globs for these files only when they are in or above the resolved target scope:
+  - `pom.xml`, `build.gradle`, `build.gradle.kts`, `gradle/wrapper/gradle-wrapper.properties`
+  - `package.json`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `tsconfig.json`, `vite.config.*`, `jest.config.*`, `vitest.config.*`
+  - `pyproject.toml`, `requirements*.txt`, `setup.cfg`, `tox.ini`, `pytest.ini`, `poetry.lock`
+  - `.java-version`, `.sdkmanrc`, `.tool-versions`, Maven compiler properties, Gradle Java toolchain declarations
+- **Never reads:** Build files unrelated to the resolved target scope.
+- **Persona:** Read-only tooling detector.
+- **Scope:** Hardening and refactor planning at high or critical risk.
 
-- `pom.xml`, `build.gradle`, `build.gradle.kts`, `gradle/wrapper/gradle-wrapper.properties`
-- `package.json`, `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `tsconfig.json`, `vite.config.*`, `jest.config.*`, `vitest.config.*`
-- `pyproject.toml`, `requirements*.txt`, `setup.cfg`, `tox.ini`, `pytest.ini`, `poetry.lock`
-- `.java-version`, `.sdkmanrc`, `.tool-versions`, Maven compiler properties, Gradle Java toolchain declarations
+## Expectations
 
-## Detection rules
+- **Scenarios:**
+  - WHEN detecting THEN record language version and build tool with evidence, and present `test_framework`, `assertion_lib`, `coverage`, and `mutation` tooling.
+  - WHEN a gap exists THEN create an install task from the compatibility matrix with an exact verify command.
+  - WHEN version evidence is missing THEN mark the version `hypothesis` and require verification.
+- **Done means:** The compact `tooling_audit` YAML below, with max 5 gaps prioritized by safety impact and compatibility checks such as Java/PIT requirements or Node/Python floors.
+- **Quality needs:** Every claim has evidence.
 
-- Record language version with evidence when available.
-- Record build tool with evidence.
-- Detect present `test_framework`, `assertion_lib`, `coverage`, and `mutation` tooling.
-- Emit max 5 gaps, prioritized by safety impact.
-- For each gap, create an install task using the compatibility matrix and include exact verify command.
-- Include compatibility checks such as Java/PIT requirements or Node/Python floors.
-- If version evidence is missing, mark the version as `hypothesis` and require verification.
-
-## Compact output
+## Method
 
 ```yaml
 tooling_audit:

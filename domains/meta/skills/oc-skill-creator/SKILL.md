@@ -8,46 +8,55 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "3.0.0"
+  version: "3.1.0"
   status: in-progress
 ---
 
-## When to Create a Skill
+# Skill Creator
 
-Create a skill when:
-- A pattern is used repeatedly and AI needs guidance
-- Project-specific conventions differ from generic best practices
-- Complex workflows need step-by-step instructions
-- Decision trees help AI choose the right approach
+## Intent
 
-**Don't create a skill when:**
-- Documentation already exists (create a reference instead)
-- Pattern is trivial or self-explanatory
-- It's a one-off task
+- **Goal:** Create or change one reusable skill with a single body, complete frontmatter, and an IDSD body.
+- **Limits:**
+  - Do not create a skill when documentation already exists (create a reference instead), the pattern is trivial or self-explanatory, or the task is one-off.
+  - Never copy skill bodies; never keep an exclusive skill at the top level.
+  - No Keywords section (agents search frontmatter), no troubleshooting sections, no lengthy explanations or duplicated docs (reference instead), no web URLs in references (use local paths).
+- **Fails if:** the skill already exists (check `domains/*/skills/*/SKILL.md` and `skills/*/SKILL.md`); frontmatter `name` differs from the directory basename or is not `oc-<short-name>`; `metadata.version` is not strict SemVer or `metadata.status` misstates lifecycle; a multi-domain skill lacks a symlink from every owner; no manual coverage key was updated and no new immutable manual case was added.
 
----
+## Context
 
-## Skill Structure
+- **Reads:** existing skills, `CONTRIBUTING.md` (`## IDSD format`, `## Skills`), and `references/behavioral-evaluation.md` when applicable.
+- **Never reads:** none.
+- **Persona:** concise skill author.
+- **Scope:** the user asks to create or change a skill, add agent instructions, or document patterns for AI; create one only when a pattern is used repeatedly and AI needs guidance; project conventions differ from generic best practices; complex workflows need step-by-step guidance; decision trees help AI choose the right approach.
 
-Choose `{skill-root}` as `domains/{domain}/skills` for one owner or `skills` for multiple owners.
+## Expectations
+
+- **Scenarios:**
+  - WHEN one domain uses the skill THEN its body is `domains/{domain}/skills/{skill-name}/`.
+  - WHEN multiple domains use it THEN one body lives at `skills/{skill-name}/` and every owner links `domains/<domain>/skills/<skill-name> -> ../../../skills/<skill-name>`.
+  - WHEN a high-impact discipline skill shows a reproducible agent failure despite being available THEN run the bounded pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, reported variance and cost. Never a routine step or CI gate; `python3 scripts/lint-manual-tests.py` validates catalog metadata, links, and coverage, not model behavior.
+- **Done means:** the skill exists at the right location with complete frontmatter (description includes trigger keywords), an IDSD body with every ICE field, accurate version and status, and updated manual coverage.
+- **Quality needs:** most critical rules first; tables for decision trees; minimal, focused examples; a commands block only when repeatable commands are part of the contract.
+
+## Method
+
+### Structure
 
 ```
-{skill-root}/{skill-name}/
-├── SKILL.md              # Required - main skill file
-├── assets/               # Optional - generated templates, schemas, fixtures, examples
-│   ├── template.py
-│   └── schema.json
-└── references/           # Optional - longer guidance, edge cases, explanatory docs
-    └── guidance.md
+{skill-root}/{skill-name}/      # skill-root: domains/{domain}/skills or skills
+├── SKILL.md                    # Required
+├── assets/                     # Optional: generated templates, schemas, fixtures, examples
+└── references/                 # Optional: longer guidance, edge cases, explanatory docs
 ```
 
----
+Concrete generated material goes in `assets/`; explanatory material goes in `references/`.
 
-## SKILL.md Template
+### SKILL.md template
 
 ```markdown
 ---
-name: {skill-name}
+name: oc-{short-name}
 description: >
   {One-line description of what this skill does}.
   Trigger: {When the AI should load this skill}.
@@ -58,115 +67,41 @@ metadata:
   status: backlog
 ---
 
-## When to Use
+# {Title}
 
-{Bullet points of when to use this skill}
+## Intent
 
-## Critical Patterns
+- **Goal:** {one observable outcome}
+- **Limits:** {boundaries, forbidden actions}
+- **Fails if:** {observable failure conditions}
 
-{The most important rules - what AI MUST know}
+## Context
 
-## Code Examples
+- **Reads:** {inputs and evidence}
+- **Never reads:** {excluded sources}
+- **Persona:** {role and stance}
+- **Scope:** {activation and where it applies}
 
-{Minimal, focused examples}
+## Expectations
 
-## Commands
+- **Scenarios:** {WHEN ... THEN ...}
+- **Done means:** {completion criteria and return contract}
+- **Quality needs:** {quality bar}
 
-```bash
-{Common commands}
+## Method
+
+{Optional: decision tables, formats, commands, and resource pointers such as [assets/](assets/) and [references/](references/).}
 ```
 
-## Resources
-
-- **Templates**: See [assets/](assets/) for {description}
-- **Documentation**: See [references/](references/) for local docs
-```
-
----
-
-## Naming Conventions
-
-| Type | Pattern | Examples |
-|------|---------|----------|
-| Generic skill | `{owner}/skills/{technology}` | `domains/plan/skills/oc-java-test` |
-| Project-specific | `{owner}/skills/{project}-{component}` | `domains/meta/skills/myapp-api` |
-| Testing skill | `{owner}/skills/{project}-test-{component}` | `domains/plan/skills/myapp-test-api` |
-| Workflow skill | `{owner}/skills/{action}-{target}` | `domains/meta/skills/oc-skill-creator` |
-
----
-
-## Decision: assets/ vs references/
-
-```
-Need generated templates?   → assets/
-Need JSON schemas?          → assets/
-Need fixtures/examples?     → assets/
-Need conceptual guidance?   → references/
-Need edge cases?            → references/
-```
-
-**Key Rule**: concrete generated material goes in `assets/`; explanatory material goes in `references/`.
-
----
-
-## Frontmatter Fields
+### Frontmatter
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | Yes | Skill identifier (lowercase, hyphens) |
+| `name` | Yes | `oc-<short-name>`: kebab-case, at most three short words after the prefix |
 | `description` | Yes | What + Trigger in one block |
-| `license` | Yes | Skill license, commonly `MIT` or `Apache-2.0` |
+| `license` | Yes | Commonly `MIT` or `Apache-2.0` |
 | `metadata.author` | Yes | Skill author or maintainer |
 | `metadata.version` | Yes | Semantic version as string |
 | `metadata.status` | Yes | `backlog`, `in-progress`, `testing`, or `done` |
 
----
-
-## Content Guidelines
-
-### DO
-- Start with the most critical patterns
-- Use tables for decision trees
-- Keep code examples minimal and focused
-- Include Commands only when repeatable commands are part of the contract
-
-### DON'T
-- Add Keywords section (agent searches frontmatter, not body)
-- Duplicate content from existing docs (reference instead)
-- Include lengthy explanations (link to docs)
-- Add troubleshooting sections (keep focused)
-- Use web URLs in references (use local paths)
-
----
-
-## Behavioral Evaluation (Conditional)
-
-The manual-catalog linter (`python3 scripts/lint-manual-tests.py`) validates case metadata, links, and changed-runtime coverage, not model behavior. When a high-impact discipline skill shows a reproducible agent failure despite being available, run the bounded evaluation pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, and reported variance and cost. It is never a routine step or a CI gate.
-
----
-
-## Registering the Skill
-
-After creating or changing a skill, keep `metadata.version` and `metadata.status` accurate. Use a patch bump for wording/path/template/internal contract fixes, a minor bump for new capabilities or optional flows, and a major bump for breaking activation/output behavior. Put a one-domain skill directly under that domain. For multiple domains, keep one body at `skills/<skill-name>` and link every owner with `domains/<domain>/skills/<skill-name> -> ../../../skills/<skill-name>`.
-
----
-
-## Checklist Before Creating
-
-- [ ] Skill doesn't already exist (check `domains/*/skills/*/SKILL.md` and `skills/*/SKILL.md`)
-- [ ] One-domain body is `domains/{domain}/skills/{skill-name}/`
-- [ ] Multi-domain body is `skills/{skill-name}/` with a symlink from every owner
-- [ ] Frontmatter `name` equals the skill directory basename
-- [ ] Pattern is reusable (not one-off)
-- [ ] Name follows conventions
-- [ ] Frontmatter is complete (description includes trigger keywords)
-- [ ] `metadata.version` is strict SemVer
-- [ ] `metadata.status` reflects the lifecycle state
-- [ ] Critical patterns are clear
-- [ ] Code examples are minimal
-- [ ] Commands section exists only when useful
-- [ ] Existing manual coverage key is updated, or one new immutable manual case is added
-
-## Resources
-
-- **Templates**: See [assets/](assets/) for SKILL.md template
+Version bumps: patch for wording/path/template/internal contract fixes, minor for new capabilities or optional flows, major for breaking activation/output behavior.

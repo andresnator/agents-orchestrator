@@ -5,45 +5,34 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
-# Skill: oc-java-security
+# oc-java-security
 
-## Activation Contract
+## Intent
 
-Use this skill when reviewing or designing Java code for secure coding practices: input validation, trust boundaries, injection, serialization/deserialization, sensitive data, resource exhaustion, mutability, access control, and third-party code risk.
+- **Goal:** Java code reviewed for secure implementation practices with severity-ranked remediation.
+- **Limits:**
+  - Teaches secure-coding review based on Java platform concerns and Oracle Secure Coding Guidelines; does not call other skills, certify security, or replace a formal security review.
+  - Establish trust boundaries before judging input safety.
+  - Prefer least privilege and minimal accessibility.
+- **Fails if:** untrusted input is used without validation and canonicalization, dynamic SQL remains instead of parameterized statements or safe higher-level APIs, secrets are logged or sensitive data is exposed in exceptions, resources are not released or resource exhaustion is not defended against, or high-risk areas (deserialization, XML, reflection, JNDI, command execution, third-party code) are not treated as high risk.
 
-Do **not** use this skill for full threat modeling, compliance audits, cryptography design, infrastructure hardening, or non-Java security work.
+## Context
 
-## Responsibility
+- **Reads:** data sources and trust boundaries; inputs accepted and outputs generated; sensitive data handled; resource-intensive operations; serialization, reflection, XML, SQL, command execution, or third-party dependencies involved.
+- **Never reads:** sources unrelated to the code under review.
+- **Persona:** Java secure-coding reviewer.
+- **Scope:** reviewing or designing Java code for input validation, trust boundaries, injection, serialization/deserialization, sensitive data, resource exhaustion, mutability, access control, and third-party code risk. Not for full threat modeling, compliance audits, cryptography design, infrastructure hardening, or non-Java security work.
 
-This skill teaches Java secure-coding review based on Java platform concerns and Oracle Secure Coding Guidelines. It does not call other skills, certify security, or replace a formal security review.
+## Expectations
 
-## Required Context
+- **Scenarios:** WHEN trust boundaries and untrusted data are identified THEN check injection, inclusion, deserialization, resource, sensitive-data, mutability, access, and privilege risks.
+- **Done means:** secure-coding verdict `low_risk`, `needs_hardening`, or `high_risk`; findings with severity and evidence; recommended remediation; residual risks and assumptions; areas requiring formal security review, if any.
+- **Quality needs:** every finding carries evidence.
 
-- Data sources and trust boundaries.
-- Inputs accepted and outputs generated.
-- Sensitive data handled.
-- Resource-intensive operations.
-- Serialization, reflection, XML, SQL, command execution, or third-party dependencies involved.
-
-## Context Budget
-
-- Keep this `SKILL.md` focused on secure-coding decisions.
-- Use `references/java-secure-coding-guidance.md` for checklist details.
-
-## Hard Rules
-
-- Establish trust boundaries before judging input safety.
-- Validate and canonicalize untrusted input before use.
-- Avoid dynamic SQL; use parameterized statements or safe higher-level APIs.
-- Do not log secrets or expose sensitive data in exceptions.
-- Release resources and defend against resource exhaustion.
-- Treat deserialization, XML, reflection, JNDI, command execution, and third-party code as high-risk areas.
-- Prefer least privilege and minimal accessibility.
-
-## Decision Gates
+## Method
 
 | Condition | Action |
 |---|---|
@@ -54,28 +43,4 @@ This skill teaches Java secure-coding review based on Java platform concerns and
 | Resource size depends on input | Add limits and overflow-safe checks. |
 | Public/extensible surface exposes internals | Reduce accessibility or document/guard contract. |
 
-## Execution Steps
-
-1. Identify trust boundaries and untrusted data.
-2. Check injection, inclusion, deserialization, and resource risks.
-3. Check sensitive-data exposure.
-4. Check mutability, access, and privilege boundaries.
-5. Return findings with severity and remediation.
-
-## Output Contract
-
-Return:
-
-- Secure-coding verdict: `low_risk`, `needs_hardening`, or `high_risk`.
-- Findings with severity and evidence.
-- Recommended remediation.
-- Residual risks and assumptions.
-- Areas requiring formal security review, if any.
-
-## References
-
-- `references/java-secure-coding-guidance.md` — Java secure-coding checklist based on official guidance themes.
-
-## Assets
-
-- None.
+Reference: `references/java-secure-coding-guidance.md` — Java secure-coding checklist based on official guidance themes.

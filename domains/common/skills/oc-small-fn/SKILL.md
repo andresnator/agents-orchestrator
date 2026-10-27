@@ -6,41 +6,38 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: in-progress
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: small functions, long method, extract method.
+# Small Functions
 
-## Hard Rules
+## Intent
 
-- Flag methods with multiple abstraction levels, nested branches, or distinct phases.
-- Prefer Extract Method when a block has a meaningful domain name.
-- Prefer Split Phase when parsing/validation/calculation/persistence are interleaved.
-- Keep recommendations behavior-preserving and incremental.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Find oversized functions and recommend the smallest safe behavior-preserving extraction.
+- **Limits:** Stay behavior-preserving and incremental; label functional changes follow-up.
+- **Fails if:** a recommendation lacks validation and rollback steps.
 
-## Decision Gates
+## Context
+
+- **Reads:** the target and nearby tests, as needed.
+- **Never reads:** code outside this lens.
+- **Persona:** refactor-plan reviewer lens.
+- **Scope:** reviewing refactor plans for small functions, long method, extract method.
+
+## Expectations
+
+- **Scenarios:**
+  - WHEN a method mixes abstraction levels, has nested branches, or distinct phases THEN flag it.
+  - WHEN a block has a meaningful domain name THEN prefer Extract Method.
+  - WHEN parsing/validation/calculation/persistence are interleaved THEN prefer Split Phase.
+- **Done means:** structured findings for the calling reviewer, or `no_findings` when this lens has no material issue.
+- **Quality needs:** none beyond repository conventions.
+
+## Method
 
 | Signal | Action |
 |---|---|
 | Concrete evidence exists | Create a finding with file, lines, symbol, benefit, validation, and rollback. |
 | Evidence is incomplete | Mark as hypothesis and lower confidence. |
 | Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
-
-## Execution Steps
-
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Add validation and rollback steps for each recommendation.
-
-## Output Contract
-
-Return structured findings for the calling reviewer. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.

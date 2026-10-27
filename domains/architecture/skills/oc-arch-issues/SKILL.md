@@ -6,30 +6,32 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.1.0"
   status: testing
 ---
 
 # Repo Issues
 
-## Contract
+## Intent
 
-Turn a verified `oc-arch-state` snapshot into a ranked architecture shortlist. Product repositories only; AI-harness analysis belongs to `oc-absorb`, and code-level findings belong to Deep Plan.
+- **Goal:** Ranked verified architecture issues, each with the smallest proportional guardrail.
+- **Limits:** Read-only; no speculative cleanup. Product repos only: AI-harness analysis goes to `oc-absorb`, code-level findings to `oc-plan-deep`.
+- **Fails if:** An issue lacks source/config/wiring evidence and consequence; docs prove behavior; preferences, unverified claims, or disproportionate fixes survive; no `Holding up` item.
 
-Read-only. Each issue needs source/config/wiring evidence plus consequence. Documentation states intent, never proves behavior.
+## Context
 
-## Flow
+- **Reads:** Verified `oc-arch-state` snapshot traced via imports, manifests, configs, CI wiring, healthy graph (boundaries, edges, operational hazards); `references/fitness-functions.md`.
+- **Never reads:** Docs as behavioral proof.
+- **Persona:** Skeptic contrasting claimed versus observed.
+- **Scope:** Repo issues, project problems, architecture shortlist; confirm target, snapshot, focus.
 
-1. Confirm target, state snapshot, optional focus.
-2. Trace boundaries, dependency edges, CI wiring, operational hazards using imports, manifests, configs, or healthy graph.
-3. Contrast claimed versus observed architecture. Record at least one `Holding up` item.
-4. Reject preferences, unverified claims, disproportionate fixes, and code-level findings.
-5. Rank surviving `FIX` and `CONDITIONAL` items by impact descending, effort ascending.
-6. Give each issue smallest automated guardrail. Prefer no-cycles and allowed-dependencies checks; use manual check when automation costs more than value. Tool examples live in `references/fitness-functions.md`.
+## Expectations
 
-## Output
+- **Scenarios:** WHEN a code-level finding appears THEN reroute it.
+- **Done means:** Table (max seven) of `FIX`/`CONDITIONAL` by impact desc, effort asc; then `Holding up`, rerouted items, unknowns, report path.
+- **Quality needs:** Prefer no-cycles and allowed-dependencies checks; manual check when automation costs more.
+
+## Method
 
 | Status | Issue | Evidence | Consequence | Impact | Effort | Fitness function |
 |---|---|---|---|---|---|---|
-
-List `Holding up`, rerouted code-level items, unknowns, and report path when written. Maximum seven shortlist items. No edits or speculative cleanup.
