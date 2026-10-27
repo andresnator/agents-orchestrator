@@ -52,7 +52,8 @@ A documentation-only pull request can report that no runtime manual cases are af
 - **Steps:**
   1. Run `installers/opencode.sh install --domain docs --target <target>`, then run `status` with the same domain and target.
   2. Run `uninstall --target <target>` and inspect the target plus its manifest before and after removal.
-- **Expected result:** Install links only selected components and `AGENTS.md`, status reports them as installed, and uninstall removes only manifest-owned content.
+  3. Run `install --domain architecture --target <target> --dry-run`.
+- **Expected result:** Install links only selected components and `AGENTS.md`, status reports them as installed, and uninstall removes only manifest-owned content. The architecture dry run also links `orchestraitor.md`, the repository agent its commands name, and no other orchestration component.
 - **Cleanup:** Remove the disposable target after confirming that no unrelated path changed.
 
 ### MT-REPOSITORY-INSTALL-IDEMPOTENCY
