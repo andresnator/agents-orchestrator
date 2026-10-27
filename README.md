@@ -34,7 +34,7 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | [orchestration](domains/orchestration/README.md) | Direct execution and durable SDD coordination | `orchestraitor` agent (the only agent) |
 | [review](domains/review/README.md) | Adversarial review and Socratic design defense | `oc-review` skill, `/judgment`, `/defend` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/adr`, `/doc`, `/prd` |
-| [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/absorb` |
+| [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/ask-me`, `/absorb` |
 | [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
 
 ## Repository shape

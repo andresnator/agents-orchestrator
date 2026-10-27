@@ -5,13 +5,14 @@ Prompt, skill-authoring, registry, and agent-model configuration utilities for t
 ## Quick path
 
 1. Install the `meta` domain.
-2. Use `/absorb` or `/models-profiles`.
+2. Use `/ask-me`, `/absorb`, or `/models-profiles`.
 3. Reinstall after changing a pinned plugin.
 
 ## Entry points
 
 | Entry | Use | Result |
 |---|---|---|
+| `/ask-me` | Find which harness skill fits a use case | Ranked `oc-*` recommendation with how to use it |
 | `/absorb` | Compare an external AI harness | Evidence-backed adoption report |
 | `/models-profiles` | Assign agent models and variants | Targeted OpenCode configuration |
 | OpenCode startup | Generate the resolved skill snapshot | `.ai/atl/skill-registry.md` |
@@ -26,6 +27,7 @@ After changing this domain, run the affected [Meta manual tests](manual-tests.md
 
 | Type | Name | Purpose |
 |---|---|---|
+| Command | `/ask-me` | Recommends `oc-*` skills for a use case |
 | Command | `/absorb` | Compares external AI harness practices |
 | Skill | `oc-absorb` | Extracts reusable external harness practices |
 | Skill | `oc-prompt` | Turns ideas into executable prompts |
