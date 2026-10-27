@@ -12,7 +12,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Map current architecture without implementation
 - **Coverage key:** `architecture/map/current-state`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-map.md`, `domains/architecture/skills/oc-arch-map/**`, `domains/architecture/skills/oc-arch-state/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-map.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/map.md`, `skills/oc-arch/assets/**`
 - **Preconditions:** Use a small disposable repository with source code and either `docs/` or no documentation directory.
 - **Steps:**
   1. Run `/arch-map` for one explicit module and answer only material scope questions.
@@ -24,7 +24,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Rank architecture risks with evidence
 - **Coverage key:** `architecture/review/ranked-risks`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-review.md`, `domains/architecture/skills/oc-arch-state/**`, `domains/architecture/skills/oc-arch-issues/**`, `domains/architecture/skills/oc-dep-audit/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-review.md`, `skills/oc-arch/references/state.md`, `skills/oc-arch/references/issues.md`, `skills/oc-arch/references/fitness-functions.md`, `domains/architecture/skills/oc-dep-audit/**`
 - **Preconditions:** Use a disposable repository with at least one observable module boundary and dependency manifest.
 - **Steps:**
   1. Run `/arch-review` on the repository without authorizing dependency commands.
@@ -36,7 +36,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Produce one architecture decision and plan
 - **Coverage key:** `architecture/ideate/adr-plan-handoff`
-- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-ideate.md`, `domains/architecture/skills/oc-arch-ideate/**`, `domains/architecture/skills/oc-arch-state/**`, `domains/architecture/skills/oc-adr/**`, `domains/architecture/skills/oc-patterns/**`, `domains/architecture/skills/oc-kiss/**`, `domains/architecture/skills/oc-plan-format/**`, `domains/architecture/skills/oc-routing/**`, `domains/architecture/skills/oc-conventions/**`, `domains/architecture/skills/oc-java-test/**`
+- **Applies to:** `skills/oc-arch/**`, `domains/architecture/commands/arch-ideate.md`, `skills/oc-arch/references/ideate.md`, `skills/oc-arch/references/state.md`, `domains/architecture/skills/oc-adr/**`, `domains/architecture/skills/oc-patterns/**`, `domains/architecture/skills/oc-refactor-lens/**`, `domains/architecture/skills/oc-plan-format/**`, `domains/architecture/skills/oc-routing/**`, `domains/architecture/skills/oc-conventions/**`, `domains/architecture/skills/oc-java-test/**`
 - **Preconditions:** Use a disposable repository with one concrete architecture concern and an existing documentation root.
 - **Steps:**
   1. Run `/arch-ideate <concern>` and resolve the material target decision.

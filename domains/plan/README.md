@@ -28,43 +28,26 @@ Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el pla
 | Type | Name | Purpose |
 |---|---|---|
 | Skill | `oc-arch-impact` | Classifies local versus architectural risk |
-| Skill | `oc-characterize` | Records observable legacy behavior |
-| Skill | `oc-char-scope` | Scopes tests, seams, and rollback |
 | Skill | `oc-conventions` | Applies code and test conventions |
-| Skill | `oc-coupling` | Detects cohesion and coupling problems |
-| Skill | `oc-big-o` | Evaluates algorithmic and control complexity |
-| Skill | `oc-dip` | Detects concrete dependency boundary risks |
 | Skill | `oc-seams` | Finds safe testability seams |
 | Skill | `oc-patterns` | Applies patterns to evidenced forces |
 | Skill | `oc-domain` | Builds and sharpens domain models |
-| Skill | `oc-dry` | Distinguishes knowledge duplication from similarity |
-| Skill | `oc-evidence` | Builds evidence-first executable plans |
-| Skill | `oc-naming` | Improves language-neutral naming and readability |
-| Skill | `oc-god-object` | Detects oversized multi-responsibility objects |
+| Skill | `oc-naming` | Improves naming, including Java conventions |
 | Skill | `oc-graphify` | Queries code graphs read-only |
 | Skill | `oc-interview` | Stress-tests plans through focused interviews |
-| Skill | `oc-preconditions` | Detects missing or duplicated preconditions |
 | Skill | `oc-java-api` | Reviews Java API boundaries |
 | Skill | `oc-java-errors` | Reviews Java failure handling |
 | Skill | `oc-java-immutable` | Reviews safe Java data models |
-| Skill | `oc-java-naming` | Reviews Java naming and readability |
 | Skill | `oc-java-security` | Reviews Java security practices |
 | Skill | `oc-java-test` | Designs focused Java test coverage |
-| Skill | `oc-kiss` | Prevents speculative refactor complexity |
-| Skill | `oc-legacy` | Protects untested behavior during change |
-| Skill | `oc-logging` | Evaluates operational logging and observability |
+| Skill | `oc-legacy` | Characterizes and protects untested behavior |
 | Skill | `oc-null-safety` | Detects conservative null-safety hazards |
-| Skill | `oc-ocp` | Detects extension pressure without speculation |
 | Skill | `oc-refactor` | Supplies cross-language refactoring techniques |
-| Skill | `oc-risk` | Classifies technical and functional risk |
-| Skill | `oc-scope` | Delimits the target boundary |
+| Skill | `oc-risk-scope` | Classifies risk and delimits target scope |
 | Skill | `oc-plan-deep` | Runs Wayfinder and Deep Plan |
 | Skill | `oc-plan-light` | Drafts quick plans for localized work |
 | Skill | `oc-plan-format` | Drafts one neutral IDSD plan |
-| Skill | `oc-refactor-lens` | Applies one read-only analysis lens |
+| Skill | `oc-refactor-lens` | Applies catalog refactor lenses read-only |
 | Skill | `oc-routing` | Selects skills for implementation work |
-| Skill | `oc-srp` | Detects multiple reasons to change |
-| Skill | `oc-spaghetti` | Detects tangled flow and hidden ordering |
-| Skill | `oc-tooling-audit` | Detects test-tooling gaps |
-| Skill | `oc-tooling-matrix` | Selects compatible quality tooling |
+| Skill | `oc-tooling-audit` | Detects tooling gaps with compatibility matrix |
 | Skill | `oc-types` | Detects weak or implicit types |

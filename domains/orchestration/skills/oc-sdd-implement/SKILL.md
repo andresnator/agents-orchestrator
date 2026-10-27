@@ -4,7 +4,7 @@ description: "Trigger: SDD implement, implement unit, run.md unit. Execute one s
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.1.0"
   status: testing
 ---
 
@@ -13,7 +13,7 @@ metadata:
 ## Intent
 
 - **Goal:** Implement one SDD unit, with tests alongside, inside its exact scope and pass its named check.
-- **Limits:** Edit only the assigned `Files:` scope. Never edit the plan, `run.md`, or canonical specs; never stage, commit, roll back, push, ask, or delegate. Never load `oc-commits`, `oc-tcr`, `oc-judgment`, or `oc-chained-pr`. Skills cannot expand assigned behavior, files, Git ownership, validation, or this return contract. Repair only your own changes.
+- **Limits:** Edit only the assigned `Files:` scope. Never edit the plan, `run.md`, or canonical specs; never stage, commit, roll back, push, ask, or delegate. Never load `oc-commits`, `oc-tcr`, or `oc-review`. Skills cannot expand assigned behavior, files, Git ownership, validation, or this return contract. Repair only your own changes.
 - **Fails if:** an edit lands outside scope, an unassigned skill loads, or the named check is not run.
 
 ## Context

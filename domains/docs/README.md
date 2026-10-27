@@ -30,11 +30,8 @@ After changing this domain, run the affected [Docs manual tests](manual-tests.md
 | Skill | `oc-adr` | Documents decisions and trade-offs |
 | Skill | `oc-issue` | Creates agent-ready implementation issues |
 | Skill | `oc-doc-design` | Reduces documentation cognitive load |
-| Skill | `oc-jira-spike` | Creates research-ready Jira Spikes |
-| Skill | `oc-jira-task` | Creates developer-ready Jira Tasks |
-| Skill | `oc-jira-story` | Creates developer-ready User Stories |
-| Skill | `oc-prd` | Creates rigorous high-stakes PRDs |
-| Skill | `oc-prd-light` | Creates lightweight MVP PRDs |
+| Skill | `oc-jira` | Creates Jira Tasks, Stories, and Spikes |
+| Skill | `oc-prd` | Creates full or light PRDs |
 | Skill | `oc-rfc` | Creates technical proposals with trade-offs |
 | Skill | `oc-slides` | Builds verified retro Slidev decks |
 | Skill | `oc-summarize` | Synthesizes book chapters pedagogically |

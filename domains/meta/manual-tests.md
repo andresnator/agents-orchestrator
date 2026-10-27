@@ -18,7 +18,7 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
   1. Run `/ask-me quiero revisar mi diff antes del PR`.
   2. Run `/ask-me` with no arguments, then answer `plan a small localized change`.
   3. Run `/ask-me deploy to Kubernetes`.
-- **Expected result:** Step 1 asks nothing and recommends `oc-review` first with `/judgment` as usage, listing `oc-judgment` only as complementary. Step 2 asks exactly one question, then recommends `oc-plan-light` first. Step 3 says no harness skill fits. Every recommendation is an available `oc-*` skill from the runtime catalog, no skill body is loaded, and no work starts.
+- **Expected result:** Step 1 asks nothing and recommends `oc-review` first with `/judgment` (operation=judgment) as usage. Step 2 asks exactly one question, then recommends `oc-plan-light` first. Step 3 says no harness skill fits. Every recommendation is an available `oc-*` skill from the runtime catalog, no skill body is loaded, and no work starts.
 - **Essential negative variant:** After startup, delete `.ai/atl/skill-registry.md` without restarting OpenCode, rerun step 1, and confirm the recommendation still comes from the native catalog filtered to `oc-`.
 - **Cleanup:** Remove the disposable target.
 

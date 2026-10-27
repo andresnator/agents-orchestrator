@@ -1,11 +1,11 @@
 ---
 name: oc-refine-output
-description: "Trigger: refine output, summarize output, compact logs, reduce cognitive load, remove duplicates. Refines heavy textual output into a concise, faithful, non-duplicative version."
+description: "Trigger: refine output, summarize output, compact logs, reduce cognitive load, remove duplicates. Refines heavy tool, log, or chat output into a concise, faithful, non-duplicative version; book chapters and documents belong to oc-summarize."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.1.0"
+  version: "3.1.1"
 ---
 
 # Cognitive Output Refiner

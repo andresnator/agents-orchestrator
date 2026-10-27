@@ -12,7 +12,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Synthesize two blind full Judgment reviews
 - **Coverage key:** `review/judgment/full-synthesis`
-- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge/**`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`
+- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge/**`, `domains/review/commands/judgment.md`, `skills/oc-review/assets/**`
 - **Preconditions:** Use a disposable diff with one observable correctness issue and one harmless style difference; do not authorize fixes.
 - **Steps:**
   1. Run `/judgment <exact-diff>` without the `light` selector.
@@ -24,7 +24,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Run one balanced light Judgment sweep
 - **Coverage key:** `review/judgment/light-sweep`
-- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge/**`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`
+- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge/**`, `domains/review/commands/judgment.md`, `skills/oc-review/assets/**`
 - **Preconditions:** Use a disposable diff with one observable critical defect and one non-critical improvement.
 - **Steps:**
   1. Run `/judgment light <exact-diff>`.
@@ -36,7 +36,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Apply only explicitly authorized review fixes
 - **Coverage key:** `review/fixes/authorization-boundary`
-- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge-fix/**`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`, `domains/review/skills/oc-conventions/**`
+- **Applies to:** `skills/oc-review/**`, `domains/orchestration/agents/orchestraitor.md`, `skills/oc-judge-fix/**`, `domains/review/commands/judgment.md`, `skills/oc-review/assets/**`, `domains/review/skills/oc-conventions/**`
 - **Preconditions:** Complete a full Judgment in a disposable project with two confirmed findings in separate files.
 - **Steps:**
   1. Authorize exactly one finding and decline the other.

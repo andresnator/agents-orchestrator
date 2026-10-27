@@ -29,6 +29,5 @@ After changing this domain, run the affected [Review manual tests](manual-tests.
 | Skill | `oc-graphify` | Queries code graphs read-only |
 | Skill | `oc-judge` | Runs one blind lens review |
 | Skill | `oc-judge-fix` | Applies authorized confirmed review fixes |
-| Skill | `oc-judgment` | Runs dual blind adversarial reviews |
 | Skill | `oc-practices` | Evaluates language-neutral code quality |
 | Skill | `oc-review` | Coordinates Judgment and Defend |

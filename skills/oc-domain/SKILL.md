@@ -1,13 +1,13 @@
 ---
 name: oc-domain
-description: "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model."
+description: "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, or when another skill needs to maintain the domain model. Formal ADR requests belong to oc-adr."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.1.0"
+  version: "2.1.1"
 ---
 
 # Domain Modeling

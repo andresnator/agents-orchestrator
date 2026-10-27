@@ -1,5 +1,5 @@
 ---
-description: Run the oc-judgment adversarial review protocol
+description: Run the oc-review Judgment adversarial review protocol
 agent: orchestraitor
 subtask: false
 argument-hint: "[light] [target files, feature, or scope]"

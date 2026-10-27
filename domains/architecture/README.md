@@ -41,15 +41,11 @@ After changing this domain, run the affected [Architecture manual tests](manual-
 | Command | `/boundary-inspector` | Maps one service boundary |
 | Skill | `oc-arch` | Coordinates all architecture operations |
 | Skill | `oc-adr` | Records architecture decisions |
-| Skill | `oc-arch-ideate` | Designs target architecture and work |
-| Skill | `oc-arch-map` | Creates evidence-backed C4-lite docs |
-| Skill | `oc-arch-state` | Records verified current architecture |
 | Skill (handoff-only) | `oc-conventions` | Names implementation conventions for SDD |
 | Skill (handoff-only) | `oc-java-test` | Names Java testing guidance for implementation |
 | Skill | `oc-dep-audit` | Audits current dependency evidence |
 | Skill | `oc-patterns` | Applies patterns to evidenced forces |
-| Skill | `oc-kiss` | Rejects speculative architecture complexity |
-| Skill | `oc-arch-issues` | Ranks gaps and fitness functions |
+| Skill | `oc-refactor-lens` | Supplies the `kiss` lens for ideation |
 | Skill | `oc-plan-format` | Drafts one neutral execution plan |
 | Skill | `oc-routing` | Selects skills for implementation work |
 | Skill | `oc-boundary` | Maps service contracts |
