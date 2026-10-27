@@ -22,3 +22,6 @@
 *.chat.md
 *.session.md
 *.transcript.md
+
+# Python bytecode
+__pycache__/
