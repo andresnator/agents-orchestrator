@@ -6,40 +6,35 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: in-progress
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: dependency inversion, DIP, ports, interfaces, adapters.
+# Dependency Inversion Lens
 
-## Hard Rules
+## Intent
 
-- Flag direct dependencies on frameworks, gateways, clients, persistence, or external systems when they hurt testing or coupling.
-- Introduce ports/interfaces only for real variation, test seams, or architectural boundaries.
-- Do not wrap stable internal classes by default.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Recommend the smallest safe behavior-preserving refactor per material finding.
+- **Limits:**
+  - Flag direct dependencies on frameworks, gateways, clients, persistence, or external systems when they hurt testing or coupling.
+  - Introduce ports/interfaces only for real variation, test seams, or architectural boundaries.
+  - Do not wrap stable internal classes by default.
+  - Preserve observable behavior; label functional changes as follow-up.
+  - Require evidence for every recommendation, or mark it as a hypothesis.
+- **Fails if:** any Limit is broken.
 
-## Decision Gates
+## Context
 
-| Signal | Action |
-|---|---|
-| Concrete evidence exists | Create a finding with file, lines, symbol, benefit, validation, and rollback. |
-| Evidence is incomplete | Mark as hypothesis and lower confidence. |
-| Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
+- **Reads:** target and nearby tests, as needed.
+- **Never reads:** none
+- **Persona:** single-lens refactor-plan reviewer.
+- **Scope:** refactor-plan reviews of: dependency inversion, DIP, ports, interfaces, adapters.
 
-## Execution Steps
+## Expectations
 
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Add validation and rollback steps for each recommendation.
-
-## Output Contract
-
-Return structured findings for the calling reviewer. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.
+- **Scenarios:**
+  - WHEN concrete evidence exists THEN report file, lines, symbol, benefit, validation, and rollback.
+  - WHEN evidence is incomplete THEN mark it hypothesis with lower confidence.
+  - WHEN cosmetic or speculative THEN omit unless maintainability benefit is clear.
+- **Done means:** structured findings for the calling reviewer, or `no_findings` when nothing is material.
+- **Quality needs:** one finding per material issue.

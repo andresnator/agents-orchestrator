@@ -6,40 +6,35 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: KISS, YAGNI, overengineering, speculative abstraction.
+# Simplicity Lens
 
-## Hard Rules
+## Intent
 
-- Prefer explicit code until variation is proven.
-- Reject abstractions for hypothetical future cases.
-- Recommend deletion of unused speculative structure only when safe and validated.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Recommend the smallest safe behavior-preserving refactor per material finding.
+- **Limits:**
+  - Prefer explicit code until variation is proven.
+  - Reject abstractions for hypothetical future cases.
+  - Recommend deletion of unused speculative structure only when safe and validated.
+  - Preserve observable behavior; label functional changes as follow-up.
+  - Require evidence for every recommendation, or mark it as a hypothesis.
+- **Fails if:** any Limit is broken or a finding lacks `file:line` evidence unmarked.
 
-## Decision Gates
+## Context
 
-| Signal | Action |
-|---|---|
-| Concrete evidence exists | Create a finding with `file:line` evidence and the smallest safe refactor. |
-| Evidence is incomplete | Mark as hypothesis and lower confidence. |
-| Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
+- **Reads:** target and nearby tests, as needed.
+- **Never reads:** none
+- **Persona:** single-lens refactor-plan reviewer.
+- **Scope:** refactor-plan reviews of: KISS, YAGNI, overengineering, speculative abstraction.
 
-## Execution Steps
+## Expectations
 
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Note validation and rollback implications where material; the calling agent decides where they land.
-
-## Output Contract
-
-Return findings in the calling agent's output contract — that contract wins over any field list here. Every finding carries `file:line` evidence or is marked hypothesis. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.
+- **Scenarios:**
+  - WHEN concrete evidence exists THEN report `file:line` evidence and the smallest safe refactor.
+  - WHEN evidence is incomplete THEN mark it hypothesis with lower confidence.
+  - WHEN cosmetic or speculative THEN omit unless maintainability benefit is clear.
+- **Done means:** findings in the calling agent's output contract (that contract wins over any field list here); `no_findings` when nothing is material.
+- **Quality needs:** note validation and rollback implications only where material, and the calling agent decides where they land.

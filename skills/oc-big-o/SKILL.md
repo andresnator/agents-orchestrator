@@ -6,40 +6,35 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: in-progress
 ---
 
-## Activation Contract
-Load this skill when reviewing refactor plans for: complexity, Big O, cyclomatic, nested loops, queries in loops.
+# Algorithmic Complexity Lens
 
-## Hard Rules
+## Intent
 
-- Flag high cyclomatic complexity, nested branches, loops, repeated scans, O(n²), and queries in loops.
-- Discuss Big O only when collections, algorithms, or repeated queries exist.
-- Avoid micro-optimizations without evidence; prioritize readability unless performance risk is real.
-- Preserve observable behavior; label functional changes as follow-up.
-- Require evidence for every recommendation, or mark it as a hypothesis.
+- **Goal:** Recommend the smallest safe behavior-preserving refactor per material finding.
+- **Limits:**
+  - Flag high cyclomatic complexity, nested branches, loops, repeated scans, O(n²), and queries in loops.
+  - Discuss Big O only when collections, algorithms, or repeated queries exist.
+  - Avoid micro-optimizations without evidence; prioritize readability unless performance risk is real.
+  - Preserve observable behavior; label functional changes as follow-up.
+  - Require evidence for every recommendation, or mark it as a hypothesis.
+- **Fails if:** any Limit is broken.
 
-## Decision Gates
+## Context
 
-| Signal | Action |
-|---|---|
-| Concrete evidence exists | Create a finding with file, lines, symbol, benefit, validation, and rollback. |
-| Evidence is incomplete | Mark as hypothesis and lower confidence. |
-| Recommendation is cosmetic or speculative | Omit it unless maintainability benefit is clear. |
+- **Reads:** target and nearby tests, as needed.
+- **Never reads:** none
+- **Persona:** single-lens refactor-plan reviewer.
+- **Scope:** refactor-plan reviews of: complexity, Big O, cyclomatic, nested loops, queries in loops.
 
-## Execution Steps
+## Expectations
 
-1. Inspect the target and nearby tests only as needed for this lens.
-2. Identify findings that match this skill's responsibility.
-3. Recommend the smallest safe behavior-preserving refactor.
-4. Add validation and rollback steps for each recommendation.
-
-## Output Contract
-
-Return structured findings for the calling reviewer. Return `no_findings` when this lens has no material issue.
-
-## References
-
-None.
+- **Scenarios:**
+  - WHEN concrete evidence exists THEN report file, lines, symbol, benefit, validation, and rollback.
+  - WHEN evidence is incomplete THEN mark it hypothesis with lower confidence.
+  - WHEN cosmetic or speculative THEN omit unless maintainability benefit is clear.
+- **Done means:** structured findings for the calling reviewer, or `no_findings` when nothing is material.
+- **Quality needs:** one finding per material issue.

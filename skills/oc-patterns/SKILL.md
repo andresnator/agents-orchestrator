@@ -5,44 +5,34 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
-# Skill: oc-patterns
+# Design Pattern Selection
 
-## Activation Contract
+## Intent
 
-Use this skill when asked whether to use a design pattern, how to apply a pattern, or how to compare pattern-based alternatives. Examples include Strategy, Factory, Builder, Adapter, Decorator, Template Method, Observer, Command, Repository, and Specification.
+- **Goal:** Choose and apply a pattern only when it solves a real design force.
+- **Limits:** Do not add patterns for decoration, replace simple code without change pressure, or do full architecture design unrelated to a specific pattern choice. Do not call other skills or force GoF terminology. Patterns belong to the consolidation phase: recommend one when variation is proven, not anticipated.
+- **Fails if:** A recommendation starts from the pattern name instead of the force, omits its cost (extra types, navigation, testing surface, cognitive load), or skips the candidate's contraindications in `references/pattern-forces.md`.
 
-Do **not** use this skill to add patterns for decoration, replace simple code without a change pressure, or perform full architecture design unrelated to a specific pattern choice.
+## Context
 
-## Responsibility
+- **Reads:** Current problem and change pressure; existing code shape or intended collaboration; language and framework constraints; expected variants, extension points, or integration boundaries.
+- **Never reads:** none.
+- **Persona:** Pragmatic designer who prefers no pattern when simple code is clearer.
+- **Scope:** Whether to use a pattern, how to apply one, or comparing pattern-based alternatives (Strategy, Factory, Builder, Adapter, Decorator, Template Method, Observer, Command, Repository, Specification).
 
-This skill teaches pragmatic pattern selection and application. It does not call other skills, force GoF terminology, or choose complexity without tradeoff justification.
+## Expectations
 
-## Required Context
+- **Scenarios:**
+  - WHEN the target is Java THEN consider lambdas, records, sealed classes, and composition before boilerplate-heavy classic patterns.
+- **Done means:** Return pattern verdict (`no_pattern`, `pattern_candidate`, or `pattern_recommended`), design force, chosen pattern or simpler alternative, tradeoffs, and a minimal implementation sketch or next step.
+- **Quality needs:** Indirection only where it reduces real change cost; smallest pattern shape that solves the force.
 
-- Current problem and change pressure.
-- Existing code shape or intended collaboration.
-- Language and framework constraints.
-- Expected variants, extension points, or integration boundaries.
+## Method
 
-## Context Budget
-
-- Keep this `SKILL.md` focused on selection workflow.
-- Use `references/pattern-selection.md` for the pattern decision table.
-
-## Hard Rules
-
-- Start from the design force, not the pattern name.
-- Prefer no pattern when simple code is clearer.
-- Introduce indirection only when it reduces real change cost.
-- Name the cost: extra types, navigation, testing surface, and cognitive load.
-- Check the candidate pattern's contraindications (`references/pattern-forces.md`) before recommending it.
-- Patterns belong to the consolidation phase of a design, not the prototyping phase: recommend one when variation is proven, not anticipated.
-- For Java, consider lambdas, records, sealed classes, and composition before classic boilerplate-heavy patterns.
-
-## Decision Gates
+State the force and expected variation, compare simple code against the candidate, explain rejected alternatives, and sketch only when useful.
 
 | Condition | Action |
 |---|---|
@@ -52,31 +42,9 @@ This skill teaches pragmatic pattern selection and application. It does not call
 | Creation logic must vary by family/type | Consider Factory. |
 | Feature wraps another object transparently | Consider Decorator. |
 | Algorithm skeleton is stable but steps vary | Consider Template Method, but check inheritance cost. |
-| Simple branch is enough | Do not introduce a pattern yet. |
+| Simple branch is enough | Return `no_pattern`; do not introduce a pattern yet. |
 
-## Execution Steps
-
-1. State the design force and expected variation.
-2. Compare simple code vs candidate pattern.
-3. Choose the smallest pattern shape that solves the force.
-4. Explain tradeoffs and rejected alternatives.
-5. Provide a minimal sketch when useful.
-
-## Output Contract
-
-Return:
-
-- Pattern verdict: `no_pattern`, `pattern_candidate`, or `pattern_recommended`.
-- Design force.
-- Chosen pattern or simpler alternative.
-- Tradeoffs.
-- Minimal implementation sketch or next step.
-
-## References
+References:
 
 - `references/pattern-selection.md` — Pattern selection and tradeoff table.
 - `references/pattern-forces.md` — Redesign causes → candidate patterns, per-pattern contraindications, and pattern relations/combinations.
-
-## Assets
-
-- None.

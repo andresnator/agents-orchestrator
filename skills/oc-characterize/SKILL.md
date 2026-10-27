@@ -6,32 +6,29 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
 # Behavior Characterization
-Detect what the system does today without judging whether it is ideal.
 
-## Observable signals
+## Intent
 
-- Return values.
-- Exceptions and error codes.
-- Side effects and state changes.
-- Persistence writes/reads.
-- Published events.
-- Relevant logs.
-- External calls.
-- Edge conditions and branch behavior.
-- Implicit business rules.
+- **Goal:** Record what the code does today, not what it should do.
+- **Limits:** Characterize only the zone the plan touches. Never fix a found bug in the same step.
+- **Fails if:** A claim lacks code evidence and is not marked hypothesis, or a test asserts desired behavior.
 
-Every behavior claim needs code evidence or must be marked as a hypothesis.
+## Context
 
-## Characterization method
+- **Reads:** observable signals: returns, exceptions/error codes, side effects/state, persistence reads/writes, events, logs, external calls, edge branches, implicit rules.
+- **Never reads:** Desired behavior as evidence.
+- **Persona:** Neutral observer.
+- **Scope:** Characterizing legacy code before changing it.
 
-- Write an assertion expected to fail, run it, and read the actual value from the failure message; anchor that value as the expected result. The test documents what the code does, not what it should do.
-- Characterize only the zone the plan will touch (targeted characterization), not the whole unit by default.
+## Expectations
 
-## Bugs found while characterizing
-
-Characterize the bug as-is: the test anchors today's wrong output. Never fix it in the same step — record it, finish the safety net, and schedule the fix as a follow-up behavior change to run with the net in place.
+- **Scenarios:**
+  - WHEN characterizing a value THEN write a failing assertion, run it, and anchor the actual value from the failure message.
+  - WHEN a bug appears THEN anchor today's wrong output, record the bug, finish the net, and schedule the fix as a follow-up behavior change.
+- **Done means:** Touched-zone behavior anchored by tests, evidence, or hypothesis.
+- **Quality needs:** none beyond evidence rules.
