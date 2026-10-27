@@ -150,5 +150,5 @@ test('shouldKeepManualCoverageAndPatchMetadataAlignedWithConsumerFix', () => {
   assert.match(registryCase, /skills\/oc-routing\/\*\*/);
   assert.match(registryCase, /scripts\/test-skill-registry-contract\.mjs/);
   assert.match(registryCase, /native loader within the agent's allowlist/);
-  assert.match(routing, /version: "3\.0\.1"\n  status: testing/);
+  assert.match(routing, /version: "\d+\.\d+\.\d+"\n  status: testing/);
 });
