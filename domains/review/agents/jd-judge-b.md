@@ -9,7 +9,7 @@ permission:
   bash: allow
   skill:
     "*": deny
-    graphify-cli: allow
+    oc-graphify: allow
 ---
 # Judge B
 

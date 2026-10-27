@@ -29,7 +29,7 @@ Executing an exact existing plan skips this gate and content reapproval while re
 
 Use the current explicit execution instruction, then the plan's optional `Delivery:` value, then `working-tree`. A valid plan value authorizes delivery without another confirmation. Duplicate lines, unknown values, or contradictions within either source block before editing; delivery cannot change after editing starts.
 
-Only `orchestraitor` owns Git delivery. It preserves unrelated changes and staged entries, excludes `.ai/`, and runs hooks. Workers never stage, commit, roll back, or push. See [work-unit-commits](skills/work-unit-commits/SKILL.md) and [tcr](skills/tcr/SKILL.md) for preflight, commit, and failure rules.
+Only `orchestraitor` owns Git delivery. It preserves unrelated changes and staged entries, excludes `.ai/`, and runs hooks. Workers never stage, commit, roll back, or push. See [oc-commits](skills/oc-commits/SKILL.md) and [tcr](skills/oc-tcr/SKILL.md) for preflight, commit, and failure rules.
 
 ### SDD resume
 
@@ -50,14 +50,14 @@ Push, PRs, merge, Review, and Judgment remain separate workflows. For later eval
 | Agent (subagent) | `sdd-implement` | Implements scoped units without Git authority |
 | Agent (subagent) | `sdd-canonical-merge` | Merges verified canonical spec deltas |
 | Agent (subagent) | `sdd-verify` | Cold-checks behavior and commands |
-| Skill | `behavior-characterization` | Captures current behavior during hardening |
-| Skill | `code-conventions` | Applies code and test conventions |
-| Skill | `cognitive-doc-design` | Keeps human-facing documentation clear |
-| Skill | `graphify-cli` | Queries code graphs read-only |
-| Skill | `implementation-skill-routing` | Selects implementation skills without delivery skills |
-| Skill | `java-testing` | Implements focused Java tests |
-| Skill | `legacy-code-safety` | Protects behavior during legacy changes |
-| Skill | `sdd-cold-verification` | Verifies `working-tree` or the recorded commit range |
-| Skill | `systematic-debugging` | Finds root causes before fixes |
-| Skill | `tcr` | Commits green microsteps; reverts attributable failures |
-| Skill | `work-unit-commits` | Delivers cohesive verified units as commits |
+| Skill | `oc-characterize` | Captures current behavior during hardening |
+| Skill | `oc-conventions` | Applies code and test conventions |
+| Skill | `oc-doc-design` | Keeps human-facing documentation clear |
+| Skill | `oc-graphify` | Queries code graphs read-only |
+| Skill | `oc-routing` | Selects implementation skills without delivery skills |
+| Skill | `oc-java-test` | Implements focused Java tests |
+| Skill | `oc-legacy` | Protects behavior during legacy changes |
+| Skill | `oc-sdd-verify` | Verifies `working-tree` or the recorded commit range |
+| Skill | `oc-debug` | Finds root causes before fixes |
+| Skill | `oc-tcr` | Commits green microsteps; reverts attributable failures |
+| Skill | `oc-commits` | Delivers cohesive verified units as commits |

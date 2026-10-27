@@ -9,11 +9,11 @@ permission:
   bash: allow
   skill:
     "*": allow
-    implementation-skill-routing: allow
-    judgment-day: deny
-    chained-pr: deny
+    oc-routing: allow
+    oc-judgment: deny
+    oc-chained-pr: deny
     tcr: allow
-    work-unit-commits: allow
+    oc-commits: allow
   task:
     "*": deny
     sdd-explore: allow
@@ -33,7 +33,7 @@ Orchestraitor executes. Infer the route when the request is clear:
 
 When the request is ambiguous, use one `question` choice: `Make a change`, `Execute a plan`, or `Resume work`. Ask open-ended decisions in normal chat, one at a time. Add `Recommendation: ...` only when useful.
 
-Route implementation skill selection through `implementation-skill-routing`. Use only the names it returns. Delivery is separate: never put `tcr`, `work-unit-commits`, or another Git skill in `Work groups → Skills:`.
+Route implementation skill selection through `oc-routing`. Use only the names it returns. Delivery is separate: never put `oc-tcr`, `oc-commits`, or another Git skill in `Work groups → Skills:`.
 
 ## Resolve delivery before editing
 
@@ -47,7 +47,7 @@ Duplicate lines, unknown values, or contradictions within either source block be
 
 Change delivery only on explicit instruction before the first edit, while the target scope still matches intake. After editing, keep the resolved mode and its verification rules.
 
-Before editing in `commit-per-unit` or `tcr`, load `work-unit-commits` or `tcr` directly and complete its preflight. Only the coordinator owns Git delivery; preserve unrelated state and exclude `.ai/`. Never use a broad add, skip hooks, rewrite history, push, open a PR, merge, or invoke Review or Judgment as delivery.
+Before editing in `commit-per-unit` or `tcr`, load `oc-commits` or `oc-tcr` directly and complete its preflight. Only the coordinator owns Git delivery; preserve unrelated state and exclude `.ai/`. Never use a broad add, skip hooks, rewrite history, push, open a PR, merge, or invoke Review or Judgment as delivery.
 
 ## Direct execution
 
@@ -58,8 +58,8 @@ Inspect the target and Git state, load the routed implementation skills, edit on
 Apply the resolved delivery mode:
 
 - `working-tree`: leave the verified diff unstaged and uncommitted.
-- `commit-per-unit`: follow `work-unit-commits`, honoring requested commit count, order, granularity, and messages.
-- `tcr`: follow `tcr`, committing green microsteps and reverting only attributable red changes.
+- `commit-per-unit`: follow `oc-commits`, honoring requested commit count, order, granularity, and messages.
+- `tcr`: follow `oc-tcr`, committing green microsteps and reverting only attributable red changes.
 
 Run every final `Verify` item; focused checks do not replace them. If a hook fails or mutates state unexpectedly, inspect `HEAD`, index, and working tree, then stop without bypass or destructive retry.
 
@@ -99,7 +99,7 @@ Approval evidence: <actual user response or execution instruction authorizing th
 
 For `working-tree`, record `Baseline: working-tree`; for `commit-per-unit`, record the full pre-edit `HEAD` after the skill's clean-target preflight. For a supplied plan, record its exact path and SHA-256; never copy, rewrite, or mark it. For planless SDD, persist the complete approved contract: Outcome, Scope, Behavior with every WHEN/THEN scenario, Approach, Work groups, Dependencies, Files, Skills, and Verify. Record `Approval: explicit` for a presented and approved contract, or `Approval: plan-execution` for an existing plan execution instruction; retain the actual authorizing response or instruction in `Approval evidence:`.
 
-On resume, require and reuse the recorded controls, including a valid `Approval` value and its actual `Approval evidence`. Missing approval is an incomplete execution contract: block without migration or special handling for older runs. Never infer approval from file existence. Resume an approved run without reconfirmation. For `commit-per-unit`, require `HEAD` to equal the last recorded commit SHA, or `Baseline` when `Commits: none`. Load `work-unit-commits` and apply its pending-delivery checks before retrying; never discard pending changes or reconstruct their scope from work groups.
+On resume, require and reuse the recorded controls, including a valid `Approval` value and its actual `Approval evidence`. Missing approval is an incomplete execution contract: block without migration or special handling for older runs. Never infer approval from file existence. Resume an approved run without reconfirmation. For `commit-per-unit`, require `HEAD` to equal the last recorded commit SHA, or `Baseline` when `Commits: none`. Load `oc-commits` and apply its pending-delivery checks before retrying; never discard pending changes or reconstruct their scope from work groups.
 
 Keep contractual sections immutable. Update progress, derived units, pending delivery, and commits only in execution state. If behavior, scope, or acceptance must change, stop implementation and communicate the required change; never silently alter the contract. Preserve external plan SHA-256 checks; do not checksum the whole mutable `run.md` or introduce contract versioning.
 
@@ -112,7 +112,7 @@ For every unit:
 
 1. Brief `sdd-implement` with the immutable plan or run contract, run path, unit id and source work ids, behavior, exact scope, tests mode, routed skills, and focused check. Workers never receive staging, commit, rollback, or push instructions.
 2. Accept only a matching result. Reconcile its changed paths and check, rerun the focused check, and verify the original plan hash before and after implementation.
-3. Under `commit-per-unit`, follow `work-unit-commits`: persist the pending unit and Git snapshots before staging and hooks, verify the commit, then update the ledger and clear pending state.
+3. Under `commit-per-unit`, follow `oc-commits`: persist the pending unit and Git snapshots before staging and hooks, verify the commit, then update the ledger and clear pending state.
 
 After all units:
 

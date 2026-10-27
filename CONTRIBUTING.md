@@ -39,6 +39,8 @@ Open-ended interviews, debriefs, teach-backs, and other free-text questions use 
 
 Each skill has exactly one body. A skill used by one domain lives directly at `domains/<domain>/skills/<skill>/SKILL.md`. A skill used by multiple domains lives at `skills/<skill>/SKILL.md`, and every owning domain declares it with a relative `domains/<domain>/skills/<skill>` symlink. Do not copy skill bodies or keep an exclusive skill at the top level.
 
+Name every skill `oc-<short-name>`: kebab-case, at most three short words after the prefix, and identical to its directory name.
+
 Skill frontmatter contains `name`, `description`, `license`, and `metadata.author`, strict SemVer `metadata.version`, and `metadata.status`. Status is `backlog`, `in-progress`, `testing`, or `done`.
 
 Bump the version whenever a skill changes: patch for wording or internal fixes, minor for additive capability, major for breaking activation or output behavior. Keep the runtime contract concise; place concrete templates in `assets/` and extended guidance in `references/`.

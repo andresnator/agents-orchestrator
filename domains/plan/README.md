@@ -28,41 +28,41 @@ Every plan recommends `direct` or `SDD`, explains why, and shows `ejecuta el pla
 |---|---|---|
 | Agent (primary) | `deep-planner` | Runs Wayfinder and Deep Plan |
 | Agent (subagent) | `refactor-analyzer` | Applies one read-only analysis lens |
-| Skill | `architecture-impact-review` | Classifies local versus architectural risk |
-| Skill | `behavior-characterization` | Records observable legacy behavior |
-| Skill | `characterization-test-scoping` | Scopes tests, seams, and rollback |
-| Skill | `code-conventions` | Applies code and test conventions |
-| Skill | `cohesion-coupling` | Detects cohesion and coupling problems |
-| Skill | `complexity-big-o` | Evaluates algorithmic and control complexity |
-| Skill | `dependency-inversion` | Detects concrete dependency boundary risks |
-| Skill | `dependency-seam-detection` | Finds safe testability seams |
-| Skill | `design-patterns-pragmatic` | Applies patterns to evidenced forces |
-| Skill | `domain-modeling` | Builds and sharpens domain models |
-| Skill | `dry-business-knowledge` | Distinguishes knowledge duplication from similarity |
-| Skill | `evidence-first-planning` | Builds evidence-first executable plans |
-| Skill | `general-naming-readability` | Improves language-neutral naming and readability |
-| Skill | `god-object-detection` | Detects oversized multi-responsibility objects |
-| Skill | `graphify-cli` | Queries code graphs read-only |
-| Skill | `grilling` | Stress-tests plans through focused interviews |
-| Skill | `input-validation-preconditions` | Detects missing or duplicated preconditions |
-| Skill | `java-api-design` | Reviews Java API boundaries |
-| Skill | `java-exception-robustness` | Reviews Java failure handling |
-| Skill | `java-immutability-modeling` | Reviews safe Java data models |
-| Skill | `java-naming-readability` | Reviews Java naming and readability |
-| Skill | `java-secure-coding` | Reviews Java security practices |
-| Skill | `java-testing` | Designs focused Java test coverage |
-| Skill | `kiss-yagni` | Prevents speculative refactor complexity |
-| Skill | `legacy-code-safety` | Protects untested behavior during change |
-| Skill | `logging-observability` | Evaluates operational logging and observability |
-| Skill | `null-safety` | Detects conservative null-safety hazards |
-| Skill | `open-closed-principle` | Detects extension pressure without speculation |
-| Skill | `refactor` | Supplies cross-language refactoring techniques |
-| Skill | `risk-assessment` | Classifies technical and functional risk |
-| Skill | `scope-analysis` | Delimits the target boundary |
-| Skill | `execution-plan` | Drafts one neutral execution plan |
-| Skill | `implementation-skill-routing` | Selects skills for implementation work |
-| Skill | `single-responsibility` | Detects multiple reasons to change |
-| Skill | `spaghetti-code-detection` | Detects tangled flow and hidden ordering |
-| Skill | `tooling-audit` | Detects test-tooling gaps |
-| Skill | `tooling-compatibility-matrix` | Selects compatible quality tooling |
-| Skill | `type-contracts` | Detects weak or implicit types |
+| Skill | `oc-arch-impact` | Classifies local versus architectural risk |
+| Skill | `oc-characterize` | Records observable legacy behavior |
+| Skill | `oc-char-scope` | Scopes tests, seams, and rollback |
+| Skill | `oc-conventions` | Applies code and test conventions |
+| Skill | `oc-coupling` | Detects cohesion and coupling problems |
+| Skill | `oc-big-o` | Evaluates algorithmic and control complexity |
+| Skill | `oc-dip` | Detects concrete dependency boundary risks |
+| Skill | `oc-seams` | Finds safe testability seams |
+| Skill | `oc-patterns` | Applies patterns to evidenced forces |
+| Skill | `oc-domain` | Builds and sharpens domain models |
+| Skill | `oc-dry` | Distinguishes knowledge duplication from similarity |
+| Skill | `oc-evidence` | Builds evidence-first executable plans |
+| Skill | `oc-naming` | Improves language-neutral naming and readability |
+| Skill | `oc-god-object` | Detects oversized multi-responsibility objects |
+| Skill | `oc-graphify` | Queries code graphs read-only |
+| Skill | `oc-interview` | Stress-tests plans through focused interviews |
+| Skill | `oc-preconditions` | Detects missing or duplicated preconditions |
+| Skill | `oc-java-api` | Reviews Java API boundaries |
+| Skill | `oc-java-errors` | Reviews Java failure handling |
+| Skill | `oc-java-immutable` | Reviews safe Java data models |
+| Skill | `oc-java-naming` | Reviews Java naming and readability |
+| Skill | `oc-java-security` | Reviews Java security practices |
+| Skill | `oc-java-test` | Designs focused Java test coverage |
+| Skill | `oc-kiss` | Prevents speculative refactor complexity |
+| Skill | `oc-legacy` | Protects untested behavior during change |
+| Skill | `oc-logging` | Evaluates operational logging and observability |
+| Skill | `oc-null-safety` | Detects conservative null-safety hazards |
+| Skill | `oc-ocp` | Detects extension pressure without speculation |
+| Skill | `oc-refactor` | Supplies cross-language refactoring techniques |
+| Skill | `oc-risk` | Classifies technical and functional risk |
+| Skill | `oc-scope` | Delimits the target boundary |
+| Skill | `oc-plan-format` | Drafts one neutral execution plan |
+| Skill | `oc-routing` | Selects skills for implementation work |
+| Skill | `oc-srp` | Detects multiple reasons to change |
+| Skill | `oc-spaghetti` | Detects tangled flow and hidden ordering |
+| Skill | `oc-tooling-audit` | Detects test-tooling gaps |
+| Skill | `oc-tooling-matrix` | Selects compatible quality tooling |
+| Skill | `oc-types` | Detects weak or implicit types |

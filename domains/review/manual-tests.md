@@ -12,7 +12,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Synthesize two blind full Judgment reviews
 - **Coverage key:** `review/judgment/full-synthesis`
-- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-judge-a.md`, `domains/review/agents/jd-judge-b.md`, `domains/review/commands/judgment.md`, `domains/review/skills/judgment-day/**`
+- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-judge-a.md`, `domains/review/agents/jd-judge-b.md`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`
 - **Preconditions:** Use a disposable diff with one observable correctness issue and one harmless style difference; do not authorize fixes.
 - **Steps:**
   1. Run `/judgment <exact-diff>` without the `light` selector.
@@ -24,7 +24,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Run one balanced light Judgment sweep
 - **Coverage key:** `review/judgment/light-sweep`
-- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-solo.md`, `domains/review/commands/judgment.md`, `domains/review/skills/judgment-day/**`
+- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-solo.md`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`
 - **Preconditions:** Use a disposable diff with one observable critical defect and one non-critical improvement.
 - **Steps:**
   1. Run `/judgment light <exact-diff>`.
@@ -36,7 +36,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Apply only explicitly authorized review fixes
 - **Coverage key:** `review/fixes/authorization-boundary`
-- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-fix.md`, `domains/review/commands/judgment.md`, `domains/review/skills/judgment-day/**`, `domains/review/skills/code-conventions/**`
+- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/agents/jd-fix.md`, `domains/review/commands/judgment.md`, `domains/review/skills/oc-judgment/**`, `domains/review/skills/oc-conventions/**`
 - **Preconditions:** Complete a full Judgment in a disposable project with two confirmed findings in separate files.
 - **Steps:**
   1. Authorize exactly one finding and decline the other.
@@ -49,7 +49,7 @@ Run these cases against a disposable diff with known review signals. Review stay
 
 - **Title:** Challenge one design decision read-only
 - **Coverage key:** `review/defend/socratic-verdict`
-- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/commands/defend.md`, `domains/review/skills/programming-practices-core/**`
+- **Applies to:** `domains/review/agents/review-coordinator.md`, `domains/review/commands/defend.md`, `domains/review/skills/oc-practices/**`
 - **Preconditions:** Use a disposable diff containing one deliberate design trade-off with available source evidence.
 - **Steps:**
   1. Run `/defend <exact-scope>` and answer the first evidence-backed design question.

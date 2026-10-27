@@ -12,7 +12,7 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Compare an external agent harness
 - **Coverage key:** `meta/absorb/adoption-report`
-- **Applies to:** `domains/meta/commands/absorb.md`, `domains/meta/skills/absorb/**`
+- **Applies to:** `domains/meta/commands/absorb.md`, `domains/meta/skills/oc-absorb/**`
 - **Preconditions:** Prepare a small local external repository with one visible agent or prompt convention and use a disposable target repository.
 - **Steps:**
   1. Run `/absorb <external-path>` and authorize only read access to the named project.
@@ -24,8 +24,8 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Convert a rough idea into an executable prompt
 - **Coverage key:** `meta/prompt/structured-output`
-- **Applies to:** `domains/meta/skills/prompt-structure-writer/**`
-- **Preconditions:** Use a session where `prompt-structure-writer` is available and prepare a loose request with an outcome, constraints, and one ambiguity.
+- **Applies to:** `domains/meta/skills/oc-prompt/**`
+- **Preconditions:** Use a session where `oc-prompt` is available and prepare a loose request with an outcome, constraints, and one ambiguity.
 - **Steps:**
   1. Ask to improve the rough prompt for a local coding agent.
   2. Inspect the returned prompt for objective, context, boundaries, deliverable, and verification.
@@ -36,10 +36,10 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Create a skill with manual regression coverage
 - **Coverage key:** `meta/skills/creation-contract`
-- **Applies to:** `domains/meta/skills/skill-creator/**`
+- **Applies to:** `domains/meta/skills/oc-skill-creator/**`
 - **Preconditions:** Use a disposable copy of this repository and request one clearly reusable, single-domain skill.
 - **Steps:**
-  1. Invoke `skill-creator`, approve the new skill, and inspect its location and frontmatter.
+  1. Invoke `oc-skill-creator`, approve the new skill, and inspect its location and frontmatter.
   2. Ask for a behavior change to that skill and inspect the version plus the owning domain's manual case.
 - **Expected result:** The skill has one body in the correct owner, complete strict-SemVer metadata, concise resources, a patch-or-larger version bump, and an updated existing coverage key or one new immutable manual ID.
 - **Cleanup:** Discard the disposable repository copy.
@@ -48,7 +48,7 @@ Run these cases after changing Meta commands, skills, or pinned utilities. Use d
 
 - **Title:** Refresh the resolved skill registry
 - **Coverage key:** `meta/registry/startup-snapshot`
-- **Applies to:** `domains/meta/external-plugins/opencode-skill-registry.npm-server.json`, `global/AGENTS.md`, `domains/meta/skills/skill-creator/**`, `skills/implementation-skill-routing/**`, `scripts/test-skill-registry-contract.mjs`
+- **Applies to:** `domains/meta/external-plugins/opencode-skill-registry.npm-server.json`, `global/AGENTS.md`, `domains/meta/skills/oc-skill-creator/**`, `skills/oc-routing/**`, `scripts/test-skill-registry-contract.mjs`
 - **Preconditions:** Install the Meta domain into a disposable project with at least one project skill and no stale OpenCode process.
 - **Steps:**
   1. Start OpenCode, inspect `.ai/atl/skill-registry.md`, then add or remove one disposable project skill.

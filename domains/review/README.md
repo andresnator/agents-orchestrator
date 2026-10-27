@@ -30,7 +30,7 @@ After changing this domain, run the affected [Review manual tests](manual-tests.
 | Agent (subagent) | `jd-solo` | Runs one balanced light review |
 | Command | `/defend` | Starts Socratic design defense |
 | Command | `/judgment` | Starts adversarial code review |
-| Skill | `code-conventions` | Applies code and test conventions |
-| Skill | `graphify-cli` | Queries code graphs read-only |
-| Skill | `judgment-day` | Runs dual blind adversarial reviews |
-| Skill | `programming-practices-core` | Evaluates language-neutral code quality |
+| Skill | `oc-conventions` | Applies code and test conventions |
+| Skill | `oc-graphify` | Queries code graphs read-only |
+| Skill | `oc-judgment` | Runs dual blind adversarial reviews |
+| Skill | `oc-practices` | Evaluates language-neutral code quality |

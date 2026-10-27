@@ -12,7 +12,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Map current architecture without implementation
 - **Coverage key:** `architecture/map/current-state`
-- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-map.md`, `domains/architecture/skills/architecture-map/**`, `domains/architecture/skills/architecture-state/**`
+- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-map.md`, `domains/architecture/skills/oc-arch-map/**`, `domains/architecture/skills/oc-arch-state/**`
 - **Preconditions:** Use a small disposable repository with source code and either `docs/` or no documentation directory.
 - **Steps:**
   1. Run `/arch-map` for one explicit module and answer only material scope questions.
@@ -24,7 +24,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Rank architecture risks with evidence
 - **Coverage key:** `architecture/review/ranked-risks`
-- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-review.md`, `domains/architecture/skills/architecture-state/**`, `domains/architecture/skills/repo-issues/**`, `domains/architecture/skills/dependency-security-audit/**`
+- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-review.md`, `domains/architecture/skills/oc-arch-state/**`, `domains/architecture/skills/oc-arch-issues/**`, `domains/architecture/skills/oc-dep-audit/**`
 - **Preconditions:** Use a disposable repository with at least one observable module boundary and dependency manifest.
 - **Steps:**
   1. Run `/arch-review` on the repository without authorizing dependency commands.
@@ -36,7 +36,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Produce one architecture decision and plan
 - **Coverage key:** `architecture/ideate/adr-plan-handoff`
-- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-ideate.md`, `domains/architecture/skills/architecture-ideation/**`, `domains/architecture/skills/architecture-state/**`, `domains/architecture/skills/adr/**`, `domains/architecture/skills/design-patterns-pragmatic/**`, `domains/architecture/skills/kiss-yagni/**`, `domains/architecture/skills/execution-plan/**`, `domains/architecture/skills/implementation-skill-routing/**`, `domains/architecture/skills/code-conventions/**`, `domains/architecture/skills/java-testing/**`
+- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/arch-ideate.md`, `domains/architecture/skills/oc-arch-ideate/**`, `domains/architecture/skills/oc-arch-state/**`, `domains/architecture/skills/oc-adr/**`, `domains/architecture/skills/oc-patterns/**`, `domains/architecture/skills/oc-kiss/**`, `domains/architecture/skills/oc-plan-format/**`, `domains/architecture/skills/oc-routing/**`, `domains/architecture/skills/oc-conventions/**`, `domains/architecture/skills/oc-java-test/**`
 - **Preconditions:** Use a disposable repository with one concrete architecture concern and an existing documentation root.
 - **Steps:**
   1. Run `/arch-ideate <concern>` and resolve the material target decision.
@@ -48,7 +48,7 @@ Run these cases against a disposable repository after changing Architecture runt
 
 - **Title:** Inspect one service boundary
 - **Coverage key:** `architecture/boundary/static-report`
-- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/boundary-inspector.md`, `domains/architecture/skills/service-boundary-analysis/**`
+- **Applies to:** `domains/architecture/agents/architect.md`, `domains/architecture/commands/boundary-inspector.md`, `domains/architecture/skills/oc-boundary/**`
 - **Preconditions:** Use a disposable repository with one identifiable service or module path.
 - **Steps:**
   1. Run `/boundary-inspector <exact-target>`.

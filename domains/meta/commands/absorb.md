@@ -4,8 +4,8 @@ argument-hint: "[git URL(s) or local path(s), optional focus]"
 ---
 # /absorb
 
-Load and follow the `absorb` skill for the provided target(s).
+Load and follow the `oc-absorb` skill for the provided target(s).
 
 If no git URL or local path is provided, ask for at least one before starting. Pass any remaining arguments as the analysis focus (skills, agents, prompts, workflows, installer patterns, or comparison themes).
 
-Scope, hard rules, the adversarial filter, and the report contract (including always writing the report under `.ai/absorb/` unless the user asks for chat-only) come from the `absorb` skill; do not restate or override them here.
+Scope, hard rules, the adversarial filter, and the report contract (including always writing the report under `.ai/absorb/` unless the user asks for chat-only) come from the `oc-absorb` skill; do not restate or override them here.

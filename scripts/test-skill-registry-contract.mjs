@@ -10,7 +10,7 @@ const ROW = '| OpenCode configuration | opencode | OpenCode | /unreadable/builti
 const PREAMBLE = 'Auto-generated — do not edit. Filesystem locations can also be read directly.';
 const CONSUMERS = [
   ['global/AGENTS.md', readFileSync(new URL('global/AGENTS.md', ROOT), 'utf8').split('## Skill Registry\n')[1].split('\n## ')[0]],
-  ['skills/implementation-skill-routing/SKILL.md', readFileSync(new URL('skills/implementation-skill-routing/SKILL.md', ROOT), 'utf8')],
+  ['skills/oc-routing/SKILL.md', readFileSync(new URL('skills/oc-routing/SKILL.md', ROOT), 'utf8')],
 ];
 
 // Instruction-only consumers: guard their source contract against realistic data,
@@ -147,7 +147,7 @@ test('shouldKeepManualCoverageAndPatchMetadataAlignedWithConsumerFix', () => {
   const registryCase = manual.split('### MT-META-SKILL-REGISTRY\n')[1].split('\n### ')[0];
   // Then
   assert.match(registryCase, /exactly `Description \| Skill ID \| Name \| Location` columns in that order/);
-  assert.match(registryCase, /skills\/implementation-skill-routing\/\*\*/);
+  assert.match(registryCase, /skills\/oc-routing\/\*\*/);
   assert.match(registryCase, /scripts\/test-skill-registry-contract\.mjs/);
   assert.match(registryCase, /native loader within the agent's allowlist/);
   assert.match(routing, /version: "3\.0\.1"\n  status: testing/);

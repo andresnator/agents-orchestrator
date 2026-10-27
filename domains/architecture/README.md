@@ -40,16 +40,16 @@ After changing this domain, run the affected [Architecture manual tests](manual-
 | Command | `/arch-map` | Generates or refreshes C4-lite docs |
 | Command | `/arch-review` | Ranks architecture and dependency risks |
 | Command | `/boundary-inspector` | Maps one service boundary |
-| Skill | `adr` | Records architecture decisions |
-| Skill | `architecture-ideation` | Designs target architecture and work |
-| Skill | `architecture-map` | Creates evidence-backed C4-lite docs |
-| Skill | `architecture-state` | Records verified current architecture |
-| Skill (handoff-only) | `code-conventions` | Names implementation conventions for SDD |
-| Skill (handoff-only) | `java-testing` | Names Java testing guidance for implementation |
-| Skill | `dependency-security-audit` | Audits current dependency evidence |
-| Skill | `design-patterns-pragmatic` | Applies patterns to evidenced forces |
-| Skill | `kiss-yagni` | Rejects speculative architecture complexity |
-| Skill | `repo-issues` | Ranks gaps and fitness functions |
-| Skill | `execution-plan` | Drafts one neutral execution plan |
-| Skill | `implementation-skill-routing` | Selects skills for implementation work |
-| Skill | `service-boundary-analysis` | Maps service contracts |
+| Skill | `oc-adr` | Records architecture decisions |
+| Skill | `oc-arch-ideate` | Designs target architecture and work |
+| Skill | `oc-arch-map` | Creates evidence-backed C4-lite docs |
+| Skill | `oc-arch-state` | Records verified current architecture |
+| Skill (handoff-only) | `oc-conventions` | Names implementation conventions for SDD |
+| Skill (handoff-only) | `oc-java-test` | Names Java testing guidance for implementation |
+| Skill | `oc-dep-audit` | Audits current dependency evidence |
+| Skill | `oc-patterns` | Applies patterns to evidenced forces |
+| Skill | `oc-kiss` | Rejects speculative architecture complexity |
+| Skill | `oc-arch-issues` | Ranks gaps and fitness functions |
+| Skill | `oc-plan-format` | Drafts one neutral execution plan |
+| Skill | `oc-routing` | Selects skills for implementation work |
+| Skill | `oc-boundary` | Maps service contracts |

@@ -12,7 +12,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Execute one local change without SDD state
 - **Coverage key:** `orchestration/direct/local-change`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/implementation-skill-routing/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-routing/**`
 - **Preconditions:** Use a clean copied Java fixture with a passing baseline and no `.ai/orchestration/` directory.
 - **Steps:**
   1. Ask `orchestraitor` to rename only the local `subtotal` variable in `OrderPricing`, preserve behavior, and run the narrowest check.
@@ -24,7 +24,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Execute one localized plan directly
 - **Coverage key:** `orchestration/plan/direct-execution`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/implementation-skill-routing/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/skills/oc-routing/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** In a clean copied Java fixture, use `deep-planner` to create a localized plan for `Order.lineCount()` and record its checksum.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-path>`.
@@ -38,7 +38,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Deliver exact Direct commits without absorbing unrelated state
 - **Coverage key:** `orchestration/delivery/direct-commits`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/work-unit-commits/**`, `domains/orchestration/skills/work-unit-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** Initialize a copied Java fixture as a Git repository on an attached branch, commit the passing baseline, and stage an unrelated `notes.txt` outside the requested target scope.
 - **Steps:**
   1. Explicitly request `commit-per-unit`: first rename the local `subtotal` variable with exact message `refactor: clarify subtotal variable`, then add `Order.lineCount()` with focused coverage and exact message `feat: expose order line count`.
@@ -79,7 +79,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Complete and archive one verified SDD run
 - **Coverage key:** `orchestration/sdd/verified-archive`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-explore.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/agents/sdd-canonical-merge.md`, `domains/orchestration/skills/sdd-cold-verification/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-explore.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/agents/sdd-canonical-merge.md`, `domains/orchestration/skills/oc-sdd-verify/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/state-seeds/**`
 - **Preconditions:** Copy the Java fixture, restore both state seeds under `.ai/`, ensure the baseline passes, and record the plan checksum.
 - **Steps:**
   1. Tell `orchestraitor`, `ejecuta el plan <exact-seeded-plan-path>`, and wait through implementation, cold verification, and canonical merge.
@@ -91,7 +91,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Resume serial SDD commits after an honest hook failure
 - **Coverage key:** `orchestration/delivery/sdd-commits`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/skills/sdd-cold-verification/**`, `domains/common/skills/work-unit-commits/**`, `domains/orchestration/skills/work-unit-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/orchestration/agents/sdd-implement.md`, `domains/orchestration/agents/sdd-verify.md`, `domains/orchestration/skills/oc-sdd-verify/**`, `domains/common/skills/oc-commits/**`, `domains/orchestration/skills/oc-commits/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** Prepare two Git-backed fixture copies with a green baseline, the complex plan under `.ai/`, its checksum, an unrelated staged `notes.txt`, and executable `.git/hooks/pre-commit` copied from `hooks/reject-order-pricing-pre-commit`.
 - **Steps:**
   1. Request `ejecuta el plan <exact-path>` with `commit-per-unit`: keep the plan's groups as separate units in one copy and combine them into one verified unit in the other. Wait for the pricing hook rejection in each.
@@ -119,7 +119,7 @@ Run these cases only in a copied fixture or disposable project. Agent cases may 
 
 - **Title:** Commit green TCR microsteps and revert only attributable red changes
 - **Coverage key:** `orchestration/delivery/direct-tcr`
-- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/tcr/**`, `domains/orchestration/skills/tcr/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
+- **Applies to:** `domains/orchestration/agents/orchestraitor.md`, `domains/common/skills/oc-tcr/**`, `domains/orchestration/skills/oc-tcr/**`, `manual-tests/fixtures/orchestration-agent-routes/java-orders/**`
 - **Preconditions:** Initialize a copied fixture as a Git repository on an attached branch, commit a passing baseline, keep the target scope clean, and stage one unrelated file outside it.
 - **Steps:**
   1. Explicitly request TCR for renaming local `subtotal` to `rawSubtotal`, with the complete `mvn -o test` verification before and after and exact final message `refactor: clarify raw subtotal`.

@@ -27,8 +27,8 @@ After changing this domain, run the affected [Meta manual tests](manual-tests.md
 | Type | Name | Purpose |
 |---|---|---|
 | Command | `/absorb` | Compares external AI harness practices |
-| Skill | `absorb` | Extracts reusable external harness practices |
-| Skill | `prompt-structure-writer` | Turns ideas into executable prompts |
-| Skill | `skill-creator` | Creates Agent Skills-compliant skills |
+| Skill | `oc-absorb` | Extracts reusable external harness practices |
+| Skill | `oc-prompt` | Turns ideas into executable prompts |
+| Skill | `oc-skill-creator` | Creates Agent Skills-compliant skills |
 | External npm server plugin | `opencode-skill-registry` | Generates the resolved skill snapshot |
 | External npm TUI plugin | `opencode-models-presets` | Assigns agent models and variants |

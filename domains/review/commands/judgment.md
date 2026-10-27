@@ -1,5 +1,5 @@
 ---
-description: Run the judgment-day adversarial review protocol
+description: Run the oc-judgment adversarial review protocol
 agent: review-coordinator
 subtask: false
 argument-hint: "[light] [target files, feature, or scope]"

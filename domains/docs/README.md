@@ -27,16 +27,16 @@ After changing this domain, run the affected [Docs manual tests](manual-tests.md
 | Command | `/adr` | Creates technical decision ADRs |
 | Command | `/doc` | Routes general documentation work |
 | Command | `/prd` | Selects appropriate PRD depth |
-| Skill | `adr` | Documents decisions and trade-offs |
-| Skill | `buildable-issue` | Creates agent-ready implementation issues |
-| Skill | `cognitive-doc-design` | Reduces documentation cognitive load |
-| Skill | `jira-spike` | Creates research-ready Jira Spikes |
-| Skill | `jira-task` | Creates developer-ready Jira Tasks |
-| Skill | `jira-user-story` | Creates developer-ready User Stories |
-| Skill | `prd` | Creates rigorous high-stakes PRDs |
-| Skill | `prd-light` | Creates lightweight MVP PRDs |
-| Skill | `rfc` | Creates technical proposals with trade-offs |
-| Skill | `slidev-retro-deck` | Builds verified retro Slidev decks |
-| Skill | `summarize` | Synthesizes book chapters pedagogically |
-| Skill | `usm` | Creates journey-first MVP story maps |
-| Skill | `whisper-extract` | Transcribes and summarizes media |
+| Skill | `oc-adr` | Documents decisions and trade-offs |
+| Skill | `oc-issue` | Creates agent-ready implementation issues |
+| Skill | `oc-doc-design` | Reduces documentation cognitive load |
+| Skill | `oc-jira-spike` | Creates research-ready Jira Spikes |
+| Skill | `oc-jira-task` | Creates developer-ready Jira Tasks |
+| Skill | `oc-jira-story` | Creates developer-ready User Stories |
+| Skill | `oc-prd` | Creates rigorous high-stakes PRDs |
+| Skill | `oc-prd-light` | Creates lightweight MVP PRDs |
+| Skill | `oc-rfc` | Creates technical proposals with trade-offs |
+| Skill | `oc-slides` | Builds verified retro Slidev decks |
+| Skill | `oc-summarize` | Synthesizes book chapters pedagogically |
+| Skill | `oc-usm` | Creates journey-first MVP story maps |
+| Skill | `oc-whisper` | Transcribes and summarizes media |

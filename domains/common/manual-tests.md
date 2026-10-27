@@ -12,7 +12,7 @@ Run these cases after changing Common commands, plugins, or the directly named s
 
 - **Title:** Share a persistent global mode across primaries and real subagents
 - **Coverage key:** `common/caveman/global-persistence`
-- **Applies to:** `global/AGENTS.md`, `domains/common/commands/caveman.md`, `domains/common/plugins/caveman-mode.ts`, `domains/common/plugins/caveman-mode.test.mjs`, `domains/common/skills/caveman/**`, `domains/common/README.md`
+- **Applies to:** `global/AGENTS.md`, `domains/common/commands/caveman.md`, `domains/common/plugins/caveman-mode.ts`, `domains/common/plugins/caveman-mode.test.mjs`, `domains/common/skills/oc-caveman/**`, `domains/common/README.md`
 - **Preconditions:** Use two independent OpenCode processes in Herdr-managed panes, with primary sessions A and B sharing one disposable global configuration directory via `OPENCODE_CONFIG_DIR`. Install the current plugin, command, skill, and global instructions there; verify the plugin and global-instructions symlinks target this checkout. Start with no `caveman-mode.json` in that disposable directory. Quit and restart both processes after installation to load the current code. Use the runtime's actual delegation and continuation controls; a primary imitating a subagent is not a substitute.
 - **Steps:**
    1. On OpenCode V2 (target v2.0.28), inspect `/api/plugin` for the disposable project and confirm `caveman-mode` is active, not merely importable. Confirm the native `caveman` command is available once. Ask A and B for the same short technical explanation. Have A delegate a real subagent S and retain its continuation identifier. Confirm all three use the `lite` fallback without an explicit selection.
@@ -31,7 +31,7 @@ Run these cases after changing Common commands, plugins, or the directly named s
 
 - **Title:** Index one repository after explicit consent
 - **Coverage key:** `common/graphify/first-index-consent`
-- **Applies to:** `domains/common/commands/graphify-index.md`, `domains/common/external-plugins/opencode-graphify-init.npm-server.json`, `domains/common/skills/graphify-cli/**`
+- **Applies to:** `domains/common/commands/graphify-index.md`, `domains/common/external-plugins/opencode-graphify-init.npm-server.json`, `domains/common/skills/oc-graphify/**`
 - **Preconditions:** Use a small disposable Git repository, an installed pinned Graphify binary, and no `.ai/graphify-out/graph.json`.
 - **Steps:**
   1. Run `/graphify-index <repository>`, choose code-only in chat, and wait for the announced extraction to finish.
@@ -44,7 +44,7 @@ Run these cases after changing Common commands, plugins, or the directly named s
 
 - **Title:** Stress-test an idea without implementation
 - **Coverage key:** `common/grill/focused-interview`
-- **Applies to:** `domains/common/commands/grill.md`, `domains/common/skills/grill/**`, `domains/common/skills/grilling/**`, `domains/common/skills/execution-plan/**`
+- **Applies to:** `domains/common/commands/grill.md`, `domains/common/skills/oc-grill/**`, `domains/common/skills/oc-interview/**`, `domains/common/skills/oc-plan-format/**`
 - **Preconditions:** Use a disposable repository and one proposal with an unresolved trade-off.
 - **Steps:**
   1. Run `/grill me <proposal>` and answer the focused questions one at a time.
