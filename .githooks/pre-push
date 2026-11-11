@@ -1,0 +1,5 @@
+#!/bin/sh
+# Run lint and unit tests before push. Non-zero exit blocks the push.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+exec make test
