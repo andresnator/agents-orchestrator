@@ -4,42 +4,44 @@ description: "Trigger: Java tests, JUnit, Mockito, AssertJ, Java legacy tests, J
 license: MIT
 metadata:
   author: andresnator
-  version: "5.0.0"
+  version: "6.0.0"
   status: testing
-  attribution: "null-safety and types references adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
 # Java
 
 ## Intent
 
-- **Goal:** Apply the one Java topic the request needs, following its reference exactly.
-- **Limits:** Load only the topic references the request matches; each reference's own Limits and output contract win. Preserve observable behavior; label functional changes as follow-up.
-- **Fails if:** a topic is answered without its reference, or a finding lacks `file:line` evidence or a `hypothesis` mark.
+- **Goal:** Write or review Java code and tests that follow the owner's rules below and the project stack.
+- **Limits:** Preserve observable behavior. Label functional changes as follow-up. Do not add or upgrade JUnit, Mockito, AssertJ, PowerMock, or ApprovalTests unless the current stack cannot support the test. State the tradeoff.
+- **Fails if:** a finding has no `file:line` evidence and no `hypothesis` mark; legacy code changes before a safety test exists; a dependency-breaking seam is not named as Sensing (to observe effects) or Separation (to run code in a test).
 
 ## Context
 
-- **Reads:** the matching `references/<topic>.md` and the files it names; Java version, build tool, and project conventions (`oc-conventions`).
-- **Never reads:** references for topics the request does not touch.
-- **Persona:** Java engineer.
-- **Scope:** Java code only; non-Java work belongs elsewhere.
+- **Reads:** the code under change; Java version, build tool, and test stack (detect each one independently); `oc-conventions`.
+- **Never reads:** non-Java code.
+- **Persona:** Java engineer who follows *Working Effectively with Legacy Code*.
+- **Scope:** Java code only. Planning a legacy change belongs to `oc-refactor`.
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN the request matches a topic below THEN follow that reference; WHEN several match THEN apply each, tests last.
   - WHEN a caller supplies its own findings format THEN that format wins.
-- **Done means:** the matching reference's `Done means`.
-- **Quality needs:** every recommendation ties to evidence, a consumer need, or a compatibility concern.
+  - WHEN legacy code has no tests THEN use Cover, then Modify, then Refactor.
+  - WHEN a recommendation changes a public API THEN flag the compatibility risk.
+- **Done means:** the route used; the detected stack; files changed or proposed; behaviors and edge cases covered; seam tradeoffs; the validation command.
+- **Quality needs:** each recommendation ties to evidence, a consumer need, or a compatibility concern.
 
 ## Method
 
-| Topic | Signals | Follow |
-|---|---|---|
-| test | JUnit, Mockito, AssertJ, characterization, seams, legacy tests | `references/test.md` (+ its references and `assets/examples/`) |
-| api | public API, visibility, modules, contracts, binary compatibility | `references/api.md`, `references/java-api-boundaries.md` |
-| errors | exceptions, try-with-resources, cleanup, robustness | `references/errors.md`, `references/java-exception-guidance.md` |
-| immutable | records, value objects, defensive copies, DTOs | `references/immutable.md`, `references/java-immutability.md` |
-| security | trust boundaries, input validation, deserialization, sensitive data | `references/security.md`, `references/java-secure-coding-guidance.md` |
-| null-safety | nullability, Optional, NPE | `references/null-safety.md` |
-| types | Object, raw types, `Map<String,Object>`, primitive obsession | `references/types.md` |
+Owner rules (`oc-conventions` owns the general test style):
+
+- Put tests under `src/test/java/` in the same package as the source.
+- Name test classes `{ClassName}Test`.
+- Put characterization tests in a permanent `{ClassName}CharacterizationTest` class.
+- Use Mockito only across real boundaries. Use Spring context tests only when framework behavior is the subject.
+- Use `@InjectMocks` only when constructor setup adds noise.
+- Use `ArgumentCaptor` only when the passed object is the behavior under test.
+- Make DTOs and helper types top-level classes, never nested.
+- Review an ApprovalTests baseline before you approve it. A bad baseline freezes bugs.
+- Keep a stack trace when you wrap an exception, except at a deliberate sanitization boundary.

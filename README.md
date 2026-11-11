@@ -69,11 +69,11 @@ A new SDD contract needs explicit approval. Silence is not approval. An exact ex
 
 | Purpose | Skills |
 |---|---|
-| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-commits`, `oc-debug` |
-| Planning | `oc-plan`, `oc-risk-scope`, `oc-arch-impact`, `oc-grill`, `oc-tooling-audit` |
-| Review | `oc-review`, `oc-judge`, `oc-practices` |
-| Architecture | `oc-arch`, `oc-adr`, `oc-boundary`, `oc-dep-audit`, `oc-patterns` |
-| Code quality | `oc-conventions`, `oc-naming`, `oc-domain`, `oc-refactor` |
+| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-commits` |
+| Planning | `oc-plan`, `oc-grill` |
+| Review | `oc-review`, `oc-judge` |
+| Architecture | `oc-arch`, `oc-adr` |
+| Code quality | `oc-conventions`, `oc-domain`, `oc-refactor` |
 | Java | `oc-java` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
 | Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
