@@ -59,11 +59,6 @@ Defaults:
   --status all
   Brew tools enabled for the default global target; disabled with --project
   or --target. Explicit Brew tool options override that target-based default.
-  Global installs also run `engram setup opencode` when Engram is on PATH,
-  even with --no-install-brew-tools. This refreshes the integration from the
-  installed binary; it does not upgrade Engram. Project/explicit targets skip it.
-  Engram owns its setup files; uninstall leaves them in place. Setup failures
-  warn without rolling back the harness. Restart OpenCode after setup.
 
 Options:
   --dry-run   Print planned mkdir/link/download/rm/manifest/setup actions without changing files.
@@ -1284,31 +1279,8 @@ runtime_install_global() {
   link_component "$REPO_ROOT/standards" "$TARGET/standards" "$1"
 }
 
-setup_global_engram() {
-  local engram_binary
-  [ "$PROJECT_TARGET" -eq 0 ] && [ -z "$TARGET_ARG" ] || return 0
-
-  if [ "$DRY_RUN" -eq 1 ]; then
-    printf 'engram setup opencode (if available on PATH after tool installation)\n'
-    return 0
-  fi
-
-  engram_binary="$(command -v engram || true)"
-  if [ -z "$engram_binary" ]; then
-    warn "Engram not found; integration not configured. Install Engram and run engram setup opencode"
-    return 0
-  fi
-
-  if "$engram_binary" setup opencode; then
-    printf 'Engram setup finished; check its output for warnings. Restart OpenCode and verify Engram in a new session; --reload cannot reload plugin code.\n'
-  else
-    warn "engram setup opencode failed; harness installation kept. Inspect setup output and retry; Engram integration may be incomplete"
-  fi
-}
-
 runtime_post_install() {
   install_selected_brew_tools
-  setup_global_engram
   [ "$RELOAD" -eq 1 ] || return 0
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'reload: skipped (dry run)\n'
