@@ -1,27 +1,27 @@
 # Assign Models to Agents
 
-The repository's only agent, `orchestraitor`, never hardcodes `model:`. Users assign providers, models, and variants in global or project OpenCode state.
+`orchestraitor` never hardcodes `model:`. Assign providers, models, and variants in the global or project OpenCode config.
 
 ## Quick path
 
-1. Install the `meta` domain.
+1. Install the harness (`installers/opencode.sh install`).
 2. Open `/models-profiles` in OpenCode.
 3. Choose a scope, review the diff, and save.
 
-Project config overrides global config. The tier table below is manual guidance; the repository does not install it as a selectable profile.
+The project config overrides the global config.
 
 ## Tier guidance
 
 | Tier | Agents | Guidance |
 |---|---|---|
-| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan-*`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
-| Delegated workers | built-in `general` (loads `oc-sdd-*`, `oc-refactor-lens`, `oc-judge`, `oc-judge-fix`) | Strong code-writing model |
+| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
+| Delegated workers | built-in `general` (loads `oc-sdd` roles, `oc-refactor` lens mode, `oc-judge`) | Strong code-writing model |
 
-Former worker agents are now skills, so per-worker models no longer exist; `general` serves every delegated brief. `oc-judge` lenses a and b now share the `general` model; because distinct providers reduce shared blind spots, run the second lens in a separate session (or temporarily change the `general` model) when you want a different provider.
+Per-worker models do not exist. The `oc-judge` lenses a and b share the `general` model. For a different provider on the second lens, run it in a separate session or change the `general` model temporarily.
 
 ## Manual configuration
 
-OpenCode merges installed Markdown agents with `agent.<name>` entries in `opencode.json` or `opencode.jsonc`:
+Set `agent.<name>` entries in `opencode.json` or `opencode.jsonc`:
 
 ```json
 {
@@ -37,21 +37,17 @@ OpenCode merges installed Markdown agents with `agent.<name>` entries in `openco
 }
 ```
 
-Model syntax is `provider_id/model_id`; `variant` is a separate key. Removing both restores caller or OpenCode defaults.
+The model syntax is `provider_id/model_id`. Remove both keys to use the defaults again.
 
 ## Configurator behavior
 
-The installer registers the exact package version from the npm descriptor. OpenCode resolves it at startup, then `/models-profiles` reads agents and connected models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before writing. Because no profile directory is supplied, the configurator does not show a Profiles section.
+`/models-profiles` reads agents and models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before it writes. Writes keep JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections stop the write. See [hot reload](hot-reload.md) for live apply.
 
-Writes preserve JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections abort. Supported changes hot-apply to the connected server; other OpenCode processes may need a restart. See [hot reload](hot-reload.md).
-
-Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`; the repository does not ship or copy model profiles.
-
-Uninstall removes only the manifest-owned npm registration. It preserves OpenCode's package cache, saved presets, agent assignments, and foreign `tui.json` entries.
+Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`. Uninstall removes only the npm registration. It keeps the package cache, presets, assignments, and foreign `tui.json` entries.
 
 ## Troubleshooting
 
-- Missing agent: install its domain and reopen the configurator.
+- Missing agent: reinstall the harness and open the configurator again.
 - Missing model: authenticate its provider and refresh the live catalog.
-- Assignment unchanged: check project overrides and restart other OpenCode processes.
+- Assignment unchanged: examine the project overrides and restart other OpenCode processes.
 - Updated plugin missing: run the installer again.

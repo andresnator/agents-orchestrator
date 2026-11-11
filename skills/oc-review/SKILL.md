@@ -14,7 +14,7 @@ metadata:
 ## Intent
 
 - **Goal:** Deliver a review verdict for `operation=judgment` or `operation=defend` with exact evidence, a compact ledger, and only explicitly authorized fixes.
-- **Limits:** Never implement outside authorized Judgment fixes; `verdict-only` and Defend never edit; never stage, commit, or push; delegate only to `general` subagents loading `oc-judge` or `oc-judge-fix`, one level deep.
+- **Limits:** Never implement outside authorized Judgment fixes; `verdict-only` and Defend never edit; never stage, commit, or push; delegate only to `general` subagents loading `oc-judge` (judge or `mode=fix`), one level deep.
 - **Fails if:** a file changes before authorization, a judge sees another judge's output, suspect or contradiction rows are fixed, a Judgment fix loop exceeds two rounds, a partial review runs without a target (missing target is `ASK`), Defend edits or delegates a fix, or the verdict omits evidence or unresolved ids.
 
 ## Context
@@ -22,12 +22,12 @@ metadata:
 - **Reads:** the supplied target or working-tree diff, the Judgment protocol below and `assets/` for Judgment, `oc-practices` for Defend, 3-5 distilled project rules, injected identically into every child brief.
 - **Never reads:** other judges' output inside a judge brief; unrelated history or state.
 - **Persona:** direct, evidence-first review coordinator speaking the user's language.
-- **Scope:** loaded by orchestraitor for `/review`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge-fix`.
+- **Scope:** loaded by orchestraitor for `/review`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge` with `mode=fix`.
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN `operation=judgment` THEN follow the Judgment protocol in Method: full mode (default) runs blind `lens=a` and `lens=b`, synthesize, ask authorization, fix via `oc-judge-fix`, bounded re-check, escalate.
+  - WHEN `operation=judgment` THEN follow the Judgment protocol in Method: full mode (default) runs blind `lens=a` and `lens=b`, synthesize, ask authorization, fix via `oc-judge mode=fix`, bounded re-check, escalate.
   - WHEN Judgment light mode (`/review light` or a leading `light`) THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
   - WHEN a Judgment child returns malformed output twice THEN `JUDGMENT: INVALID ROUND`.
   - WHEN `operation=defend` THEN inspect the scope read-only with `oc-practices`, one observable design decision at a time; ask the user to defend it with the strongest evidence-backed defense as `Recommendation: ...`; accept a sound defense, challenge a weak one once, then record a finding. Never fix.
@@ -43,7 +43,7 @@ metadata:
 2. A valid result is clean or holds evidence-backed findings with stable ids and failure scenarios. Retry one malformed child once.
 3. Synthesize: both judges = confirmed; one judge's CRITICAL/WARNING inside its emphasis = emphasis-confirmed; other single findings = suspect; disagreement = contradiction. Keep ids and lifecycle `open | fixed | verified | refuted | wont-fix`.
 4. Without preset mode, ask whether to fix/re-judge, fix only, or stop. `verdict-only` stops; `full` authorizes the first fix.
-5. `oc-judge-fix` touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh `lens=a` and `lens=b` subagents. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
+5. The `oc-judge mode=fix` fixer touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh `lens=a` and `lens=b` subagents. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
 6. Each later fix/re-judge round needs a continue gate. Remaining confirmed issues after two rounds escalate; never loop forever.
 
 ### Judgment A2A

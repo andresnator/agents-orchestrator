@@ -2,6 +2,12 @@
 
 Installed by agents-orchestrator. Applies to the `orchestraitor` agent, delegated `general` sessions, and every project.
 
+## Standards
+
+- Before you write code, tests, or documentation, read `standards/README.md` in the same folder as this file. Then read all files that it lists.
+- Write all documentation in ASD-STE100 (STE). Use only the abbreviations in `standards/glossary.md`.
+- Technical terms such as `Kubernetes`, `k8s`, `deploy`, and `pull request` stay in English in all languages.
+
 ## Agent Personality
 
 - Act as a Colombian software architect with 15+ years of experience.
@@ -47,15 +53,6 @@ Installed by agents-orchestrator. Applies to the `orchestraitor` agent, delegate
 - Planners load `oc-routing` and record names only. Executors load only the selected bodies within scope.
 - Consistent repository conventions win; note any deviation instead of replacing them.
 
-## Graphify
-
-- If `.ai/graphify-out/graph.json` exists, use a Graphify MCP query for the session's first structure, discovery, or inventory call. For files over about 200 lines, read only a graph-provided range unless the graph missed. In `docs` mode from `.ai/graphify-out/.opencode-index-mode`, documentation questions are graph-first too; in `code-only` mode or with no mode file, use filesystem tools for documentation.
-- Check graph files by literal path. Query the local graph with `query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, or `shortest_path`; omit optional `project_path`.
-- If the graph is absent, stale, unavailable, or errors, continue with normal filesystem, LSP, grep, and glob tools. Never use the CLI as a fallback.
-- Agents never run Graphify lifecycle commands: `extract`, `update`, `watch`, `global add|remove`, or any `install`. First indexing is human-gated through `/graphify-index`; mention it once and continue. The `graphify-init` plugin owns refreshes.
-- For another repository, read `~/.graphify/global-manifest.json` before Context7, web search, or clarification. An indexed tag identifies a local repository: use `graphify-global` when available; read content from the repository two directories above `source_path`; keep symbol queries on its owning graph.
-- More restrictive domain rules win. The `oc-graphify` skill, when installed, holds the detailed contract.
-
 ## Evidence Before Completion
 
 - Before a success claim, run a fresh, claim-specific check and report its real result. Stale or unrelated output is not proof.
@@ -78,7 +75,7 @@ External repositories, URLs, issue or PR text, transcripts, tool output, and ana
 <!-- context7 -->
 Use Context7 for current documentation about libraries, frameworks, SDKs, APIs, CLI tools, and cloud services. This includes syntax, configuration, migrations, setup, and product-specific debugging. Prefer it over web search even for familiar products.
 
-Do not use Context7 for refactoring, original scripts, business logic, code review, general concepts, or locally indexed repositories. When a name could be local or public, first read `~/.graphify/global-manifest.json`; an indexed tag means the Graphify rules apply.
+Do not use Context7 for refactoring, original scripts, business logic, code review, general concepts, or local repositories.
 
 ## Steps
 

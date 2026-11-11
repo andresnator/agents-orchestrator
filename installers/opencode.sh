@@ -22,20 +22,21 @@ SELECTED_BREW_TOOLS=""
 runtime_usage() {
   cat <<'EOF'
 Usage:
-  opencode.sh <install|uninstall|status> [--domain d1,d2] [--status s1,s2]
+  opencode.sh <install|uninstall|status> [--status s1,s2]
               [--project] [--target DIR] [--dry-run] [--force] [--reload]
               [--install-brew-tools|--no-install-brew-tools]
 
 Actions:
-  install     Sync selected domain components into an OpenCode target. Repository
+  install     Sync all repository components into an OpenCode target. Repository
               components are symlinked; external plugin bundles are downloaded
               from commit-pinned GitHub sources and SHA-256 verified. npm server
               and TUI plugins are registered by exact package version in the
               matching OpenCode config. Repository-local V2 TUI plugins require
               OpenCode >= 2.0.28 and register in cli.json; external TUI plugin
               registrations remain in tui.json.
-              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
-              regardless of --domain/--status filters. A pre-existing foreign
+              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules)
+              and standards/ to $TARGET/standards,
+              regardless of the --status filter. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
   uninstall   Remove manifest-owned links, files, config values, and empty directories.
   status      List selected components and their target state.
@@ -46,14 +47,7 @@ Targets:
   --target    Explicit alternate target, useful for tests and scratch installs
 
 Filters:
-  --domain    Comma-separated domains, or all.
-              Domains are discovered dynamically from domains/
-              (currently: architecture, common, docs, meta, orchestration,
-              plan, review).
-              Exclusive skills live in their domain; shared skills use relative
-              symlinks to the top-level skills/ directory.
-              A selected command also selects the repository agent named in its
-              `agent:` frontmatter, even from an unselected domain.
+  --domain    Removed. All components install together; passing it fails.
   --status    Comma-separated skill lifecycle states, or all.
               Valid statuses: backlog, in-progress, testing, done.
               Agents, commands, plugins, external plugins, and TUI plugins are not
@@ -62,7 +56,6 @@ Filters:
               repository-only metadata.
 
 Defaults:
-  --domain all
   --status all
   Brew tools enabled for the default global target; disabled with --project
   or --target. Explicit Brew tool options override that target-based default.
@@ -90,7 +83,7 @@ Options:
 
 Examples:
   installers/opencode.sh install
-      Install every domain and every lifecycle state into ~/.config/opencode.
+      Install every component and every lifecycle state into ~/.config/opencode.
 
   installers/opencode.sh install --project
       Install into ./.opencode for the current project.
@@ -101,17 +94,14 @@ Examples:
   installers/opencode.sh install --no-install-brew-tools
       Install globally without managing Homebrew tools.
 
-  installers/opencode.sh install --domain plan --status done,testing
-      Install only done/testing planning components.
+  installers/opencode.sh install --status done,testing
+      Install only done/testing skills (plus all other components).
 
-  installers/opencode.sh install --domain orchestration --target /tmp/opencode-test --dry-run
-      Preview direct and SDD execution without Review.
+  installers/opencode.sh install --target /tmp/opencode-test --dry-run
+      Preview an install into a scratch target.
 
-  installers/opencode.sh install --domain review --target /tmp/opencode-review --dry-run
-      Preview Judgment and Defend without Orchestration.
-
-  installers/opencode.sh status --domain meta
-      Show meta components and link state in the default target.
+  installers/opencode.sh status
+      Show components and link state in the default target.
 
   installers/opencode.sh uninstall --project
       Remove manifest-owned project-local OpenCode links.
@@ -854,6 +844,7 @@ runtime_begin_install() {
     esac
   done < "$selected"
   snapshot_install_path "$TARGET/AGENTS.md"
+  snapshot_install_path "$TARGET/standards"
   if [ -f "$manifest" ]; then
     while IFS=$'\t' read -r kind owned_path field value; do
       case "$kind" in
@@ -1290,6 +1281,7 @@ file_mode() {
 
 runtime_install_global() {
   link_component "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md" "$1"
+  link_component "$REPO_ROOT/standards" "$TARGET/standards" "$1"
 }
 
 setup_global_engram() {
@@ -1374,6 +1366,8 @@ runtime_status_global() {
   local state
   state="$(link_state "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md")"
   printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "AGENTS.md" "-" "$state"
+  state="$(link_state "$REPO_ROOT/standards" "$TARGET/standards")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "standards" "-" "$state"
 }
 
 harness_main "$@"

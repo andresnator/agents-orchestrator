@@ -1,6 +1,6 @@
 # Orchestration Permissions
 
-The helper writes complete OpenCode permission blocks for `orchestraitor`, the only orchestration agent, and optionally `general`, which runs SDD workers through `oc-sdd-*` skills.
+The helper writes OpenCode permission blocks for `orchestraitor` and, optionally, `general`.
 
 ## Quick path
 
@@ -11,14 +11,8 @@ scripts/orchestration-permissions.sh show
 scripts/orchestration-permissions.sh off
 ```
 
-Use `--project` for `./.opencode` or `--target <dir>` for an explicit target. Use `--no-general` when enabling permissions to leave the built-in `general` agent unchanged.
+Use `--project` for `./.opencode`. Use `--target <dir>` for an explicit target. When you enable permissions, use `--no-general` to keep the built-in `general` agent unchanged.
 
 ## Boundaries
 
-The script discovers agents under `domains/orchestration/agents/`. Frontmatter denies override automatic allows. `off` also removes blocks left for the retired `sdd-*` and `jd-*` agents. Workflow confirmations remain unchanged.
-
-The script rejects JSONC comments because it uses `jq`. It creates a timestamped backup before changing an existing config.
-
-## Manual regression
-
-Follow [`MT-ORCHESTRATION-PERMISSIONS`](../domains/orchestration/manual-tests.md#mt-orchestration-permissions) in a disposable target. It covers dry run, on/show/off, idempotency, backups, preserved denies, and the invalid-JSON boundary.
+Frontmatter denies override automatic allows. `off` also removes blocks from the retired `sdd-*` and `jd-*` agents. Workflow confirmations do not change. The script uses `jq`, so it rejects JSONC comments. It makes a timestamped backup before it changes a config.

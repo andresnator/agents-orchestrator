@@ -22,7 +22,6 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$LIB_DIR/../.." && pwd)"
 
 ACTION=""
-DOMAIN_FILTER="all"
 STATUS_FILTER="all"
 PROJECT_TARGET=0
 TARGET_ARG=""
@@ -71,15 +70,8 @@ valid_status() {
 }
 
 validate_filters() {
-  local item old_ifs domain_dir
+  local item old_ifs
   old_ifs="$IFS"
-  if [ "$DOMAIN_FILTER" != "all" ]; then
-    IFS=,
-    for item in $DOMAIN_FILTER; do
-      domain_dir="$REPO_ROOT/domains/$item"
-      [ -d "$domain_dir" ] || die "unknown domain: $item"
-    done
-  fi
   if [ "$STATUS_FILTER" != "all" ]; then
     IFS=,
     for item in $STATUS_FILTER; do
@@ -116,134 +108,76 @@ status_allowed() {
   csv_contains "$STATUS_FILTER" "$status"
 }
 
-skill_source_dir() {
-  local file link_target
-  file="$1"
-  if [ -L "$file" ]; then
-    link_target="$(readlink "$file")"
-    case "$link_target" in
-      /*) (cd -P "$link_target" && pwd -P) ;;
-      *) (cd -P "$(dirname "$file")/$link_target" && pwd -P) ;;
-    esac
-  else
-    (cd -P "$file" && pwd -P)
-  fi
-}
-
 # Emits selected components as 5-column TSV: type, name, domain, status, src.
-# Destination mapping is runtime-specific and happens later via runtime_dest.
+# The domain column is always "-" (domains were removed); it is kept so the
+# row shape stays stable. Destination mapping happens later via runtime_dest.
 discover_components() {
-  local out domain domain_name type dir file name status src skill_file
+  local out type dir file name status src
   out="$1"
   : > "$out"
 
-  for domain in "$REPO_ROOT"/domains/*; do
-    [ -d "$domain" ] || continue
-    domain_name="$(basename "$domain")"
-    csv_contains "$DOMAIN_FILTER" "$domain_name" || continue
-
-    for type in agents commands; do
-      dir="$domain/$type"
-      [ -d "$dir" ] || continue
-      find "$dir" -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r file; do
-        name="$(basename "$file")"
-        status="-"
-        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-        printf '%s\t%s\t%s\t%s\t%s\n' "$type" "$name" "$domain_name" "$status" "$src" >> "$out"
-      done
-    done
-
-    dir="$domain/skills"
-    if [ -d "$dir" ]; then
-      find "$dir" -mindepth 1 -maxdepth 1 -print | sort | while IFS= read -r file; do
-        if [ ! -L "$file" ] && [ ! -d "$file" ]; then
-          warn "$file: domain skill entry must be a directory or shared-skill symlink; skipped"
-          continue
-        fi
-        name="$(basename "$file")"
-        src="$(skill_source_dir "$file")"
-        skill_file="$src/SKILL.md"
-        if [ ! -f "$skill_file" ]; then
-          warn "$file: skill entry does not resolve to a SKILL.md; skipped"
-          continue
-        fi
-        status="$(status_from_file "$skill_file")"
-        if ! status_allowed "$status"; then
-          valid_status "$status" || warn "$skill_file: missing or invalid metadata.status; skipped"
-          continue
-        fi
-        printf '%s\t%s\t%s\t%s\t%s\n' "skills" "$name" "$domain_name" "$status" "$src" >> "$out"
-      done
-    fi
-
-    dir="$domain/plugins"
-    if [ -d "$dir" ]; then
-      find "$dir" -type f -name '*.ts' | sort | while IFS= read -r file; do
-        name="$(basename "$file")"
-        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-        printf '%s\t%s\t%s\t%s\t%s\n' "plugins" "$name" "$domain_name" "-" "$src" >> "$out"
-      done
-    fi
-
-    dir="$domain/external-plugins"
-    if [ -d "$dir" ]; then
-      find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
-        while IFS= read -r file; do
-          name="$(basename "$file")"
-          case "$name" in
-            *.npm-server.json)
-              name="${name%.npm-server.json}"
-              type="npm-server-plugins"
-              ;;
-            *.npm-tui.json)
-              name="${name%.npm-tui.json}"
-              type="npm-tui-plugins"
-              ;;
-            *.server.json)
-              name="${name%.server.json}"
-              type="external-server-plugins"
-              ;;
-            *.tui.json)
-              name="${name%.tui.json}"
-              type="external-tui-plugins"
-              ;;
-          esac
-          src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-          printf '%s\t%s\t%s\t%s\t%s\n' "$type" "$name" "$domain_name" "-" "$src" >> "$out"
-        done
-    fi
-
-    dir="$domain/tui-plugins"
-    if [ -d "$dir" ]; then
-      find "$dir" -maxdepth 1 -type f -name '*.tsx' | sort | while IFS= read -r file; do
-        name="$(basename "$file")"
-        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-        printf '%s\t%s\t%s\t%s\t%s\n' "tui-plugins" "$name" "$domain_name" "-" "$src" >> "$out"
-      done
-    fi
-  done
-
-  add_command_agents "$out"
-}
-
-# A selected command's `agent:` frontmatter is an install dependency: when that
-# repository agent lives in an unselected domain, select it too. Built-in
-# OpenCode agents (no repository file) are left to OpenCode.
-add_command_agents() {
-  local out agent file agent_domain src
-  out="$1"
-  awk -F '\t' '$1 == "commands" { print $5 }' "$out" | while IFS= read -r file; do
-    agent="$(awk 'NR == 1 && $0 != "---" { exit } NR > 1 && $0 == "---" { exit } /^agent:[[:space:]]*/ { sub(/^agent:[[:space:]]*/, ""); gsub(/["'"'"'[:space:]]/, ""); print; exit }' "$file")"
-    [ -n "$agent" ] || continue
-    awk -F '\t' -v name="$agent.md" '$1 == "agents" && $2 == name { found = 1 } END { exit found ? 0 : 1 }' "$out" && continue
-    for src in "$REPO_ROOT"/domains/*/agents/"$agent.md"; do
-      [ -f "$src" ] || continue
-      agent_domain="$(basename "$(dirname "$(dirname "$src")")")"
-      src="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
-      printf '%s\t%s\t%s\t%s\t%s\n' "agents" "$agent.md" "$agent_domain" "-" "$src" >> "$out"
-      break
+  for type in agents commands; do
+    dir="$REPO_ROOT/$type"
+    [ -d "$dir" ] || continue
+    find "$dir" -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r file; do
+      name="$(basename "$file")"
+      src="$(cd "$(dirname "$file")" && pwd -P)/$name"
+      printf '%s\t%s\t-\t-\t%s\n' "$type" "$name" "$src" >> "$out"
     done
   done
+
+  dir="$REPO_ROOT/skills"
+  if [ -d "$dir" ]; then
+    find "$dir" -mindepth 1 -maxdepth 1 -type d | sort | while IFS= read -r file; do
+      name="$(basename "$file")"
+      src="$(cd -P "$file" && pwd -P)"
+      if [ ! -f "$src/SKILL.md" ]; then
+        warn "$file: skill directory has no SKILL.md; skipped"
+        continue
+      fi
+      status="$(status_from_file "$src/SKILL.md")"
+      if ! status_allowed "$status"; then
+        valid_status "$status" || warn "$src/SKILL.md: missing or invalid metadata.status; skipped"
+        continue
+      fi
+      printf '%s\t%s\t-\t%s\t%s\n' "skills" "$name" "$status" "$src" >> "$out"
+    done
+  fi
+
+  # *.test.mjs and other non-.ts files are never installed.
+  dir="$REPO_ROOT/plugins"
+  if [ -d "$dir" ]; then
+    find "$dir" -type f -name '*.ts' | sort | while IFS= read -r file; do
+      name="$(basename "$file")"
+      src="$(cd "$(dirname "$file")" && pwd -P)/$name"
+      printf '%s\t%s\t-\t-\t%s\n' "plugins" "$name" "$src" >> "$out"
+    done
+  fi
+
+  dir="$REPO_ROOT/external-plugins"
+  if [ -d "$dir" ]; then
+    find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
+      while IFS= read -r file; do
+        name="$(basename "$file")"
+        case "$name" in
+          *.npm-server.json) name="${name%.npm-server.json}"; type="npm-server-plugins" ;;
+          *.npm-tui.json) name="${name%.npm-tui.json}"; type="npm-tui-plugins" ;;
+          *.server.json) name="${name%.server.json}"; type="external-server-plugins" ;;
+          *.tui.json) name="${name%.tui.json}"; type="external-tui-plugins" ;;
+        esac
+        src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
+        printf '%s\t%s\t-\t-\t%s\n' "$type" "$name" "$src" >> "$out"
+      done
+  fi
+
+  dir="$REPO_ROOT/tui-plugins"
+  if [ -d "$dir" ]; then
+    find "$dir" -maxdepth 1 -type f -name '*.tsx' | sort | while IFS= read -r file; do
+      name="$(basename "$file")"
+      src="$(cd "$(dirname "$file")" && pwd -P)/$name"
+      printf '%s\t%s\t-\t-\t%s\n' "tui-plugins" "$name" "$src" >> "$out"
+    done
+  fi
 }
 
 check_collisions() {
@@ -598,7 +532,7 @@ status_action() {
     runtime_dest "$type" "$name"
     [ -n "$DEST_PATH" ] || continue
     state="$(runtime_component_state "$type" "$name" "$src" "$DEST_PATH")"
-    printf '%s\t%s\t%s\t%s\t%s\n' "$domain" "$type" "$name" "$status" "$state"
+    printf '%s\t%s\t%s\t%s\n' "$type" "$name" "$status" "$state"
   done < "$selected"
   runtime_status_global
   rm -f "$selected"
@@ -655,7 +589,7 @@ harness_main() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --domain) shift; [ "$#" -gt 0 ] || die "--domain requires a value"; DOMAIN_FILTER="$1" ;;
+      --domain) die "--domain was removed; all components install together" ;;
       --status) shift; [ "$#" -gt 0 ] || die "--status requires a value"; STATUS_FILTER="$1" ;;
       --project) PROJECT_TARGET=1 ;;
       --target) shift; [ "$#" -gt 0 ] || die "--target requires a value"; TARGET_ARG="$1" ;;

@@ -1,11 +1,11 @@
 # Apply Changes Without Restarting OpenCode
 
-Validated on OpenCode 1.17.15. Model assignments and installed Markdown artifacts can reload; plugin registration and code still require a restart.
+Validated on OpenCode 1.17.15. Model assignments and Markdown artifacts can reload. Plugin registration and plugin code need a restart.
 
 ## Quick path
 
-- Save model or variant changes through `/models-profiles`; it hot-applies when supported.
-- Reinstall agents, commands, or skills with `installers/opencode.sh install --reload`.
+- Save model or variant changes through `/models-profiles`.
+- Install agents, commands, or skills again with `installers/opencode.sh install --reload`.
 - Restart after plugin registration or code changes, or when the tool reports fallback.
 
 ## Support matrix
@@ -20,18 +20,18 @@ Validated on OpenCode 1.17.15. Model assignments and installed Markdown artifact
 
 ## Mechanism and limits
 
-`PATCH /global/config` preserves JSONC comments, deep-merges changes, invalidates the global config cache, and disposes instances only when bytes change. It cannot delete keys, and an identical patch does not invalidate state.
+`PATCH /global/config` deep-merges changes and keeps JSONC comments. It disposes instances only when the bytes change. It cannot delete keys.
 
-`POST /instance/dispose?directory=<dir>` reloads project config for one instance. `POST /global/dispose` reloads Markdown artifacts and project config for all instances, but not hand-edited global config because that cache is separate.
+`POST /global/dispose` does not reload a hand-edited global config.
 
-Avoid instance `PATCH /config` on 1.17.15: it writes `<project>/config.json`, which the loader does not re-read.
+Do not use instance `PATCH /config` on 1.17.15. It writes `<project>/config.json`, and the loader does not read that file again.
 
-A disposed TUI instance refreshes agents, config, and providers on its next bootstrap. A session-level `/model` choice still overrides the configured agent model until the user changes it or restarts.
+A session-level `/model` choice overrides the configured agent model until you change it or restart.
 
 ## Repository behavior
 
-The pinned `opencode-models-presets` package keeps transactional JSONC writes. Project changes dispose the target instance. Global removals are written locally, then a changed set leaf triggers `PATCH /global/config`; removal-only changes request a restart. Failure leaves the config saved and reports that restart is required.
+If a live apply fails, the config stays saved and the tool asks for a restart.
 
-`installers/opencode.sh install --reload` discovers healthy local servers or uses `OPENCODE_RELOAD_URLS`, then calls global disposal after a successful install. Reload is best-effort and never rolls back installation.
+`installers/opencode.sh install --reload` finds healthy local servers or uses `OPENCODE_RELOAD_URLS`. Reload is best-effort and never rolls back the install.
 
-Only the connected server receives Models Presets hot apply. Restart any other running OpenCode process that needs the change.
+Only the connected server gets the hot apply. Restart each other OpenCode process.

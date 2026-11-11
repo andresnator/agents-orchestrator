@@ -1,37 +1,38 @@
 # Use LM Studio From OpenCode Over a Local Network
 
-Computer A runs OpenCode; Computer B runs LM Studio. Both must share a reachable trusted network, and OpenCode must use Computer B's LAN address rather than `localhost`.
+Computer A runs OpenCode. Computer B runs LM Studio on the same trusted network. OpenCode must use the LAN address of Computer B, not `localhost`.
 
 ## Quick path
 
 1. On Computer B, enable **Serve on Local Network** and **Require Authentication** under **Developer > Server Settings**.
-2. Start the server, allow inbound TCP port `1234` from the trusted LAN, and note Computer B's stable address.
-3. From Computer A, verify `/v1/models` with the API token.
-4. Add an `lmstudio-lan` provider to OpenCode using the returned model ids.
-5. Restart OpenCode and select a model with `/models`.
+2. Start the server.
+3. Allow inbound TCP port `1234` from the trusted LAN.
+4. Write down the stable address of Computer B.
+5. From Computer A, verify `/v1/models` with the API token.
+6. Add an `lmstudio-lan` provider to OpenCode with the returned model ids.
+7. Restart OpenCode and select a model with `/models`.
 
-Never expose the LM Studio port to the internet. It uses plain HTTP unless you add a trusted TLS proxy.
+Unauthorized access can occur. Never expose the LM Studio port to the internet. It uses plain HTTP unless you add a trusted TLS proxy.
 
 ## Configure Computer B
 
-In LM Studio, enable network serving and authentication, create a token for Computer A, then start the server. CLI equivalent:
+Create a token for Computer A. The CLI equivalent of the quick-path server steps is:
 
 ```bash
 lms server start --bind 0.0.0.0 --port 1234
 ```
 
-`0.0.0.0` is a listen address. Computer A must use Computer B's private address, such as `192.168.1.50`.
+`0.0.0.0` is a listen address. Computer A must use the private address of Computer B, for example `192.168.1.50`.
 
 Network checklist:
 
-- Keep both machines on a trusted LAN or routed VLAN.
-- Restrict firewall access to the private network or Computer A.
-- Disable guest-network client isolation or use a reachable network.
-- Give Computer B a DHCP reservation or stable address.
+- Limit firewall access to the private network or to Computer A.
+- Disable guest-network client isolation, or use a reachable network.
+- Give Computer B a DHCP reservation or a stable address.
 
 ## Verify from Computer A
 
-Launch OpenCode from a shell that contains the token:
+Start OpenCode from a shell that has the token:
 
 ```bash
 export LM_STUDIO_API_TOKEN="replace-with-the-token-from-computer-b"
@@ -41,7 +42,7 @@ curl --fail --show-error \
   http://192.168.1.50:1234/v1/models
 ```
 
-Do not configure OpenCode until this returns JSON with model ids.
+Do not configure OpenCode until this command returns JSON with model ids.
 
 | Symptom | Check |
 |---|---|
@@ -50,11 +51,11 @@ Do not configure OpenCode until this returns JSON with model ids.
 | `401` or `403` | API token |
 | Later model error | Exact exposed model id |
 
-If authentication is intentionally disabled, omit both the header and `options.apiKey`.
+If you disabled authentication on purpose, omit the header and `options.apiKey`.
 
 ## Configure OpenCode
 
-Merge this into global `~/.config/opencode/opencode.json[c]` or project `.opencode/opencode.json[c]` on Computer A:
+On Computer A, merge this into the global `~/.config/opencode/opencode.json[c]` or the project `.opencode/opencode.json[c]`:
 
 ```json
 {
@@ -84,19 +85,11 @@ Merge this into global `~/.config/opencode/opencode.json[c]` or project `.openco
 }
 ```
 
-Replace the address, ids, and limits with values from Computer B. Limits inform OpenCode accounting; they do not increase the model's loaded context. Model references use `provider_id/model_id`.
-
-Restart OpenCode, then use `/models` or `opencode models`.
+Replace the address, ids, and limits with the values from Computer B. The limits do not increase the loaded context. Model references use `provider_id/model_id`. Coding agents need reliable tool calling, not only good chat quality. Restart OpenCode, then use `/models` or `opencode models`.
 
 ## Multiple models
 
-| Goal | Supported | Owner |
-|---|---|---|
-| Make several models selectable | Yes | OpenCode provider map |
-| Keep several models resident | If memory permits | LM Studio load settings |
-| Process requests concurrently | Hardware and runtime dependent | LM Studio server |
-
-Load stable identifiers when model filenames may change:
+Each entry in the provider `models` map is selectable. If model filenames can change, load stable identifiers:
 
 ```bash
 lms load --estimate-only <first-model-key> --context-length 32768
@@ -105,9 +98,9 @@ lms load <second-model-key> --identifier llama-general --context-length 16384
 lms ps
 ```
 
-JIT auto-eviction may unload the previous model. Disable **Only Keep Last JIT Loaded Model** only when RAM or VRAM can retain all models. Residency reduces load delay but does not guarantee parallel execution.
+JIT auto-eviction can unload the previous model. Disable **Only Keep Last JIT Loaded Model** only when the RAM or VRAM can hold all models. Loaded models do not run in parallel.
 
-Assign models per agent when useful:
+Assign models per agent when it helps:
 
 ```json
 {
@@ -118,17 +111,15 @@ Assign models per agent when useful:
 }
 ```
 
-Coding agents need reliable tool calling and enough context; chat quality alone is insufficient.
-
 ## Troubleshooting
 
-1. Re-run `/v1/models` from Computer A.
-2. Confirm `baseURL` ends in `/v1` and never uses Computer A's `localhost`.
-3. Compare every model id exactly with the API response or `--identifier` value.
-4. Confirm the OpenCode process inherited `LM_STUDIO_API_TOKEN`.
-5. Inspect LM Studio logs during one simple request.
-6. For agent-only failures, verify tool calling and context limits.
-7. For slow first requests, check JIT loading and auto-eviction.
+1. Run `/v1/models` again from Computer A. Use the symptom table above.
+2. Make sure that `baseURL` ends in `/v1` and does not use `localhost`.
+3. Make sure that the OpenCode process inherited `LM_STUDIO_API_TOKEN`.
+4. For failures only with agents, verify tool calling and context limits.
+5. Compare each model id exactly with the `/v1/models` response or the `--identifier` value.
+6. Read the LM Studio logs during one request.
+7. If the first request is slow, check JIT loading.
 
 ## References
 
