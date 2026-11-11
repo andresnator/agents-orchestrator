@@ -76,6 +76,8 @@ The external plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md`
 
 Run `make install` to install the harness. Add options with `ARGS`, for example `make install ARGS=--dry-run`. Run `make hooks` one time to install the pre-push hook. Run `make test` to do the lint and the unit tests.
 
+Run `make mcp` to add the Context7 and Engram MCP servers to the global OpenCode config, and `make mcp-remove` to remove them. Use `make mcp-context7` or `make mcp-engram` for one server. The entries go to `mcp.servers` if that object exists (OpenCode 2.x), else to `mcp`. `make mcp-engram` runs [`engram setup opencode`](https://github.com/Gentleman-Programming/engram/blob/main/docs/AGENT-SETUP.md#opencode), so install `engram` first. To send a Context7 API key, set `CONTEXT7_API_KEY` before `make mcp-context7`; the config gets `{env:CONTEXT7_API_KEY}`, not the key. The targets do not replace an entry that you set; use `FORCE=1` to replace it. Run `make help` for all targets.
+
 ## Documentation
 
 | Guide | Purpose |
