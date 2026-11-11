@@ -28,7 +28,7 @@ After the install:
 |---|---|
 | `agents/` | The single OpenCode agent, `orchestraitor` |
 | `commands/` | Fused OpenCode commands |
-| `skills/<skill>/` | All skill bodies |
+| `skills/<skill>/` | All skill bodies, one `SKILL.md` each. Never copy a body or add symlinks |
 | `plugins/` | Repository-specific server plugins (`*.test.mjs` are not installed) |
 | `tui-plugins/` | Repository-specific TUI plugins |
 | `external-plugins/` | Pinned standalone plugin descriptors |
@@ -44,6 +44,42 @@ installers/opencode.sh install --project
 installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status
 ```
+
+## Catalog
+
+### Entry points
+
+| Entry | Result |
+|---|---|
+| Ask `orchestraitor` for a change | Verified, uncommitted diff (Direct or SDD) |
+| Ask for a light or deep plan | IDSD plan in `.ai/deep-planner/plans/<slug>.md` |
+| Ask to explore an idea | Wayfinder discovery in `.ai/deep-planner/discoveries/<slug>.md`. Say `convert this discovery into a plan` to get a plan |
+| `ejecuta el plan <path>` | Runs an exact plan. No new approval. Structural and checksum checks still run |
+| `continúa <run>` | Resumes an SDD run without a new approval |
+| `/arch map\|review\|ideate\|boundary` | Architecture docs, risks, ADR, or service boundary map. Dependency commands need authorization, else they give inventory only |
+| `/review judgment\|light\|defend` | Adversarial code review or design defense. Judgment fixes only authorized, confirmed findings. Defend is read-only |
+| `/doc` | Routes to the most specific documentation skill |
+| `/grill` | Focused interview to stress-test an idea |
+| `/caveman lite\|full\|ultra\|wenyan` | Saves a global response compression level. The default is `lite`. `normal mode` or `stop caveman` saves `off`. The level persists across restarts |
+| `/ask-me` | Recommends `oc-*` skills for a use case |
+| `/models-profiles` (TUI plugin) | Assigns agent models and variants |
+
+A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push. TCR is Direct only.
+
+### Skills by purpose
+
+| Purpose | Skills |
+|---|---|
+| Execution (SDD) | `oc-sdd`, `oc-sdd-explore`, `oc-sdd-implement`, `oc-sdd-verify`, `oc-sdd-merge`, `oc-routing`, `oc-tcr`, `oc-commits`, `oc-chained-pr`, `oc-debug` |
+| Planning | `oc-plan-light`, `oc-plan-deep`, `oc-plan-format`, `oc-risk-scope`, `oc-arch-impact`, `oc-interview`, `oc-grill`, `oc-tooling-audit` |
+| Review | `oc-review`, `oc-judge`, `oc-judge-fix`, `oc-practices` |
+| Architecture | `oc-arch`, `oc-adr`, `oc-boundary`, `oc-dep-audit`, `oc-patterns` |
+| Code quality | `oc-conventions`, `oc-naming`, `oc-domain`, `oc-refactor`, `oc-refactor-lens`, `oc-seams`, `oc-legacy`, `oc-types`, `oc-null-safety` |
+| Java | `oc-java-api`, `oc-java-errors`, `oc-java-immutable`, `oc-java-security`, `oc-java-test` |
+| Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
+| Output and meta | `oc-caveman`, `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
+
+The external plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
 
 ## Documentation
 

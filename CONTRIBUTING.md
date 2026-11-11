@@ -5,7 +5,7 @@ This repository stores OpenCode agent artifacts, not application code. Start wit
 ## Repository contract
 
 - Read [standards/README.md](standards/README.md) and all files that it lists before you make a change. They own the language, ASD-STE100, and trigger rules.
-- The layout is flat by type: `agents/`, `commands/`, `skills/`, `plugins/`, `tui-plugins/`, and `external-plugins/`. There are no domains.
+- The layout is flat by type: `agents/`, `commands/`, `skills/`, `plugins/`, `tui-plugins/`, and `external-plugins/`.
 - The installer links `standards/` beside `AGENTS.md`.
 - `global/AGENTS.md` is the installable runtime rules file. `CONTRIBUTING.md` is maintainer guidance. Do not merge their roles.
 - A new component must not require edits to `installers/opencode.sh`.
@@ -84,9 +84,7 @@ Keep the runtime contract short. Put concrete templates in `assets/`. Put extend
 
 ## Keeping the catalog accurate
 
-Each domain README uses this H2 sequence: `## Quick path`, `## Entry points`, then `## Components`. Limits: two intro sentences, two or three quick-path steps, and 3-8 words for each component purpose. `## Components` is the final authoritative section.
-
-When you add, remove, or move a component, update the `## Components` table of the owning domain. Update the root domain table only when the entry points or the domain purpose change. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
+To add a component, add its folder or file in the correct type directory. Then update the `## Catalog` in [README.md](README.md): add a command to "Entry points" and a skill to "Skills by purpose". Do the same when you remove or rename a component. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
 
 ## Validation
 
