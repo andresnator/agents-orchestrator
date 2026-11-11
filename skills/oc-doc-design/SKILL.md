@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: testing
-  version: "2.1.0"
+  version: "3.0.0"
 ---
 # Documentation design
 
@@ -69,14 +69,4 @@ metadata:
 ## Next step
 
 <Link or action that continues the workflow.>
-```
-
-### Commands
-
-```bash
-# Check markdown files changed in the current branch
-git diff --name-only -- '*.md'
-
-# Inspect PR changed-line count for cognitive load
-gh pr view <PR_NUMBER> --json additions,deletions,changedFiles
 ```

@@ -6,7 +6,7 @@ Loaded by `oc-arch`. Triggers: architecture refactor ideas, target architecture,
 
 - **Goal:** An architecture change grounded in verified state.
 - **Limits:** Write only one ADR and one plan; never edit source, commit, or push. Class/method refactors belong to `oc-plan` deep mode. No big-bang migration.
-- **Fails if:** A pattern lacks evidenced forces or pragmatic/KISS gates (the `kiss` lens in `oc-refactor` `references/lenses.md`); microservices lack justified operational cost; a work item maps to neither an ADR decision nor an architecture gap, or names no real files.
+- **Fails if:** A pattern lacks evidenced forces or pragmatic/KISS gates (the `kiss` lens of `oc-refactor` lens mode); microservices lack justified operational cost; a work item maps to neither an ADR decision nor an architecture gap, or names no real files.
 
 ## Context
 

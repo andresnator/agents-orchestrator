@@ -28,7 +28,7 @@ metadata:
 - **Scenarios:**
   - WHEN writing a plan or design document THEN record the detected language and tool versions with evidence (e.g. `java.version` in `pom.xml`, `typescript` in `package.json`) so the implementer can fetch version-correct documentation.
 - **Done means:** Code and tests follow the Method rules or the repo's winning convention; any deviation is named in the plan, design, or summary.
-- **Quality needs:** Single Responsibility and Open-Closed carry weight. Introduce interfaces or dependency inversion only for real variation, test seams, or architectural boundaries, never as SOLID dogma (see the `dip` lens in `oc-refactor` `references/lenses.md`).
+- **Quality needs:** Single Responsibility and Open-Closed carry weight. Introduce interfaces or dependency inversion only for real variation, test seams, or architectural boundaries, never as SOLID dogma (see `oc-refactor` lens mode, `dip` lens).
 
 ## Method
 
