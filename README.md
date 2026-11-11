@@ -49,6 +49,7 @@ installers/opencode.sh status
 | `/doc` | Routes to the most specific documentation skill |
 | `/grill` | Focused interview to stress-test an idea |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
+| `/wait-what [fragment]` | Explains the fragment or the last response in chat, with only supported context. Preserves facts, uncertainty, vocabulary, and the user's language |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
 For delivery and Git rules, see [`agents/orchestraitor.md`](agents/orchestraitor.md). The `oc-sdd` skill owns the SDD approval gate.
@@ -63,6 +64,9 @@ For delivery and Git rules, see [`agents/orchestraitor.md`](agents/orchestraitor
 | Architecture | `oc-arch`, `oc-adr` |
 | Code quality | `oc-conventions`, `oc-domain`, `oc-refactor` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
+| Context transfer | `oc-handoff` |
+| File-based courses | `oc-teach` |
+| PR bodies | `oc-pr` |
 | Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
 
 The npm plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
