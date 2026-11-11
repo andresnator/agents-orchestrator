@@ -4,10 +4,11 @@ import test from 'node:test';
 
 const ROOT = new URL('../', import.meta.url);
 const SECTIONS = ['OpenCode Skills', 'Agent Skills', 'Claude Skills'];
+// The global AGENTS.md owns the registry contract; oc-routing points at it.
 const CONSUMERS = [
   ['global/AGENTS.md', readFileSync(new URL('global/AGENTS.md', ROOT), 'utf8').split('## Skill Registry\n')[1].split('\n## ')[0]],
-  ['skills/oc-routing/SKILL.md', readFileSync(new URL('skills/oc-routing/SKILL.md', ROOT), 'utf8')],
 ];
+const ROUTING = readFileSync(new URL('skills/oc-routing/SKILL.md', ROOT), 'utf8');
 
 // Instruction-only consumers: assert the contract text they ship.
 
@@ -35,7 +36,7 @@ test('shouldRequireRuntimeFallbackWhenSnapshotIsMissingMalformedOrLegacy', () =>
 
 test('shouldKeepFallbackWithinAllowlistAndBlockIneligibleAssignedSkills', () => {
   // Given
-  const routing = CONSUMERS[1][1];
+  const routing = ROUTING;
   // When
   const policies = CONSUMERS.map(([path, source]) => ({ path, source }));
   // Then
@@ -44,6 +45,7 @@ test('shouldKeepFallbackWithinAllowlistAndBlockIneligibleAssignedSkills', () => 
     assert.match(source, /available, allowed/, path);
     assert.match(source, /allowlist/, path);
   }
+  assert.match(routing, /Skill Registry" rules in the global `AGENTS.md`/);
   assert.match(routing, /Use `none` if no eligible description matches/);
   assert.match(routing, /already assigned `Skills:` field.*unavailable or disallowed identifier.*`BLOCK skill-routing <reason>`/);
   assert.match(routing, /Runtime fallback is for discovery, not permission to replace, ignore, or guess around an assigned identifier/);

@@ -87,7 +87,7 @@ Keep the runtime contract short. Put concrete templates in `assets/`. Put extend
 
 ## Keeping the catalog accurate
 
-To add a component, add its folder or file in the correct type directory. Then update the `## Catalog` in [README.md](README.md): add a command to "Entry points" and a skill to "Skills by purpose". Do the same when you remove or rename a component. For GitHub-bundled external plugins, update the version, commit, artifact, and SHA-256 lock together. For npm plugins, keep the package, exact version pin, and runtime target aligned.
+To add a component, add its folder or file in the correct type directory. Then update the `## Catalog` in [README.md](README.md): add a command to "Entry points" and a skill to "Skills by purpose". Do the same when you remove or rename a component. For npm plugins, keep the package, exact version pin, and runtime target aligned.
 
 ## Validation
 
