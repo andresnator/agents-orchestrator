@@ -6,7 +6,7 @@
 - **Limits:**
   - Write only under `.ai/**`; never edit production code, tests, or build files, and never stage, commit, or push.
   - Before writing, create the parent with exactly one of `mkdir -p .ai/deep-planner/discoveries` or `mkdir -p .ai/deep-planner/plans`; never alter or combine them. Use another `.ai/**` path only when the user gives that exact path and its parent exists.
-  - No web fetch. Never run graph lifecycle commands. Use allowlisted Git history commands only after authorization.
+  - No web fetch. Use allowlisted Git history commands only after authorization.
   - Load only `references/format.md`, `oc-routing`, `oc-domain`, and `oc-grill` (its `references/interview.md` engine only); never load implementation skill bodies.
   - Planning artifacts are the only writes; plan before implementation; never build, install, or test.
   - Delegate only to the `general` subagent: at most three disjoint research briefs, plus `oc-refactor` lens-mode analyses as stated below.
@@ -44,7 +44,7 @@ Before returning, check evidence, edges, proportionality, exact paths, and the e
 
 ### Lens brief
 
-Brief a `general` subagent: `Load oc-refactor in lens mode. Input: target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv of catalog lens ids> skills=<csv> focus=<text> max=7 graph=<state>`. It is read-only and returns `OK plan/analyze ...` plus `TOTAL findings=<n>`. Lens ids come from `oc-refactor` lens mode (`srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`); critical-risk briefs use disjoint lens ids.
+Brief a `general` subagent: `Load oc-refactor in lens mode. Input: target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv of catalog lens ids> skills=<csv> focus=<text> max=7`. It is read-only and returns `OK plan/analyze ...` plus `TOTAL findings=<n>`. Lens ids come from `oc-refactor` lens mode (`srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`); critical-risk briefs use disjoint lens ids.
 
 ### Risk and scope
 

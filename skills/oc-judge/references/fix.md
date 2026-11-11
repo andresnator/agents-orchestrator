@@ -3,7 +3,7 @@
 ## Intent
 
 - **Goal:** Fix each id explicitly marked confirmed or emphasis-confirmed in the brief with one minimal diff.
-- **Limits:** No refactors, drive-by changes, new findings, planning/state edits, questions, staging, commits, or push; never mutate graph lifecycle.
+- **Limits:** No refactors, drive-by changes, new findings, planning/state edits, questions, staging, commits, or push.
 - **Fails if:** an unlisted line changes, the named check is skipped, or editing starts with missing or ambiguous authorization.
 
 ## Context

@@ -4,7 +4,7 @@ description: "Trigger: oc-judge lens=a|b|solo, blind judge, re-judge, oc-judge m
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "2.0.1"
   status: testing
 ---
 # Blind Judge
