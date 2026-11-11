@@ -32,8 +32,8 @@ Actions:
               from commit-pinned GitHub sources and SHA-256 verified. npm server
               and TUI plugins are registered by exact package version in the
               matching OpenCode config. Repository-local V2 TUI plugins require
-              OpenCode >= 2.0.28 and register in cli.json; external TUI plugin
-              registrations remain in tui.json.
+              OpenCode >= 2.0.28. Local and npm TUI plugins register in cli.json;
+              external bundled TUI plugins remain in tui.json.
               Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules)
               and standards/ to $TARGET/standards,
               regardless of the --status filter. A pre-existing foreign
@@ -141,7 +141,7 @@ runtime_dest() {
     external-server-plugins) DEST_PATH="$TARGET/plugins/$2.js" ;;
     external-tui-plugins) DEST_PATH="$TARGET/plugins/$2/tui.js" ;;
     npm-server-plugins) DEST_PATH="$OPENCODE_CONFIG_FILE" ;;
-    npm-tui-plugins) DEST_PATH="$TARGET/tui.json" ;;
+    npm-tui-plugins) DEST_PATH="$CLI_CONFIG_FILE" ;;
     tui-plugins) DEST_PATH="$TARGET/plugins/$2" ;;
     *) DEST_PATH="$TARGET/$1/$2" ;;
   esac
@@ -387,17 +387,17 @@ runtime_install_component() {
       maybe_fail_install "after-links"
       package="$(npm_plugin_package "$src")"
       spec="$(npm_plugin_spec "$src")"
-      if ! managed_array_has "$dest" plugin "$spec" &&
-        managed_array_npm_has "$dest" plugin "$package"; then
-        remove_managed_npm_entries "$dest" plugin "$package"
+      if ! managed_array_has "$dest" plugins "$spec" &&
+        managed_array_npm_has "$dest" plugins "$package"; then
+        remove_managed_npm_entries "$dest" plugins "$package"
       fi
       for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-        if managed_array_has "$dest" plugin "$legacy_spec" &&
-          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; }; then
-          remove_managed_array_entry "$dest" plugin "$legacy_spec"
+        if managed_array_has "$dest" plugins "$legacy_spec" &&
+          { [ "$FORCE" -eq 1 ] || manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugins "$legacy_spec"; }; then
+          remove_managed_array_entry "$dest" plugins "$legacy_spec"
         fi
       done
-      ensure_managed_array_entry "$dest" plugin "$spec" "$manifest"
+      ensure_managed_array_entry "$dest" plugins "$spec" "$manifest"
       maybe_fail_install "after-managed-array"
       return 0
       ;;
@@ -465,14 +465,14 @@ runtime_component_state() {
     version="$(external_descriptor_field "$src" version)"
     package="$(npm_plugin_package "$src")"
     spec="$(npm_plugin_spec "$src")"
-    if managed_array_has "$dest" plugin "$spec"; then
+    if managed_array_has "$dest" plugins "$spec"; then
       compatibility="$(opencode_compatibility)"
       if [ "$compatibility" = "compatible" ]; then
         printf 'registered@%s' "$version"
       else
         printf 'registered@%s; %s' "$version" "$compatibility"
       fi
-    elif managed_array_npm_has "$dest" plugin "$package"; then
+    elif managed_array_npm_has "$dest" plugins "$package"; then
       printf 'foreign'
     else
       printf 'not installed'
@@ -715,6 +715,8 @@ runtime_pre_install() {
     validate_managed_files "$has_tui" "$has_npm_server"
     if awk -F '\t' '$1 == "tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected"; then
       check_opencode_version "$MIN_LOCAL_TUI_OPENCODE_VERSION"
+    fi
+    if awk -F '\t' '$1 == "tui-plugins" || $1 == "npm-tui-plugins" { found = 1 } END { exit found ? 0 : 1 }' "$selected"; then
       validate_managed_jsonc_file "$CLI_CONFIG_FILE" plugins
     fi
   fi
@@ -760,16 +762,16 @@ runtime_pre_install() {
         validate_npm_tui_descriptor "$name" "$src"
         package="$(npm_plugin_package "$src")"
         spec="$(npm_plugin_spec "$src")"
-        if ! managed_array_has "$dest" plugin "$spec" &&
-          managed_array_npm_has "$dest" plugin "$package" &&
+        if ! managed_array_has "$dest" plugins "$spec" &&
+          managed_array_npm_has "$dest" plugins "$package" &&
           [ "$FORCE" -ne 1 ] &&
-          ! manifest_owns_npm_package "$OLD_MANIFEST" "$dest" plugin "$package"; then
+          ! manifest_owns_npm_package "$OLD_MANIFEST" "$dest" plugins "$package"; then
           die "$dest already configures npm package $package; use --force to replace it"
         fi
         for legacy_spec in $RETIRED_MODEL_TUI_SPECS; do
-          if managed_array_has "$dest" plugin "$legacy_spec" &&
+          if managed_array_has "$dest" plugins "$legacy_spec" &&
             [ "$FORCE" -ne 1 ] &&
-            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugin "$legacy_spec"; then
+            ! manifest_owns_managed_value managed-array "$OLD_MANIFEST" "$dest" plugins "$legacy_spec"; then
             die "$dest contains foreign legacy Models Presets entry $legacy_spec; remove it or use --force"
           fi
         done
