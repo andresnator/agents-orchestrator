@@ -16,6 +16,14 @@ Rules for all code, scripts, and tests. For language-specific rules, load the `o
 - Quote all variables: `"$var"`.
 - Run `bash -n <script>` after each change.
 
+## Make targets
+
+- The root `Makefile` is an entry point only. It holds shared variables, `all`, `help`, and `include make/*.mk`.
+- Put each action in its own file: `make/<action>.mk`. One file has one responsibility, for example `make/install.mk` or `make/default-agent.mk`.
+- Start each file with a one-line comment that tells its purpose. End it with its own `.PHONY` line.
+- Write a `## <description>` comment after each public target. `make help` reads these comments.
+- Put variables that only one action uses in that action's file.
+
 ## Tests
 
 ### No tautological tests
