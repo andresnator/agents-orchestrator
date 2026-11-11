@@ -31,7 +31,7 @@ test("shouldCreatePrivateMiniSettingsWhenConfigIsMissing", (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), {
     $schema: "https://opencode.ai/v2/cli.json",
-    mini: { thinking: "hide", tools: "hide", shell_output: "hide" },
+    mini: { thinking: "hide", tools: "show", shell_output: "hide" },
   });
   assert.equal(statSync(file).mode & 0o777, 0o600);
 });
@@ -49,7 +49,7 @@ test("shouldKeepCommentsAndOtherSettingsWhenConfigExists", (t) => {
   assert.match(after, /\/\/ keep this/);
   assert.deepEqual(JSON.parse(after.replace(/\/\/ keep this/, "")), {
     plugins: ["example"], session: { permissions: "prompt" },
-    mini: { footer: "show", thinking: "hide", tools: "hide", shell_output: "hide" },
+    mini: { footer: "show", thinking: "hide", tools: "show", shell_output: "hide" },
   });
   assert.equal(readFileSync(`${file}.bak`, "utf8"), before);
   assert.equal(readFileSync(join(dir, "opencode.json"), "utf8"), '{"model":"test/model"}');
@@ -83,13 +83,13 @@ test("shouldRefuseAllChangesWhenALaterSettingConflicts", (t) => {
 
 test("shouldReplaceConflictsWhenForceIsOne", (t) => {
   // Given
-  const { file, run } = setup(t, '{"mini":{"tools":"show","footer":"hide"}}');
+  const { file, run } = setup(t, '{"mini":{"thinking":"show","footer":"hide"}}');
   // When
   const result = run("set", { FORCE: "1" });
   // Then
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), {
-    mini: { thinking: "hide", tools: "hide", shell_output: "hide", footer: "hide" },
+    mini: { thinking: "hide", tools: "show", shell_output: "hide", footer: "hide" },
   });
 });
 
@@ -102,7 +102,7 @@ for (const text of ["", " \n", "{}", '{"mini":{}}']) {
     // Then
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(JSON.parse(readFileSync(file, "utf8")).mini, {
-      thinking: "hide", tools: "hide", shell_output: "hide",
+      thinking: "hide", tools: "show", shell_output: "hide",
     });
   });
 }
@@ -121,7 +121,7 @@ for (const text of ['{"mini":', '{"mini":[]}', '[]', '{"mini":null}']) {
   });
 }
 
-test("shouldRemoveOnlyHiddenFieldsWhenOtherSettingsExist", (t) => {
+test("shouldRemoveOnlyManagedFieldsWhenOtherSettingsExist", (t) => {
   // Given
   const { file, run } = setup(t, '{"mini":{"thinking":"hide","tools":"show","shell_output":"hide","footer":"show"},"theme":{"name":"system"}}');
   // When
@@ -129,13 +129,13 @@ test("shouldRemoveOnlyHiddenFieldsWhenOtherSettingsExist", (t) => {
   // Then
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), {
-    mini: { tools: "show", footer: "show" }, theme: { name: "system" },
+    mini: { footer: "show" }, theme: { name: "system" },
   });
 });
 
-test("shouldLeaveNoMiniObjectWhenAllHiddenFieldsAreRemoved", (t) => {
+test("shouldLeaveNoMiniObjectWhenAllManagedFieldsAreRemoved", (t) => {
   // Given
-  const { file, run } = setup(t, '{"mini":{"thinking":"hide","tools":"hide","shell_output":"hide"},"mouse":true}');
+  const { file, run } = setup(t, '{"mini":{"thinking":"hide","tools":"show","shell_output":"hide"},"mouse":true}');
   // When
   const result = run("remove");
   // Then
@@ -167,7 +167,7 @@ test("shouldKeepSymlinkAndModeWhenUpdatingConfig", (t) => {
   assert.equal(lstatSync(file).isSymbolicLink(), true);
   assert.equal(statSync(file).mode & 0o777, 0o640);
   assert.deepEqual(JSON.parse(readFileSync(target, "utf8")).mini, {
-    thinking: "hide", tools: "hide", shell_output: "hide",
+    thinking: "hide", tools: "show", shell_output: "hide",
   });
 });
 
@@ -207,6 +207,6 @@ test("shouldUseXdgConfigHomeWhenMakeHasNoDirectoryOverride", (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(join(dir, "opencode/cli.json"), "utf8")), {
     $schema: "https://opencode.ai/v2/cli.json",
-    mini: { thinking: "hide", tools: "hide", shell_output: "hide" },
+    mini: { thinking: "hide", tools: "show", shell_output: "hide" },
   });
 });

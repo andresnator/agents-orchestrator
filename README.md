@@ -21,8 +21,8 @@ make mini
 opencode mini
 ```
 
-`make mini` sets `mini.thinking`, `mini.tools`, and `mini.shell_output` to `hide` in the global `cli.json`.
-It hides reasoning, tool calls, preceding assistant text, and raw shell output in Mini.
+`make mini` sets `mini.thinking` and `mini.shell_output` to `hide`, and `mini.tools` to `show`, in the global `cli.json`.
+It hides reasoning and raw shell output, and shows tool calls and the preceding assistant text, in Mini.
 It does not collapse items in the full-screen TUI or change the interface of an active session.
 Continue an existing session with `opencode mini --session <session-id>`.
 
@@ -30,7 +30,7 @@ The command keeps other settings, comments, permissions, symlinks, and file mode
 It saves the previous file as `cli.json.bak` before a change.
 If a setting has another value, use `make mini FORCE=1` to replace it.
 
-Run `make mini-remove` to remove these three settings when their value is `hide`.
+Run `make mini-remove` to remove the three settings that `make mini` set.
 This restores the OpenCode defaults, not previous custom values.
 The normal install and uninstall do not change these optional settings.
 
