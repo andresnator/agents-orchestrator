@@ -35,11 +35,11 @@ uninstall:
 	installers/opencode.sh uninstall $(ARGS)
 
 engram-install:
-	brew install $(ENGRAM_FORMULA)
+	brew install --formula $(ENGRAM_FORMULA)
 	engram setup opencode
 
 engram-upgrade:
-	brew upgrade $(ENGRAM_FORMULA)
+	brew upgrade --formula $(ENGRAM_FORMULA)
 	engram setup opencode
 
 hooks:
