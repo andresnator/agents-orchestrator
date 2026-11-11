@@ -64,6 +64,7 @@ For delivery and Git rules, see [`agents/orchestraitor.md`](agents/orchestraitor
 | Architecture | `oc-arch`, `oc-adr` |
 | Code quality | `oc-conventions`, `oc-domain`, `oc-refactor` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
+| Context transfer | `oc-handoff` |
 | Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
 
 The npm plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
