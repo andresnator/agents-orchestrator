@@ -1,9 +1,9 @@
 # Fix brief
 
-Brief for the `general` subagent that loads `oc-judge-fix`.
+Brief for the `general` subagent that loads `oc-judge` with `mode=fix`.
 
 ```text
-Load skill oc-judge-fix.
+Load skill oc-judge with mode=fix.
 Target: <exact scope>
 Findings: <confirmed or emphasis-confirmed rows only>
 Rules: <0-5 distilled project rules>

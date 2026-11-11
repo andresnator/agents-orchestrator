@@ -17,11 +17,21 @@ description: |
   "renombrar variable", "mover método", "eliminar código duplicado",
   "reducir complejidad", "mejorar legibilidad", "reorganizar código".
   Includes general Java detection; Java examples should follow the project's Java version and idioms.
+  Lens mode triggers: refactor lens, refactor analysis, analyze unit with lens, SRP, OCP, DIP, coupling,
+  cohesion, Big O, God Object, spaghetti code, long method, logging lens, preconditions (read-only
+  analysis of one unit through catalog lenses, including DRY, KISS, and YAGNI lenses; general
+  DRY/KISS/YAGNI evaluation belongs to oc-practices).
+  Seams mode triggers: dependency seam detection, hard dependencies.
+  Legacy mode triggers: legacy code, legacy code safety, characterization tests, safe refactor,
+  behavior characterization, observable behavior, characterization planning, seam planning,
+  scope legacy change, protect legacy change, high-risk refactor planning, test safety planning
+  (writing Java tests with JUnit or Mockito belongs to oc-java).
 license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "2.1.0"
+  version: "3.0.0"
+  attribution: "seams and legacy references adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
 # Refactoring Catalog (Multi-Language)
@@ -49,6 +59,17 @@ metadata:
 - **Quality needs:** Names matter more than length; intention over implementation; data and logic that change together live together; prefer composition over inheritance; immutability is a powerful preservative; CQS — a function either returns a value or modifies state, never both.
 
 ## Method
+
+### Modes
+
+| Mode | Use when | Follow |
+|---|---|---|
+| catalog (default) | applying named refactoring techniques | this file and `techniques/` |
+| lens | a planner brief asks for read-only analysis of one unit (`target=... lens=... lenses=...`) | `references/lens-analysis.md`, `references/lenses.md` |
+| seams | hard dependencies block tests | `references/seams.md`, `references/dependency-breaking-catalog.md` |
+| legacy | untested code must become safe to change (characterization, change algorithm, test-safety scope) | `references/legacy.md` |
+
+Lens mode is read-only and returns only its `OK plan/analyze` contract; seams and legacy modes precede catalog refactors when tests are missing.
 
 ### Detect language
 
@@ -181,3 +202,6 @@ Cross-cutting techniques from both sources.
 | `references/java-notes.md` | Java-specific constraints, Java 8 vs 11+ notes, and the Java completion gate |
 | `references/selection-heuristics.md` | Ordered decision rules when several techniques compete: conditionals tree, smell directionality, falsifiable micro-tests, inheritance→delegation triggers |
 | `references/technique-to-pattern.md` | Which refactoring techniques land on which GoF pattern (Kerievsky bridge) |
+| `references/lens-analysis.md`, `references/lenses.md` | Lens mode contract and lens catalog |
+| `references/seams.md`, `references/dependency-breaking-catalog.md` | Seam detection and WELC dependency-breaking catalog |
+| `references/legacy.md` | Legacy code safety: change algorithm, characterization, scope and test priority |

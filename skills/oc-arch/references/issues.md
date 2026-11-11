@@ -5,7 +5,7 @@ Loaded by `oc-arch`. Triggers: repo issues, project problems, architecture issue
 ## Intent
 
 - **Goal:** Ranked verified architecture issues, each with the smallest proportional guardrail.
-- **Limits:** Read-only; no speculative cleanup. Product repos only: AI-harness analysis goes to `oc-absorb`, code-level findings to `oc-plan-deep`.
+- **Limits:** Read-only; no speculative cleanup. Product repos only: AI-harness analysis goes to `oc-absorb`, code-level findings to `oc-plan` deep mode.
 - **Fails if:** An issue lacks source/config/wiring evidence and consequence; docs prove behavior; preferences, unverified claims, or disproportionate fixes survive; no `Holding up` item.
 
 ## Context

@@ -23,7 +23,7 @@ permission:
 
 ## Context
 
-- **Reads:** the request, target files and Git state, the exact plan or `run.md`, `oc-routing` results, and route skills `oc-plan-light`, `oc-plan-deep`, `oc-sdd`, `oc-review`, `oc-arch`, `oc-commits`, `oc-tcr`.
+- **Reads:** the request, target files and Git state, the exact plan or `run.md`, `oc-routing` results, and route skills `oc-plan`, `oc-sdd`, `oc-review`, `oc-arch`, `oc-commits`, `oc-tcr`.
 - **Never reads:** unrelated working-tree changes as scope; child logs or diffs; `SKILL.md` bodies outside the native skill loader.
 - **Persona:** pragmatic coordinating implementer; implements tests alongside changes.
 - **Scope:** every user request in this harness.
@@ -32,7 +32,7 @@ permission:
 
 - **Scenarios:**
   - WHEN the request is a clear change THEN use Direct.
-  - WHEN the user asks to plan THEN load `oc-plan-light` for small localized work or explicit light/quick requests, or `oc-plan-deep` for deep/wayfinder requests, dependencies, or high risk (explicit words first), and stop after the plan.
+  - WHEN the user asks to plan THEN load `oc-plan` in light mode for small localized work or explicit light/quick requests, or in deep mode for deep/wayfinder requests, dependencies, or high risk (explicit words first), and stop after the plan.
   - WHEN the user says `ejecuta el plan <path>` THEN validate the plan structure and execute it: Direct for localized, safe plans; otherwise load `oc-sdd`.
   - WHEN the user says `continúa <run>` THEN load `oc-sdd` and resume that exact run.
   - WHEN the user explicitly requests SDD THEN load `oc-sdd` and its approval gate.

@@ -25,7 +25,7 @@ metadata:
 ## Context
 
 - **Reads:** the operation and raw arguments, read/search results, source evidence, and the `references/`, `assets/`, and skills each operation loads.
-- **Never reads:** implementation skill bodies (`oc-conventions`, `oc-java-test`, and similar); they are named in plans only.
+- **Never reads:** implementation skill bodies (`oc-conventions`, `oc-java`, and similar); they are named in plans only.
 - **Persona:** evidence-first architecture coordinator.
 - **Scope:** `/arch map|review|ideate|boundary`, or any architecture request routed by `orchestraitor`.
 
@@ -49,7 +49,7 @@ Freeze one target first. Load each operation's references (`references/<op>.md`,
 |---|---|---|
 | `map` | `references/state.md`, `references/map.md` (skeleton `assets/architecture-doc-set.md`) | Create or refresh C4-lite docs under `<docfolder>/architecture/` in place |
 | `review` | `references/state.md`, `references/issues.md` (`references/fitness-functions.md`); plus `oc-dep-audit` for explicit dependency focus | One ranked report under `.ai/architect/reports/` |
-| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan-format`, `oc-routing` (`oc-adr`, `oc-patterns`, and the `kiss` lens section of `oc-refactor-lens` `references/lenses.md` as needed) | One ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/plans/<slug>.md`; every work group records its routing result; group 1 establishes fitness-function guardrails |
+| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan`, `oc-routing` (`oc-adr`, `oc-patterns`, and the `kiss` lens section of `oc-refactor` `references/lenses.md` as needed) | One ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/plans/<slug>.md`; every work group records its routing result; group 1 establishes fitness-function guardrails |
 | `boundary` | `oc-boundary` | Require exact target and target-specific path under `.ai/architect/reports/`; write it, then confirm the report exists |
 
 Allowlisted dependency commands come from `oc-dep-audit`; run them only after primary-mediated authorization.

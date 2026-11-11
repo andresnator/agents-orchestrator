@@ -70,12 +70,12 @@ A new SDD contract needs explicit approval. Silence is not approval. An exact ex
 
 | Purpose | Skills |
 |---|---|
-| Execution (SDD) | `oc-sdd`, `oc-sdd-explore`, `oc-sdd-implement`, `oc-sdd-verify`, `oc-sdd-merge`, `oc-routing`, `oc-tcr`, `oc-commits`, `oc-chained-pr`, `oc-debug` |
-| Planning | `oc-plan-light`, `oc-plan-deep`, `oc-plan-format`, `oc-risk-scope`, `oc-arch-impact`, `oc-interview`, `oc-grill`, `oc-tooling-audit` |
-| Review | `oc-review`, `oc-judge`, `oc-judge-fix`, `oc-practices` |
+| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-tcr`, `oc-commits`, `oc-chained-pr`, `oc-debug` |
+| Planning | `oc-plan`, `oc-risk-scope`, `oc-arch-impact`, `oc-grill`, `oc-tooling-audit` |
+| Review | `oc-review`, `oc-judge`, `oc-practices` |
 | Architecture | `oc-arch`, `oc-adr`, `oc-boundary`, `oc-dep-audit`, `oc-patterns` |
-| Code quality | `oc-conventions`, `oc-naming`, `oc-domain`, `oc-refactor`, `oc-refactor-lens`, `oc-seams`, `oc-legacy`, `oc-types`, `oc-null-safety` |
-| Java | `oc-java-api`, `oc-java-errors`, `oc-java-immutable`, `oc-java-security`, `oc-java-test` |
+| Code quality | `oc-conventions`, `oc-naming`, `oc-domain`, `oc-refactor` |
+| Java | `oc-java` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
 | Output and meta | `oc-caveman`, `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
 

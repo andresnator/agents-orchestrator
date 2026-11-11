@@ -1,10 +1,10 @@
 ---
 name: oc-sdd
-description: "Trigger: SDD, spec-driven run, ejecutar SDD, plan execution via SDD, continúa <run>. Coordinate one durable SDD run: approval gate, run controls, units, workers, cold verification, merge, and archive."
+description: "Trigger: SDD, spec-driven run, ejecutar SDD, plan execution via SDD, continúa <run>, SDD explore, SDD discovery, explore change scope, SDD implement, implement unit, run.md unit, cold verification, verify run.md, SDD verification, behavior acceptance, canonical merge, merge spec deltas, SDD canonical spec. Coordinate one durable SDD run: approval gate, run controls, units, workers, cold verification, merge, and archive; workers load it with a role (explore, implement, verify, merge) and follow only that role reference."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "2.0.0"
   status: testing
 ---
 
@@ -18,7 +18,7 @@ metadata:
 
 ## Context
 
-- **Reads:** the request or exact plan, `.ai/orchestration/runs/<slug>/run.md`, Git state, and skills `oc-sdd-explore`, `oc-sdd-implement`, `oc-sdd-verify`, `oc-sdd-merge`, `oc-commits`.
+- **Reads:** the request or exact plan, `.ai/orchestration/runs/<slug>/run.md`, Git state, the worker role references `references/explore.md`, `references/implement.md`, `references/verify.md`, `references/merge.md`, and skill `oc-commits`.
 - **Never reads:** unrelated working-tree changes as scope; child logs or diffs; mutable `run.md` as a checksum source.
 - **Persona:** careful run coordinator; contract first, then units.
 - **Scope:** explicit SDD requests, plan execution routed to SDD, Direct work exceeding safety, and `continúa <run>`.
@@ -39,7 +39,7 @@ metadata:
 
 ### Approval gate
 
-For new SDD work without a plan execution instruction, explore (via `oc-sdd-explore`) and draft the contract in conversation. Present Intent, Scope, every `WHEN/THEN` scenario, Approach, and Done means compactly without hiding acceptance criteria; use native `question` with `Approve`, `Request adjustments`, `Cancel`. An explicit response approving the presented contract also counts. Direct → SDD explains the route change and one approval covers route and contract; if rejected, continue only with an explicitly authorized safe reduced scope. Adjustments require re-presenting and approving the revision; silence, the initial SDD request, or a reply that introduces changes never approve. Cancel stops. If interrupted, present the contract again; never reconstruct approval. Before approval, do not create the run, edit implementation, launch implementation workers, stage, or commit, including through other agents. After approval, continue automatically.
+For new SDD work without a plan execution instruction, explore (brief a `general` worker to load `oc-sdd role=explore`) and draft the contract in conversation. Present Intent, Scope, every `WHEN/THEN` scenario, Approach, and Done means compactly without hiding acceptance criteria; use native `question` with `Approve`, `Request adjustments`, `Cancel`. An explicit response approving the presented contract also counts. Direct → SDD explains the route change and one approval covers route and contract; if rejected, continue only with an explicitly authorized safe reduced scope. Adjustments require re-presenting and approving the revision; silence, the initial SDD request, or a reply that introduces changes never approve. Cancel stops. If interrupted, present the contract again; never reconstruct approval. Before approval, do not create the run, edit implementation, launch implementation workers, stage, or commit, including through other agents. After approval, continue automatically.
 
 ### Run controls
 
@@ -63,11 +63,15 @@ Require and reuse the recorded controls, including valid `Approval` and actual `
 
 Contract sections are immutable; only progress, derived units, pending delivery, and commits change. Keep the external plan SHA-256 checks; do not checksum mutable `run.md` or introduce contract versioning. Split or combine Work groups into cohesive, independently verifiable `unit-01`, `unit-02`, ... `working-tree` parallelizes only dependency-ready units with disjoint scopes; `commit-per-unit` implements, checks, commits, and records each unit serially.
 
-- **Implement:** brief a `general` worker to load `oc-sdd-implement` with every input that skill requires. Accept only a matching result; reconcile changed paths, rerun the focused check, verify the plan hash before and after.
+- **Implement:** brief a `general` worker to load `oc-sdd role=implement` with every input that skill requires. Accept only a matching result; reconcile changed paths, rerun the focused check, verify the plan hash before and after.
 - **Commit:** under `commit-per-unit`, follow `oc-commits`: persist the pending unit and Git snapshots before staging and hooks, verify the commit, update the ledger, clear pending state.
-- **Verify:** with no pending delivery, brief a `general` worker to load `oc-sdd-verify` with every input that skill requires, including every Scenario and Done means item and exactly `working-tree` or `<Baseline>..HEAD`.
+- **Verify:** with no pending delivery, brief a `general` worker to load `oc-sdd role=verify` with every input that skill requires, including every Scenario and Done means item and exactly `working-tree` or `<Baseline>..HEAD`.
 - **Correct:** a failure becomes a new scoped correction unit (new id and commit after a commit; never rewrite history).
-- **Merge:** only when canonical behavior is required, brief a `general` worker to load `oc-sdd-merge`; require one merge row per delta and `stale=0`. Keep canonical specs and `.ai/` outside delivery commits.
+- **Merge:** only when canonical behavior is required, brief a `general` worker to load `oc-sdd role=merge`; require one merge row per delta and `stale=0`. Keep canonical specs and `.ai/` outside delivery commits.
 - **Archive:** move a completed run to `.ai/orchestration/runs/archive/<YYYY-MM-DD>-<slug>/`, preserving plan path, final SHA-256, delivery and approval controls with evidence, the contract, and the commit ledger. An incomplete run stays active and keeps every green commit.
 
-Every worker brief states: load `<skill>`, no Git mutation, no questions, no further delegation, return only the skill's result lines.
+### Worker roles
+
+A worker loading `oc-sdd role=<role>` follows only `references/<role>.md` (explore, implement, verify, merge) and ignores the coordinator sections above.
+
+Every worker brief states: load `oc-sdd role=<role>`, no Git mutation, no questions, no further delegation, return only the role's result lines.

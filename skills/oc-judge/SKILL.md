@@ -1,10 +1,10 @@
 ---
 name: oc-judge
-description: "Trigger: oc-judge lens=a|b|solo, blind judge, re-judge. Blind read-only Judgment sweep with lens-specific emphasis."
+description: "Trigger: oc-judge lens=a|b|solo, blind judge, re-judge, oc-judge mode=fix, judgment fix. Blind read-only Judgment sweep with lens-specific emphasis, or fix mode that applies only authorized confirmed findings as minimal diffs."
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
+  version: "2.0.0"
   status: testing
 ---
 # Blind Judge
@@ -12,7 +12,7 @@ metadata:
 ## Intent
 
 - **Goal:** Return evidence-backed findings, `CLEAN`, or re-judge verdicts for one exact target under the brief's `lens`.
-- **Limits:** Read-only: never edit, ask, delegate, stage, commit, or push; never reference another judge. `lens=solo` never re-judges.
+- **Limits:** Sweep and re-judge are read-only: never edit, ask, delegate, stage, commit, or push; never reference another judge. `lens=solo` never re-judges.
 - **Fails if:** a finding lacks exact `file:line`, concrete failure, severity, or fix intent; output uses another lens's id prefix; `CLEAN` follows an incomplete sweep.
 
 ## Context
@@ -43,3 +43,9 @@ TOTAL critical=<n> warning=<n> note=<n>
 ```
 
 - **Quality needs:** no praise, logs, or diffs.
+
+## Method
+
+### Fix mode
+
+When the brief says `mode=fix`, the read-only limits above do not apply: follow `references/fix.md` and edit only the ids explicitly marked confirmed, returning `OK fix ...` / `OPEN <id> <reason>` or `BLOCK review/fix <reason>`.

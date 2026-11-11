@@ -14,8 +14,8 @@ The project config overrides the global config.
 
 | Tier | Agents | Guidance |
 |---|---|---|
-| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan-*`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
-| Delegated workers | built-in `general` (loads `oc-sdd-*`, `oc-refactor-lens`, `oc-judge`, `oc-judge-fix`) | Strong code-writing model |
+| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
+| Delegated workers | built-in `general` (loads `oc-sdd` roles, `oc-refactor` lens mode, `oc-judge`) | Strong code-writing model |
 
 Per-worker models do not exist. The `oc-judge` lenses a and b share the `general` model. For a different provider on the second lens, run it in a separate session or change the `general` model temporarily.
 
