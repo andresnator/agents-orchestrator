@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 
 # Architecture Operations
@@ -16,7 +16,7 @@ metadata:
 - **Limits:**
   - Work at system/module boundaries, never code style.
   - Write only `.ai/architect/**` and `<docfolder>/architecture/**`; `<docfolder>` = existing `docs/`, else `doc/`.
-  - Never edit production code, tests, or build files; never commit or push; never run graph lifecycle commands.
+  - Never edit production code, tests, or build files; never commit or push.
   - Load only the operation references and skills listed in Method; never load implementation skill bodies.
   - Never run dependency audit commands or install tools.
   - When loaded inside a delegated `general` subagent: no questions and no Git; return blockers instead.

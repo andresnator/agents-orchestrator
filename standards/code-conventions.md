@@ -53,5 +53,5 @@ Test each behavior for these scenarios when they apply:
 Before you complete a change, run:
 
 ```bash
-python3 scripts/lint-manual-tests.py
+make test
 ```

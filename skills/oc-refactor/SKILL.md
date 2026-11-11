@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.0"
+  version: "4.0.1"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
@@ -43,7 +43,7 @@ metadata:
 
 ### Lens mode
 
-Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7 graph=<state>`. A missing field returns `BLOCK plan/analyze <reason>`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-java`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly:
+Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field returns `BLOCK plan/analyze <reason>`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-java`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly:
 
 ```text
 OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>
