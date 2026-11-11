@@ -226,28 +226,6 @@ def edit(text: str, property_name: str, value: str, action: str) -> tuple[str, b
     raise JsoncError(f"unsupported action '{action}'")
 
 
-def edit_json(text: str, property_name: str, encoded_value: str, action: str) -> tuple[str, bool]:
-    try:
-        value = json.loads(encoded_value)
-    except json.JSONDecodeError as error:
-        raise JsoncError(f"invalid managed JSON value: {error.msg}") from error
-
-    root, array = array_property(text, property_name)
-    matching = [] if array is None else [item for item in array.items if node_value(item) == value]
-    if action == "has-json":
-        return text, bool(matching)
-    if action == "add-json":
-        if matching:
-            return text, False
-        encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        return add_encoded_value(text, root, array, property_name, encoded), True
-    if action == "remove-json":
-        if not matching or array is None:
-            return text, False
-        return remove_value(text, array, matching[0]), True
-    raise JsoncError(f"unsupported action '{action}'")
-
-
 def npm_package_name(spec: str) -> Optional[str]:
     if spec.startswith(("./", "../", "/", "file:", "http:", "https:")):
         return None
@@ -622,7 +600,6 @@ def main() -> int:
     if len(sys.argv) < 4:
         print(
             "usage: jsonc-array.py <has|add|remove> <file> <property> <value>\n"
-            "       jsonc-array.py <has-json|add-json|remove-json> <file> <property> <json-value>\n"
             "       jsonc-array.py <has-npm|remove-npm> <file> <property> <package>\n"
             "       jsonc-array.py <get|remove-property> <file> <property>\n"
             "       jsonc-array.py set <file> <property> <json-scalar>\n"
@@ -639,9 +616,6 @@ def main() -> int:
         "has",
         "add",
         "remove",
-        "has-json",
-        "add-json",
-        "remove-json",
         "has-npm",
         "remove-npm",
     }
@@ -660,9 +634,6 @@ def main() -> int:
         if action in {"has", "add", "remove"}:
             assert value is not None
             rendered, changed = edit(text, property_name, value, action)
-        elif action in {"has-json", "add-json", "remove-json"}:
-            assert value is not None
-            rendered, changed = edit_json(text, property_name, value, action)
         elif action in {"has-npm", "remove-npm"}:
             assert value is not None
             rendered, changed = edit_npm(text, property_name, value, action)
@@ -676,7 +647,7 @@ def main() -> int:
     except (OSError, JsoncError) as error:
         print(f"error: {file}: {error}", file=sys.stderr)
         return 2
-    if action in {"has", "has-json", "has-npm", "get"}:
+    if action in {"has", "has-npm", "get"}:
         if action == "get" and changed:
             print(rendered)
         return 0 if changed else 1

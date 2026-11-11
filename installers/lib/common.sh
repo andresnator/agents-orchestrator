@@ -28,7 +28,6 @@ TARGET_ARG=""
 DRY_RUN=0
 FORCE=0
 RELOAD=0
-BREW_TOOLS_MODE="auto"
 MANIFEST_ROOT=""
 OLD_MANIFEST=""
 DEST_PATH=""
@@ -38,15 +37,6 @@ INSTALL_NEW_MANIFEST=""
 
 warn() { printf 'warn: %s\n' "$*" >&2; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
-
-set_brew_tools_mode() {
-  local requested="$1"
-  case "$BREW_TOOLS_MODE:$requested" in
-    auto:*) BREW_TOOLS_MODE="$requested" ;;
-    enabled:enabled|disabled:disabled) ;;
-    *) die "--install-brew-tools and --no-install-brew-tools cannot be combined" ;;
-  esac
-}
 
 csv_contains() {
   local csv value item old_ifs
@@ -108,9 +98,8 @@ status_allowed() {
   csv_contains "$STATUS_FILTER" "$status"
 }
 
-# Emits selected components as 5-column TSV: type, name, domain, status, src.
-# The domain column is always "-" (domains were removed); it is kept so the
-# row shape stays stable. Destination mapping happens later via runtime_dest.
+# Emits selected components as 4-column TSV: type, name, status, src.
+# Destination mapping happens later via runtime_dest.
 discover_components() {
   local out type dir file name status src
   out="$1"
@@ -122,7 +111,7 @@ discover_components() {
     find "$dir" -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r file; do
       name="$(basename "$file")"
       src="$(cd "$(dirname "$file")" && pwd -P)/$name"
-      printf '%s\t%s\t-\t-\t%s\n' "$type" "$name" "$src" >> "$out"
+      printf '%s\t%s\t-\t%s\n' "$type" "$name" "$src" >> "$out"
     done
   done
 
@@ -140,33 +129,21 @@ discover_components() {
         valid_status "$status" || warn "$src/SKILL.md: missing or invalid metadata.status; skipped"
         continue
       fi
-      printf '%s\t%s\t-\t%s\t%s\n' "skills" "$name" "$status" "$src" >> "$out"
-    done
-  fi
-
-  # *.test.mjs and other non-.ts files are never installed.
-  dir="$REPO_ROOT/plugins"
-  if [ -d "$dir" ]; then
-    find "$dir" -type f -name '*.ts' | sort | while IFS= read -r file; do
-      name="$(basename "$file")"
-      src="$(cd "$(dirname "$file")" && pwd -P)/$name"
-      printf '%s\t%s\t-\t-\t%s\n' "plugins" "$name" "$src" >> "$out"
+      printf '%s\t%s\t%s\t%s\n' "skills" "$name" "$status" "$src" >> "$out"
     done
   fi
 
   dir="$REPO_ROOT/external-plugins"
   if [ -d "$dir" ]; then
-    find "$dir" -maxdepth 1 -type f \( -name '*.server.json' -o -name '*.tui.json' -o -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
+    find "$dir" -maxdepth 1 -type f \( -name '*.npm-server.json' -o -name '*.npm-tui.json' \) | sort |
       while IFS= read -r file; do
         name="$(basename "$file")"
         case "$name" in
           *.npm-server.json) name="${name%.npm-server.json}"; type="npm-server-plugins" ;;
           *.npm-tui.json) name="${name%.npm-tui.json}"; type="npm-tui-plugins" ;;
-          *.server.json) name="${name%.server.json}"; type="external-server-plugins" ;;
-          *.tui.json) name="${name%.tui.json}"; type="external-tui-plugins" ;;
         esac
         src="$(cd "$(dirname "$file")" && pwd -P)/$(basename "$file")"
-        printf '%s\t%s\t-\t-\t%s\n' "$type" "$name" "$src" >> "$out"
+        printf '%s\t%s\t-\t%s\n' "$type" "$name" "$src" >> "$out"
       done
   fi
 
@@ -175,7 +152,7 @@ discover_components() {
     find "$dir" -maxdepth 1 -type f -name '*.tsx' | sort | while IFS= read -r file; do
       name="$(basename "$file")"
       src="$(cd "$(dirname "$file")" && pwd -P)/$name"
-      printf '%s\t%s\t-\t-\t%s\n' "tui-plugins" "$name" "$src" >> "$out"
+      printf '%s\t%s\t-\t%s\n' "tui-plugins" "$name" "$src" >> "$out"
     done
   fi
 }
@@ -187,15 +164,12 @@ check_collisions() {
     {
       type = $1
       name = $2
-      if (type == "plugins" || type == "external-server-plugins" || type == "npm-server-plugins") {
-        type = "server-plugins"
-        sub(/\.(ts|js)$/, "", name)
-      } else if (type == "tui-plugins" || type == "external-tui-plugins" || type == "npm-tui-plugins") {
+      if (type == "tui-plugins" || type == "npm-tui-plugins") {
         type = "tui-plugins"
         sub(/\.tsx$/, "", name)
       }
       key = type "\t" name
-      src = $5
+      src = $4
       if (seen[key] != "" && seen[key] != src) {
         print key
         exit
@@ -382,8 +356,8 @@ remove_stale() {
 
   old_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-old.XXXXXX")"
   new_entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-new.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$old_manifest" | sort -u > "$old_entries"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$new_manifest" | sort -u > "$new_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array"' "$old_manifest" | sort -u > "$old_entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array"' "$new_manifest" | sort -u > "$new_entries"
 
   comm -23 "$old_entries" "$new_entries" | while IFS=$'\t' read -r kind dest field value; do
     [ -n "$dest" ] || continue
@@ -398,7 +372,7 @@ remove_stale() {
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
         ;;
-      managed-array|managed-array-json|managed-object)
+      managed-array)
         runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac
@@ -421,7 +395,7 @@ remove_stale() {
 }
 
 install_action() {
-  local selected new_manifest manifest type name domain status src
+  local selected new_manifest manifest type name status src
   runtime_init
   selected="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-selected.XXXXXX")"
   new_manifest="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-manifest.XXXXXX")"
@@ -441,7 +415,7 @@ install_action() {
 
   runtime_ensure_dirs "$new_manifest"
 
-  while IFS=$'\t' read -r type name domain status src; do
+  while IFS=$'\t' read -r type name status src; do
     DEST_PATH=""
     runtime_dest "$type" "$name"
     [ -n "$DEST_PATH" ] || continue
@@ -451,14 +425,12 @@ install_action() {
   runtime_install_global "$new_manifest"
 
   remove_stale "$manifest" "$new_manifest"
-  runtime_before_manifest_commit
 
   if [ "$DRY_RUN" -eq 1 ]; then
     printf 'write manifest %s\n' "$manifest"
   else
     mv "$new_manifest" "$manifest"
   fi
-  runtime_after_manifest_commit
   runtime_commit_install
   INSTALL_TRANSACTION_ACTIVE=0
   trap - EXIT
@@ -488,7 +460,10 @@ uninstall_action() {
 
   entries="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-links.XXXXXX")"
   dirs="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-dirs.XXXXXX")"
-  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array" || $1 == "managed-array-json" || $1 == "managed-object"' "$manifest" > "$entries"
+  awk -F '\t' '$1 == "link" || $1 == "file" || $1 == "managed-array"' "$manifest" > "$entries"
+  # Kinds that older installers wrote but this one no longer manages are left in place.
+  awk -F '\t' '$1 != "dir" && $1 != "link" && $1 != "file" && $1 != "managed-array" && NF { print $1 }' "$manifest" | sort -u |
+    while IFS= read -r kind; do warn "$manifest: skipped unsupported entry kind $kind"; done
   awk -F '\t' '$1 == "dir" { print $NF }' "$manifest" > "$dirs"
 
   while IFS=$'\t' read -r kind dest field value; do
@@ -504,7 +479,7 @@ uninstall_action() {
           if [ "$DRY_RUN" -eq 1 ]; then printf 'rm %s\n' "$dest"; else rm "$dest"; fi
         fi
         ;;
-      managed-array|managed-array-json|managed-object)
+      managed-array)
         runtime_remove_managed_entry "$kind" "$dest" "$field" "$value"
         ;;
     esac
@@ -522,12 +497,12 @@ uninstall_action() {
 }
 
 status_action() {
-  local selected type name domain status src state
+  local selected type name status src state
   runtime_init
   selected="$(mktemp "${TMPDIR:-/tmp}/agents-orchestrator-selected.XXXXXX")"
   discover_components "$selected"
   check_collisions "$selected"
-  while IFS=$'\t' read -r type name domain status src; do
+  while IFS=$'\t' read -r type name status src; do
     DEST_PATH=""
     runtime_dest "$type" "$name"
     [ -n "$DEST_PATH" ] || continue
@@ -560,14 +535,6 @@ runtime_abort_install() {
   return 0
 }
 
-runtime_before_manifest_commit() {
-  return 0
-}
-
-runtime_after_manifest_commit() {
-  return 0
-}
-
 runtime_remove_managed_entry() {
   return 0
 }
@@ -589,15 +556,12 @@ harness_main() {
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --domain) die "--domain was removed; all components install together" ;;
       --status) shift; [ "$#" -gt 0 ] || die "--status requires a value"; STATUS_FILTER="$1" ;;
       --project) PROJECT_TARGET=1 ;;
       --target) shift; [ "$#" -gt 0 ] || die "--target requires a value"; TARGET_ARG="$1" ;;
       --dry-run) DRY_RUN=1 ;;
       --force) FORCE=1 ;;
       --reload) RELOAD=1 ;;
-      --install-brew-tools) set_brew_tools_mode enabled ;;
-      --no-install-brew-tools) set_brew_tools_mode disabled ;;
       -h|--help) runtime_usage; exit 0 ;;
       *) die "unknown argument: $1" ;;
     esac
@@ -605,9 +569,6 @@ harness_main() {
   done
 
   validate_filters
-  if [ "$ACTION" != "install" ] && [ "$BREW_TOOLS_MODE" != "auto" ]; then
-    die "Brew tool options are valid only with install"
-  fi
 
   case "$ACTION" in
     install) install_action ;;
