@@ -82,7 +82,7 @@ The external plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md`
 
 ## Validate
 
-Run `make hooks` one time to install the pre-push hook. Run `make test` to do the lint and the unit tests.
+Run `make install` to install the harness. Add options with `ARGS`, for example `make install ARGS=--dry-run`. Run `make hooks` one time to install the pre-push hook. Run `make test` to do the lint and the unit tests.
 
 ## Documentation
 
