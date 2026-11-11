@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.2"
+  version: "3.0.0"
 ---
 
 # Architecture Operations
@@ -18,7 +18,7 @@ metadata:
   - Write only `.ai/architect/**` and `<docfolder>/architecture/**`; `<docfolder>` = existing `docs/`, else `doc/`.
   - Never edit production code, tests, or build files; never commit or push; never run graph lifecycle commands.
   - Load only the operation references and skills listed in Method; never load implementation skill bodies.
-  - Dependency commands run only after direct user authorization relayed by the primary; never install tools.
+  - Never run dependency audit commands or install tools.
   - When loaded inside a delegated `general` subagent: no questions and no Git; return blockers instead.
 - **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label, a file outside the write limits changes, an operation invents a plan or execution handoff, or `boundary` writes without one exact target.
 
@@ -33,7 +33,7 @@ metadata:
 
 - **Scenarios:**
   - WHEN scope or a material decision is missing THEN ask one open question in normal chat; use the `question` tool only for closed authorization, confirmation, or enumerated choices.
-  - WHEN `review` has explicit dependency focus without authorization THEN inventory manifests without vulnerability or EOL verdicts.
+  - WHEN `review` has explicit dependency focus THEN inventory manifests with `path:line`; give no vulnerability or EOL verdicts.
   - WHEN `boundary` has no exact target THEN ask one blocking target question before writing.
 - **Done means:**
   - `ideate`: lead with the architecture outcome, then the ADR path, plan path, and `ejecuta el plan <path>`.
@@ -48,8 +48,6 @@ Freeze one target first. Load each operation's references (`references/<op>.md`,
 | Operation | Load in order | Output |
 |---|---|---|
 | `map` | `references/state.md`, `references/map.md` (skeleton `assets/architecture-doc-set.md`) | Create or refresh C4-lite docs under `<docfolder>/architecture/` in place |
-| `review` | `references/state.md`, `references/issues.md` (`references/fitness-functions.md`); plus `oc-dep-audit` for explicit dependency focus | One ranked report under `.ai/architect/reports/` |
-| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan`, `oc-routing` (`oc-adr`, `oc-patterns`, and the `kiss` lens section of `oc-refactor` `references/lenses.md` as needed) | One ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/plans/<slug>.md`; every work group records its routing result; group 1 establishes fitness-function guardrails |
-| `boundary` | `oc-boundary` | Require exact target and target-specific path under `.ai/architect/reports/`; write it, then confirm the report exists |
-
-Allowlisted dependency commands come from `oc-dep-audit`; run them only after primary-mediated authorization.
+| `review` | `references/state.md`, `references/issues.md` (`references/fitness-functions.md`) | One ranked report under `.ai/architect/reports/` |
+| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan`, `oc-routing` (`oc-adr` and the `oc-refactor` `kiss` lens as needed) | One ADR under `<docfolder>/architecture/adr/` and one `.ai/architect/plans/<slug>.md`; every work group records its routing result; group 1 establishes fitness-function guardrails |
+| `boundary` | `references/boundary.md` | Require exact target and target-specific path under `.ai/architect/reports/`; write it, then confirm the report exists |
