@@ -1,17 +1,39 @@
-# Entry point only. Each action lives in its own file under make/.
+# Commands only. Keep every target in this file so shell completion finds it.
+# Logic that needs more than one line lives in make-scripts/<action>.sh.
 .POSIX:
 
 NODE = node
-SCRIPTS = installers/*.sh installers/lib/*.sh scripts/*.sh
+SCRIPTS = installers/*.sh installers/lib/*.sh scripts/*.sh make-scripts/*.sh
 ARGS =
 OPENCODE_DIR = $(HOME)/.config/opencode
+DEFAULT_AGENT = orchestraitor
+MAKE_ENV = OPENCODE_DIR="$(OPENCODE_DIR)" FORCE="$(FORCE)"
 
 all: test
 
-include make/*.mk
-
 help: ## Show this help
-	@grep -h -E '^[a-z-]+:.*## ' make/*.mk Makefile | sort | \
-	  awk -F ':.*## ' '{ printf "make %-22s %s\n", $$1, $$2 }'
+	@grep -E '^[a-z0-9-]+:.*## ' Makefile | awk -F ':.*## ' '{ printf "make %-22s %s\n", $$1, $$2 }'
 
-.PHONY: all help
+install: ## Install the harness globally (ARGS="--project" etc.)
+	installers/opencode.sh install $(ARGS)
+
+uninstall: ## Remove the installed harness
+	installers/opencode.sh uninstall $(ARGS)
+
+default-agent: ## Set DEFAULT_AGENT (orchestraitor) as the default OpenCode agent (FORCE=1 to replace)
+	@$(MAKE_ENV) DEFAULT_AGENT="$(DEFAULT_AGENT)" make-scripts/default-agent.sh set
+
+default-agent-remove: ## Remove default_agent if it is DEFAULT_AGENT
+	@$(MAKE_ENV) DEFAULT_AGENT="$(DEFAULT_AGENT)" make-scripts/default-agent.sh remove
+
+lint: ## Syntax-check shell scripts (bash -n)
+	@for f in $(SCRIPTS); do bash -n "$$f" || exit 1; done
+
+test: lint ## Run lint and all unit tests
+	@NODE="$(NODE)" make-scripts/test.sh
+
+hooks: ## Install the git pre-push hook
+	git config core.hooksPath .githooks
+	@echo "pre-push hook installed (.githooks/pre-push)"
+
+.PHONY: all help install uninstall default-agent default-agent-remove lint test hooks
