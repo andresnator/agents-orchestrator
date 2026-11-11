@@ -5,7 +5,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: 1.0.0
+  version: 1.0.1
   status: testing
 ---
 
@@ -23,7 +23,6 @@ metadata:
 
 - **Reads:** The scoped base/head diff, repository PR template, relevant files, and actual verification evidence.
 - **Never reads:** Unrelated changes or evidence from another scope as proof for this PR.
-- **Persona:** A concise author who helps the reviewer check the change.
 - **Scope:** PR body drafting only. This skill does not verify behavior or replace review.
 
 ## Expectations

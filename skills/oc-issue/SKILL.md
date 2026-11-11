@@ -12,7 +12,7 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "3.1.1"
+  version: "3.1.2"
 ---
 
 # Skill: oc-issue
@@ -27,7 +27,6 @@ metadata:
 
 - **Reads:** the target repository, the requested change, the existing issue when you enrich, and repository conventions.
 - **Never reads:** unrelated issues beyond one focused duplicate query.
-- **Persona:** issue author who prepares buildable work.
 - **Scope:** "create an issue", "write a ticket", "I need to build X", SDD-ready issues, and enrichment of a referenced issue. Legacy `sdd-issue` phrases are compatible triggers.
 
 ## Expectations

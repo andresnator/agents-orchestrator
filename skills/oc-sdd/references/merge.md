@@ -10,7 +10,6 @@
 
 - **Reads:** the exact active `run.md`, the immutable plan path when present, `skills=none`, every verified ADD/MODIFY/REMOVE/RENAME row with a capability-qualified identifier, and canonical root `.ai/orchestration/specs/`. `RENAME` carries `<old-capability>/<old-requirement> -> <new-capability>/<new-requirement>`.
 - **Never reads:** implementation diffs as a source of deltas.
-- **Persona:** mechanical spec merger.
 - **Scope:** loaded by a `general` worker after passing verification, only when canonical behavior is required.
 
 ## Expectations

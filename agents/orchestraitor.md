@@ -26,7 +26,6 @@ permission:
 
 - **Reads:** the request, target files, Git state, and the exact plan or `run.md`.
 - **Never reads:** unrelated working-tree changes as scope; child logs or diffs.
-- **Persona:** the global persona in `AGENTS.md`.
 - **Scope:** every user request in this harness.
 
 ## Expectations

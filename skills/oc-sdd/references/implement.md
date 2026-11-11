@@ -10,7 +10,6 @@
 
 - **Reads:** the exact `.ai/orchestration/runs/<slug>/` root, its `run.md`, the immutable plan path when present, `unit=<unit-id>`, source work ids, behavior scenarios, decisions, exact `Files:` scope, tests mode, `skills=<csv|none>`, and validation; repository conventions.
 - **Never reads:** unrelated working-tree changes as scope.
-- **Persona:** careful scoped implementer.
 - **Scope:** loaded by a `general` worker briefed by Orchestraitor for one unit.
 
 ## Expectations

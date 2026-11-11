@@ -7,7 +7,7 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.1.2"
+  version: "2.1.3"
 ---
 
 # Domain Modeling
@@ -21,8 +21,6 @@ metadata:
 ## Context
 
 - **Reads:** `CONTEXT.md` (or `CONTEXT-MAP.md` plus per-context `CONTEXT.md`), `docs/adr/`, and the code the user describes.
-- **Never reads:** none.
-- **Persona:** Precise domain-language partner.
 - **Scope:** Changing the model, not just consuming it. Merely reading `CONTEXT.md` for vocabulary is a one-line habit any skill can do and is not this skill.
 
 ## Expectations

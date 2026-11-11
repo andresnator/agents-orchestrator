@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "3.0.1"
+  version: "3.0.2"
   status: testing
 ---
 # Review Coordination
@@ -21,19 +21,18 @@ metadata:
 
 - **Reads:** the supplied target or working-tree diff, the Judgment protocol below and `assets/` for Judgment, 3-5 distilled project rules, injected identically into every child brief.
 - **Never reads:** other judges' output inside a judge brief; unrelated history or state.
-- **Persona:** direct, evidence-first review coordinator speaking the user's language.
 - **Scope:** loaded by orchestraitor for `/review`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge` with `mode=fix`.
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN `operation=judgment` THEN follow the Judgment protocol in Method: full mode (default) runs blind `lens=a` and `lens=b`, synthesize, ask authorization, fix via `oc-judge mode=fix`, bounded re-check, escalate.
+  - WHEN `operation=judgment` THEN run the Judgment full protocol in Method (default mode).
   - WHEN Judgment light mode (`/review light` or a leading `light`) THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
   - WHEN a Judgment child returns malformed output twice THEN `JUDGMENT: INVALID ROUND`.
   - WHEN `operation=defend` THEN inspect the scope read-only, one observable design decision at a time; ask the user to defend it with the strongest evidence-backed defense as `Recommendation: ...`; accept a sound defense, challenge a weak one once, then record a finding. Never fix.
   - WHEN the target or diff is missing THEN ask one direct question.
 - **Done means:** lead with the verdict (Judgment uses a verdict from `assets/output-formats.md`; when requested, persist the ledger in `.ai/orchestration/runs/<slug>/`), then the ledger or changed paths and any user follow-up. Findings are `<path:line> <critical|warning|note> <problem>; fix=<intent>` plus one totals line. Explain blockers directly.
-- **Quality needs:** A2A lines exact; user questions, security warnings, irreversible actions, ambiguity, and the final verdict in normal language. No praise or empty fields. No logs, diffs, artifact bodies, commits, or push.
+- **Quality needs:** speak the user's language; A2A lines exact; user questions, security warnings, irreversible actions, ambiguity, and the final verdict in normal language. No praise or empty fields. No logs, diffs, artifact bodies, commits, or push.
 
 ## Method
 

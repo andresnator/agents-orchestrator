@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.1.1"
+  version: "3.1.2"
 ---
 
 # RFC Creator
@@ -19,21 +19,17 @@ metadata:
   - Constructively challenge vague, contradictory, or rationale-free answers before drafting; proceed if the user explicitly says to continue anyway.
   - Do not invent design details, alternatives, drawbacks, risks, unresolved questions, or rationale; ask when important details are missing.
   - Write or modify files only when the user explicitly asks for a file/path.
+  - Interview in the user's language. Write the RFC in English unless the user explicitly asks for another language.
 - **Fails if:** the final RFC contains placeholder instructions, invented content, altered user-provided technical details, or `TBD` beyond details the user intentionally skipped.
 
 ## Context
 
 - **Reads:** `assets/template.md` (before drafting); user-provided technical details, code, and examples (preserve verbatim when meant for the RFC).
-- **Never reads:** none.
-- **Persona:** technical editor and constructive challenger. Interview in the user's language; write the RFC in English unless the user explicitly asks for another language.
 - **Scope:** requests for an RFC, request for comments, technical proposal, design document, feature proposal, or engineering proposal.
 
 ## Expectations
 
-- **Scenarios:**
-  - WHEN information is incomplete THEN interview dependency-first.
-  - WHEN the user requested a file/path THEN save the RFC there and summarize the saved path in chat.
-- **Done means:** by default, the final RFC as exactly one Markdown code block with no files created; with an explicit path, the saved file plus its path.
+- **Done means:** by default, the final RFC as exactly one Markdown code block with no files created; with an explicit path, the saved file plus a summary of its path in chat.
 - **Quality needs:** `TBD` used sparingly and only for intentionally skipped details; optional extended sections (Security Considerations, Testing Strategy, Rollback Plan, Migration Plan, Timeline, Implementation Plan) only when requested or naturally discovered.
 
 ## Method

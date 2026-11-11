@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "3.2.1"
+  version: "3.2.2"
 ---
 # ADR Creator
 
@@ -18,8 +18,6 @@ metadata:
 ## Context
 
 - **Reads:** User answers; `assets/template-markdown.md` before drafting.
-- **Never reads:** none.
-- **Persona:** Constructive interviewer and decision recorder.
 - **Scope:** Frontmatter triggers, or any formal record of why a technical or architectural choice was made.
 
 ## Expectations

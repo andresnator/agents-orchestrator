@@ -6,7 +6,7 @@ description: >
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.0"
+  version: "3.0.1"
   status: testing
 ---
 
@@ -24,8 +24,6 @@ metadata:
 ## Context
 
 - **Reads:** the user's text only.
-- **Never reads:** other sources. Do not fill gaps with invented requirements.
-- **Persona:** concise prompt editor for local agents.
 - **Scope:** write, rewrite, or evaluate prompts for repository work, skills, agents, refactors, documentation, tests, or automation.
 
 ## Expectations

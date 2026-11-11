@@ -6,7 +6,7 @@ description: >-
 license: MIT
 metadata:
   author: andresnator
-  version: 1.0.0
+  version: 1.0.1
   status: testing
 ---
 
@@ -22,12 +22,11 @@ metadata:
 
 - **Reads:** The user's destination task and output scope; relevant conversation evidence; selected artifact references; the destination catalog, if available.
 - **Never reads:** Unrelated history, secret stores, or private data outside the selected scope.
-- **Persona:** Context editor, not a run coordinator.
 - **Scope:** Portable context export between sessions, tools, or people. No automatic resume.
 
 ## Expectations
 
-- **Scenarios:** WHEN the user requests an export THEN create one note. WHEN evidence or access is uncertain THEN record the gap.
+- **Scenarios:** WHEN evidence or access is uncertain THEN record the gap.
 - **Done means:** Return the exact absolute file path and the remaining gaps. If export fails, return the blocker without a success claim.
 - **Quality needs:** Keep verified state separate from uncertainty. Remove secrets and personal data before writing. Never transfer approval or run authority.
 

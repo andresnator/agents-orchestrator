@@ -4,7 +4,7 @@ description: "Trigger: SDD, spec-driven run, ejecutar SDD, plan execution via SD
 license: MIT
 metadata:
   author: andresnator
-  version: "2.1.0"
+  version: "2.2.0"
   status: testing
 ---
 
@@ -13,22 +13,22 @@ metadata:
 ## Intent
 
 - **Goal:** Deliver one approved contract through a durable, resumable SDD run with fresh cold verification and the resolved delivery mode.
-- **Limits:** Loaded only by the primary coordinator, which owns every Git action; workers never mutate Git, ask, or delegate. SDD allows only `working-tree` or `commit-per-unit`. Never implement before approval, never modify an executed plan, never alter an approved contract silently, never reconstruct or infer approval.
-- **Fails if:** an edit, run, implementation worker, stage, or commit precedes approval; a run lacks `Approval` or actual `Approval evidence`; a plan hash changes; a Scenario or Done means item is skipped; `.ai/` or canonical specs enter a delivery commit; a child returns logs, diffs, or artifact bodies.
+- **Limits:**
+  - Only the primary coordinator follows the coordinator sections. It owns every Git action. Workers follow "Worker roles".
+  - SDD allows only `working-tree` or `commit-per-unit`.
+  - "Approval" owns every approval rule. "Plan integrity" owns every plan and contract change rule.
+- **Fails if:** an "Approval" rule is broken (including any edit, run, worker, stage, or commit before approval); a plan hash changes; a Scenario or Done means item is skipped; `.ai/` or canonical specs enter a delivery commit; a child returns logs, diffs, or artifact bodies.
 
 ## Context
 
 - **Reads:** the request or exact plan, `.ai/orchestration/runs/<slug>/run.md`, Git state, the worker role references `references/explore.md`, `references/implement.md`, `references/verify.md`, `references/merge.md`, and skill `oc-commits`.
 - **Never reads:** unrelated working-tree changes as scope; child logs or diffs; mutable `run.md` as a checksum source.
-- **Persona:** careful run coordinator; contract first, then units.
 - **Scope:** explicit SDD requests, plan execution routed to SDD, Direct work exceeding safety, and `continúa <run>`.
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN new SDD work arrives without a plan execution instruction THEN explore, draft, and gate on approval.
-  - WHEN a plan execution instruction routes to SDD THEN record `Approval: plan-execution` without a confirmation or content reapproval; structural validation, delivery restrictions, and checksum checks still apply.
-  - WHEN the user says `continúa <run>` THEN resume that exact run with its recorded controls.
+  - WHEN the user says `continúa <run>` THEN resume that exact run with its recorded controls (see "Resume").
   - WHEN behavior, scope, or acceptance must change during execution THEN stop and communicate.
   - WHEN a correction fails twice THEN ask whether to continue, reduce scope, or stop.
 - **Done means:** the outcome and fresh verification; the active or archived run path; confirmation that the original plan stayed unchanged; for `commit-per-unit`, the full SHAs.
@@ -36,13 +36,25 @@ metadata:
 
 ## Method
 
-### Approval gate
+### Approval
 
-For new SDD work without a plan execution instruction, explore (brief a `general` worker to load `oc-sdd role=explore`) and draft the contract in conversation. Present Intent, Scope, every `WHEN/THEN` scenario, Approach, and Done means compactly without hiding acceptance criteria; use native `question` with `Approve`, `Request adjustments`, `Cancel`. An explicit response approving the presented contract also counts. Direct → SDD explains the route change and one approval covers route and contract; if rejected, continue only with an explicitly authorized safe reduced scope. Adjustments require re-presenting and approving the revision; silence, the initial SDD request, or a reply that introduces changes never approve. Cancel stops. If interrupted, present the contract again; never reconstruct approval. Before approval, do not create the run, edit implementation, launch implementation workers, stage, or commit, including through other agents. After approval, continue automatically.
+This section owns every approval rule. Never implement before approval. Never reconstruct or infer approval.
 
-### Run controls
+| Source | Gate | `Approval:` value |
+| --- | --- | --- |
+| New SDD work without a plan execution instruction | Explore, draft, and gate on approval (below). | `explicit`, after the presented contract is approved |
+| A plan execution instruction that routes to SDD | No confirmation or content reapproval. Structural validation, delivery restrictions, and checksum checks still apply. | `plan-execution` |
 
-Create `.ai/orchestration/runs/<slug>/run.md` only after approval or a plan execution instruction, with one value per line at the top:
+- **Gate:** explore (brief a `general` worker to load `oc-sdd role=explore`) and draft the contract in conversation. Present Intent, Scope, every `WHEN/THEN` scenario, Approach, and Done means compactly without hiding acceptance criteria. Use native `question` with `Approve`, `Request adjustments`, `Cancel`. An explicit response approving the presented contract also counts.
+- **Route change:** Direct → SDD explains the route change, and one approval covers route and contract. If rejected, continue only with an explicitly authorized safe reduced scope.
+- **Not approval:** adjustments require re-presenting and approving the revision. Silence, the initial SDD request, or a reply that introduces changes never approve. Cancel stops. If interrupted, present the contract again.
+- **Before approval:** do not create the run, edit implementation, launch implementation workers, stage, or commit, including through other agents. After approval, continue automatically.
+- **Record:** create `run.md` only after approval or a plan execution instruction. Write the `Approval:` value above and the actual authorizing user response or execution instruction in `Approval evidence:`. A run without `Approval` or actual `Approval evidence` is invalid.
+- **Resume:** require a valid `Approval` and actual `Approval evidence`; missing approval blocks as an incomplete contract without migration. Never infer approval from file existence. Never reconfirm an approved run.
+
+### Run file
+
+`.ai/orchestration/runs/<slug>/run.md` starts with one value per line:
 
 ```text
 Delivery: working-tree | commit-per-unit
@@ -52,15 +64,21 @@ Approval: explicit | plan-execution
 Approval evidence: <actual user response or execution instruction authorizing this contract>
 ```
 
-`working-tree` records `Baseline: working-tree`; `commit-per-unit` records the full pre-edit `HEAD` after the `oc-commits` clean-target preflight. Record `Approval: explicit` after a presented contract is approved, or `Approval: plan-execution` for a plan execution instruction, with the actual authorizing response or instruction in `Approval evidence:`. A supplied plan is recorded by exact path and SHA-256, never copied, rewritten, or marked. Planless SDD persists the complete approved contract in the IDSD plan shape (Intent, Context, Expectations with every scenario and Done means item, Method with Approach and Work groups).
+`working-tree` records `Baseline: working-tree`; `commit-per-unit` records the full pre-edit `HEAD` after the `oc-commits` clean-target preflight. Planless SDD persists the complete approved contract in the IDSD plan shape (Intent, Context, Expectations with every scenario and Done means item, Method with Approach and Work groups).
+
+### Plan integrity
+
+- Never modify an executed plan. Record a supplied plan by exact path and SHA-256; never copy, rewrite, or mark it.
+- Contract sections are immutable; only progress, derived units, pending delivery, and commits change. Never alter an approved contract silently.
+- Keep the external plan SHA-256 checks. Do not checksum mutable `run.md` or introduce contract versioning.
 
 ### Resume
 
-Require and reuse the recorded controls, including valid `Approval` and actual `Approval evidence`; missing approval blocks as an incomplete contract without migration. Never infer approval from file existence; never reconfirm an approved run. For `commit-per-unit`, require `HEAD` to equal the last recorded commit, or `Baseline` when `Commits: none`; load `oc-commits` and apply its pending-delivery checks before retrying. Never discard pending changes or rebuild their scope from work groups.
+Require and reuse the recorded controls ("Approval" owns the approval checks). For `commit-per-unit`, require `HEAD` to equal the last recorded commit, or `Baseline` when `Commits: none`; load `oc-commits` and apply its pending-delivery checks before retrying. Never discard pending changes or rebuild their scope from work groups.
 
 ### Execute
 
-Contract sections are immutable; only progress, derived units, pending delivery, and commits change. Keep the external plan SHA-256 checks; do not checksum mutable `run.md` or introduce contract versioning. Split or combine Work groups into cohesive, independently verifiable `unit-01`, `unit-02`, ... `working-tree` parallelizes only dependency-ready units with disjoint scopes; `commit-per-unit` implements, checks, commits, and records each unit serially.
+A unit is one cohesive, independently verifiable part of the work: `unit-01`, `unit-02`, ... Split or combine plan Work groups into units. A wave is one set of dependency-ready units that run in parallel. `working-tree` puts in a wave only dependency-ready units with disjoint scopes; `commit-per-unit` implements, checks, commits, and records each unit serially.
 
 - **Implement:** brief a `general` worker to load `oc-sdd role=implement` with every input that skill requires. Accept only a matching result; reconcile changed paths, rerun the focused check, verify the plan hash before and after.
 - **Commit:** under `commit-per-unit`, follow `oc-commits`: persist the pending unit and Git snapshots before staging and hooks, verify the commit, update the ledger, clear pending state.

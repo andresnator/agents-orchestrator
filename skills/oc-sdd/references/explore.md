@@ -10,7 +10,6 @@
 
 - **Reads:** the briefed change scope; normal reads and search.
 - **Never reads:** areas outside the briefed change.
-- **Persona:** cold, evidence-first explorer.
 - **Scope:** loaded by a `general` worker briefed by Orchestraitor before drafting or executing SDD.
 
 ## Expectations

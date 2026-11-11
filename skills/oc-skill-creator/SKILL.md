@@ -8,7 +8,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "4.0.0"
+  version: "4.1.0"
   status: in-progress
 ---
 
@@ -21,30 +21,32 @@ metadata:
   - Do not create a skill for a one-off task, a trivial pattern, or knowledge that already has a document. Add a reference instead.
   - Never copy skill bodies. No symlinks.
   - No Keywords section, no troubleshooting section, no web URLs in references.
-- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `name` differs from the directory basename or is not `oc-<short-name>`; `SKILL.md` has more than 80 lines; `metadata.version` is not strict SemVer; `metadata.status` misstates the lifecycle.
+- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `name` differs from the directory basename or is not `oc-<short-name>`; `SKILL.md` exceeds its line cap (80 lines; 120 for the coordinator skills `oc-sdd` and `oc-plan`); a required IDSD field is missing; `metadata.version` is not strict SemVer; `metadata.status` misstates the lifecycle.
 
 ## Context
 
 - **Reads:** existing skills; `CONTRIBUTING.md` (`## IDSD format`, `## Skills`); `standards/writing-conventions.md`.
-- **Never reads:** none.
-- **Persona:** concise skill author.
 - **Scope:** create or change a skill, add agent instructions, or record a repeated pattern for AI.
 
 ## Expectations
 
-- **Scenarios:**
-  - WHEN you write a skill THEN state intent first: goal, limits, fails-if, and expected output.
-  - WHEN content is general practice or procedure that a capable agent can infer THEN delete it.
-  - WHEN content is an owner convention, an exact format, or a project contract THEN keep it.
-  - WHEN a high-impact discipline skill fails reproducibly while available THEN run the pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md). It is never a routine step or CI gate.
-- **Done means:** `skills/<name>/SKILL.md` exists with complete frontmatter, an IDSD body with every field, at most 80 lines, and a correct version and status.
+- **Scenarios:** WHEN a high-impact discipline skill fails reproducibly while available THEN run the pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md). It is never a routine step or CI gate.
+- **Done means:** `skills/<name>/SKILL.md` exists with complete frontmatter, an IDSD body with every required field, no more lines than its cap, and a correct version and status.
 - **Quality needs:** ASD-STE100 text; critical rules first; tables for decisions; literal triggers and return lines kept exactly.
 
 ## Method
 
-Layout: `skills/<name>/SKILL.md` (required); `assets/` for templates, schemas, and examples; `references/` for longer guidance that the agent cannot infer.
+Layout: `skills/<name>/SKILL.md` (required); `assets/` for templates, schemas, and examples; `references/` for longer guidance that the agent cannot infer. A reference adds only its own procedure; it never copies the parent `Limits` or `Fails if`.
 
-Body: the IDSD headings and bold field labels from `CONTRIBUTING.md` `## IDSD format`, kept terse.
+Body: the IDSD headings and bold field labels from `CONTRIBUTING.md` `## IDSD format`, kept terse. State intent first.
+
+| Field | Rule |
+|---|---|
+| `Goal`, `Limits`, `Fails if`, `Reads`, `Scope`, `Done means`, `Method` | Required. A reference can omit `Method` if it adds no method. |
+| `Never reads`, `Persona`, `Quality needs` | Optional. Omit if `none`, empty, or a restatement of the title or `Goal`. Put each rule in one field only. |
+| `Scenarios` | Optional. Only real branches and edge cases; never repeat `Method`. |
+
+Method content: give intent by default. Write exact steps only when (a) order matters or a step cannot be undone, (b) another program parses the output, (c) each run must give the same result, or (d) the model cannot infer an environment detail. Delete general practice that a capable agent can infer. Keep owner conventions, exact formats, and project contracts.
 
 | Frontmatter | Rule |
 |---|---|

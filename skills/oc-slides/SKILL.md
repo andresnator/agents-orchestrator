@@ -12,7 +12,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.2"
+  version: "2.1.3"
 ---
 
 # Slidev Retro Deck
@@ -32,8 +32,6 @@ metadata:
 ## Context
 
 - **Reads:** the assets and `references/troubleshooting.md`.
-- **Never reads:** none.
-- **Persona:** deck builder with visual-QA discipline.
 - **Scope:** Slidev decks and presentations, mainly with a retro or terminal look.
 
 ## Expectations

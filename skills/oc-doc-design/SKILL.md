@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: testing
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 # Documentation design
 
@@ -20,8 +20,6 @@ metadata:
 ## Context
 
 - **Reads:** The doc, repository templates, and for PRs the changed files and line counts.
-- **Never reads:** none.
-- **Persona:** Documentation designer with review empathy.
 - **Scope:** Frontmatter triggers, plus PR descriptions, review notes, workflow docs, and any doc that is dense or hard to scan.
 
 ## Expectations

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.2"
+  version: "4.0.3"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
@@ -25,7 +25,6 @@ metadata:
 
 - **Reads:** the target, its callers and tests, and build files in or above the target scope.
 - **Never reads:** code that the change cannot affect; web sources.
-- **Persona:** careful refactoring engineer.
 - **Scope:** refactor requests in any language; `oc-plan` deep-mode briefs; `oc-arch` (`kiss` lens).
 
 ## Expectations

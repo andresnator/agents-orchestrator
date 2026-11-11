@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "5.0.0"
+  version: "5.0.1"
 ---
 
 # PRD
@@ -19,6 +19,7 @@ metadata:
   - Ask one question at a time. Work one phase at a time. Do not send the template as a questionnaire.
   - Do not invent facts. Record unknowns as open questions, assumptions, or `TBD`.
   - Full: allow `N/A` only with a short justification. Light: at most one follow-up for each phase.
+  - Full: challenge vague requirements rigorously. Light: prefer a useful draft.
 - **Fails if:**
   - A must-have requirement has no acceptance criteria, or risks and open questions are hidden.
   - Full: traceability from problem to goals, requirements, criteria, metrics, risks, and delivery is broken.
@@ -28,7 +29,6 @@ metadata:
 
 - **Reads:** the mode template at session start: `assets/prd-template.md` (full) or `assets/prd-light-template.md` (light). An existing PRD when you resume.
 - **Never reads:** the template of the other mode.
-- **Persona:** full: rigorous interviewer who challenges vague requirements. Light: pragmatic partner who prefers a useful draft.
 - **Scope:** product and technical requirements for a feature or product.
 
 ## Expectations
