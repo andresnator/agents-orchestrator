@@ -18,11 +18,11 @@ Rules for all code, scripts, and tests. For language-specific rules, load the `o
 
 ## Make targets
 
-- The root `Makefile` is an entry point only. It holds shared variables, `all`, `help`, and `include make/*.mk`.
-- Put each action in its own file: `make/<action>.mk`. One file has one responsibility, for example `make/install.mk` or `make/default-agent.mk`.
-- Start each file with a one-line comment that tells its purpose. End it with its own `.PHONY` line.
-- Write a `## <description>` comment after each public target. `make help` reads these comments.
-- Put variables that only one action uses in that action's file.
+- Keep all targets in the root `Makefile`. Do not use `include`: shell completion reads only the root `Makefile`.
+- The `Makefile` holds commands only. A recipe has one command line.
+- If an action needs more logic, put it in `make-scripts/<action>.sh`. One script has one responsibility, for example `make-scripts/default-agent.sh`. The target calls the script and gives values as environment variables or arguments.
+- Each script follows "Shell scripts" above and starts with a comment that tells its purpose and usage.
+- Write a `## <description>` comment after each public target. `make help` reads these comments. Add each target to `.PHONY`.
 
 ## Tests
 
