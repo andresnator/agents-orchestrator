@@ -4,7 +4,7 @@
 
 ## Quick path
 
-1. Install the `meta` domain.
+1. Install the harness (`installers/opencode.sh install`).
 2. Open `/models-profiles` in OpenCode.
 3. Choose a scope, review the diff, and save.
 
@@ -47,7 +47,7 @@ Saved presets are user state at `~/.config/opencode/model-configurator-presets.j
 
 ## Troubleshooting
 
-- Missing agent: install its domain and open the configurator again.
+- Missing agent: reinstall the harness and open the configurator again.
 - Missing model: authenticate its provider and refresh the live catalog.
 - Assignment unchanged: examine the project overrides and restart other OpenCode processes.
 - Updated plugin missing: run the installer again.

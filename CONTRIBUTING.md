@@ -1,12 +1,11 @@
 # Contributing
 
-This repository stores OpenCode agent artifacts, not application code. Start with [README.md](README.md) and the README of the domain that you change.
+This repository stores OpenCode agent artifacts, not application code. Start with [README.md](README.md).
 
 ## Repository contract
 
 - Read [standards/README.md](standards/README.md) and all files that it lists before you make a change. They own the language, ASD-STE100, and trigger rules.
-- `domains/` owns agents, commands, repository plugins, external-plugin locks, and skills used by one domain.
-- `skills/` holds only skill bodies that more than one domain uses.
+- The layout is flat by type: `agents/`, `commands/`, `skills/`, `plugins/`, `tui-plugins/`, and `external-plugins/`. There are no domains.
 - The installer links `standards/` beside `AGENTS.md`.
 - `global/AGENTS.md` is the installable runtime rules file. `CONTRIBUTING.md` is maintainer guidance. Do not merge their roles.
 - A new component must not require edits to `installers/opencode.sh`.
@@ -14,9 +13,9 @@ This repository stores OpenCode agent artifacts, not application code. Start wit
 
 ## Agents and commands
 
-`orchestraitor` (`domains/orchestration/agents/orchestraitor.md`, `mode: primary`) is the only agent. Do not add agents. Add an `oc-*` skill.
+`orchestraitor` (`agents/orchestraitor.md`, `mode: primary`) is the only agent. Do not add agents. Add an `oc-*` skill.
 
-Store commands at `domains/<domain>/commands/<name>.md`. The command `agent:` is `orchestraitor`, a built-in agent such as `build`, or omitted. Names are globally unique in their type.
+Store commands at `commands/<name>.md`. The command `agent:` is `orchestraitor`, a built-in agent such as `build`, or omitted. Names are globally unique in their type.
 
 Agent frontmatter order:
 
@@ -69,7 +68,7 @@ For free-text questions, ask one direct question in normal chat, add `Recommenda
 
 ## Skills
 
-Each skill has exactly one body. Put a single-domain skill at `domains/<domain>/skills/<skill>/SKILL.md`. Put a shared skill at `skills/<skill>/SKILL.md`, and link it from each owning domain with a relative `domains/<domain>/skills/<skill>` symlink. Do not copy skill bodies.
+Each skill has exactly one body. Put every skill at `skills/<skill>/SKILL.md`. Do not copy skill bodies or add symlinks.
 
 Name each skill `oc-<short-name>`: kebab-case, three short words maximum after the prefix, identical to the directory name.
 

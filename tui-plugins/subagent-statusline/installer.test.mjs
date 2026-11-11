@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
+const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const INSTALLER = join(ROOT, "installers/opencode.sh");
 const PLUGIN_SPEC = "./plugins/subagent-statusline.tsx";
 const FOREIGN_SPEC = "./plugins/foreign.tsx";
@@ -26,7 +26,7 @@ async function fixture(t, version = "2.0.28") {
   await writeFile(binary, `#!/bin/sh\nprintf 'opencode v${version}\\n'\n`, { mode: 0o700 });
   const env = { ...process.env, OPENCODE_BIN: binary };
   const args = (action, extra) => [
-    INSTALLER, action, "--domain", "orchestration", "--target", target,
+    INSTALLER, action, "--target", target,
     ...(action === "install" ? ["--no-install-brew-tools"] : []), ...extra,
   ];
   return {
@@ -90,7 +90,8 @@ test("shouldPreserveForeignConfigWhenInstallingReinstallingAndUninstallingStatus
   assert.deepEqual(JSON.parse(await readFile(join(f.target, "cli.json"), "utf8")), {
     plugins: [FOREIGN_SPEC], theme: "user-theme",
   });
-  assert.equal(await readFile(join(f.target, "tui.json"), "utf8"), '{"plugin":["foreign-legacy"]}');
+  // All components install together, so tui.json is edited and re-serialized; compare content.
+  assert.deepEqual(JSON.parse(await readFile(join(f.target, "tui.json"), "utf8")), { plugin: ["foreign-legacy"] });
   assert.equal(await readFile(join(f.target, "foreign.txt"), "utf8"), "preserve");
   await assert.rejects(readFile(join(f.target, INSTALLED_FILES[0])), { code: "ENOENT" });
 });

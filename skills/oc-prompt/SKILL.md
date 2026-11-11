@@ -163,7 +163,7 @@ Objectives:
 
 Constraints:
 
-- Do not modify the `domains/*/agents/` directories.
+- Do not modify the `agents/` directory.
 - Keep only skills that are necessary and maintainable.
 
 Deliverables:

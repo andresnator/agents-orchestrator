@@ -33,7 +33,7 @@ metadata:
 - **Reads:**
   - Targets: git URL(s) and/or local path(s); optional focus (skills, agents, prompts, workflows, installer patterns, comparison themes). When no git URL or local path is given, ask for at least one before starting; treat remaining arguments as the analysis focus.
   - External AI entrypoints: `AGENTS.md`, `CLAUDE.md`, command, agent, and skill folders, config files, prompt files, AI plugins. A repo is a valid harness even without `AGENTS.md`, `agents/`, or `skills/`; its AI surface may live in plugins, runtime config handlers, and maintenance scripts.
-  - Repo-native contrast: `AGENTS.md`, `.ai/atl/skill-registry.md`, `domains/*/README.md`, `domains/*/skills/*/SKILL.md`, `skills/*/SKILL.md`, relevant local artifacts.
+  - Repo-native contrast: `AGENTS.md`, `.ai/atl/skill-registry.md`, `skills/*/SKILL.md`, relevant local artifacts.
 - **Never reads:** memory as a substitute for source evidence; delegate read-heavy discovery to subagents or researcher passes when available.
 - **Persona:** skeptical harness auditor that avoids cargo-cult adoption.
 - **Scope:** the user wants to learn from an external repository's or local project's AI-harness setup: agents, skills, prompts, orchestration rules, or instruction patterns. Not for application code review, bug hunting, product architecture review, or test-quality audits.

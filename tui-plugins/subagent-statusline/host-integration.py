@@ -134,7 +134,7 @@ def main():
         raise RuntimeError("Pass --binary for the native OpenCode 2.0.28 executable")
     root = pathlib.Path(tempfile.mkdtemp(prefix="statusline-live-", dir=options.temp_root)).resolve()
     os.chmod(root, 0o700)
-    repository = pathlib.Path(__file__).resolve().parents[4]
+    repository = pathlib.Path(__file__).resolve().parents[2]
     env = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TERM": "xterm-256color",
            "TMPDIR": str(root), "OPENCODE_CONFIG_PROJECT_DISABLE": "true",
            "OPENCODE_DISABLE_MODELS_FETCH": "true", "OPENCODE_DISABLE_AUTOUPDATE": "true",
@@ -151,7 +151,7 @@ def main():
     version = subprocess.check_output([options.binary, "--version"], env=env, cwd=project, timeout=TIMEOUT).decode().strip()
     assert version in ("2.0.28", "opencode v2.0.28"), version
     subprocess.run(["/bin/bash", str(repository / "installers/opencode.sh"), "install",
-                    "--domain", "orchestration", "--target", str(config), "--no-install-brew-tools"],
+                    "--target", str(config), "--no-install-brew-tools"],
                    env={**env, "OPENCODE_BIN": options.binary}, cwd=project,
                    check=True, capture_output=True, timeout=TIMEOUT)
     installed_plugins = json.loads((config / "cli.json").read_text())["plugins"]

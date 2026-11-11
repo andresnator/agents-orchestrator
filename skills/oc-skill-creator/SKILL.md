@@ -21,7 +21,7 @@ metadata:
   - Do not create a skill when documentation already exists (create a reference instead), the pattern is trivial or self-explanatory, or the task is one-off.
   - Never copy skill bodies; never keep an exclusive skill at the top level.
   - No Keywords section (agents search frontmatter), no troubleshooting sections, no lengthy explanations or duplicated docs (reference instead), no web URLs in references (use local paths).
-- **Fails if:** the skill already exists (check `domains/*/skills/*/SKILL.md` and `skills/*/SKILL.md`); frontmatter `name` differs from the directory basename or is not `oc-<short-name>`; `metadata.version` is not strict SemVer or `metadata.status` misstates lifecycle; a multi-domain skill lacks a symlink from every owner.
+- **Fails if:** the skill already exists (check `skills/*/SKILL.md`); frontmatter `name` differs from the directory basename or is not `oc-<short-name>`; `metadata.version` is not strict SemVer or `metadata.status` misstates lifecycle.
 
 ## Context
 
@@ -33,8 +33,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN one domain uses the skill THEN its body is `domains/{domain}/skills/{skill-name}/`.
-  - WHEN multiple domains use it THEN one body lives at `skills/{skill-name}/` and every owner links `domains/<domain>/skills/<skill-name> -> ../../../skills/<skill-name>`.
+  - WHEN a skill is created THEN its single body lives at `skills/{skill-name}/`; no symlinks.
   - WHEN a high-impact discipline skill shows a reproducible agent failure despite being available THEN run the bounded pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, reported variance and cost. Never a routine step or CI gate.
 - **Done means:** the skill exists at the right location with complete frontmatter (description includes trigger keywords), an IDSD body with every ICE field, and accurate version and status.
 - **Quality needs:** most critical rules first; tables for decision trees; minimal, focused examples; a commands block only when repeatable commands are part of the contract.
@@ -44,7 +43,7 @@ metadata:
 ### Structure
 
 ```
-{skill-root}/{skill-name}/      # skill-root: domains/{domain}/skills or skills
+skills/{skill-name}/
 ├── SKILL.md                    # Required
 ├── assets/                     # Optional: generated templates, schemas, fixtures, examples
 └── references/                 # Optional: longer guidance, edge cases, explanatory docs

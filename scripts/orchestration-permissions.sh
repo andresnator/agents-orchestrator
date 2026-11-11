@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ORCHESTRATION_AGENTS_DIR="$REPO_ROOT/domains/orchestration/agents"
+ORCHESTRATION_AGENTS_DIR="$REPO_ROOT/agents"
 
 # OpenCode permission keys. This list is the one drift point of the script:
 # update it when OpenCode adds keys (https://opencode.ai/docs/permissions/).
@@ -37,7 +37,7 @@ usage() {
   cat <<'EOF'
 usage: scripts/orchestration-permissions.sh on|off|show [options]
 
-Toggle automatic permissions for the orchestration domain: write complete
+Toggle automatic permissions for orchestraitor: write complete
 agent.<name>.permission blocks into the user's OpenCode config so work runs
 without tool-permission prompts. Frontmatter denies are preserved verbatim
 and workflow question gates are unaffected. Repo files are never modified.
