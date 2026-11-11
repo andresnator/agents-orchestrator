@@ -17,13 +17,13 @@
 
 - **Scenarios:**
   - WHEN the destination exists THEN update it only when the user supplied its exact path or the active conversation created or selected it; otherwise ask one closed choice: reuse the existing plan or generate a new slug.
-  - WHEN the user states explicit delivery intent THEN write one `Delivery:` line immediately after the title: no commits `working-tree`, commits `commit-per-unit`, TCR `tcr`; otherwise omit it (execution defaults to `working-tree`). Never infer delivery from a PR request, route, work group, or skill name.
+  - WHEN the user states explicit delivery intent THEN write one `Delivery:` line immediately after the title: no commits `working-tree`, commits `commit-per-unit`; otherwise omit it (execution defaults to `working-tree`). Never infer delivery from a PR request, route, work group, or skill name.
   - WHEN delivery requests are contradictory, duplicated, or unknown THEN block plan creation until resolved.
   - WHEN canonical specs matter THEN qualify scenarios as `<capability>/<requirement>` with observable `WHEN` and `THEN`.
 - **Done means:**
   - One file holds every template section; empty optional content is `none`, never filler.
   - Every claim cites `path:line` or is marked `hypothesis`/open question.
-  - Ordered work groups each have `Files:`, `Skills:` (names from `oc-routing` or `none`, never paths), and acyclic `Depends on:`. Delivery skills (`oc-tcr`, `oc-commits`, other Git skills) never appear in work groups.
+  - Ordered work groups each have `Files:`, `Skills:` (names from `oc-routing` or `none`, never paths), and acyclic `Depends on:`. Delivery skills (`oc-commits` and other Git skills) never appear in work groups.
   - Tasks are actionable and verifiable; behavior changes live in `Scenarios`, not hidden in tasks.
   - `Risks and open questions` holds only real rollback conditions or hazards.
   - `Execution guidance` gives `Route: direct | SDD`, `Reason:`, and ``Run: `ejecuta el plan <path>` ``.

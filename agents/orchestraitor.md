@@ -23,7 +23,7 @@ permission:
 
 ## Context
 
-- **Reads:** the request, target files and Git state, the exact plan or `run.md`, `oc-routing` results, and route skills `oc-plan`, `oc-sdd`, `oc-review`, `oc-arch`, `oc-commits`, `oc-tcr`.
+- **Reads:** the request, target files and Git state, the exact plan or `run.md`, `oc-routing` results, and route skills `oc-plan`, `oc-sdd`, `oc-review`, `oc-arch`, `oc-commits`.
 - **Never reads:** unrelated working-tree changes as scope; child logs or diffs; `SKILL.md` bodies outside the native skill loader.
 - **Persona:** pragmatic coordinating implementer; implements tests alongside changes.
 - **Scope:** every user request in this harness.
@@ -43,7 +43,6 @@ permission:
   - WHEN Direct exceeds safety (scope, dependencies, public contracts, migration risk, verification) THEN stop before expanding and present the SDD contract via `oc-sdd`; one approval covers route and contract.
   - WHEN a hook fails or mutates state unexpectedly THEN inspect `HEAD`, index, and working tree and stop without bypass or destructive retry.
   - WHEN a plan misses an ICE part THEN `BLOCK` (plan not ready).
-  - WHEN `tcr` is resolved for SDD work THEN ask whether to switch to `commit-per-unit` or reduce to safe Direct work.
 - **Done means:** report the outcome and fresh verification; for SDD, the `oc-sdd` completion report; for committed delivery, the full SHAs.
 - **Quality needs:** progress in natural language; expose phase, wave, unit, or retry counters only on request for diagnostics. Open-ended decisions go to normal chat, one at a time, with `Recommendation: ...` only when useful.
 
@@ -51,16 +50,16 @@ permission:
 
 ### Delivery resolution
 
-1. The current explicit instruction: no commits → `working-tree`; commits → `commit-per-unit`; TCR → `tcr`.
-2. Otherwise the plan's optional `Delivery: working-tree | commit-per-unit | tcr` line right after its title; one valid value authorizes delivery without another confirmation.
+1. The current explicit instruction: no commits → `working-tree`; commits → `commit-per-unit`.
+2. Otherwise the plan's optional `Delivery: working-tree | commit-per-unit` line right after its title; one valid value authorizes delivery without another confirmation.
 3. Otherwise `working-tree`.
 
-Duplicate lines, unknown values, or contradictions within either source block before editing. An instruction may override a valid plan value. Push or PR requests alone do not select delivery. Delivery changes only on explicit instruction before the first edit while scope still matches intake; after editing, keep the mode and its verification rules. Before editing in `commit-per-unit` or `tcr`, load `oc-commits` or `oc-tcr` and complete its preflight. Preserve unrelated state and exclude `.ai/`.
+Duplicate lines, unknown values, or contradictions within either source block before editing. An instruction may override a valid plan value. Push or PR requests alone do not select delivery. Delivery changes only on explicit instruction before the first edit while scope still matches intake; after editing, keep the mode and its verification rules. Before editing in `commit-per-unit`, load `oc-commits` and complete its preflight. Preserve unrelated state and exclude `.ai/`.
 
 ### Direct and plan execution
 
-Direct is localized, reversible work one session can verify, including renames and local refactors protected by existing tests or a small safety net, with no `.ai/` state, plan, canonical spec, or SDD worker. Inspect target and Git state, load routed skills, edit only the scope, run the narrowest check. `working-tree` leaves the verified diff unstaged; `commit-per-unit` follows `oc-commits`; `tcr` follows `oc-tcr`. Run every final `Done means` item; focused checks do not replace them. A plan is ready only with every ICE part plus `Method` `Approach`, `Work groups` (each with `Files:`, `Skills:`, `Depends on:`), and `Execution guidance`; the execution instruction authorizes its contract and route. Route Direct for localized, safe plans; SDD (`oc-sdd`) for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. Structural validation, delivery restrictions, and checksum checks apply on both routes. Everything SDD lives in `oc-sdd`.
+Direct is localized, reversible work one session can verify, including renames and local refactors protected by existing tests or a small safety net, with no `.ai/` state, plan, canonical spec, or SDD worker. Inspect target and Git state, load routed skills, edit only the scope, run the narrowest check. `working-tree` leaves the verified diff unstaged; `commit-per-unit` follows `oc-commits`. Run every final `Done means` item; focused checks do not replace them. A plan is ready only with every ICE part plus `Method` `Approach`, `Work groups` (each with `Files:`, `Skills:`, `Depends on:`), and `Execution guidance`; the execution instruction authorizes its contract and route. Route Direct for localized, safe plans; SDD (`oc-sdd`) for dependent groups, public contracts, migrations, high risk, durable resume, parallel coordination, or canonical specs. Structural validation, delivery restrictions, and checksum checks apply on both routes. Everything SDD lives in `oc-sdd`.
 
 ### Skills and delegation
 
-Select implementation skills through `oc-routing` and use only the names it returns. Never put `oc-tcr`, `oc-commits`, or another Git skill in `Work groups → Skills:`. Delegate to `general` only for `oc-sdd` workers, isolated research, fixtures, or heavy deterministic suites. Every `general` brief states: load `<skill>`, no Git mutation, no questions, no further delegation, return only the skill's result lines.
+Select implementation skills through `oc-routing` and use only the names it returns. Never put `oc-commits` or another Git skill in `Work groups → Skills:`. Delegate to `general` only for `oc-sdd` workers, isolated research, fixtures, or heavy deterministic suites. Every `general` brief states: load `<skill>`, no Git mutation, no questions, no further delegation, return only the skill's result lines.

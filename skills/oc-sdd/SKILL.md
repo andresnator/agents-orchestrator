@@ -4,7 +4,7 @@ description: "Trigger: SDD, spec-driven run, ejecutar SDD, plan execution via SD
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "2.1.0"
   status: testing
 ---
 
@@ -26,7 +26,6 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN `tcr` was resolved for SDD work THEN ask before any edit whether to switch to `commit-per-unit` or reduce to safe Direct work; stop if neither is chosen.
   - WHEN new SDD work arrives without a plan execution instruction THEN explore, draft, and gate on approval.
   - WHEN a plan execution instruction routes to SDD THEN record `Approval: plan-execution` without a confirmation or content reapproval; structural validation, delivery restrictions, and checksum checks still apply.
   - WHEN the user says `continúa <run>` THEN resume that exact run with its recorded controls.

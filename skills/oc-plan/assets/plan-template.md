@@ -1,5 +1,5 @@
 # Plan: <verb-led outcome>
-<!-- Explicit delivery only: replace with Delivery: <working-tree|commit-per-unit|tcr>, choosing one value. Otherwise remove. -->
+<!-- Explicit delivery only: replace with Delivery: <working-tree|commit-per-unit>, choosing one value. Otherwise remove. -->
 
 ## Intent
 

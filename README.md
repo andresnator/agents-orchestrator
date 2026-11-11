@@ -63,13 +63,13 @@ installers/opencode.sh status
 | `/ask-me` | Recommends `oc-*` skills for a use case |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
-A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push. TCR is Direct only.
+A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push.
 
 ### Skills by purpose
 
 | Purpose | Skills |
 |---|---|
-| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-tcr`, `oc-commits`, `oc-debug` |
+| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-commits`, `oc-debug` |
 | Planning | `oc-plan`, `oc-risk-scope`, `oc-arch-impact`, `oc-grill`, `oc-tooling-audit` |
 | Review | `oc-review`, `oc-judge`, `oc-practices` |
 | Architecture | `oc-arch`, `oc-adr`, `oc-boundary`, `oc-dep-audit`, `oc-patterns` |

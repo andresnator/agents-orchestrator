@@ -42,7 +42,6 @@ This glossary defines the abbreviations and technical terms for this repository.
 | SRP | Single Responsibility Principle | One module has one reason to change. |
 | STE | Simplified Technical English | Short form of ASD-STE100. |
 | TCP | Transmission Control Protocol | A reliable network transport protocol. |
-| TCR | Test && Commit \|\| Revert | A workflow that commits when tests pass and reverts when they fail. |
 | TDD | Test-Driven Development | Write a failing test first, then the code. |
 | TLS | Transport Layer Security | A protocol that encrypts network traffic. |
 | TUI | Terminal User Interface | An interface that shows in a terminal. |
