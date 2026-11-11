@@ -372,6 +372,149 @@ def remove_property(text: str, property_name: str) -> tuple[str, bool]:
     return text[:start] + text[end:], True
 
 
+# Object members at a dotted path, for example "mcp" or "mcp.servers".
+
+
+def parse_root(text: str) -> Node:
+    root = Parser(text).parse()
+    if root.kind != "object" or root.properties is None:
+        raise JsoncError("JSONC root must be an object")
+    return root
+
+
+def object_chain(root: Node, path: list[str]) -> list[Node]:
+    """The root and each object on `path` that exists. A non-object on the path is an error."""
+    chain = [root]
+    for name in path:
+        assert chain[-1].properties is not None
+        node = chain[-1].properties.get(name)
+        if node is None:
+            break
+        if node.kind != "object" or node.properties is None:
+            raise JsoncError(f"property '{name}' must be an object")
+        chain.append(node)
+    return chain
+
+
+def split_path(path: str) -> list[str]:
+    return [name for name in path.split(".") if name]
+
+
+def line_indent(text: str, offset: int) -> str:
+    start = text.rfind("\n", 0, offset) + 1
+    end = start
+    while end < offset and text[end] in " \t":
+        end += 1
+    return text[start:end] if end == offset else ""
+
+
+def indent_unit(text: str) -> str:
+    """The first indentation step used in the file; two spaces when nothing is indented."""
+    for line in text.splitlines():
+        stripped = line.lstrip(" \t")
+        if stripped and len(stripped) < len(line) and not stripped.startswith(("*", "/*")):
+            return line[: len(line) - len(stripped)]
+    return "  "
+
+
+def member_indent(text: str, node: Node, depth: int) -> str:
+    """Indentation of the members of `node`: copy a sibling, else one step past the brace line."""
+    assert node.property_keys is not None
+    for key in node.property_keys.values():
+        indent = line_indent(text, key.start)
+        if indent:
+            return indent
+    unit = indent_unit(text)
+    if depth == 0:
+        return unit
+    line_start = text.rfind("\n", 0, node.start) + 1
+    line = text[line_start : node.start]
+    return line[: len(line) - len(line.lstrip(" \t"))] + unit
+
+
+def encode_block(value: object, indent: str, unit: str) -> str:
+    return json.dumps(value, ensure_ascii=False, indent=unit).replace("\n", "\n" + indent)
+
+
+def insert_member(text: str, node: Node, depth: int, key: str, value: object) -> str:
+    indent = member_indent(text, node, depth)
+    close_indent = indent[: max(0, len(indent) - len(indent_unit(text)))]
+    close = node.end - 1
+    if node.properties and not has_trailing_comma(text, node):
+        last = max(node.properties.values(), key=lambda item: item.end)
+        text = text[: last.end] + "," + text[last.end :]
+        close += 1
+    encoded = encode_block(value, indent, indent_unit(text))
+    insertion = f"\n{indent}{json.dumps(key)}: {encoded}\n{close_indent}"
+    return text[: trim_before(text, close, node.start + 1)] + insertion + text[close:]
+
+
+def get_member(text: str, path: str, key: str) -> tuple[str, bool]:
+    names = split_path(path)
+    chain = object_chain(parse_root(text), names)
+    if len(chain) != len(names) + 1 or key not in chain[-1].properties:
+        return "", False
+    value = node_value(chain[-1].properties[key])
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")), True
+
+
+def set_member(text: str, path: str, key: str, encoded_value: str) -> tuple[str, bool]:
+    try:
+        value = json.loads(encoded_value)
+    except json.JSONDecodeError as error:
+        raise JsoncError(f"invalid JSON value: {error.msg}") from error
+    names = split_path(path)
+    chain = object_chain(parse_root(text), names)
+    if len(chain) == len(names) + 1:
+        node = chain[-1]
+        member = node.properties.get(key)
+        if member is not None:
+            if node_value(member) == value:
+                return text, False
+            indent = line_indent(text, node.property_keys[key].start) or member_indent(text, node, len(names) + 1)
+            return text[: member.start] + encode_block(value, indent, indent_unit(text)) + text[member.end :], True
+    # Build the missing objects of the path around the value.
+    missing = names[len(chain) - 1 :] + [key]
+    for name in reversed(missing[1:]):
+        value = {name: value}
+    return insert_member(text, chain[-1], len(chain) - 1, missing[0], value), True
+
+
+def remove_key(text: str, node: Node, key: str) -> str:
+    assert node.property_keys is not None
+    start = node.property_keys[key].start
+    end = node.properties[key].end
+    comma = property_separator_comma(text, node, key)
+    if comma is not None:
+        text = text[:comma] + text[comma + 1 :]
+        if comma < start:
+            start -= 1
+            end -= 1
+    # Take the member's own indentation and line break with it, so no blank line is left.
+    while start > node.start + 1 and text[start - 1] in " \t":
+        start -= 1
+    if start > node.start + 1 and text[start - 1] == "\n":
+        start -= 1
+    return text[:start] + text[end:]
+
+
+def remove_member(text: str, path: str, key: str) -> tuple[str, bool]:
+    """Remove `key`, then each object on the path that this leaves empty (comments keep it)."""
+    names = split_path(path)
+    chain = object_chain(parse_root(text), names)
+    if len(chain) != len(names) + 1 or key not in chain[-1].properties:
+        return text, False
+    text = remove_key(text, chain[-1], key)
+    while names:
+        chain = object_chain(parse_root(text), names)
+        node = chain[-1]
+        if node.properties or text[node.start + 1 : node.end - 1].strip():
+            break
+        text = remove_key(text, chain[-2], names[-1])
+        names = names[:-1]
+    return text, True
+
+
 def trim_before(text: str, close: int, floor: int) -> int:
     """Start of the whitespace run that ends at `close`, never crossing `floor`.
 
@@ -482,11 +625,15 @@ def main() -> int:
             "       jsonc-array.py <has-json|add-json|remove-json> <file> <property> <json-value>\n"
             "       jsonc-array.py <has-npm|remove-npm> <file> <property> <package>\n"
             "       jsonc-array.py <get|remove-property> <file> <property>\n"
-            "       jsonc-array.py set <file> <property> <json-scalar>",
+            "       jsonc-array.py set <file> <property> <json-scalar>\n"
+            "       jsonc-array.py <get-member|remove-member> <file> <object.path> <key>\n"
+            "       jsonc-array.py set-member <file> <object.path> <key> <json-value>",
             file=sys.stderr,
         )
         return 2
     action, file_name, property_name = sys.argv[1:4]
+    if action in {"get-member", "set-member", "remove-member"}:
+        return member_main(action, file_name, property_name, sys.argv[4:])
     value = sys.argv[4] if len(sys.argv) == 5 else None
     array_actions = {
         "has",
@@ -533,6 +680,33 @@ def main() -> int:
         if action == "get" and changed:
             print(rendered)
         return 0 if changed else 1
+    sys.stdout.write(rendered)
+    return 0 if changed else 3
+
+
+def member_main(action: str, file_name: str, path: str, rest: list[str]) -> int:
+    """Exit 0 found/changed, 1 missing (get-member), 3 unchanged, 2 usage or parse error."""
+    expected = 2 if action == "set-member" else 1
+    if len(rest) != expected:
+        print(f"error: action '{action}' takes {expected} argument(s) after the path", file=sys.stderr)
+        return 2
+    file = Path(file_name)
+    try:
+        text = file.read_text() if file.exists() else ""
+        if not text.strip():
+            text = "{}\n"
+        if action == "get-member":
+            rendered, changed = get_member(text, path, rest[0])
+            if changed:
+                print(rendered)
+            return 0 if changed else 1
+        if action == "set-member":
+            rendered, changed = set_member(text, path, rest[0], rest[1])
+        else:
+            rendered, changed = remove_member(text, path, rest[0])
+    except (OSError, JsoncError) as error:
+        print(f"error: {file}: {error}", file=sys.stderr)
+        return 2
     sys.stdout.write(rendered)
     return 0 if changed else 3
 
