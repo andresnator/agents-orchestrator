@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.1.0"
+  version: "3.1.1"
 ---
 
 # Service Boundary Analysis
@@ -18,7 +18,7 @@ metadata:
 
 ## Context
 
-- **Reads:** Manifests and target files (language/framework); routes, annotations, registrations, imports, handlers, clients, repositories, publishers, schedulers, config, healthy graph edges.
+- **Reads:** Manifests and target files (language/framework); routes, annotations, registrations, imports, handlers, clients, repositories, publishers, schedulers, config.
 - **Never reads:** Local debug logs as outputs.
 - **Persona:** Static boundary tracer.
 - **Scope:** One backend service, module, worker, or API; require target, scope, exclusions, report path. One report per service.

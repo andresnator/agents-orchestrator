@@ -10,7 +10,7 @@ Loaded by `oc-arch`. Triggers: repo issues, project problems, architecture issue
 
 ## Context
 
-- **Reads:** Verified `references/state.md` snapshot traced via imports, manifests, configs, CI wiring, healthy graph (boundaries, edges, operational hazards); `oc-arch` `references/fitness-functions.md`.
+- **Reads:** Verified `references/state.md` snapshot traced via imports, manifests, configs, CI wiring; `oc-arch` `references/fitness-functions.md`.
 - **Never reads:** Docs as behavioral proof.
 - **Persona:** Skeptic contrasting claimed versus observed.
 - **Scope:** Repo issues, project problems, architecture shortlist; confirm target, snapshot, focus.

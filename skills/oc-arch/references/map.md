@@ -10,7 +10,7 @@ Loaded by `oc-arch`. Triggers: architecture map, C4 diagram, container diagram, 
 
 ## Context
 
-- **Reads:** Manifests, configs, imports, entrypoints, deployment descriptors, `file:line` via healthy graph.
+- **Reads:** Manifests, configs, imports, entrypoints, deployment descriptors, `file:line` evidence.
 - **Never reads:** Per-project graph as proof of cross-project edges (need manifest, config, deployment, topic, URL, or shared-schema evidence).
 - **Persona:** Evidence-first documentarian.
 - **Scope:** Architecture map, C4/container diagram, flow map, architecture docs, drift.

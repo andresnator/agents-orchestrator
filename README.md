@@ -1,29 +1,35 @@
 # Agents Orchestrator
 
-Reusable OpenCode commands, skills, and plugins organized by domain around a single agent. `orchestraitor` is the only agent; every other capability is an `oc-*` skill that it loads itself or hands to OpenCode's built-in `general` subagent (one delegation level). Skills, the orchestraitor body, and plans follow the Intent-Driven Software Development (IDSD) format described in [CONTRIBUTING.md](CONTRIBUTING.md#idsd-format).
+Agents Orchestrator gives reusable OpenCode commands, skills, and plugins, organized by domain. `orchestraitor` is the only agent. It loads each `oc-*` skill itself or gives it to the built-in `general` subagent (one delegation level). Skills, the agent body, and plans use the [IDSD format](CONTRIBUTING.md#idsd-format).
 
 ## Quick path
 
-Install every component globally:
+Install all components globally:
 
 ```bash
 installers/opencode.sh install
 ```
 
-Global installs also attempt to install missing Homebrew tools required by the selected components. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip Homebrew by default and accept `--install-brew-tools` as an opt-in.
+A global install also installs missing Homebrew tools. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip them unless you add `--install-brew-tools`.
 
-Every global install then runs [`engram setup opencode`](https://github.com/Gentleman-Programming/engram/blob/v2.1.0/docs/AGENT-SETUP.md#opencode) if `engram` is on PATH, including with `--no-install-brew-tools`. This refreshes Engram's plugin, MCP registration, and statusline integration from the **installed binary**, without upgrading Engram or enabling Cloud. Missing Engram or setup failure produces a warning without rolling back the harness; check setup output for additional warnings. Restart OpenCode afterward, check `opencode mcp list`, and verify memory tools in a new session. `--reload` does not reload plugin code.
+If `engram` is on PATH, each global install then runs [`engram setup opencode`](https://github.com/Gentleman-Programming/engram/blob/v2.1.0/docs/AGENT-SETUP.md#opencode). It refreshes the Engram plugin, MCP registration, and statusline from the **installed binary**. It does not upgrade Engram or enable Cloud. If the setup fails, the installer shows a warning and does not roll back. `--dry-run` only prints the setup. `--project`, `--target`, `status`, and `uninstall` never run it. A harness uninstall does not remove Engram files.
 
-`--dry-run` only prints the planned setup. `--project`, any explicit `--target`, `status`, and `uninstall` never run it. Engram's files and settings remain owned by Engram, outside the harness manifest, and survive harness uninstall.
+After the install:
 
-Or install the single-primary profile into one project only:
+1. Restart OpenCode.
+2. Run `opencode mcp list`.
+3. Make sure that the memory tools are available in a new session.
+
+`--reload` does not reload plugin code.
+
+To install the single-primary profile into one project only:
 
 ```bash
 scripts/multi-primary-profile.sh install --project-root /absolute/path/to/project
 scripts/multi-primary-profile.sh status --project-root /absolute/path/to/project
 ```
 
-The project profile selects `plan,orchestration,architecture,review,common`, preserves the user's default agent, and allows one delegation level. See the [profile runbook](docs/multi-primary-profile.md). Select `orchestraitor` for every route: it plans with `oc-plan-light` or `oc-plan-deep`, executes and resumes, reviews with `oc-review`, and decides architecture with `oc-arch`.
+Then select `orchestraitor` for all routes. See the [profile runbook](docs/multi-primary-profile.md).
 
 ## Domains
 
@@ -35,7 +41,7 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | [review](domains/review/README.md) | Adversarial review and Socratic design defense | `oc-review` skill, `/review` |
 | [docs](domains/docs/README.md) | Product documents, Jira artifacts, summaries, and transcription | `/doc` |
 | [meta](domains/meta/README.md) | Prompt, skill, and model-configuration utilities | `/ask-me` |
-| [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/graphify-index`, `/grill` |
+| [common](domains/common/README.md) | Shared engineering and quality skills | `/caveman`, `/grill` |
 
 ## Repository shape
 
@@ -48,11 +54,11 @@ The project profile selects `plan,orchestration,architecture,review,common`, pre
 | `domains/<domain>/skills/<shared-skill>` | Relative symlinks declaring shared usage |
 | `domains/<domain>/plugins/` | Repository-specific plugins |
 | `domains/<domain>/external-plugins/` | Pinned standalone plugin descriptors |
+| `standards/` | Code conventions, writing conventions (ASD-STE100), and glossary |
 | `installers/` | Discovery, installation, sync, and uninstall |
 | `docs/` | Unique operational guides |
-| `manual-tests/fixtures/` | Reusable inputs for human regression cases |
 
-Filtered installation is a sync: include every domain and lifecycle status you want to keep.
+A filtered installation is a sync. Include each domain and status that you want to keep.
 
 ```bash
 installers/opencode.sh install --domain plan --status done,testing
@@ -62,25 +68,13 @@ installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status --domain orchestration
 ```
 
-Install `orchestration` and `review` independently. Ask `orchestraitor` for a review (it loads `oc-review`) only when a separate evaluation is wanted.
-
 ## Documentation
 
 | Guide | Purpose |
 |---|---|
 | [Single-primary profile](docs/multi-primary-profile.md) | Install, select, validate, and roll back the orchestraitor profile |
-| [Manual regression catalog](docs/manual-testing.md) | Find affected cases by repository surface |
 | [Agent models](docs/agent-models.md) | Assign provider models and variants to orchestraitor and `general` |
 | [Orchestration permissions](docs/orchestration-permissions.md) | Toggle `orchestraitor` and `general` permissions |
-| [Graphify](docs/graphify.md) | Index and query structural graphs |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |
 | [LM Studio](docs/lm-studio.md) | Connect OpenCode to LAN-hosted models |
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspect and prune local session data |
-
-## Validate changes
-
-```bash
-python3 scripts/lint-manual-tests.py
-```
-
-The linter validates only the manual catalog and never executes OpenCode or product scripts. In a pull request, its `manual-test-catalog` summary lists the human cases affected by the diff; follow the [manual testing guide](docs/manual-testing.md) and run model-backed cases only with separate cost authorization.

@@ -4,7 +4,7 @@ description: "Trigger: SDD explore, SDD discovery, explore change scope. Read-on
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 
@@ -13,12 +13,12 @@ metadata:
 ## Intent
 
 - **Goal:** Return compact, verified evidence for one briefed SDD change.
-- **Limits:** Read-only. Never edit, ask, delegate, stage, commit, or push. Never build, refresh, install, or mutate a graph. Load no skill except `oc-graphify`.
+- **Limits:** Read-only. Never edit, ask, delegate, stage, commit, or push. Load no skill.
 - **Fails if:** a row cites a speculative path, the scope is exceeded, or logs or file bodies are returned.
 
 ## Context
 
-- **Reads:** the briefed change scope; a healthy `.ai/graphify-out/graph.json` for structural discovery when available, verified with filesystem tools; otherwise normal reads and search.
+- **Reads:** the briefed change scope; normal reads and search.
 - **Never reads:** areas outside the briefed change.
 - **Persona:** cold, evidence-first explorer.
 - **Scope:** loaded by a `general` worker briefed by Orchestraitor before drafting or executing SDD.

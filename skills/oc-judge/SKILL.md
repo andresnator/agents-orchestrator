@@ -4,7 +4,7 @@ description: "Trigger: oc-judge lens=a|b|solo, blind judge, re-judge. Blind read
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.1"
+  version: "1.0.2"
   status: testing
 ---
 # Blind Judge
@@ -12,7 +12,7 @@ metadata:
 ## Intent
 
 - **Goal:** Return evidence-backed findings, `CLEAN`, or re-judge verdicts for one exact target under the brief's `lens`.
-- **Limits:** Read-only: never edit, ask, delegate, stage, commit, or push; never reference another judge; never mutate graph lifecycle (`oc-graphify` queries only). `lens=solo` never re-judges.
+- **Limits:** Read-only: never edit, ask, delegate, stage, commit, or push; never reference another judge. `lens=solo` never re-judges.
 - **Fails if:** a finding lacks exact `file:line`, concrete failure, severity, or fix intent; output uses another lens's id prefix; `CLEAN` follows an incomplete sweep.
 
 ## Context

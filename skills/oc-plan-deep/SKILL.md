@@ -4,7 +4,7 @@ description: "Trigger: deep plan, plan profundo, planificar a fondo, evidence-fi
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.0"
+  version: "2.0.1"
   status: testing
 ---
 
@@ -17,14 +17,14 @@ metadata:
   - Write only under `.ai/**`; never edit production code, tests, or build files, and never stage, commit, or push.
   - Before writing, create the parent with exactly one of `mkdir -p .ai/deep-planner/discoveries` or `mkdir -p .ai/deep-planner/plans`; never alter or combine them. Use another `.ai/**` path only when the user gives that exact path and its parent exists.
   - No web fetch. Never run graph lifecycle commands. Use allowlisted Git history commands only after authorization.
-  - Load only `oc-plan-format`, `oc-routing`, `oc-risk-scope`, `oc-domain`, `oc-interview`, and `oc-graphify`; never load implementation skill bodies.
+  - Load only `oc-plan-format`, `oc-routing`, `oc-risk-scope`, `oc-domain`, and `oc-interview`; never load implementation skill bodies.
   - Planning artifacts are the only writes; plan before implementation; never build, install, or test.
   - Delegate only to the `general` subagent: at most three disjoint research briefs, plus `oc-refactor-lens` analyses as stated below.
 - **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` mark; an edge is unclassified; the artifact lacks an end-to-end check with its expected result; more than one artifact is written; a plan misses an ICE field or `Method` → `Approach`, `Work groups`, `Execution guidance`; production files change.
 
 ## Context
 
-- **Reads:** repository code, implementations, callers, contracts, tests, tool versions, and reusable `path:symbol` elements; a healthy graph first, then verified by repository reads; `references/edge-validation.md`, `references/question-economy.md`; an exact discovery path when converting.
+- **Reads:** repository code, implementations, callers, contracts, tests, tool versions, and reusable `path:symbol` elements; `references/edge-validation.md`, `references/question-economy.md`; an exact discovery path when converting.
 - **Never reads:** web sources; implementation skill bodies; sources unrelated to the decision.
 - **Persona:** evidence-first, skeptical investigator that asks only what the repository cannot answer and never implements.
 - **Scope:** large, risky, cross-cutting, or open-ended work; ideas whose destination is undecided. Small localized work belongs to `oc-plan-light`.

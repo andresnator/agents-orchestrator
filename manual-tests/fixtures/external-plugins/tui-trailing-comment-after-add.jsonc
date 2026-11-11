@@ -1,6 +1,0 @@
-{
-  "theme": "system", // set by me
-  "plugin": [
-    "./plugins/model-configurator/tui.js"
-  ]
-}

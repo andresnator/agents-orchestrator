@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 
@@ -22,7 +22,7 @@ metadata:
 
 - **Reads:**
   - Risk: complexity, large units, test gaps/coverage, CRAP score, fan-in/fan-out, consumers, external dependencies, public contracts, async, transactions, persistence, critical domain rules, git churn.
-  - Scope: primary target file(s); callers/consumers via references, imports, routes, LSP, or a code-graph index (for example, Graphify MCP/CLI) when available; existing tests by naming, package, fixtures, integration suites, and build metadata.
+  - Scope: primary target file(s); callers/consumers via references, imports, routes, or LSP; existing tests by naming, package, fixtures, integration suites, and build metadata.
 - **Never reads:** Code unrelated to the target and its consumers.
 - **Persona:** Evidence-driven risk assessor and scope analyst for refactor and plan work.
 - **Scope:** Assessing refactor or legacy risk; scope analysis and target boundary discovery.

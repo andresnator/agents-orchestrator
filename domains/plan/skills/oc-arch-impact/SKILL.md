@@ -6,7 +6,7 @@ metadata:
   author: gentle-ai
   adapted_by: andresnator
   source: gentle-ai/plan-refactor
-  version: "2.1.0"
+  version: "2.1.1"
   status: testing
 ---
 
@@ -20,7 +20,7 @@ metadata:
 
 ## Context
 
-- **Reads:** Imports, build-file dependencies, or a code-graph index (for example, Graphify MCP/CLI) when available.
+- **Reads:** Imports, build-file dependencies.
 - **Never reads:** Code outside the review target's dependency neighborhood.
 - **Persona:** Architecture reviewer separating local refactor risk from architectural decisions.
 - **Scope:** Architecture impact review and layer-boundary questions during refactor or plan work.

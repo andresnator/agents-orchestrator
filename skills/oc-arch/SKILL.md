@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.1"
+  version: "2.0.2"
 ---
 
 # Architecture Operations
@@ -24,7 +24,7 @@ metadata:
 
 ## Context
 
-- **Reads:** the operation and raw arguments, healthy graph when available (else read/search), source evidence, and the `references/`, `assets/`, and skills each operation loads.
+- **Reads:** the operation and raw arguments, read/search results, source evidence, and the `references/`, `assets/`, and skills each operation loads.
 - **Never reads:** implementation skill bodies (`oc-conventions`, `oc-java-test`, and similar); they are named in plans only.
 - **Persona:** evidence-first architecture coordinator.
 - **Scope:** `/arch map|review|ideate|boundary`, or any architecture request routed by `orchestraitor`.

@@ -1,12 +1,12 @@
 # Architecture Domain
 
-Evidence-backed architecture maps, reviews, target decisions, and service boundaries. Class-level refactors belong to Plan; product requirements belong to Docs.
+Evidence-backed architecture maps, reviews, decisions, and service boundaries. Class-level refactors belong to Plan.
 
 ## Quick path
 
 1. Install `architecture` or the multi-primary profile.
-2. Use an entry point below, or ask `orchestraitor` to load `oc-arch`.
-3. Review files under `<docfolder>/architecture/` or `.ai/architect/`; execute any plan through `orchestraitor`.
+2. Use an entry point, or ask `orchestraitor` to load `oc-arch`.
+3. Review the files under `<docfolder>/architecture/` or `.ai/architect/`. Execute plans through `orchestraitor`.
 
 ## Entry points
 
@@ -17,32 +17,22 @@ Evidence-backed architecture maps, reviews, target decisions, and service bounda
 | `/arch ideate` | Choose a target architecture | ADR and neutral execution plan |
 | `/arch boundary` | Inspect one service | Evidence-backed boundary map |
 
-```mermaid
-flowchart LR
-    request[Architecture request] --> architect{oc-arch operation}
-    architect -->|Map| map[C4-lite documentation]
-    architect -->|Review| review[Ranked risks and fitness functions]
-    architect -->|Ideate| ideate[ADR and execution plan]
-    architect -->|Boundary| boundary[Service boundary report]
-    ideate --> execute[Execute through Orchestraitor]
-```
-
-`orchestraitor` loads `oc-arch`, which runs each operation inline. Dependency commands require authorization and degrade to inventory-only results; audit execution never installs tools. See the [Graphify guide](../../docs/graphify.md) for graph setup.
-
-After changing this domain, run the affected [Architecture manual tests](manual-tests.md).
+Dependency commands need authorization; without it, they give inventory only.
 
 ## Components
 
-| Type | Name | Purpose |
-|---|---|---|
-| Command | `/arch` | Runs map, review, ideate, or boundary |
-| Skill | `oc-arch` | Coordinates all architecture operations |
-| Skill | `oc-adr` | Records architecture decisions |
-| Skill (handoff-only) | `oc-conventions` | Names implementation conventions for SDD |
-| Skill (handoff-only) | `oc-java-test` | Names Java testing guidance for implementation |
-| Skill | `oc-dep-audit` | Audits current dependency evidence |
-| Skill | `oc-patterns` | Applies patterns to evidenced forces |
-| Skill | `oc-refactor-lens` | Supplies the `kiss` lens for ideation |
-| Skill | `oc-plan-format` | Drafts one neutral execution plan |
-| Skill | `oc-routing` | Selects skills for implementation work |
-| Skill | `oc-boundary` | Maps service contracts |
+Unmarked rows are skills.
+
+| Name | Purpose |
+|---|---|
+| `/arch` | Runs all architecture operations |
+| `oc-arch` | Coordinates all architecture operations |
+| `oc-adr` | Records architecture decisions |
+| `oc-conventions` (handoff-only) | Names SDD implementation conventions |
+| `oc-java-test` (handoff-only) | Names Java testing guidance |
+| `oc-dep-audit` | Audits current dependency evidence |
+| `oc-patterns` | Applies patterns to evidenced forces |
+| `oc-refactor-lens` | Supplies the `kiss` lens |
+| `oc-plan-format` | Drafts one neutral execution plan |
+| `oc-routing` | Selects implementation skills |
+| `oc-boundary` | Maps service contracts |

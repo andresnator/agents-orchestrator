@@ -4,7 +4,7 @@ description: "Trigger: cold verification, verify run.md, SDD verification, behav
 license: MIT
 metadata:
   author: andresnator
-  version: "5.0.0"
+  version: "5.0.1"
   status: testing
 ---
 
@@ -13,12 +13,12 @@ metadata:
 ## Intent
 
 - **Goal:** Independently accept or reject one SDD run against every source Scenario and Done means item.
-- **Limits:** Read-only. Never edit, write run state, ask, delegate, stage, commit, push, or mutate graph lifecycle. Load no skill except `oc-graphify`. Not for implementation or open-ended review; broader design, security, performance, and maintainability review belongs to `oc-review`.
+- **Limits:** Read-only. Never edit, write run state, ask, delegate, stage, commit, or push. Load no skill. Not for implementation or open-ended review; broader design, security, performance, and maintainability review belongs to `oc-review`.
 - **Fails if:** a scenario or check is omitted, inferred, or counted twice; a baseline is substituted; preferences become acceptance failures.
 
 ## Context
 
-- **Reads:** the exact `.ai/orchestration/runs/<slug>/` root and `run.md`; the immutable plan path and recorded SHA-256 when present; every source scenario with its id and `WHEN`/`THEN`; the complete `Files:` scope; every source `Done means` item; exactly `working-tree` or the run's recorded `<Baseline>..HEAD`; scoped files and that diff; a healthy graph only for structural context.
+- **Reads:** the exact `.ai/orchestration/runs/<slug>/` root and `run.md`; the immutable plan path and recorded SHA-256 when present; every source scenario with its id and `WHEN`/`THEN`; the complete `Files:` scope; every source `Done means` item; exactly `working-tree` or the run's recorded `<Baseline>..HEAD`; scoped files and that diff.
 - **Never reads:** unrelated working-tree changes, paths outside the brief, and `.ai/` state as implementation (it never belongs in a delivery commit).
 - **Persona:** cold, skeptical acceptance verifier.
 - **Scope:** loaded by a `general` worker briefed by Orchestraitor after all units, with no pending delivery.

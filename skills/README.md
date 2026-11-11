@@ -1,18 +1,11 @@
 # Skills
 
-This directory is the source of truth only for skill bodies shared by multiple domains.
-
-An exclusive skill lives with its domain:
+This directory owns only skill bodies that two or more domains share.
 
 ```text
-domains/<domain>/skills/<skill>/SKILL.md
+domains/<domain>/skills/<skill>/SKILL.md                    # exclusive skill
+skills/<skill>/SKILL.md                                     # shared body
+domains/<domain>/skills/<skill> -> ../../../skills/<skill>  # symlink per owner
 ```
 
-A shared skill has one top-level body and a relative symlink from every owning domain:
-
-```text
-skills/<skill>/SKILL.md
-domains/<domain>/skills/<skill> -> ../../../skills/<skill>
-```
-
-Never copy a body. When ownership changes from one domain to several, move it to `skills/` and add the symlinks together; when it becomes exclusive, move the body into that domain and remove the top-level entry.
+Never copy a body. When a second domain owns a skill, move the body here and add the symlinks in the same change. When one owner remains, move the body back into that domain.

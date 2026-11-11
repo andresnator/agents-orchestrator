@@ -139,16 +139,3 @@ test('shouldMatchCurrentLiveSnapshotSchemaWithoutOpeningRegistryLocations', (con
   assert.ok(snapshot.includes('| opencode | OpenCode | /builtin/opencode.md |'));
 });
 
-test('shouldKeepManualCoverageAndPatchMetadataAlignedWithConsumerFix', () => {
-  // Given
-  const manual = readFileSync(new URL('domains/meta/manual-tests.md', ROOT), 'utf8');
-  const routing = CONSUMERS[1][1];
-  // When
-  const registryCase = manual.split('### MT-META-SKILL-REGISTRY\n')[1].split('\n### ')[0];
-  // Then
-  assert.match(registryCase, /exactly `Description \| Skill ID \| Name \| Location` columns in that order/);
-  assert.match(registryCase, /skills\/oc-routing\/\*\*/);
-  assert.match(registryCase, /scripts\/test-skill-registry-contract\.mjs/);
-  assert.match(registryCase, /native loader within the agent's allowlist/);
-  assert.match(routing, /version: "\d+\.\d+\.\d+"\n  status: testing/);
-});

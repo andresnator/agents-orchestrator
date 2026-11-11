@@ -4,7 +4,7 @@ description: "Trigger: oc-judge-fix, judgment fix. Applies only authorized confi
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 # Judgment Fix
@@ -17,7 +17,7 @@ metadata:
 
 ## Context
 
-- **Reads:** the brief's target, authorized rows, distilled rules; `oc-conventions`; `oc-graphify` queries only when available.
+- **Reads:** the brief's target, authorized rows, distilled rules; `oc-conventions`.
 - **Never reads:** suspect or contradiction rows as fix input.
 - **Persona:** minimal-diff fixer following established conventions.
 - **Scope:** a `general` subagent delegated by `oc-review` during Judgment.

@@ -1,35 +1,33 @@
 # Meta Domain
 
-Prompt, skill-authoring, registry, and agent-model configuration utilities for this artifact repository.
+Utilities for prompts, skill authoring, the skill registry, and agent-model configuration.
 
 ## Quick path
 
 1. Install the `meta` domain.
-2. Use `/ask-me` or `/models-profiles`, or ask to absorb an external harness.
-3. Reinstall after changing a pinned plugin.
+2. Use `/ask-me` or `/models-profiles`, or ask the agent to absorb an external harness.
+3. Reinstall after you change a pinned plugin.
 
 ## Entry points
 
 | Entry | Use | Result |
 |---|---|---|
-| `/ask-me` | Find which harness skill fits a use case | Ranked `oc-*` recommendation with how to use it |
+| `/ask-me` | Find the skill for a use case | Ranked `oc-*` recommendations |
 | `oc-absorb` skill | Compare an external AI harness | Evidence-backed adoption report |
 | `/models-profiles` | Assign agent models and variants | Targeted OpenCode configuration |
 | OpenCode startup | Generate the resolved skill snapshot | `.ai/atl/skill-registry.md` |
 
-External plugin descriptors pin either GitHub bundles by commit and SHA-256 or npm packages by exact version and runtime target. This repository owns those locks; each external repository owns its plugin implementation and tests. See [agent models](../../docs/agent-models.md) and [Graphify](../../docs/graphify.md).
-
-`opencode-skill-registry` is the sole owner of `.ai/atl/skill-registry.md`. The file is an automatic snapshot of OpenCode's resolved `/skill` catalog and refreshes when OpenCode restarts; there is no manual generator in this repository.
-
-After changing this domain, run the affected [Meta manual tests](manual-tests.md).
+Plugin descriptors pin exact versions; external repositories own the code. Only `opencode-skill-registry` writes `.ai/atl/skill-registry.md`, on each OpenCode restart. See [agent models](../../docs/agent-models.md).
 
 ## Components
 
-| Type | Name | Purpose |
-|---|---|---|
-| Command | `/ask-me` | Recommends `oc-*` skills for a use case |
-| Skill | `oc-absorb` | Extracts reusable external harness practices |
-| Skill | `oc-prompt` | Turns ideas into executable prompts |
-| Skill | `oc-skill-creator` | Creates Agent Skills-compliant skills |
-| External npm server plugin | `opencode-skill-registry` | Generates the resolved skill snapshot |
-| External npm TUI plugin | `opencode-models-presets` | Assigns agent models and variants |
+Unmarked rows are skills.
+
+| Name | Purpose |
+|---|---|
+| `/ask-me` | Recommends `oc-*` skills |
+| `oc-absorb` | Extracts external harness practices |
+| `oc-prompt` | Turns ideas into executable prompts |
+| `oc-skill-creator` | Creates Agent Skills-compliant skills |
+| `opencode-skill-registry` (external npm server plugin) | Generates the resolved skill snapshot |
+| `opencode-models-presets` (external npm TUI plugin) | Assigns agent models and variants |

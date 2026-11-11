@@ -34,7 +34,8 @@ Actions:
               matching OpenCode config. Repository-local V2 TUI plugins require
               OpenCode >= 2.0.28 and register in cli.json; external TUI plugin
               registrations remain in tui.json.
-              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
+              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules)
+              and standards/ to $TARGET/standards,
               regardless of --domain/--status filters. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
   uninstall   Remove manifest-owned links, files, config values, and empty directories.
@@ -854,6 +855,7 @@ runtime_begin_install() {
     esac
   done < "$selected"
   snapshot_install_path "$TARGET/AGENTS.md"
+  snapshot_install_path "$TARGET/standards"
   if [ -f "$manifest" ]; then
     while IFS=$'\t' read -r kind owned_path field value; do
       case "$kind" in
@@ -1290,6 +1292,7 @@ file_mode() {
 
 runtime_install_global() {
   link_component "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md" "$1"
+  link_component "$REPO_ROOT/standards" "$TARGET/standards" "$1"
 }
 
 setup_global_engram() {
@@ -1374,6 +1377,8 @@ runtime_status_global() {
   local state
   state="$(link_state "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md")"
   printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "AGENTS.md" "-" "$state"
+  state="$(link_state "$REPO_ROOT/standards" "$TARGET/standards")"
+  printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "standards" "-" "$state"
 }
 
 harness_main "$@"
