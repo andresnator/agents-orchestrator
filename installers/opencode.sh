@@ -1279,20 +1279,6 @@ file_mode() {
 runtime_install_global() {
   link_component "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md" "$1"
   link_component "$REPO_ROOT/standards" "$TARGET/standards" "$1"
-  ensure_default_agent orchestraitor
-}
-
-# Select the orchestraitor when OpenCode opens. Keep a default_agent the user already set.
-ensure_default_agent() {
-  local agent="$1" tmp
-  python3 "$JSONC_EDITOR" get "$OPENCODE_CONFIG_FILE" default_agent >/dev/null 2>&1 && return 0
-  if [ "$DRY_RUN" -eq 1 ]; then
-    printf 'set %s.default_agent = %s\n' "$OPENCODE_CONFIG_FILE" "$agent"
-    return 0
-  fi
-  tmp="$(mktemp "$(dirname "$OPENCODE_CONFIG_FILE")/.agents-orchestrator-jsonc.XXXXXX")"
-  python3 "$JSONC_EDITOR" set "$OPENCODE_CONFIG_FILE" default_agent "\"$agent\"" > "$tmp" || { rm -f "$tmp"; die "failed to set default_agent in $OPENCODE_CONFIG_FILE"; }
-  mv "$tmp" "$OPENCODE_CONFIG_FILE"
 }
 
 runtime_post_install() {
