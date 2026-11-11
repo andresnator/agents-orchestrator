@@ -5,7 +5,7 @@
 NODE = node
 SCRIPTS = installers/*.sh installers/lib/*.sh scripts/*.sh make-scripts/*.sh
 ARGS =
-OPENCODE_DIR ?= $(HOME)/.config/opencode
+OPENCODE_DIR ?= $(if $(XDG_CONFIG_HOME),$(XDG_CONFIG_HOME),$(HOME)/.config)/opencode
 DEFAULT_AGENT ?= orchestraitor
 MAKE_ENV = OPENCODE_DIR="$(OPENCODE_DIR)" FORCE="$(FORCE)"
 
@@ -25,6 +25,12 @@ default-agent: ## Set DEFAULT_AGENT (orchestraitor) as the default OpenCode agen
 
 default-agent-remove: ## Remove default_agent if it is DEFAULT_AGENT
 	@$(MAKE_ENV) DEFAULT_AGENT="$(DEFAULT_AGENT)" make-scripts/default-agent.sh remove
+
+mini: ## Hide reasoning, tools, and shell output in OpenCode Mini (FORCE=1 to replace)
+	@$(MAKE_ENV) bash make-scripts/mini.sh set
+
+mini-remove: ## Remove the three Mini settings when their value is hide
+	@$(MAKE_ENV) bash make-scripts/mini.sh remove
 
 mcp: ## Add the Context7 and Engram MCP servers (FORCE=1 to replace)
 	@$(MAKE_ENV) make-scripts/mcp.sh install all
@@ -54,4 +60,4 @@ hooks: ## Install the git pre-push hook
 	git config core.hooksPath .githooks
 	@echo "pre-push hook installed (.githooks/pre-push)"
 
-.PHONY: all help install uninstall default-agent default-agent-remove mcp mcp-remove mcp-context7 mcp-context7-remove mcp-engram mcp-engram-remove lint test hooks
+.PHONY: all help install uninstall default-agent default-agent-remove mini mini-remove mcp mcp-remove mcp-context7 mcp-context7-remove mcp-engram mcp-engram-remove lint test hooks

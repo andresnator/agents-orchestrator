@@ -12,6 +12,36 @@ installers/opencode.sh install
 
 After the install, restart OpenCode. `--reload` does not reload plugin code.
 
+### Optional: quiet Mini interface
+
+Run this setup step after installation. It requires Python 3 and OpenCode 2 with `opencode mini`.
+
+```bash
+make mini
+opencode mini
+```
+
+`make mini` sets `mini.thinking`, `mini.tools`, and `mini.shell_output` to `hide` in the global `cli.json`.
+It hides reasoning, tool calls, preceding assistant text, and raw shell output in Mini.
+It does not collapse items in the full-screen TUI or change the interface of an active session.
+Continue an existing session with `opencode mini --session <session-id>`.
+
+The command keeps other settings, comments, permissions, symlinks, and file modes.
+It saves the previous file as `cli.json.bak` before a change.
+If a setting has another value, use `make mini FORCE=1` to replace it.
+
+Run `make mini-remove` to remove these three settings when their value is `hide`.
+This restores the OpenCode defaults, not previous custom values.
+The normal install and uninstall do not change these optional settings.
+
+The default directory is `$XDG_CONFIG_HOME/opencode`, or `~/.config/opencode` when that variable is not set.
+Use `OPENCODE_DIR=/path/to/opencode` for an alternate global directory or a scratch test, not project-local settings.
+An `OPENCODE_CLI_CONFIG_CONTENT` value can override the file settings.
+
+Only the visual display changes. Hidden activity still uses tools and model tokens.
+Check permission prompts, questions, errors, and final responses in your Mini session before regular use.
+See the [OpenCode Mini settings](https://opencode.ai/docs/cli/config#mini).
+
 ## Repository shape
 
 | Path | Ownership |
