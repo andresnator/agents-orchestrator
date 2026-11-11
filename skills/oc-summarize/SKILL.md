@@ -11,7 +11,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.1"
+  version: "2.1.2"
 ---
 
 # Book Chapter Summary
@@ -54,7 +54,7 @@ metadata:
 
 ### Publishing
 
-Create the page with the descriptive title as title, the `.md` body converted to Notion Markdown as content (exclude YAML frontmatter, but use it to infer properties if the target is a database), and the parent destination indicated by the user or configured by the environment. Show the link or identifier when available.
+Create the page with the descriptive title as title, the `.md` body as content (exclude YAML frontmatter, but use it to infer properties if the target is a database), and the parent destination indicated by the user or configured by the environment. Show the link or identifier when available.
 
 ### Large PDFs (more than 20 pages)
 

@@ -3,7 +3,7 @@
 ## Intent
 
 - **Goal:** Reach shared understanding of a plan or design by walking each branch of the design tree, resolving dependencies between decisions one by one.
-- **Limits:** One question at a time; wait for feedback before continuing.
+- **Limits:** Resolve a decision before the decisions that depend on it.
 - **Fails if:** the user is asked something the codebase could answer, or the interview stops before shared understanding.
 
 ## Context
@@ -17,10 +17,8 @@
 
 - **Scenarios:**
   - WHEN the codebase can answer a question THEN explore it instead of asking.
-  - WHEN a question is open-ended THEN ask it directly in normal chat, adding a `Recommendation: ...` line only when it helps.
-  - WHEN a question is a closed confirmation, mode, rating, or enumerated choice THEN use the `question` tool.
 - **Done means:** every branch is resolved and understanding is shared.
-- **Quality needs:** No question headings, numbering, rationale blocks, or interview-length estimates.
+- **Quality needs:** none beyond the question rule in `AGENTS.md`.
 
 ## Attribution
 

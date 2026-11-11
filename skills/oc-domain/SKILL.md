@@ -7,7 +7,7 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.1.1"
+  version: "2.1.2"
 ---
 
 # Domain Modeling
@@ -38,11 +38,7 @@ metadata:
 
 ## Method
 
-Offer an ADR only when all three are true; otherwise skip it:
-
-1. **Hard to reverse** — the cost of changing your mind later is meaningful.
-2. **Surprising without context** — a future reader will wonder "why did they do it this way?"
-3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons.
+Offer an ADR only when all three criteria in [ADR-FORMAT.md](./assets/ADR-FORMAT.md) are true; otherwise skip it.
 
 File layout. Single context:
 

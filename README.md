@@ -10,8 +10,6 @@ Install all components globally:
 installers/opencode.sh install
 ```
 
-A global install also installs missing Homebrew tools. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip them unless you add `--install-brew-tools`.
-
 After the install, restart OpenCode. `--reload` does not reload plugin code.
 
 ## Repository shape
@@ -21,7 +19,6 @@ After the install, restart OpenCode. `--reload` does not reload plugin code.
 | `agents/` | The single OpenCode agent, `orchestraitor` |
 | `commands/` | Fused OpenCode commands |
 | `skills/<skill>/` | All skill bodies, one `SKILL.md` each. Never copy a body or add symlinks |
-| `plugins/` | Repository-specific server plugins, if any (`*.test.mjs` are not installed) |
 | `tui-plugins/` | Repository-specific TUI plugins |
 | `external-plugins/` | Pinned standalone plugin descriptors |
 | `standards/` | Code conventions, writing conventions (ASD-STE100), and glossary |
@@ -33,7 +30,6 @@ An installation is a sync. All components install together; `--status` filters s
 ```bash
 installers/opencode.sh install --status done,testing
 installers/opencode.sh install --project
-installers/opencode.sh install --project --install-brew-tools
 installers/opencode.sh status
 ```
 
@@ -48,14 +44,14 @@ installers/opencode.sh status
 | Ask to explore an idea | Wayfinder discovery in `.ai/deep-planner/discoveries/<slug>.md`. Say `convert this discovery into a plan` to get a plan |
 | `ejecuta el plan <path>` | Runs an exact plan. No new approval. Structural and checksum checks still run |
 | `continúa <run>` | Resumes an SDD run without a new approval |
-| `/arch map\|review\|ideate\|boundary` | Architecture docs, risks, ADR, or service boundary map. Dependency commands need authorization, else they give inventory only |
+| `/arch map\|review\|ideate\|boundary` | Architecture docs, risks, ADR, or service boundary map. Dependency focus gives an inventory only and never runs dependency audit commands |
 | `/review judgment\|light\|defend` | Adversarial code review or design defense. Judgment fixes only authorized, confirmed findings. Defend is read-only |
 | `/doc` | Routes to the most specific documentation skill |
 | `/grill` | Focused interview to stress-test an idea |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
-A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push.
+For delivery and Git rules, see [`agents/orchestraitor.md`](agents/orchestraitor.md). The `oc-sdd` skill owns the SDD approval gate.
 
 ### Skills by purpose
 
@@ -66,11 +62,10 @@ A new SDD contract needs explicit approval. Silence is not approval. An exact ex
 | Review | `oc-review`, `oc-judge` |
 | Architecture | `oc-arch`, `oc-adr` |
 | Code quality | `oc-conventions`, `oc-domain`, `oc-refactor` |
-| Java | `oc-java` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
 | Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
 
-The external plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
+The npm plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
 
 ## Validate
 

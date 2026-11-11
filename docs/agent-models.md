@@ -43,7 +43,7 @@ The model syntax is `provider_id/model_id`. Remove both keys to use the defaults
 
 `/models-profiles` reads agents and models from the live server. It edits one agent, a coordinator group, or a saved preset, and shows `agent: before -> after` before it writes. Writes keep JSONC comments and unrelated keys. Concurrent changes, invalid models, and stale selections stop the write. See [hot reload](hot-reload.md) for live apply.
 
-Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`. Uninstall removes only the npm registration. It keeps the package cache, presets, assignments, and foreign `tui.json` entries.
+Saved presets are user state at `~/.config/opencode/model-configurator-presets.json`. Uninstall removes only the npm registration. It keeps the package cache, presets, assignments, and foreign `cli.json` entries.
 
 ## Troubleshooting
 

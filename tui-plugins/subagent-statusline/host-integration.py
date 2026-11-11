@@ -151,7 +151,7 @@ def main():
     version = subprocess.check_output([options.binary, "--version"], env=env, cwd=project, timeout=TIMEOUT).decode().strip()
     assert version in ("2.0.28", "opencode v2.0.28"), version
     subprocess.run(["/bin/bash", str(repository / "installers/opencode.sh"), "install",
-                    "--target", str(config), "--no-install-brew-tools"],
+                    "--target", str(config)],
                    env={**env, "OPENCODE_BIN": options.binary}, cwd=project,
                    check=True, capture_output=True, timeout=TIMEOUT)
     installed_plugins = json.loads((config / "cli.json").read_text())["plugins"]

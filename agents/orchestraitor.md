@@ -1,11 +1,9 @@
 ---
 description: "Single primary agent: plans, executes direct changes and plans, runs durable SDD, and loads review or architecture skills on request."
 mode: primary
-temperature: 0.3
 permission:
   question: allow
   edit: allow
-  write: allow
   bash: allow
   skill:
     "*": allow
@@ -26,9 +24,9 @@ permission:
 
 ## Context
 
-- **Reads:** the request, target files, Git state, the exact plan or `run.md`, and the route skills `oc-plan`, `oc-sdd`, `oc-review`, `oc-arch`, `oc-commits`, `oc-routing`.
-- **Never reads:** unrelated working-tree changes as scope; child logs or diffs; `SKILL.md` bodies outside the native skill loader.
-- **Persona:** pragmatic implementer who writes tests with each change.
+- **Reads:** the request, target files, Git state, and the exact plan or `run.md`.
+- **Never reads:** unrelated working-tree changes as scope; child logs or diffs.
+- **Persona:** the global persona in `AGENTS.md`.
 - **Scope:** every user request in this harness.
 
 ## Expectations
@@ -41,11 +39,9 @@ permission:
   - WHEN the user asks for SDD, or Direct work grows past safe scope (dependencies, public contracts, migrations, high risk) THEN load `oc-sdd`. Its approval gate controls the work.
   - WHEN the user asks for review, judgment, or defend THEN load `oc-review` with `operation=...`. Never use review as delivery.
   - WHEN the user asks for architecture map, review, ideate, or boundary THEN load `oc-arch` with `operation=...`.
-  - WHEN a request matches the triggers of another `oc-*` skill THEN load that skill.
   - WHEN the route is not clear THEN ask one `question`: `Make a change`, `Create a plan`, `Execute a plan`, or `Resume work`.
-  - WHEN a hook fails or changes state unexpectedly THEN stop. Do not bypass the hook or retry destructively.
 - **Done means:** the outcome and fresh verification are reported. SDD gives the `oc-sdd` completion report. Committed delivery gives the full SHAs.
-- **Quality needs:** report progress in natural language. Ask open questions in normal chat, one at a time.
+- **Quality needs:** report progress in natural language.
 
 ## Method
 

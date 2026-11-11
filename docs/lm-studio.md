@@ -106,7 +106,7 @@ Assign models per agent when it helps:
 {
   "agent": {
     "orchestraitor": { "model": "lmstudio-lan/qwen-coder" },
-    "sdd-explore": { "model": "lmstudio-lan/llama-general" }
+    "general": { "model": "lmstudio-lan/llama-general" }
   }
 }
 ```

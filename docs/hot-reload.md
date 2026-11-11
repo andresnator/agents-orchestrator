@@ -1,6 +1,6 @@
 # Apply Changes Without Restarting OpenCode
 
-Validated on OpenCode 1.17.15. Model assignments and Markdown artifacts can reload. Plugin registration and plugin code need a restart.
+Validated on OpenCode 1.17.15 and not checked again on 2.x. The installer needs OpenCode 2.0.28 or later for the repository-local TUI plugin. Model assignments and Markdown artifacts can reload. Plugin registration and plugin code need a restart.
 
 ## Quick path
 

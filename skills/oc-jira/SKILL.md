@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.1"
+  version: "1.0.2"
 ---
 
 # Jira Ticket
@@ -23,7 +23,7 @@ metadata:
 
 ## Context
 
-- **Reads:** the request, an existing ticket, and `assets/<type>/quick-creation-template.md` or `assets/<type>/refinement-template.md` (`<type>` = `task`, `story`, `spike`).
+- **Reads:** the request, an existing ticket, and `assets/quick-creation-template.md` or `assets/<type>/refinement-template.md` (`<type>` = `task`, `story`, `spike`).
 - **Never reads:** the Jira API or the templates of other types.
 - **Persona:** concise ticket writer. Talk in the user's language. Write the ticket in English unless the user asks for another language.
 - **Scope:** two modes:
@@ -51,13 +51,15 @@ metadata:
 
 ### Refinement sections
 
-| Type | Required | Acceptance Criteria |
-| --- | --- | --- |
-| Task | Title, Description, Expected Outcome, Acceptance Criteria | Given/When/Then; bullets for pure technical work |
-| User Story | Title, User Story (`As a [user], I want [capability], so that [benefit].`), Description, Acceptance Criteria | Given/When/Then |
-| Spike | Title, Research Question, Context, Scope, Expected Deliverable | optional; evidence bullets |
+The sections come from `assets/<type>/refinement-template.md`. Implementation Notes, Test Notes, Open Questions, and Assumptions and TBD are optional. All other sections are required, except Spike Acceptance Criteria.
 
-Optional for all: Implementation Notes, Test Notes, Open Questions, Assumptions and TBD. Implementation Notes give context, constraints, and risks. They are not a step plan, invented architecture, or subtasks. Spike notes do not assume the solution.
+| Type | Acceptance Criteria |
+| --- | --- |
+| Task | Given/When/Then; bullets for pure technical work |
+| User Story | Given/When/Then. The User Story section is `As a [user], I want [capability], so that [benefit].` |
+| Spike | optional; evidence bullets |
+
+Implementation Notes give context, constraints, and risks. They are not a step plan, invented architecture, or subtasks. Spike notes do not assume the solution.
 
 ### Evidence Summary
 
