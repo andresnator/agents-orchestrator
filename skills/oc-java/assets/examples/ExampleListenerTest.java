@@ -65,18 +65,15 @@ class ExampleListenerTest implements WithAssertions {
 
     @ParameterizedTest
     @MethodSource("validationScenarios")
-    void shouldValidateMessageCorrectly(String message, boolean isValid, int expectedErrorCode) {
+    void shouldMapParserVerdictToErrorCodeWhenValidating(String message, boolean parserVerdict, int expectedErrorCode) {
         // Given
-        when(messageParser.isValid(message)).thenReturn(isValid);
+        when(messageParser.isValid(message)).thenReturn(parserVerdict);
 
         // When
         ValidationResult result = exampleListener.validate(message);
 
-        // Then
-        assertThat(result.isValid()).isEqualTo(isValid);
-        if (!isValid) {
-            assertThat(result.getErrorCode()).isEqualTo(expectedErrorCode);
-        }
+        // Then — assert the listener's own mapping, not the stubbed verdict echoed back
+        assertThat(result.getErrorCode()).isEqualTo(expectedErrorCode);
     }
 
     enum MessageType {
