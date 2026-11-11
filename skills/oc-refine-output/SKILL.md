@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.1.1"
+  version: "3.1.2"
 ---
 
 # Cognitive Output Refiner
@@ -31,7 +31,7 @@ metadata:
 - **Scenarios:**
   - WHEN input is already concise THEN say no refinement is needed and offer at most a micro-improvement.
   - WHEN the user asks to save/create a document or provides a file as input THEN write `{topic_snake_case}_v<semver>.md` in the current working directory unless a path is given; infer the topic, asking only if unclear; do not save the original; start at `v1.0.0` when no prior refined version exists. SemVer: patch for clarity/order/deduplication, minor for added information or structure changes, major for changed interpretation.
-  - WHEN the user is not satisfied THEN ask one correction question at a time in normal chat (`[Direct question]`, then `Recommendation: ...` only when useful; no headings, numbering, rationale blocks, or interview-length estimates; the `question` tool only for closed confirmations or enumerated choices), then generate a new complete version, not a patch.
+  - WHEN the user is not satisfied THEN ask correction questions, then generate a new complete version, not a patch.
 - **Done means:** the output contract below, with every Satisfaction Check item honestly true before rendering (fix the output first if one fails).
 - **Quality needs:** target 30–50% of original size; 10–20% only for explicit ultra-compact requests. Fidelity beats size. Keep errors, relevant stack frames, commands, paths, public/non-sensitive IDs, decisions, trade-offs, critical warnings, verification steps, and next steps, redacting usernames, local/private path prefixes, internal hostnames, and credentials while keeping filenames, function names, line numbers, error codes, and public IDs. Deduplicate to one canonical version.
 

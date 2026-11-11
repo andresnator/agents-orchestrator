@@ -4,8 +4,7 @@ Rules for all code, scripts, and tests. For language-specific rules, load the `o
 
 ## General
 
-- Obey the conventions of nearby code. Report deviations.
-- Names tell the intent. Use only abbreviations from the [glossary](glossary.md).
+- Names tell the intent. In agents-orchestrator, use only abbreviations from the [glossary](glossary.md).
 - One function does one thing. One module has one reason to change.
 - Comments tell why, not what, in STE ([writing-conventions.md](writing-conventions.md)).
 - Do not add code that no test or caller uses.
@@ -15,14 +14,6 @@ Rules for all code, scripts, and tests. For language-specific rules, load the `o
 - Start with `set -euo pipefail` unless the script needs different error handling.
 - Quote all variables: `"$var"`.
 - Run `bash -n <script>` after each change.
-
-## Make targets
-
-- Keep all targets in the root `Makefile`. Do not use `include`: shell completion reads only the root `Makefile`.
-- The `Makefile` holds commands only. A recipe has one command line.
-- If an action needs more logic, put it in `make-scripts/<action>.sh`. One script has one responsibility, for example `make-scripts/default-agent.sh`. The target calls the script and gives values as environment variables or arguments.
-- Each script follows "Shell scripts" above and starts with a comment that tells its purpose and usage.
-- Write a `## <description>` comment after each public target. `make help` reads these comments. Add each target to `.PHONY`.
 
 ## Tests
 
@@ -55,11 +46,3 @@ Test each behavior for these scenarios when they apply:
 - Tests are independent: no shared mutable state, no order dependency.
 - Test public behavior, not private details.
 - Do not test trivial code such as getters, setters, or generated code.
-
-## Validation
-
-Before you complete a change, run:
-
-```bash
-make test
-```

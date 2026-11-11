@@ -4,7 +4,7 @@ author: "{{AUTHOR}}"
 chapter: "{{CHAPTER_NUMBER}}"
 chapter_title: "{{CHAPTER_TITLE}}"
 date: "{{DATE}}"
-tags: [summary, book, architecture]
+tags: [summary, book, {{TOPIC_TAGS}}]
 ---
 
 # {{SUMMARY_TITLE}}
@@ -58,7 +58,3 @@ public class {{ClassName}} {
 ## Final Summary and Conclusions
 
 {{FINAL_SUMMARY}}
-
----
-
-*Generated with book-chapter-summarizer · {{DATE}}*

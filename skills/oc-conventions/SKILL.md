@@ -1,11 +1,11 @@
 ---
 name: oc-conventions
-description: "Trigger: writing production code or tests, applying test naming/assert style, extracting constants, placing DTOs or characterization tests. Andres's personal code and test conventions."
+description: "Trigger: writing production code or tests, applying test naming/assert style, extracting constants, placing DTOs or characterization tests, Java tests, JUnit, Mockito, ApprovalTests. Andres's personal code and test conventions, with Java-specific rules."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.1.1"
+  version: "3.2.0"
 ---
 
 # Code Conventions
@@ -45,6 +45,14 @@ metadata:
 - **Unified asserts:** fluent single-entry assertions: AssertJ `assertThat` in Java, `expect` in TS.
 - **Whole-object asserts:** for complex objects or DTOs with many fields, assert the full object (`usingRecursiveComparison()` or ApprovalTests in Java, `toMatchObject`/`toMatchSnapshot` in Vitest/Jest), never a cascade of field-by-field asserts. Prefer structured comparison over raw snapshots when golden-master fragility hurts.
 - **Characterization tests live apart:** a dedicated class/file per unit, `{ClassName}CharacterizationTest` (Java) or `<name>.characterization.test.ts` (TS). They are a permanent regression net.
+
+### Java
+
+- Use Mockito only across real boundaries. Use Spring context tests only when framework behavior is the subject.
+- Use `@InjectMocks` only when constructor setup adds noise.
+- Use `ArgumentCaptor` only when the passed object is the behavior under test.
+- Review an ApprovalTests baseline before you approve it. A bad baseline freezes bugs.
+- Keep the stack trace when you wrap an exception, except at a deliberate sanitization boundary.
 
 ### Resources
 

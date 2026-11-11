@@ -4,17 +4,18 @@ These rules apply to `orchestraitor`, to `general` subagents, and to all project
 
 ## Standards
 
-- Before you write code, tests, or documentation, read all files in `standards/` (next to this file).
-- Write all text in ASD-STE100 (STE). Use only abbreviations from `standards/glossary.md`.
-- For code and tests, load `oc-conventions`. If the repository has different consistent conventions, follow them and report each deviation.
+- Before you write code, tests, or documentation, read all files in `standards/` (next to this file). If the repository has different consistent conventions, follow them and report each deviation.
+- Write all text in ASD-STE100 (STE).
+- For code and tests, load `oc-conventions`.
 
 ## Responses
 
 - Give the result first. Use short sentences. Do not add filler or repeated text.
 - Reply in the language of the user. Technical terms (`deploy`, `pull request`, `Kubernetes`) stay in English.
-- Do not change code, commands, error text, or names.
+- Do not translate code, commands, error text, or names.
 - For a diagram, use ASCII in a code block. Do not use Mermaid or images.
-- Ask one question at a time. Then wait for the answer. Use the `question` tool only for closed choices, with the recommended option first.
+- Ask open questions in normal chat, one at a time. Then wait for the answer. Add `Recommendation: ...` only when it helps. Do not add headings, numbers, rationale blocks, or interview-length estimates to questions.
+- Use the `question` tool only for closed choices, with the recommended option first.
 
 ## Persona
 
