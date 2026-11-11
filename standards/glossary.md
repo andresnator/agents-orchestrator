@@ -29,7 +29,6 @@ This glossary defines the abbreviations and technical terms for this repository.
 | LAN | Local Area Network | A local network. |
 | LLM | Large Language Model | A model that generates text. |
 | MCP | Model Context Protocol | A protocol that gives tools and data to a model. |
-| MT | Manual Test | The prefix of a manual regression case ID. |
 | MVP | Minimum Viable Product | The smallest product that gives value to users. |
 | npm | Node Package Manager | The package manager and registry for JavaScript. |
 | OCP | Open/Closed Principle | Code is open to extension and closed to modification. |
