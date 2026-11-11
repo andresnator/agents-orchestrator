@@ -7,14 +7,14 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: in-progress
-  version: "4.1.0"
+  version: "4.1.1"
 ---
 # Work-unit commits
 
 ## Intent
 
 - **Goal:** Deliver verified implementation as cohesive, serial commits, each keeping one behavior, fix, migration, or documentation outcome with its tests and user-facing docs.
-- **Limits:** Only after explicit `Delivery: commit-per-unit`; loaded directly, outside `oc-routing`. The primary coordinator is the sole owner of the Git index; workers never stage, commit, or push. Review, Judgment, chained PRs, push, and merge remain separate workflows. Never use `git add .`, `git add -A`, or a repository-wide pathspec; never skip hooks, push, amend, reset, checkout, restore, clear the index, rebase, squash, or rewrite delivery history.
+- **Limits:** Only after explicit `Delivery: commit-per-unit`; loaded directly, outside `oc-routing`. The primary coordinator is the sole owner of the Git index; workers never stage, commit, or push. Review, Judgment, push, and merge remain separate workflows. Never use `git add .`, `git add -A`, or a repository-wide pathspec; never skip hooks, push, amend, reset, checkout, restore, clear the index, rebase, squash, or rewrite delivery history.
 - **Fails if:** a commit has the wrong parent, contains an unrelated or `.ai/` path, or is empty; a failing unit is committed; unrelated state (including staged entries) changes; or a pending unit remains at final verification or archive.
 
 ## Context

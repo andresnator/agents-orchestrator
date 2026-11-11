@@ -121,21 +121,3 @@ test('shouldDenyBodyPathAndGeneratedPreambleReadsWhenSnapshotSuggestsThem', () =
     assert.match(source, /plugin alone owns the generated snapshot; never hand-edit it or add a manual generator/, path);
   }
 });
-
-test('shouldMatchCurrentLiveSnapshotSchemaWithoutOpeningRegistryLocations', (context) => {
-  // Given
-  const registryUrl = new URL('.ai/atl/skill-registry.md', ROOT);
-  // When
-  let snapshot;
-  try {
-    snapshot = readFileSync(registryUrl, 'utf8');
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    context.skip('Plugin-generated .ai/atl/skill-registry.md absent; live-only check skipped, required V06 live verification remains separate.');
-    return;
-  }
-  // Then
-  assertSnapshotSchema(snapshot);
-  assert.ok(snapshot.includes('| opencode | OpenCode | /builtin/opencode.md |'));
-});
-

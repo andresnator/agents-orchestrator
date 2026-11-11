@@ -4,7 +4,7 @@ description: "Trigger: light plan, quick plan, plan rápido, plan light, deep pl
 license: MIT
 metadata:
   author: andresnator
-  version: "5.0.0"
+  version: "5.1.0"
   status: testing
 ---
 
