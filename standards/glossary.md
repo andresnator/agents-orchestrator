@@ -10,6 +10,7 @@ This glossary defines the abbreviations and technical terms for this repository.
 | ADR | Architecture Decision Record | A document that records one architecture decision and its reasons. |
 | AI | Artificial Intelligence | Software that does tasks that usually need human intelligence. |
 | API | Application Programming Interface | A contract that lets one program use another. |
+| ASCII | American Standard Code for Information Interchange | A basic text character set. An ASCII diagram uses only these characters. |
 | ASD-STE100 | ASD Simplified Technical English | The writing standard for this repository. Also called STE. |
 | C4 | Context, Containers, Components, Code | A model with four levels of architecture diagrams. |
 | CD | Continuous Delivery | Automatic release of each change that passes CI. |
@@ -37,6 +38,7 @@ This glossary defines the abbreviations and technical terms for this repository.
 | RAM | Random-Access Memory | The main working memory of a computer. |
 | RFC | Request for Comments | A design proposal for review. |
 | SDD | Spec-Driven Development | Development that starts from a written specification. |
+| SDK | Software Development Kit | A set of tools and libraries to build software for a platform. |
 | SemVer | Semantic Versioning | The `MAJOR.MINOR.PATCH` version format. |
 | SHA | Secure Hash Algorithm | A hash function. `SHA-256` makes a 256-bit hash. |
 | SRP | Single Responsibility Principle | One module has one reason to change. |
