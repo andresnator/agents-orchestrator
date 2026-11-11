@@ -88,6 +88,8 @@ To add a component, add its folder or file in the correct type directory. Then u
 
 ## Validation
 
+Run `make hooks` one time. Then run `make test` before you push. The pre-push hook runs it too.
+
 Syntax-check a changed executable, for example `bash -n <script>`. Test behavior in a disposable target. Model-backed checks spend credits. Run them only with a separate explicit authorization.
 
 Do not commit unless a person explicitly asks.

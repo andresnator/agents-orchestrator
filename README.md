@@ -29,7 +29,7 @@ After the install:
 | `agents/` | The single OpenCode agent, `orchestraitor` |
 | `commands/` | Fused OpenCode commands |
 | `skills/<skill>/` | All skill bodies, one `SKILL.md` each. Never copy a body or add symlinks |
-| `plugins/` | Repository-specific server plugins (`*.test.mjs` are not installed) |
+| `plugins/` | Repository-specific server plugins, if any (`*.test.mjs` are not installed) |
 | `tui-plugins/` | Repository-specific TUI plugins |
 | `external-plugins/` | Pinned standalone plugin descriptors |
 | `standards/` | Code conventions, writing conventions (ASD-STE100), and glossary |
@@ -60,26 +60,29 @@ installers/opencode.sh status
 | `/review judgment\|light\|defend` | Adversarial code review or design defense. Judgment fixes only authorized, confirmed findings. Defend is read-only |
 | `/doc` | Routes to the most specific documentation skill |
 | `/grill` | Focused interview to stress-test an idea |
-| `/caveman lite\|full\|ultra\|wenyan` | Saves a global response compression level. The default is `lite`. `normal mode` or `stop caveman` saves `off`. The level persists across restarts |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
-A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push. TCR is Direct only.
+A new SDD contract needs explicit approval. Silence is not approval. An exact existing plan skips approval. Delivery precedence: the current instruction, then the plan `Delivery:` value, then `working-tree`. Only `orchestraitor` stages, commits, or pushes. Workers never stage, commit, roll back, or push.
 
 ### Skills by purpose
 
 | Purpose | Skills |
 |---|---|
-| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-tcr`, `oc-commits`, `oc-chained-pr`, `oc-debug` |
+| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-commits`, `oc-debug` |
 | Planning | `oc-plan`, `oc-risk-scope`, `oc-arch-impact`, `oc-grill`, `oc-tooling-audit` |
 | Review | `oc-review`, `oc-judge`, `oc-practices` |
 | Architecture | `oc-arch`, `oc-adr`, `oc-boundary`, `oc-dep-audit`, `oc-patterns` |
 | Code quality | `oc-conventions`, `oc-naming`, `oc-domain`, `oc-refactor` |
 | Java | `oc-java` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
-| Output and meta | `oc-caveman`, `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
+| Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
 
 The external plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
+
+## Validate
+
+Run `make install` to install the harness. Add options with `ARGS`, for example `make install ARGS=--dry-run`. Run `make hooks` one time to install the pre-push hook. Run `make test` to do the lint and the unit tests.
 
 ## Documentation
 
