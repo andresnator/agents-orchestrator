@@ -4,12 +4,15 @@
 NODE = node
 SCRIPTS = installers/*.sh installers/lib/*.sh scripts/*.sh
 ARGS =
+ENGRAM_FORMULA = gentleman-programming/tap/engram
 
 all: test
 
 help:
 	@echo "make install    Install the harness globally (ARGS=\"--project\" etc.)"
 	@echo "make uninstall  Remove the installed harness"
+	@echo "make engram-install  Install Engram (Homebrew) and set it up for OpenCode"
+	@echo "make engram-upgrade  Upgrade Engram (Homebrew) and refresh its OpenCode setup"
 	@echo "make test   Run lint and all unit tests"
 	@echo "make lint   Syntax-check shell scripts (bash -n)"
 	@echo "make hooks  Install the git pre-push hook"
@@ -31,8 +34,16 @@ install:
 uninstall:
 	installers/opencode.sh uninstall $(ARGS)
 
+engram-install:
+	brew install $(ENGRAM_FORMULA)
+	engram setup opencode
+
+engram-upgrade:
+	brew upgrade $(ENGRAM_FORMULA)
+	engram setup opencode
+
 hooks:
 	git config core.hooksPath .githooks
 	@echo "pre-push hook installed (.githooks/pre-push)"
 
-.PHONY: all help install uninstall lint test hooks
+.PHONY: all help install uninstall engram-install engram-upgrade lint test hooks

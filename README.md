@@ -12,6 +12,8 @@ installers/opencode.sh install
 
 A global install also installs missing Homebrew tools. Use `--no-install-brew-tools` to skip them. Project and explicit-target installs skip them unless you add `--install-brew-tools`.
 
+For Engram memory, run `make engram-install` one time and `make engram-upgrade` to update it. Both run `engram setup opencode`.
+
 After the install, restart OpenCode. `--reload` does not reload plugin code.
 
 ## Repository shape
