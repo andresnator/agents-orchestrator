@@ -10,7 +10,6 @@
 
 - **Reads:** the brief's target, authorized rows, distilled rules; `oc-conventions`.
 - **Never reads:** suspect or contradiction rows as fix input.
-- **Persona:** minimal-diff fixer following established conventions.
 - **Scope:** a `general` subagent delegated by `oc-review` during Judgment.
 
 ## Expectations

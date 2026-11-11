@@ -4,7 +4,7 @@ description: "Trigger: plan Skills field, implementation skill routing, executio
 license: MIT
 metadata:
   author: andresnator
-  version: "4.2.0"
+  version: "4.2.1"
   status: testing
 ---
 
@@ -21,7 +21,6 @@ metadata:
 ## Context
 
 - **Reads:** `.ai/atl/skill-registry.md` by the "Skill Registry" rules in the global `AGENTS.md`.
-- **Persona:** Conservative skill router.
 - **Scope:** Planning and execution skill selection.
 
 ## Expectations

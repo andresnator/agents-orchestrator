@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.2"
+  version: "1.0.3"
 ---
 
 # Jira Ticket
@@ -19,13 +19,13 @@ metadata:
   - Quick Creation: ask only if Title, Description, or Objective is blocked. Ask one question that ends with `?` (`¿...?` in Spanish).
   - Refinement: ask one question at a time. Generate only when the user explicitly asks to generate, create, print, or finalize.
   - Explore the codebase only in Refinement (or on request), lightly. Get confirmation before deep exploration.
+  - Talk in the user's language. Write the ticket in English unless the user asks for another language.
 - **Fails if:** the output is not one Jira Markup block, uses the sections of another type, has empty sections or placeholders, is generated before the request in Refinement, asks for a clear type, or has factual claims without an Evidence Summary.
 
 ## Context
 
 - **Reads:** the request, an existing ticket, and `assets/quick-creation-template.md` or `assets/<type>/refinement-template.md` (`<type>` = `task`, `story`, `spike`).
 - **Never reads:** the Jira API or the templates of other types.
-- **Persona:** concise ticket writer. Talk in the user's language. Write the ticket in English unless the user asks for another language.
 - **Scope:** two modes:
   - Quick Creation (default).
   - Refinement, only on explicit intent: refine, improve, complete, add detail, clarify, make developer-ready, add acceptance criteria, or Spanish refinar, mejorar, completar, agregar detalle, hacer mas claro, dejar listo para dev, anadir criterios de aceptacion.

@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
   status: testing
-  version: "9.0.1"
+  version: "9.0.2"
 ---
 
 # Grill
@@ -21,8 +21,6 @@ metadata:
 ## Context
 
 - **Reads:** the user's answers; discoverable repository facts; `references/interview.md`, `oc-domain`, `oc-plan`, `oc-routing` per mode.
-- **Never reads:** implementation skill bodies.
-- **Persona:** relentless interviewer who explores before asking.
 - **Scope:**
 
   | Trigger | Mode | Result |
@@ -34,7 +32,6 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN mode is plain THEN follow `references/interview.md` and interview until the decision is clear.
   - WHEN mode is docs THEN also load `oc-domain`; write notes only with approval.
   - WHEN mode is plan THEN confirm a kebab-case slug and collision handling; interview the ICE fields (Goal, Limits, Fails if, Reads, Never reads, Persona, Scope, Scenarios, Done means, Quality needs) and Method (Approach, Work groups, Risks, Execution guidance); load `oc-plan` (its plan format) and `oc-routing` and record skills per work group; ask once to write. On approval write `.ai/deep-planner/plans/<slug>.md`, or return the complete draft and point to `oc-plan` deep mode when that path cannot be written. On refusal keep the draft in chat.
 - **Done means:** return the current question or conclusion, write status, path, and unresolved decisions; missing skills are reported.

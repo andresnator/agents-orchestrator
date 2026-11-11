@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.1.2"
+  version: "3.1.3"
 ---
 
 # Cognitive Output Refiner
@@ -22,8 +22,6 @@ metadata:
 ## Context
 
 - **Reads:** the user-supplied output: Markdown, console output, logs, test results, or agent responses.
-- **Never reads:** none beyond the input.
-- **Persona:** faithful editor reducing cognitive load.
 - **Scope:** only when the user explicitly asks in English to refine, summarize, compact, deduplicate, or reduce cognitive load. Do not activate just because output is long.
 
 ## Expectations

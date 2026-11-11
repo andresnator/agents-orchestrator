@@ -50,24 +50,50 @@ Agents, skills, and plans use Intent-Driven Software Development (IDSD). Each bo
 ## Context
 
 - **Reads:** <inputs, files, skills, and evidence it uses>
-- **Never reads:** <sources it must ignore>
-- **Persona:** <role and stance>
+- **Never reads:** <optional: sources it must ignore>
+- **Persona:** <optional: a stance that changes behavior>
 - **Scope:** <activation and where it applies>
 
 ## Expectations
 
-- **Scenarios:** <WHEN ... THEN ... behaviors>
+- **Scenarios:** <optional: WHEN ... THEN ... for real branches and edge cases>
 - **Done means:** <completion criteria and exact return contract>
-- **Quality needs:** <quality bar>
+- **Quality needs:** <optional: quality bar>
 
 ## Method
 
-<Optional: decision tables, protocols, formats, and resource pointers. Describe what to achieve, not a rigid script.>
+<Method knowledge that a model cannot infer. See "Method rule".>
 ```
 
 Keep the bold field labels exact. Use nested bullets or a short table for a long field. Keep literal triggers, return lines such as `OK ...` and `BLOCK ...`, and paths exactly.
 
 Do not copy the question rule of `global/AGENTS.md` into an agent, skill, or command. Keep only a nuance that is specific to the skill.
+
+### Required and optional fields
+
+| Field | Status | Rule |
+| --- | --- | --- |
+| `Goal`, `Limits`, `Fails if`, `Reads`, `Scope`, `Done means` | Required | Always write them. |
+| `Method` | Required | Required in agent and skill bodies. A reference can omit it if it adds no method. |
+| `Never reads` | Optional | Use it only for a real source that the body must ignore. |
+| `Persona` | Optional | Use it only for a stance that changes behavior. Do not restate the title or the `Goal`. |
+| `Scenarios` | Optional | Use it only for real branches and edge cases. Do not repeat `Method`. |
+| `Quality needs` | Optional | Use it only for a quality bar that no other field states. |
+
+- Omit an optional field if its value is `none`, is empty, or restates the title or the `Goal`.
+- Put each rule in one field only. For example, a language rule goes in `Limits` or `Quality needs`, not in `Persona`.
+- Plans keep every section of `skills/oc-plan/assets/plan-template.md`. The `oc-plan` skill owns the plan format.
+
+### Method rule
+
+Give the intent by default: the outcome, the limits, and the checks. A capable model finds the steps. Write exact steps only when one of these conditions is true:
+
+- The order of the steps is important, or a step cannot be undone.
+- Another program parses the output.
+- Each run must give the same result.
+- The model cannot infer a detail of the environment.
+
+Delete a procedure that a capable model can infer. Keep owner conventions, exact formats, and project contracts.
 
 ## Skills
 
@@ -84,6 +110,13 @@ Bump the version for each skill change:
 - Major: breaking activation or output behavior.
 
 Keep the runtime contract short. Put concrete templates in `assets/`. Put extended guidance in `references/`.
+
+Line cap for `SKILL.md`:
+
+- A skill has 80 lines maximum.
+- A coordinator skill has 120 lines maximum. A coordinator skill controls workers or modes through its references. The coordinator skills are `oc-sdd` and `oc-plan`.
+
+Put each rule in one place. A reference adds only its own procedure. It does not copy the `Limits` or `Fails if` of its parent `SKILL.md`. Define a shared term one time, where the skill first uses it.
 
 ## Keeping the catalog accurate
 

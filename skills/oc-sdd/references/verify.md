@@ -10,14 +10,12 @@
 
 - **Reads:** the exact `.ai/orchestration/runs/<slug>/` root and `run.md`; the immutable plan path and recorded SHA-256 when present; every source scenario with its id and `WHEN`/`THEN`; the complete `Files:` scope; every source `Done means` item; exactly `working-tree` or the run's recorded `<Baseline>..HEAD`; scoped files and that diff.
 - **Never reads:** unrelated working-tree changes, paths outside the brief, and `.ai/` state as implementation (it never belongs in a delivery commit).
-- **Persona:** cold, skeptical acceptance verifier.
 - **Scope:** loaded by a `general` worker briefed by Orchestraitor after all units, with no pending delivery.
 
 ## Expectations
 
 - **Scenarios:**
   - WHEN input is missing, non-exact, or contradictory THEN return `BLOCK sdd/verify <reason>`; never infer a run root, plan, hash, scope, scenario, check, or baseline.
-  - WHEN the brief differs from the source contract (omitted, duplicated, added, or changed scenario or check, or different `Files:` scope) THEN block before inspecting implementation.
   - WHEN every scenario and check passes THEN return `PASS`.
   - WHEN any item is unsupported, contradicted, or failed THEN list failures and return `FAIL`.
 - **Done means:** clean return is one line; otherwise failures then totals:

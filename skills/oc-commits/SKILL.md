@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: in-progress
-  version: "4.1.1"
+  version: "4.1.2"
 ---
 # Work-unit commits
 
@@ -20,8 +20,6 @@ metadata:
 ## Context
 
 - **Reads:** Git state, repository commit-message style, the plan's work groups (candidates, not mandatory commit boundaries), focused checks, and any explicit commit count, order, granularity, or message.
-- **Never reads:** `.ai/` as target scope.
-- **Persona:** Cohesive-commit deliverer.
 - **Scope:** Frontmatter triggers; Direct and SDD.
 
 ## Expectations

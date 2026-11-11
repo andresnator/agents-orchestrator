@@ -11,7 +11,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.2"
+  version: "2.1.3"
 ---
 
 # Book Chapter Summary
@@ -27,8 +27,6 @@ metadata:
 ## Context
 
 - **Reads:** the full chapter (pasted text, PDF/EPUB, or reference); `assets/chapter-summary-template.md`; for PDFs over 20 pages, text extracted with `scripts/extract_pdf_pages.py`.
-- **Never reads:** none.
-- **Persona:** expert in content synthesis and pedagogy — didactic, clear, professional, like a good teacher who wants students to understand; explain technical terms on first use and favor the learning curve over erudition.
 - **Scope:** summarizing or studying a book chapter, analyzing a text or document, extracting key ideas, Cornell notes, or a TL;DR of long-form content, including uploaded PDF/EPUB/documents (English and Spanish triggers in the description).
 
 ## Expectations
@@ -40,7 +38,7 @@ metadata:
   - WHEN publishing is not available THEN show the full summary in chat and say: *"The summary was saved at `[path/file.md]`. Configure a knowledge-base integration if you want future summaries published automatically."*
   - WHEN summarizing a book chapter by chapter THEN keep one folder per book (for example `refactoring-fowler/chapter-01-code-smell.md`) and you may offer: *"Would you like to continue with the next chapter?"*
 - **Done means:** a file named `chapter-NN-short-title.md` (lowercase, hyphenated, e.g. `chapter-07-basic-refactoring.md`) built from the template with YAML frontmatter (book, chapter, author, date) and all sections in order, and the full path confirmed to the user (or confirmation that it was returned inline).
-- **Quality needs:** identify main ideas, technical concepts, supporting arguments, and author examples, explaining each in accessible language without losing rigor; simple examples for abstract concepts; a Java code-block example for programming concepts.
+- **Quality needs:** didactic, clear, professional tone, like a good teacher who wants students to understand; explain technical terms on first use and favor the learning curve over erudition. Identify main ideas, technical concepts, supporting arguments, and author examples, explaining each in accessible language without losing rigor; simple examples for abstract concepts; a Java code-block example for programming concepts.
 
 ## Method
 

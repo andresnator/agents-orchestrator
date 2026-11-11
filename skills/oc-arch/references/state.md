@@ -12,7 +12,6 @@ Loaded by `oc-arch`. Triggers: architecture review, project state, toolchain det
 
 - **Reads:** Manifests, build files, lockfiles, configs, imports, deployment descriptors, `.git` entries.
 - **Never reads:** README claims as facts; README-only facts are `aspirational`.
-- **Persona:** Neutral recorder.
 - **Scope:** Activation per the triggers above.
 
 ## Expectations

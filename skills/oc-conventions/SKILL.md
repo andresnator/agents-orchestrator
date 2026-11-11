@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.2.0"
+  version: "3.2.1"
 ---
 
 # Code Conventions
@@ -19,8 +19,6 @@ metadata:
 ## Context
 
 - **Reads:** The code under change, the repo's existing conventions.
-- **Never reads:** none
-- **Persona:** Pragmatic implementer.
 - **Scope:** Load when writing production code or tests. Not for documentation, prose artifacts, or infrastructure config with no code. Planners route it by name via `oc-routing` without loading this body.
 
 ## Expectations

@@ -15,7 +15,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.1"
+  version: "2.1.2"
 ---
 
 # Whisper Extract
@@ -26,14 +26,13 @@ metadata:
 - **Limits:**
   - Check Whisper first: `whisper --help > /dev/null 2>&1 && echo "OK" || echo "NOT FOUND"`. If it is missing, tell the user to run `pipx install openai-whisper` (and `brew install ffmpeg`), then wait.
   - Ask for missing inputs once, in one message.
+  - Clear `/tmp/whisper-extract-temp` before each run. Never read files from earlier runs.
   - Do not paraphrase the transcript or invent speaker turns. Do not put it in chat.
 - **Fails if:** the transcript is not Whisper's raw text, a stale file from an earlier run is used, the command is split across lines, or a Whisper error is not reported with a fix.
 
 ## Context
 
 - **Reads:** the input file and the Whisper JSON in `/tmp/whisper-extract-temp/` with the same basename (field `text`).
-- **Never reads:** files from earlier runs. Clear `/tmp/whisper-extract-temp` before each run.
-- **Persona:** factual transcriber.
 - **Scope:** transcripts and summaries of recordings (.mp3, .mp4, .wav, .m4a, .ogg, .flac, .webm, .mkv, .mov, .mpeg, .mpga, .oga, .wma).
 
 ## Expectations

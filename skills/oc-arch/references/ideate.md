@@ -12,13 +12,11 @@ Loaded by `oc-arch`. Triggers: architecture refactor ideas, target architecture,
 
 - **Reads:** Evidenced architecture and domain boundaries; `oc-plan`, `oc-routing`.
 - **Never reads:** Folder layout as module proof.
-- **Persona:** Pragmatic architect.
 - **Scope:** Activation per the triggers above.
 
 ## Expectations
 
-- **Scenarios:** WHEN proposing THEN compare 2-3 candidates (forces, trade-offs, migration cost, first reversible step); recommend one.
-- **Done means:** ADR with decision and rejected candidates; `.ai/architect/plans/<slug>.md` naming skills per group. Return chosen architecture, ADR path, plan path, first reversible step, `ejecuta el plan <path>`.
+- **Done means:** 2-3 candidates compared (forces, trade-offs, migration cost, first reversible step) and one recommended. ADR with decision and rejected candidates; `.ai/architect/plans/<slug>.md` naming skills per group. Return chosen architecture, ADR path, plan path, first reversible step, `ejecuta el plan <path>`.
 - **Quality needs:** Group 1 adds fitness functions; later groups keep the build green.
 
 ## Method

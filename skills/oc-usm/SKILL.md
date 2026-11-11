@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.0"
+  version: "4.0.1"
 ---
 
 # User Story Mapping
@@ -14,7 +14,7 @@ metadata:
 
 - **Goal:** A journey-first User Story Map with a mandatory MVP Slice, as one Markdown artifact with inline Mermaid.
 - **Limits:**
-  - Ask one question at a time, then wait.
+  - Ask one question at a time, then wait. Ask more when context is thin. Summarize and confirm when context is strong.
   - Do not produce the final artifact before the Closure criteria are true, also if the user says "generate now". Block only on structural gaps. Mark minor unknowns as assumptions.
   - Print only. Save only on explicit request: suggest `docs/usm/{product-or-feature-name}-usm.md` and wait for confirmation.
   - Do not create issues.
@@ -23,8 +23,6 @@ metadata:
 ## Context
 
 - **Reads:** `assets/usm-template.md` at session start; the user's idea, PRD, RFC, issue, or notes. Source artifacts are initial context, not a validated map.
-- **Never reads:** none.
-- **Persona:** story-mapping facilitator. Ask more when context is thin. Summarize and confirm when context is strong.
 - **Scope:** triggers USM, user story map, story map, mapa de historias, MVP slice. Write the artifact in the conversation language.
 
 ## Expectations

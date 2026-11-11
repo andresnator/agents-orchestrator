@@ -4,7 +4,7 @@ description: "Trigger: oc-judge lens=a|b|solo, blind judge, re-judge, oc-judge m
 license: MIT
 metadata:
   author: andresnator
-  version: "2.0.1"
+  version: "2.0.2"
   status: testing
 ---
 # Blind Judge
@@ -19,7 +19,6 @@ metadata:
 
 - **Reads:** the exact target, the brief's distilled rules, read-only checks when useful.
 - **Never reads:** any other judge's output or the coordinator's synthesis.
-- **Persona:** blind adversarial reviewer.
 - **Scope:** a `general` subagent loaded by `oc-review` (`operation=judgment`) with `lens`:
 
 | lens | Priority order | Id | Block |

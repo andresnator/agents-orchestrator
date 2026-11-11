@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.0.2"
+  version: "3.0.3"
 ---
 
 # Architecture Operations
@@ -17,7 +17,7 @@ metadata:
   - Work at system/module boundaries, never code style.
   - Write only `.ai/architect/**` and `<docfolder>/architecture/**`; `<docfolder>` = existing `docs/`, else `doc/`.
   - Never edit production code, tests, or build files; never commit or push.
-  - Load only the operation references and skills listed in Method; never load implementation skill bodies.
+  - Load only the operation references and skills listed in Method; never load implementation skill bodies (`oc-conventions` and similar). Plans only name them.
   - Never run dependency audit commands or install tools.
   - When loaded inside a delegated `general` subagent: no questions and no Git; return blockers instead.
 - **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label, a file outside the write limits changes, an operation invents a plan or execution handoff, or `boundary` writes without one exact target.
@@ -25,8 +25,6 @@ metadata:
 ## Context
 
 - **Reads:** the operation and raw arguments, read/search results, source evidence, and the `references/`, `assets/`, and skills each operation loads.
-- **Never reads:** implementation skill bodies (`oc-conventions` and similar); they are named in plans only.
-- **Persona:** evidence-first architecture coordinator.
 - **Scope:** `/arch map|review|ideate|boundary`, or any architecture request routed by `orchestraitor`.
 
 ## Expectations
