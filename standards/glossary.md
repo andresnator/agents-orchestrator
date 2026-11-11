@@ -29,10 +29,8 @@ This glossary defines the abbreviations and technical terms for this repository.
 | LAN | Local Area Network | A local network. |
 | LLM | Large Language Model | A model that generates text. |
 | MCP | Model Context Protocol | A protocol that gives tools and data to a model. |
-| MT | Manual Test | The prefix of a manual regression case ID. |
 | MVP | Minimum Viable Product | The smallest product that gives value to users. |
 | npm | Node Package Manager | The package manager and registry for JavaScript. |
-| OCP | Open/Closed Principle | Code is open to extension and closed to modification. |
 | PR | Pull Request | A request to merge a change. |
 | PRD | Product Requirements Document | A document that tells what a product must do. |
 | RAM | Random-Access Memory | The main working memory of a computer. |
@@ -41,14 +39,12 @@ This glossary defines the abbreviations and technical terms for this repository.
 | SDK | Software Development Kit | A set of tools and libraries to build software for a platform. |
 | SemVer | Semantic Versioning | The `MAJOR.MINOR.PATCH` version format. |
 | SHA | Secure Hash Algorithm | A hash function. `SHA-256` makes a 256-bit hash. |
-| SRP | Single Responsibility Principle | One module has one reason to change. |
 | STE | Simplified Technical English | Short form of ASD-STE100. |
 | TCP | Transmission Control Protocol | A reliable network transport protocol. |
 | TDD | Test-Driven Development | Write a failing test first, then the code. |
 | TLS | Transport Layer Security | A protocol that encrypts network traffic. |
 | TUI | Terminal User Interface | An interface that shows in a terminal. |
 | USM | User Story Map | A map of user stories by user activity. |
-| VLAN | Virtual Local Area Network | A logical LAN on shared network hardware. |
 | VRAM | Video Random-Access Memory | The memory of a graphics processor. |
 
 ## Technical terms (do not translate)

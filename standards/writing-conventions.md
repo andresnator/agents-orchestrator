@@ -4,7 +4,7 @@ All text uses ASD-STE100 Simplified Technical English (STE): READMEs, guides, sk
 
 ## Language
 
-- Write in English. Use Spanish only for literal triggers and [glossary](glossary.md) terms.
+- Write repository artifacts (code, comments, documentation, prompts, commits) in English. Use Spanish only for literal triggers and [glossary](glossary.md) terms.
 - "Spanglish" rule: do not translate technical terms (`Kubernetes`, `pull request`, `commit`, `deploy`, `endpoint`), also in Spanish text.
 - Do not translate literal triggers such as `"ejecuta el plan <change>"`. They are activation contracts.
 
@@ -33,7 +33,7 @@ All text uses ASD-STE100 Simplified Technical English (STE): READMEs, guides, sk
 
 ## Abbreviations
 
-Define each abbreviation in the [glossary](glossary.md) before you use it. Use one form in a section (`k8s` or `Kubernetes`). Do not invent abbreviations.
+In agents-orchestrator, define each abbreviation in the [glossary](glossary.md) before you use it. Use one form in a section (`k8s` or `Kubernetes`). Do not invent abbreviations.
 
 ## Examples
 

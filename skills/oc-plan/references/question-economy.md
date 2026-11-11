@@ -9,11 +9,9 @@ Before asking anything, classify it:
 - **The repo can answer it** (does X exist? how is Y called? what pattern do tests use? which framework version?) → explore read-only. Asking these erodes trust in every question that follows.
 - **Only the user can answer it** (scope boundaries, product trade-offs, priorities, acceptance criteria, risk appetite) → it earns a slot in the round.
 
-## One conversational question at a time
+## Before you ask
 
 - Explore first, then ask: exploration removes questions and sharpens the ones that remain.
-- Ask each surviving open-ended question directly in normal chat, then stop and wait. Use the `question` tool only for a closed confirmation, mode, rating, or enumerated choice.
-- Add `Recommendation: ...` only when it helps the user decide or respond. Do not add a rationale block or estimate the interview length.
 - Skip anything the user already stated; restating it as a question reads as not listening.
 
 ## Edge validation
@@ -22,4 +20,4 @@ Edge-case validation may surface decisions only the user can make, such as reten
 
 ## Record the answers
 
-Every answer becomes a line in the plan's Decisions section, with its rationale, so a fresh session or executor never re-litigates it.
+Record every answer with its rationale in the plan, so a fresh session or executor never re-litigates it: a design choice goes in `Approach`; a risk, a deferred decision, or a rollback condition goes in `Risks and open questions`.

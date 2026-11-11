@@ -1,11 +1,11 @@
 ---
 name: oc-refactor
-description: "Trigger: refactor, refactorizar, code smells, malos olores del código, olores de código, código sucio, limpiar código, simplificar condicionales, reestructurar clase, eliminar código duplicado, reducir complejidad, mejorar legibilidad, reorganizar código, clean code, código limpio, SOLID, simplify conditionals, extract method, extraer método, mejorar este código, legacy code, legacy code safety, characterization tests, safe refactor, dependency seam detection, hard dependencies, refactor lens, refactor analysis, analyze unit with lens, architecture impact review, layer boundaries, tooling audit, test tooling gaps, mutation coverage tooling. Behavior-preserving refactor in any language, plus read-only lens, legacy-safety, architecture-impact, and tooling-audit modes."
+description: "Trigger: refactor, refactorizar, code smells, clean code, limpiar código, legacy code, characterization tests, safe refactor, refactor lens, architecture impact review, tooling audit. Behavior-preserving refactor in any language, plus read-only lens, impact, and tooling-audit modes."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.1"
+  version: "4.0.2"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
@@ -36,18 +36,18 @@ metadata:
   - WHEN a brief gives `target=... lens=...` THEN use lens mode.
   - WHEN the question is local versus architectural THEN use impact mode.
   - WHEN a high or critical risk plan needs safety tooling THEN use tooling mode.
-- **Done means:** catalog mode: the refactor is applied in small steps, tests pass after each step, and each change has a short reason. Other modes: only the output contract of that mode.
+- **Done means:** refactor: the change is applied in small steps, tests pass after each step, and each change has a short reason. Analysis modes: only the output contract of that mode.
 - **Quality needs:** evidence over opinion; smallest safe step.
 
 ## Method
 
 ### Lens mode
 
-Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field returns `BLOCK plan/analyze <reason>`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-java`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly:
+Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field returns `BLOCK plan/analyze <reason>`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly:
 
 ```text
 OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>
-<file:line> <high|medium|low> <recommendation>; technique=<canonical|none> confidence=<0..1>
+<file:line> <high|medium|low> <recommendation>; confidence=<0..1>
 TOTAL findings=<n> [nf=<reason>]
 ```
 
