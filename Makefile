@@ -5,8 +5,8 @@
 NODE = node
 SCRIPTS = installers/*.sh installers/lib/*.sh scripts/*.sh make-scripts/*.sh
 ARGS =
-OPENCODE_DIR = $(HOME)/.config/opencode
-DEFAULT_AGENT = orchestraitor
+OPENCODE_DIR ?= $(HOME)/.config/opencode
+DEFAULT_AGENT ?= orchestraitor
 MAKE_ENV = OPENCODE_DIR="$(OPENCODE_DIR)" FORCE="$(FORCE)"
 
 all: test

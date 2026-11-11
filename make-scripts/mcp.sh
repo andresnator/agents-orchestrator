@@ -48,9 +48,20 @@ entry() {
   esac
 }
 
-# mcp.servers when it is an object (OpenCode 2.x), else mcp.
+# mcp.servers when it is an object (OpenCode 2.x), else mcp. A server entry that
+# is named "servers" (it has type, command, or url) is not the 2.x container.
 base_path() {
-  case "$(entry mcp servers)" in '{'*) echo mcp.servers ;; *) echo mcp ;; esac
+  local cur
+  cur="$(entry mcp servers)"
+  if [ -n "$cur" ] && python3 -c '
+import json, sys
+v = json.loads(sys.argv[1])
+sys.exit(0 if isinstance(v, dict) and not {"type", "command", "url"} & set(v) else 1)
+' "$cur"; then
+    echo mcp.servers
+  else
+    echo mcp
+  fi
 }
 other_path() { [ "$1" = mcp ] && echo mcp.servers || echo mcp; }
 
@@ -83,7 +94,7 @@ check_foreign() {
   cur="$(entry "$path" "$name")"
   [ -n "$cur" ] || return 0
   ours "$name" "$cur" && return 0
-  [ -n "${FORCE:-}" ] || die "$path.$name is $cur in $f; run with FORCE=1 to replace it"
+  [ -n "${FORCE:-}" ] || die "$path.$name in $f is not an entry that we write; run with FORCE=1 to replace it"
   write_config remove-member "$f" "$path" "$name"
   echo "removed $path.$name (FORCE=1)"
 }
@@ -118,6 +129,11 @@ install_engram() {
   # engram setup writes "enabled": true, which the 2.x mcp.servers schema does not have.
   if [ "$path" = mcp.servers ] && [ -n "$(entry mcp.servers.engram enabled)" ]; then
     write_config remove-member "$f" mcp.servers.engram enabled
+  fi
+  # Keep one entry: drop ours from the other shape.
+  cur="$(entry "$(other_path "$path")" engram)"
+  if [ -n "$cur" ] && ours engram "$cur"; then
+    write_config remove-member "$f" "$(other_path "$path")" engram
   fi
   cur="$(entry "$path" engram)"
   ours engram "$cur" || die "engram setup did not register $path.engram in $f; see its output above"
