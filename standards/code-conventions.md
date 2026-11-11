@@ -27,8 +27,9 @@ A tautological test cannot fail. Do not write one:
 - It asserts only `not null` or `true`.
 - It copies the production algorithm into the assertion.
 - It has no assertion.
+- It asserts on a fixture that the test itself built. It tests the test, not the production code.
 
-Use literal expected values that you calculated independently. Each test must fail when you break its behavior.
+Use literal expected values that you calculated independently. Each test must fail when you break its behavior. To prove this for a doubtful test, break the production code temporarily and see the test fail.
 
 ### Minimum scenarios
 
