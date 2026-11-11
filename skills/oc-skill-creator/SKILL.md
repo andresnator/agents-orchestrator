@@ -8,7 +8,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "3.2.0"
+  version: "4.0.0"
   status: in-progress
 ---
 
@@ -16,91 +16,41 @@ metadata:
 
 ## Intent
 
-- **Goal:** Create or change one reusable skill with a single body, complete frontmatter, and an IDSD body.
+- **Goal:** Create or change one skill that follows the repository skill contract below.
 - **Limits:**
-  - Do not create a skill when documentation already exists (create a reference instead), the pattern is trivial or self-explanatory, or the task is one-off.
-  - Never copy skill bodies; never keep an exclusive skill at the top level.
-  - No Keywords section (agents search frontmatter), no troubleshooting sections, no lengthy explanations or duplicated docs (reference instead), no web URLs in references (use local paths).
-- **Fails if:** the skill already exists (check `skills/*/SKILL.md`); frontmatter `name` differs from the directory basename or is not `oc-<short-name>`; `metadata.version` is not strict SemVer or `metadata.status` misstates lifecycle.
+  - Do not create a skill for a one-off task, a trivial pattern, or knowledge that already has a document. Add a reference instead.
+  - Never copy skill bodies. No symlinks.
+  - No Keywords section, no troubleshooting section, no web URLs in references.
+- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `name` differs from the directory basename or is not `oc-<short-name>`; `SKILL.md` has more than 80 lines; `metadata.version` is not strict SemVer; `metadata.status` misstates the lifecycle.
 
 ## Context
 
-- **Reads:** existing skills, `CONTRIBUTING.md` (`## IDSD format`, `## Skills`), and `references/behavioral-evaluation.md` when applicable.
+- **Reads:** existing skills; `CONTRIBUTING.md` (`## IDSD format`, `## Skills`); `standards/writing-conventions.md`.
 - **Never reads:** none.
 - **Persona:** concise skill author.
-- **Scope:** the user asks to create or change a skill, add agent instructions, or document patterns for AI; create one only when a pattern is used repeatedly and AI needs guidance; project conventions differ from generic best practices; complex workflows need step-by-step guidance; decision trees help AI choose the right approach.
+- **Scope:** create or change a skill, add agent instructions, or record a repeated pattern for AI.
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN a skill is created THEN its single body lives at `skills/{skill-name}/`; no symlinks.
-  - WHEN a high-impact discipline skill shows a reproducible agent failure despite being available THEN run the bounded pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md): pre-written criteria, a no-guidance control, multiple fresh-context runs per arm, preserved raw receipts, manual scoring, reported variance and cost. Never a routine step or CI gate.
-- **Done means:** the skill exists at the right location with complete frontmatter (description includes trigger keywords), an IDSD body with every ICE field, and accurate version and status.
-- **Quality needs:** most critical rules first; tables for decision trees; minimal, focused examples; a commands block only when repeatable commands are part of the contract.
+  - WHEN you write a skill THEN state intent first: goal, limits, fails-if, and expected output.
+  - WHEN content is general practice or procedure that a capable agent can infer THEN delete it.
+  - WHEN content is an owner convention, an exact format, or a project contract THEN keep it.
+  - WHEN a high-impact discipline skill fails reproducibly while available THEN run the pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md). It is never a routine step or CI gate.
+- **Done means:** `skills/<name>/SKILL.md` exists with complete frontmatter, an IDSD body with every field, at most 80 lines, and a correct version and status.
+- **Quality needs:** ASD-STE100 text; critical rules first; tables for decisions; literal triggers and return lines kept exactly.
 
 ## Method
 
-### Structure
+Layout: `skills/<name>/SKILL.md` (required); `assets/` for templates, schemas, and examples; `references/` for longer guidance that the agent cannot infer.
 
-```
-skills/{skill-name}/
-├── SKILL.md                    # Required
-├── assets/                     # Optional: generated templates, schemas, fixtures, examples
-└── references/                 # Optional: longer guidance, edge cases, explanatory docs
-```
+Body: the IDSD headings and bold field labels from `CONTRIBUTING.md` `## IDSD format`, kept terse.
 
-Concrete generated material goes in `assets/`; explanatory material goes in `references/`.
-
-### SKILL.md template
-
-```markdown
----
-name: oc-{short-name}
-description: >
-  {One-line description of what this skill does}.
-  Trigger: {When the AI should load this skill}.
-license: Apache-2.0
-metadata:
-  author: {author}
-  version: "1.0.0"
-  status: backlog
----
-
-# {Title}
-
-## Intent
-
-- **Goal:** {one observable outcome}
-- **Limits:** {boundaries, forbidden actions}
-- **Fails if:** {observable failure conditions}
-
-## Context
-
-- **Reads:** {inputs and evidence}
-- **Never reads:** {excluded sources}
-- **Persona:** {role and stance}
-- **Scope:** {activation and where it applies}
-
-## Expectations
-
-- **Scenarios:** {WHEN ... THEN ...}
-- **Done means:** {completion criteria and return contract}
-- **Quality needs:** {quality bar}
-
-## Method
-
-{Optional: decision tables, formats, commands, and resource pointers such as [assets/](assets/) and [references/](references/).}
-```
-
-### Frontmatter
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | `oc-<short-name>`: kebab-case, at most three short words after the prefix |
-| `description` | Yes | What + Trigger in one block |
-| `license` | Yes | Commonly `MIT` or `Apache-2.0` |
-| `metadata.author` | Yes | Skill author or maintainer |
-| `metadata.version` | Yes | Semantic version as string |
-| `metadata.status` | Yes | `backlog`, `in-progress`, `testing`, or `done` |
-
-Version bumps: patch for wording/path/template/internal contract fixes, minor for new capabilities or optional flows, major for breaking activation/output behavior.
+| Frontmatter | Rule |
+|---|---|
+| `name` | `oc-<short-name>`, kebab-case, at most three short words after the prefix, equal to the directory |
+| `description` | what it does plus `Trigger:` keywords, in one block |
+| `license` | usually `MIT` or `Apache-2.0` |
+| `metadata.author` | author or maintainer |
+| `metadata.version` | SemVer string: patch for wording or path fixes, minor for new capabilities, major for changed or reduced activation or output contract |
+| `metadata.status` | `backlog`, `in-progress`, `testing`, or `done` |

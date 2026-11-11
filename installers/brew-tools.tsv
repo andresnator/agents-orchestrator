@@ -1,3 +1,1 @@
 # component-type	component-name	command	formula
-skills	oc-dep-audit	govulncheck	govulncheck
-skills	oc-dep-audit	osv-scanner	osv-scanner
