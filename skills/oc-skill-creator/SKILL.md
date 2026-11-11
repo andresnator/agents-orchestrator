@@ -42,7 +42,7 @@ Body: the IDSD headings and bold field labels from `CONTRIBUTING.md` `## IDSD fo
 
 | Field | Rule |
 |---|---|
-| `Goal`, `Limits`, `Fails if`, `Reads`, `Scope`, `Done means`, `Method` | Required |
+| `Goal`, `Limits`, `Fails if`, `Reads`, `Scope`, `Done means`, `Method` | Required. A reference can omit `Method` if it adds no method. |
 | `Never reads`, `Persona`, `Quality needs` | Optional. Omit if `none`, empty, or a restatement of the title or `Goal`. Put each rule in one field only. |
 | `Scenarios` | Optional. Only real branches and edge cases; never repeat `Method`. |
 

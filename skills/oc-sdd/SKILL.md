@@ -17,7 +17,7 @@ metadata:
   - Only the primary coordinator follows the coordinator sections. It owns every Git action. Workers follow "Worker roles".
   - SDD allows only `working-tree` or `commit-per-unit`.
   - "Approval" owns every approval rule. "Plan integrity" owns every plan and contract change rule.
-- **Fails if:** an "Approval" rule is broken; a plan hash changes; a Scenario or Done means item is skipped; `.ai/` or canonical specs enter a delivery commit; a child returns logs, diffs, or artifact bodies.
+- **Fails if:** an "Approval" rule is broken (including any edit, run, worker, stage, or commit before approval); a plan hash changes; a Scenario or Done means item is skipped; `.ai/` or canonical specs enter a delivery commit; a child returns logs, diffs, or artifact bodies.
 
 ## Context
 

@@ -116,7 +116,7 @@ Line cap for `SKILL.md`:
 - A skill has 80 lines maximum.
 - A coordinator skill has 120 lines maximum. A coordinator skill controls workers or modes through its references. The coordinator skills are `oc-sdd` and `oc-plan`.
 
-Put each rule in one place. A reference adds only its own procedure. It does not copy the `Limits` or `Fails if` of its parent `SKILL.md`. Define a shared term one time, where the skill first uses it.
+Put each rule in one place. A reference adds only its own procedure. A mode reference of a coordinator skill can use its own headings and inherits the IDSD fields of its parent `SKILL.md`. It does not copy the `Limits` or `Fails if` of its parent `SKILL.md`. Define a shared term one time, where the skill first uses it.
 
 ## Keeping the catalog accurate
 

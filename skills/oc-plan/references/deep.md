@@ -34,7 +34,8 @@ Apply "Plan format" and `oc-routing`. Write exactly one plan at `.ai/deep-planne
 Classify risk and scope. The plan records: risk `low|medium|high|critical` with evidence and rationale; churn priority from read-only `git log` (high churn raises priority, near-zero churn lowers it unless a planned change lands there); value tier `core|supporting|generic` or `not inferable` (never guessed); target level `class|package|module`; in-scope files; neighboring context; explicit out-of-scope work.
 
 - Low risk: analyze inline.
-- Medium or high risk: may brief one `general` subagent to load `oc-refactor` in lens mode. High or critical risk loads `oc-refactor` tooling mode for its `tooling_audit` output.
+- Medium or high risk: may brief one `general` subagent to load `oc-refactor` in lens mode.
+- High or critical risk: load `oc-refactor` tooling mode for its `tooling_audit` output.
 - Critical risk: may brief two lens subagents with disjoint lens ids.
 - Missing protection orders tooling, minimal seams, focused tests, and revalidation before restructuring. Discovered behavior changes stay separate.
 
