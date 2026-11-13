@@ -26,10 +26,10 @@ default-agent: ## Set DEFAULT_AGENT (orchestraitor) as the default OpenCode agen
 default-agent-remove: ## Remove default_agent if it is DEFAULT_AGENT
 	@$(MAKE_ENV) DEFAULT_AGENT="$(DEFAULT_AGENT)" make-scripts/default-agent.sh remove
 
-mini: ## Hide reasoning, tools, and shell output in OpenCode Mini (FORCE=1 to replace)
+mini: ## Hide reasoning and shell output, show tools, in OpenCode Mini (FORCE=1 to replace)
 	@$(MAKE_ENV) bash make-scripts/mini.sh set
 
-mini-remove: ## Remove the three Mini settings when their value is hide
+mini-remove: ## Remove the three Mini settings set by make mini
 	@$(MAKE_ENV) bash make-scripts/mini.sh remove
 
 mcp: ## Add the Context7 and Engram MCP servers (FORCE=1 to replace)

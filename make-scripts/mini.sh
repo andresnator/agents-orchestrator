@@ -12,7 +12,14 @@ dir="${OPENCODE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}"
 file="$dir/cli.json"
 editor="$(dirname "$0")/../scripts/jsonc-array.py"
 fields=(thinking tools shell_output)
-hidden='"hide"'
+
+# Reasoning and raw shell output stay hidden; tool calls stay visible.
+value_for() {
+  case "$1" in
+    tools) printf '"show"' ;;
+    *) printf '"hide"' ;;
+  esac
+}
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -32,6 +39,7 @@ fi
 
 # Stage every edit before a write to the real configuration.
 for field in "${fields[@]}"; do
+  value="$(value_for "$field")"
   status=0
   current="$(python3 "$editor" get-member "$work/config" mini "$field")" || status=$?
   case "$status" in
@@ -40,18 +48,18 @@ for field in "${fields[@]}"; do
   esac
 
   if [ "$action" = set ]; then
-    if [ -n "$current" ] && [ "$current" != "$hidden" ] && [ "${FORCE:-}" != 1 ]; then
+    if [ -n "$current" ] && [ "$current" != "$value" ] && [ "${FORCE:-}" != 1 ]; then
       die "mini.$field is already set in $file; run with FORCE=1 to replace it"
     fi
     operation=set-member
   else
-    [ "$current" = "$hidden" ] || continue
+    [ "$current" = "$value" ] || continue
     operation=remove-member
   fi
 
   status=0
   if [ "$operation" = set-member ]; then
-    python3 "$editor" "$operation" "$work/config" mini "$field" "$hidden" > "$work/next" || status=$?
+    python3 "$editor" "$operation" "$work/config" mini "$field" "$value" > "$work/next" || status=$?
   else
     python3 "$editor" "$operation" "$work/config" mini "$field" > "$work/next" || status=$?
   fi
