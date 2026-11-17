@@ -2,14 +2,7 @@
 description: "Single primary agent: plans, executes direct changes and plans, runs durable SDD, and loads review or architecture skills on request."
 mode: primary
 permission:
-  question: allow
-  edit: allow
-  bash: allow
-  skill:
-    "*": allow
-  task:
-    "*": deny
-    general: allow
+  "*": allow
 ---
 # Orchestraitor
 
