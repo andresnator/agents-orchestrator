@@ -13,10 +13,12 @@
 #
 # Environment:
 #   FACTORY_RUNNER     Command that gets the prompt as its last argument and runs
-#                      in the worktree. Use an absolute path.
+#                      in the worktree. The shell splits it into words, so use
+#                      an absolute path without spaces.
 #                      Default: opencode run --agent worker --title "factory/<id>"
 #                      (plus --auto when `opencode run --help` lists it).
-#   FACTORY_WORKTREES  Parent directory of the worktrees.
+#   FACTORY_WORKTREES  Parent directory of the worktrees. A relative path starts
+#                      at the repository root.
 #                      Default: <repo-parent>/.<repo-name>-factory
 #   FACTORY_DRY_RUN=1  `start` prints the runner command and starts nothing.
 #
@@ -39,12 +41,19 @@ usage() {
 
 init_paths() {
   REPO="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not in a Git repository"
+  # In a factory worktree the state would go to a second, nested factory.
+  if [ "$(git -C "$REPO" rev-parse --git-dir)" != "$(git -C "$REPO" rev-parse --git-common-dir)" ]; then
+    case "$(git -C "$REPO" symbolic-ref -q --short HEAD || true)" in
+      factory/*) die "this is a factory worktree; run from the main working tree of the repository" ;;
+    esac
+  fi
   FACTORY_DIR="$REPO/.ai/factory"
   TASKS_DIR="$FACTORY_DIR/tasks"
   LOGS_DIR="$FACTORY_DIR/logs"
   STATE_DIR="$FACTORY_DIR/state"
   BOARD="$FACTORY_DIR/board.md"
   WORKTREES="${FACTORY_WORKTREES:-$(dirname "$REPO")/.$(basename "$REPO")-factory}"
+  case "$WORKTREES" in /*) ;; *) WORKTREES="$REPO/$WORKTREES" ;; esac
 }
 
 init_state() {
@@ -53,6 +62,8 @@ init_state() {
     local exclude
     exclude="$(cd "$REPO" && cd "$(git rev-parse --git-common-dir)" && pwd)/info/exclude"
     mkdir -p "$(dirname "$exclude")"
+    # Start a new line if the last line of the file has no end.
+    if [ -s "$exclude" ] && [ -n "$(tail -c 1 "$exclude")" ]; then echo >>"$exclude"; fi
     echo ".ai/" >>"$exclude"
   fi
 }
@@ -61,8 +72,14 @@ read_file() {
   if [ -f "$1" ]; then cat "$1"; fi
 }
 
+valid_id() {
+  echo "$1" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$'
+}
+
+# The id becomes part of paths that drop deletes. Check its form before each use.
 require_id() {
   [ -n "${1:-}" ] || die "missing task id"
+  valid_id "$1" || die "invalid id: $1 (use kebab-case, for example fix-login)"
   [ -f "$TASKS_DIR/$1.md" ] || die "unknown task: $1"
 }
 
@@ -73,22 +90,43 @@ last_factory_line() {
   local log="$LOGS_DIR/$1.log" esc
   [ -f "$log" ] || return 0
   esc="$(printf '\033')"
-  tr -d '\r' <"$log" | sed "s/${esc}\\[[0-9;]*[A-Za-z]//g" | awk '
+  # LC_ALL=C: a log can have bytes that are not valid text in the locale of the user.
+  LC_ALL=C tr -d '\r' <"$log" | LC_ALL=C sed "s/${esc}\\[[0-9;]*[A-Za-z]//g" | LC_ALL=C awk '
     /^--- factory run / { last = ""; next }
     {
       line = $0
-      sub(/^[ \t`*]+/, "", line)
-      if (line ~ /^FACTORY: (done|needs-input|failed)([ \t`*.]|$)/) last = line
+      sub(/^[ \t`*>]+/, "", line)
+      if (line ~ /^FACTORY:[ \t]*(done|needs-input|failed)([ \t`*.:]|$)/) last = line
     }
     END {
-      sub(/^FACTORY: /, "", last)
+      sub(/^FACTORY:[ \t]*/, "", last)
       sub(/[ \t`*]+$/, "", last)
-      print last
+      if (match(last, /^(done|needs-input|failed)/)) {
+        key = substr(last, 1, RLENGTH)
+        rest = substr(last, RLENGTH + 1)
+        sub(/^[ \t`*.:]+/, "", rest)
+        print (rest == "" ? key : key " " rest)
+      }
     }'
 }
 
 pid_alive() {
   [ -n "$1" ] && kill -0 "$1" 2>/dev/null
+}
+
+# Print the start time of a process. Empty if the process or ps is not available.
+pid_start() {
+  LC_ALL=C ps -o lstart= -p "$1" 2>/dev/null | sed 's/^ *//; s/ *$//' || true
+}
+
+# True if the runner of the task is alive. The system can give the pid of an
+# ended runner to a different process, so the start time must agree too.
+runner_alive() {
+  local id="$1" pid saved
+  pid="$(read_file "$STATE_DIR/$id.pid")"
+  saved="$(read_file "$STATE_DIR/$id.pidstart")"
+  pid_alive "$pid" || return 1
+  [ -z "$saved" ] || [ "$(pid_start "$pid")" = "$saved" ]
 }
 
 # Set T_STATE and T_NOTE for a task. Sources: the state mark, the exit code of
@@ -137,7 +175,7 @@ task_state() {
     esac
     return 0
   fi
-  if pid_alive "$(read_file "$STATE_DIR/$id.pid")"; then
+  if runner_alive "$id"; then
     T_STATE="running"
   elif [ -f "$STATE_DIR/$id.exit" ]; then
     # The runner ended between the two checks. Read the result.
@@ -183,14 +221,16 @@ commits_ahead() {
 
 # Print the runner command line without the prompt.
 runner_line() {
-  local id="$1" line
+  local id="$1" line help
   if [ -n "${FACTORY_RUNNER:-}" ]; then
     echo "$FACTORY_RUNNER"
     return 0
   fi
   line="opencode run --agent worker --title \"factory/$id\""
   # OpenCode v2 has --auto. OpenCode v1 does not, and it approves by default.
-  if opencode run --help 2>&1 | grep -q -- '--auto'; then line="$line --auto"; fi
+  # No pipe to grep -q: with pipefail, an early exit of grep can make the test false.
+  help="$(opencode run --help 2>&1 || true)"
+  case "$help" in *--auto*) line="$line --auto" ;; esac
   echo "$line"
 }
 
@@ -212,14 +252,14 @@ You are a factory worker. You work alone in a Git worktree on the branch factory
 
 Rules:
 1. Do the task in the brief below. Change files only in this directory.
-2. Do not ask questions during the work. For a small gap, make the smallest safe assumption and write it in your last message.
+2. Do not ask questions during the work. The question tool is not available. For a small gap, make the smallest safe assumption and write it in your last message.
 3. Run the checks that the brief gives. Fix what fails.
 4. Commit your work on this branch. Stage explicit paths only: git add -- <paths>. Do not use "git add ." or "git add -A". Do not commit .ai/.
-5. Do not push. Do not merge. Do not change other branches.
-6. End your last message with exactly one of these lines, alone on its line:
-- \`FACTORY: done\`
-- \`FACTORY: needs-input <one question>\` (only when you cannot continue without the user)
-- \`FACTORY: failed <short reason>\`
+5. Do not push. Do not change or delete other branches.
+6. End your last message with one result line. The line starts with the word FACTORY. Put no other text on that line.
+   When the work is complete and committed, the line is: FACTORY: done
+   When you cannot continue without the user, the line is: FACTORY: needs-input <one question>
+   When the work failed, the line is: FACTORY: failed <short reason>
 
 Brief:
 
@@ -230,7 +270,7 @@ EOF
 # Start the runner for a task in the background. The task must have a worktree.
 launch() {
   local id="$1"
-  rm -f "$STATE_DIR/$id.exit" "$STATE_DIR/$id.note"
+  rm -f "$STATE_DIR/$id.exit" "$STATE_DIR/$id.note" "$STATE_DIR/$id.pidstart"
   echo "started" >"$STATE_DIR/$id.state"
   echo "--- factory run $id $(date -u '+%Y-%m-%dT%H:%M:%SZ') ---" >>"$LOGS_DIR/$id.log"
   # Job control gives the job its own process group, so a signal to the group
@@ -239,6 +279,7 @@ launch() {
   nohup bash "$SELF" __run "$id" </dev/null >>"$LOGS_DIR/$id.log" 2>&1 &
   echo "$!" >"$STATE_DIR/$id.pid"
   set +m
+  pid_start "$!" >"$STATE_DIR/$id.pidstart"
 }
 
 # Internal: run the runner in the foreground and record its exit code.
@@ -255,7 +296,7 @@ stop_task() {
   local id="$1" pid tries=0
   [ -f "$STATE_DIR/$id.exit" ] && return 0
   pid="$(read_file "$STATE_DIR/$id.pid")"
-  pid_alive "$pid" || return 0
+  runner_alive "$id" || return 0
   kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
   while pid_alive "$pid" && [ "$tries" -lt 50 ]; do
     sleep 0.1
@@ -283,7 +324,7 @@ remove_worktree() {
 cmd_add() {
   local id="${1:-}" src="${2:-}"
   [ -n "$id" ] && [ -n "$src" ] || die "usage: add <id> <brief-file|->"
-  echo "$id" | grep -Eq '^[a-z0-9]+(-[a-z0-9]+)*$' || die "invalid id: $id (use kebab-case, for example fix-login)"
+  valid_id "$id" || die "invalid id: $id (use kebab-case, for example fix-login)"
   [ ! -e "$TASKS_DIR/$id.md" ] || die "task exists already: $id"
   if [ "$src" != "-" ] && [ ! -f "$src" ]; then die "brief file not found: $src"; fi
   if [ "$src" = "-" ]; then cat >"$TASKS_DIR/$id.md"; else cat "$src" >"$TASKS_DIR/$id.md"; fi
@@ -390,8 +431,9 @@ cmd_status() {
         echo "| $id | $T_STATE | $(commits_ahead "$id") | $note |"
       done
     fi
-  } >"$BOARD.tmp"
-  mv "$BOARD.tmp" "$BOARD"
+  } >"$BOARD.tmp.$$"
+  # The pid in the name keeps two status calls at the same time apart.
+  mv "$BOARD.tmp.$$" "$BOARD"
   cat "$BOARD"
 }
 
@@ -425,13 +467,18 @@ cmd_logs() {
 }
 
 cmd_merge() {
-  local id="${1:-}" count files
+  local id="${1:-}" count files target
   require_id "$id"
   task_state "$id"
   case "$T_STATE" in
     done | conflict) ;;
     *) die "cannot merge $id: state is $T_STATE (merge needs done)" ;;
   esac
+  # A merge of the user is not a conflict of this task. Do not abort it.
+  if git -C "$REPO" rev-parse -q --verify MERGE_HEAD >/dev/null; then
+    die "a merge is in progress in $REPO; complete it or abort it, then merge $id again"
+  fi
+  target="$(git -C "$REPO" symbolic-ref -q --short HEAD || echo "detached HEAD")"
   count="$(git -C "$REPO" rev-list --count "$(cat "$STATE_DIR/$id.base")..factory/$id")"
   if ! git -C "$REPO" merge --no-edit "factory/$id" >"$STATE_DIR/$id.merge.log" 2>&1; then
     if git -C "$REPO" rev-parse -q --verify MERGE_HEAD >/dev/null; then
@@ -453,20 +500,29 @@ cmd_merge() {
   # Work that the worker did not commit is not in the merge. Keep it for the user.
   if [ -d "$WORKTREES/$id" ] && [ -n "$(git -C "$WORKTREES/$id" status --porcelain)" ]; then
     echo "worktree kept: files without commit in $WORKTREES/$id" >"$STATE_DIR/$id.note"
-    echo "$id: merged (commits: $count); worktree kept because it has files without commit. Run drop $id to remove it."
+    echo "$id: merged into $target (commits: $count); worktree kept because it has files without commit. Run drop $id to remove it."
     return 0
   fi
   remove_worktree "$id"
-  echo "$id: merged (commits: $count); worktree and branch removed"
+  echo "$id: merged into $target (commits: $count); worktree and branch removed"
 }
 
 cmd_drop() {
-  local id="${1:-}"
+  local id="${1:-}" tip=""
   require_id "$id"
   stop_task "$id"
+  # Commits that are not in the current branch stay in Git for some time. Give their address.
+  if tip="$(git -C "$REPO" rev-parse -q --verify "refs/heads/factory/$id")" &&
+    git -C "$REPO" merge-base --is-ancestor "$tip" HEAD 2>/dev/null; then
+    tip=""
+  fi
   remove_worktree "$id"
   rm -f "$TASKS_DIR/$id.md" "$LOGS_DIR/$id.log" "$STATE_DIR/$id".*
-  echo "$id: dropped"
+  if [ -n "$tip" ]; then
+    echo "$id: dropped (commits not merged; the branch was at $tip)"
+  else
+    echo "$id: dropped"
+  fi
 }
 
 main() {

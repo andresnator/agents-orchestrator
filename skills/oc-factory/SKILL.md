@@ -29,8 +29,8 @@ metadata:
 
 ## Method
 
-The script is in the directory of this skill. Use the base directory that the skill loader reports:
-`bash <skill base directory>/scripts/factory.sh <command>`. Run it from inside the repository of the user.
+The script is in the directory of this skill. Use the base directory that the skill loader reports (usually `~/.config/opencode/skills/oc-factory`):
+`bash <skill base directory>/scripts/factory.sh <command>`. Run it from the repository of the user, not from a factory worktree.
 
 ### Start work
 
@@ -64,8 +64,8 @@ The script adds the worker rules and the `FACTORY:` result line to each brief. D
 | `status` | Print the board: state, commits, and question or reason for each task. |
 | `answer <id> <text>` | Add the answer to the brief and start the task again. |
 | `logs <id> [lines]` | Print the end of the log. Use it for a `failed` task. |
-| `merge <id>` | Merge a `done` task into the current branch. Remove its worktree and branch. |
-| `drop <id>` | Stop the task. Remove its worktree, branch, and state. |
+| `merge <id>` | Merge a `done` task into the current branch. Remove its worktree and branch. Also tries a `conflict` task again. |
+| `drop <id>` | Stop the task. Remove its worktree, branch, and state. Work that is not merged is deleted. |
 
 ### Show the state
 
