@@ -34,9 +34,9 @@ Use literal expected values that you calculated independently. Each test must fa
 
 Write one test for each different way that a behavior can fail. Start with the normal case.
 
-Boundary, invalid input, and failure of a dependency are prompts, not required items. Add one of these tests only when the code has a branch, limit, validation, or external call that can fail.
+Then look for boundary, invalid input, and dependency failure cases. Add a test at each limit, for each validation rule, and for each error path that the code has. If the code has none, add none.
 
-Two tests that fail for the same broken line are one test. Do not add a test to complete a list.
+A test is a duplicate when no defect makes it fail while the other tests pass. Do not add a test to complete a list.
 
 ### Structure
 
