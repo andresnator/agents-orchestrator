@@ -67,7 +67,7 @@ See the [OpenCode Mini settings](https://opencode.ai/docs/cli/config#mini).
 | `skills/<skill>/` | All skill bodies, one `SKILL.md` each. Never copy a body or add symlinks |
 | `tui-plugins/` | Repository-specific TUI plugins |
 | `external-plugins/` | Pinned standalone plugin descriptors |
-| `standards/` | Code conventions, writing conventions (ASD-STE100), and glossary |
+| `standards/` | Code conventions, writing conventions (ASD-STE100), and glossary. For this repository only; not installed |
 | `installers/` | Discovery, installation, sync, and uninstall |
 | `docs/` | Unique operational guides |
 

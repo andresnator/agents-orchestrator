@@ -9,10 +9,10 @@ agents-orchestrator is a set of OpenCode agents, commands, skills, and plugins. 
 - Read [standards/README.md](standards/README.md) and all files that it lists before you make a change. They own the language, ASD-STE100, and trigger rules.
 - Add each new abbreviation or term to [standards/glossary.md](standards/glossary.md) before you use it.
 - The layout is flat by type: `agents/`, `commands/`, `skills/`, `tui-plugins/`, and `external-plugins/`.
-- The installer links `standards/` beside `AGENTS.md`.
+- `standards/` applies to this repository only. The installer does not install it. The root `AGENTS.md` tells agents in this repository to read it.
 - `global/AGENTS.md` is the installable runtime rules file. `CONTRIBUTING.md` is maintainer guidance. Do not merge their roles.
 - A new component must not require edits to `installers/opencode.sh`.
-- Do not track `.ai/`, other runtime state, root `/AGENTS.md`, or root `/CLAUDE.md`.
+- Do not track `.ai/`, other runtime state, or root `/CLAUDE.md`. The root `/AGENTS.md` is tracked: keep it short, with pointers only.
 
 ## Agents and commands
 

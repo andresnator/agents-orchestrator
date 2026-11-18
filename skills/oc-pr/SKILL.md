@@ -4,7 +4,7 @@ description: "Draft a review-ready PR body from scoped changes and available evi
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.2"
+  version: "1.0.3"
   status: testing
 ---
 
@@ -30,7 +30,7 @@ metadata:
   - WHEN scope is ambiguous THEN resolve the base, head, and included changes before drafting.
   - WHEN evidence is missing THEN state the gap and mark the affected behavior `unverified`.
 - **Done means:** Return only the PR body after the scope is clear.
-- **Quality needs:** Use English ASD-STE100. Use ASCII only when a small sketch helps. Do not require visuals.
+- **Quality needs:** Use plain English with short sentences. Use ASCII only when a small sketch helps. Do not require visuals.
 
 ## Method
 
