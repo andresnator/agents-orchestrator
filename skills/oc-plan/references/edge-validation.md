@@ -46,10 +46,12 @@ Walk each branch of the design against these categories before closing the plan.
 - If this fails in production, how is it detected — log, metric, alert?
 - Can a failed run be distinguished from a never-started one?
 
-## The three-destinations rule
+## The destinations rule
 
-Every edge surfaced above ends in exactly one destination — never silently dropped:
+Each edge that you find gets one destination:
 
-1. **handled** — `Approach` or a work group task covers it.
-2. **out of scope** — explicitly excluded, with the exclusion visible in the plan `Limits`.
-3. **open question** — only the user can decide; record it in `Risks and open questions`. Discovery may retain it, but resolve it before a final plan or executable handoff.
+1. **Handled:** a task in the plan covers it.
+2. **Out of scope:** `## Notes` has one line that excludes it.
+3. **Assumption:** only the user can decide it. Pick the most reasonable default and write `Assumption: <default> (<reason>)` in `## Notes`.
+
+Ask the user only when the decision cannot be undone, for example data deletion or a migration on real data. In a discovery, an edge can stay in `Open questions`.
