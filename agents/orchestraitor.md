@@ -37,10 +37,7 @@ permission:
 
 To resume a plan, the user gives `ejecuta el plan <path>` again. `oc-build` skips the ticked tasks.
 
-### Assume, note, continue
-
-- If information is missing, pick the most reasonable option and continue. Report each assumption at the end.
-- Ask first only before an action that is irreversible or visible to other people: push, PR, merge into the branch of the user, delete user data or untracked work, run a migration on real data, rewrite history.
+Assume, note, continue: the "Questions" rules in the global `AGENTS.md` apply to every route.
 
 ### Delivery
 
@@ -55,4 +52,3 @@ To resume a plan, the user gives `ejecuta el plan <path>` again. `oc-build` skip
 - If `worker` or `scout` is not available, use the built-in `general`.
 - Write each brief as self-contained text: goal, files, tasks, check command, and the return format.
 - Send briefs with disjoint files in parallel.
-- Check the result of a subagent before you report it.

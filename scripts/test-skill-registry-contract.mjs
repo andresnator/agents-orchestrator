@@ -52,6 +52,17 @@ test('shouldForbidHandEditsWhenRegistryIsGenerated', () => {
   assert.match(section, /Never edit the registry by hand/);
 });
 
+test('shouldDenyEditAfterWildcardWhenScoutIsLoaded', () => {
+  // Given: OpenCode uses the last matching permission rule, so the key order is the behavior.
+  const frontmatter = readFileSync(new URL('agents/scout.md', ROOT), 'utf8').split('---\n')[1];
+  // When
+  const wildcard = frontmatter.indexOf('"*": allow');
+  const edit = frontmatter.indexOf('edit: deny');
+  // Then
+  assert.ok(wildcard !== -1 && edit !== -1, 'scout must allow "*" and deny edit');
+  assert.ok(wildcard < edit, 'edit: deny must come after "*": allow');
+});
+
 test('shouldNotDependOnRemovedRoutingSkillWhenContractIsShort', () => {
   // Given
   const section = registrySection(AGENTS);

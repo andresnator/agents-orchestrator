@@ -1,8 +1,10 @@
 ---
 description: "Subagent that implements one self-contained brief: edits the named files, runs the check, and returns the result in the format of the brief."
-mode: subagent
+mode: all
 permission:
   "*": allow
+  task: deny
+  question: deny
 ---
 # Worker
 

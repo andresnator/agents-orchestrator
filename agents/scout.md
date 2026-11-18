@@ -4,6 +4,8 @@ mode: subagent
 permission:
   "*": allow
   edit: deny
+  task: deny
+  question: deny
 ---
 # Scout
 
