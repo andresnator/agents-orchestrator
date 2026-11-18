@@ -34,9 +34,9 @@ metadata:
   - WHEN the request names no operation THEN use `solo`.
   - WHEN the request names no target THEN review the working-tree diff: `git diff HEAD` and the untracked files.
   - WHEN there is no target and no diff THEN say that there is nothing to review, and stop.
-  - WHEN a judge reply does not follow the format THEN send the same brief one more time. If the second reply is also wrong, report its findings as they came, with status `unverified`.
+  - WHEN a judge reply does not follow the format THEN send the same brief one more time. If the second reply is also wrong, add what it found as rows with status `unverified`. Use severity `warning` when it gives none.
   - WHEN the request has `defend` and `fix` THEN ignore `fix` and say so in the report.
-- **Done means:** the report starts with `APPROVED`, `FINDINGS`, or `FIXED`, then shows the ledger from `assets/output-formats.md`, the check result, and the assumptions. Use the language of the user. Do not paste logs or diffs.
+- **Done means:** the report starts with `APPROVED`, `FINDINGS`, or `FIXED`, then shows the ledger from `assets/output-formats.md`, the check result when a fix ran, and the assumptions. Use the language of the user. Do not paste logs or diffs.
 
 ## Method
 
@@ -46,9 +46,9 @@ metadata:
 2. Fill `assets/judge-brief.md` and send it: one brief for `solo`, two briefs at the same time for `dual`. A judge brief never contains the reply of another judge.
 3. Build the ledger. In `dual`, two findings are the same when they show the same problem at the same place. Merge them into one row with source `both` (confirmed) and keep the higher severity.
 4. If the request has no `fix` word, report the verdict and stop.
-5. If the request has `fix`, send one `worker` brief with all `open` rows of severity `critical` or `warning`. Do not send `unverified` rows.
-6. Run the project checks (tests and lint) one time. If the project has no check command, say so.
-7. In `dual` only, send one more judge brief with lens `solo`, the changed files as target, and the fixed rows in `Recheck`. Each finding in the reply is an `open` row.
+5. If the request has `fix`, send one `worker` brief with all `open` rows of severity `critical` or `warning`. Do not send `unverified` rows. If there is no such row, report the verdict now.
+6. Mark a sent row `fixed` when the `worker` changed its file and `NOTES` does not reject it. All other rows stay `open`. Then run the project checks (tests and lint) one time. If the project has no check command, say so and continue.
+7. In `dual` only, send one more judge brief with lens `solo`, the changed files as target, and the fixed rows in `Recheck`. Each finding in the reply is an `open` row: set a returned `Recheck` row to `open` again, and add a new row for a new finding.
 8. Report the verdict. There is one fix round only. Rows that stay `open` go into the report.
 
 ### Fix brief
@@ -72,7 +72,7 @@ NOTES: <assumptions and problems, or none>
 ### `defend`
 
 1. Read the target. List its design decisions, the most important first.
-2. Show one decision at a time, with `path:line`. Ask the user to defend it.
+2. Show one decision at a time, with `path:line`. Ask the user to defend it, and give the strongest defense that the evidence supports as `Recommendation: ...`.
 3. If the defense is sound, accept it. If it is weak, challenge it one time with evidence.
 4. If the second defense is also weak, record a finding with source `defend`.
 5. After the last decision, or when the user stops, report `APPROVED` or `FINDINGS` with the ledger.

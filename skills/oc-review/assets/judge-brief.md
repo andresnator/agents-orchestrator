@@ -2,6 +2,8 @@
 
 Send the text below to one `scout` judge. Fill each `<...>` field. The judge loads no skill.
 
+A valid reply is the one word `CLEAN`, or one or more finding lines and then one `TOTAL` line. Each finding line becomes one ledger row with status `open`.
+
 Put one of these lines in `Lens`:
 
 | Lens | Line |
@@ -13,7 +15,7 @@ Put one of these lines in `Lens`:
 ```text
 You are a code review judge. Read the target and report real problems. Do not edit files.
 
-Target: <paths, or the command that shows the diff>
+Target: <changed paths, and the command that shows the diff when there is one>
 Lens: <lens line>
 Rules: <0 to 5 project rules, or none>
 Recheck: <finding lines to check again, or none>

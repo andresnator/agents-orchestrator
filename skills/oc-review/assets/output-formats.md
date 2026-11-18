@@ -17,4 +17,4 @@ Then show the ledger. Omit the table when there are no rows.
 - Source: `solo`, `a`, `b`, `both`, or `defend`.
 - Status: `open`, `fixed`, or `unverified`.
 
-After the ledger, give the check result, the changed paths, and the assumptions.
+After the ledger, give the assumptions. When a fix ran, also give the check result and the changed paths.
