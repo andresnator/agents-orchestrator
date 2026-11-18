@@ -1,58 +1,39 @@
 # Glossary
 
-This glossary defines the abbreviations and technical terms for this repository. These terms stay in their original form in all languages ("Spanglish" rule). Do not translate them.
+This glossary defines only the terms that are specific to this repository or that have a specific meaning here. A common industry abbreviation (`API`, `JSON`, `CLI`) needs no entry.
 
 ## Abbreviations
 
-| Abbreviation | Full form | Meaning |
+| Abbreviation | Full form | Meaning here |
 | --- | --- | --- |
-| A2A | Agent-to-Agent | Communication between two agents. |
-| ADR | Architecture Decision Record | A document that records one architecture decision and its reasons. |
-| AI | Artificial Intelligence | Software that does tasks that usually need human intelligence. |
-| API | Application Programming Interface | A contract that lets one program use another. |
-| ASCII | American Standard Code for Information Interchange | A basic text character set. An ASCII diagram uses only these characters. |
-| ASD-STE100 | ASD Simplified Technical English | The writing standard for this repository. Also called STE. |
-| C4 | Context, Containers, Components, Code | A model with four levels of architecture diagrams. |
-| CD | Continuous Delivery | Automatic release of each change that passes CI. |
-| CI | Continuous Integration | Automatic build and test of each change. |
-| CLI | Command-Line Interface | A program that you use from a terminal. |
-| DHCP | Dynamic Host Configuration Protocol | A protocol that gives network addresses to computers. |
-| DTO | Data Transfer Object | An object that only carries data between layers. |
-| HTTP | Hypertext Transfer Protocol | The protocol that web clients and servers use. |
-| ICE | Intent, Context, Expectations | The three parts of an IDSD body. |
-| ID | Identifier | A value that identifies one item. |
-| IDSD | Intent-Driven Software Development | The format for agents and skills in this repository. |
-| JIT | Just-In-Time | An action that occurs only when it is necessary. |
-| JSON | JavaScript Object Notation | A text data format. |
-| JSONC | JSON with Comments | JSON that also permits comments. |
-| k8s | Kubernetes | A container orchestration platform. |
-| LAN | Local Area Network | A local network. |
-| LLM | Large Language Model | A model that generates text. |
-| MCP | Model Context Protocol | A protocol that gives tools and data to a model. |
-| MVP | Minimum Viable Product | The smallest product that gives value to users. |
-| npm | Node Package Manager | The package manager and registry for JavaScript. |
-| PR | Pull Request | A request to merge a change. |
-| PRD | Product Requirements Document | A document that tells what a product must do. |
-| RAM | Random-Access Memory | The main working memory of a computer. |
-| RFC | Request for Comments | A design proposal for review. |
-| SDD | Spec-Driven Development | Development that starts from a written specification. |
-| SDK | Software Development Kit | A set of tools and libraries to build software for a platform. |
-| SemVer | Semantic Versioning | The `MAJOR.MINOR.PATCH` version format. |
-| SHA | Secure Hash Algorithm | A hash function. `SHA-256` makes a 256-bit hash. |
-| STE | Simplified Technical English | Short form of ASD-STE100. |
-| TCP | Transmission Control Protocol | A reliable network transport protocol. |
-| TDD | Test-Driven Development | Write a failing test first, then the code. |
-| TLS | Transport Layer Security | A protocol that encrypts network traffic. |
-| TUI | Terminal User Interface | An interface that shows in a terminal. |
-| USM | User Story Map | A map of user stories by user activity. |
-| VRAM | Video Random-Access Memory | The memory of a graphics processor. |
+| ASD-STE100, STE | ASD Simplified Technical English | The writing standard for all repository text. See [writing-conventions.md](writing-conventions.md). |
+| ICE | Intent, Context, Expectations | The three sections that each IDSD body states. |
+| IDSD | Intent-Driven Software Development | The body format for agents and skills. `CONTRIBUTING.md` owns it. |
+| RFC | Request for Comments | A design proposal that the `oc-rfc` skill writes. It is not an internet standard. |
+| USM | User Story Map | A map of user stories by user activity. The `oc-usm` skill writes it. |
+
+## Terms
+
+| Term | Meaning here |
+| --- | --- |
+| brief | The self-contained text that gives one task to a subagent. The subagent sees no other context. |
+| coordinator skill | A skill that controls workers or modes through its references: `oc-plan` and `oc-build`. |
+| `Deviations` | The plan section where `oc-build` records each change to the plan and each failed task. |
+| `Done means` | The completion criteria. It is a field of an IDSD body and a section of a plan. |
+| factory | The `oc-factory` flow. It runs independent tasks at the same time, each in its own Git worktree. |
+| group | One numbered part of a plan: one goal with its `Files:` and `Depends on:` lines. |
+| `orchestraitor` | The primary agent. It routes, plans, coordinates, and owns Git. The spelling with "ai" is correct. |
+| `scout` | The read-only subagent. It explores, verifies, and judges for one brief. |
+| `worker` | The subagent that implements one brief and runs its check. |
 
 ## Technical terms (do not translate)
+
+The "Spanglish" rule in [writing-conventions.md](writing-conventions.md) keeps technical terms in their original form in all languages. These terms are examples of the rule, not a complete list:
 
 `agent`, `branch`, `build`, `cluster`, `commit`, `container`, `deploy`, `endpoint`, `framework`, `hook`, `issue`, `Kubernetes`, `merge`, `mock`, `pipeline`, `plugin`, `prompt`, `pull request`, `release`, `repository`, `skill`, `subagent`, `token`, `workflow`.
 
 ## Add a term
 
-1. Add the term in alphabetical order.
-2. Give the full form and a one-sentence meaning in STE.
-3. Use the term only after you add it.
+1. Make sure that the term is specific to this repository or has a specific meaning here.
+2. Add the term to the correct table in alphabetical order.
+3. Give a one-sentence meaning in STE. For an abbreviation, give the full form too.
