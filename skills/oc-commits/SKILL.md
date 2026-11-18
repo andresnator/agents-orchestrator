@@ -1,6 +1,6 @@
 ---
 name: oc-commits
-description: "Commit finished work as one commit per outcome with explicit paths. Trigger: commit request, plan line Delivery: commits, split commits."
+description: "Commit finished work, one commit per outcome, explicit paths. Trigger: commit, haz commit, commitea, split commits, plan line Delivery: commits."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -30,10 +30,10 @@ metadata:
 
 ## Method
 
-1. Group the changed paths by outcome: one behavior, fix, or document, with its tests and docs. Use the messages or the number of commits that the user gave, if any.
+1. Group the changed paths by outcome: one behavior, fix, or document, with its tests and docs. Use the messages or the number of commits that the user gave, if any. If the groups are not clear, make one commit.
 2. For each outcome, stage its paths: `git add -- <paths>`. Never stage `.ai/`.
 3. Read `git diff --cached --stat`. Remove a path that is not part of the outcome: `git restore --staged -- <path>`.
 4. Commit with a conventional message, for example `fix(cart): keep items after reload`. Keep the hooks on.
 5. If a hook fails, fix the cause and commit again, one time. If it fails again, make no more commits, leave the changes in the working tree, and report the hook output.
 
-A target file can have changes from before the work. Keep them out of the commit when they are separable (`git add -p -- <path>`). If they are not separable, include them and say so in the report.
+A path can have changes from before the work. Do not stage a file that has only such changes. If one file has old and new changes together, include the file and say so in the report. Do not use interactive commands such as `git add -p`.
