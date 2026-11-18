@@ -2,7 +2,7 @@
 
 This repository stores OpenCode agent artifacts, not application code. Start with [README.md](README.md).
 
-agents-orchestrator is a set of OpenCode commands, skills, and plugins. One agent, `orchestraitor`, does all routes: it loads `oc-*` skills or gives work to the `general` subagent. The installer (`installers/opencode.sh`) links the files into the OpenCode configuration folder.
+agents-orchestrator is a set of OpenCode agents, commands, skills, and plugins. The primary agent, `orchestraitor`, does all routes: it loads `oc-*` skills or gives work to the `worker` and `scout` subagents. The installer (`installers/opencode.sh`) links the files into the OpenCode configuration folder.
 
 ## Repository contract
 
@@ -16,7 +16,15 @@ agents-orchestrator is a set of OpenCode commands, skills, and plugins. One agen
 
 ## Agents and commands
 
-`orchestraitor` (`agents/orchestraitor.md`, `mode: primary`) is the only agent. Do not add agents. Add an `oc-*` skill.
+Three agents are allowed and no more:
+
+| Agent | Mode | Role |
+| --- | --- | --- |
+| `orchestraitor` | `primary` | Routes, plans, coordinates, and owns Git in the main working tree. |
+| `worker` | `subagent` | Implements one self-contained brief. |
+| `scout` | `subagent` | Read-only: explores, verifies, judges. `edit` is denied. |
+
+Do not add agents. Add an `oc-*` skill. Delegation is one level deep. The three agents let the user give a different model to each role.
 
 Store commands at `commands/<name>.md`. The command `agent:` is `orchestraitor`, a built-in agent such as `build`, or omitted. Names are globally unique in their type.
 
@@ -36,7 +44,7 @@ Do not add `name`, `prompt`, `license`, or `metadata` to agent or command frontm
 
 ## IDSD format
 
-Agents, skills, and plans use Intent-Driven Software Development (IDSD). Each body states one complete ICE (Intent, Context, Expectations) for one capability. Then it gives only the method knowledge that a model cannot infer.
+Agent bodies and skills use Intent-Driven Software Development (IDSD). Plans do not: they use the `oc-plan` template. Each body states one complete ICE (Intent, Context, Expectations) for one capability. Then it gives only the method knowledge that a model cannot infer.
 
 ```markdown
 # <Title>
@@ -65,7 +73,7 @@ Agents, skills, and plans use Intent-Driven Software Development (IDSD). Each bo
 <Method knowledge that a model cannot infer. See "Method rule".>
 ```
 
-Keep the bold field labels exact. Use nested bullets or a short table for a long field. Keep literal triggers, return lines such as `OK ...` and `BLOCK ...`, and paths exactly.
+Keep the bold field labels exact. Use nested bullets or a short table for a long field. Keep literal triggers, return lines such as `RESULT: ok | failed`, and paths exactly.
 
 Do not copy the question rule of `global/AGENTS.md` into an agent, skill, or command. Keep only a nuance that is specific to the skill.
 
@@ -82,18 +90,34 @@ Do not copy the question rule of `global/AGENTS.md` into an agent, skill, or com
 
 - Omit an optional field if its value is `none`, is empty, or restates the title or the `Goal`.
 - Put each rule in one field only. For example, a language rule goes in `Limits` or `Quality needs`, not in `Persona`.
-- Plans keep every section of `skills/oc-plan/assets/plan-template.md`. The `oc-plan` skill owns the plan format.
+- `Fails if` has three items maximum.
+- The `oc-plan` skill owns the plan template. A plan requires only `Goal`, `Done means`, and `Tasks`.
 
 ### Method rule
 
-Give the intent by default: the outcome, the limits, and the checks. A capable model finds the steps. Write exact steps only when one of these conditions is true:
+Write for a small model:
+
+- Give concrete numbered steps for the main path. Use short positive sentences.
+- Write few rules. Do not write a long list of prohibitions.
+- Do not write a stop condition for a recoverable gap. See "Flow rules".
+- Give one small example where a format is important.
+
+Use an exact format only when one of these conditions is true:
 
 - The order of the steps is important, or a step cannot be undone.
 - Another program parses the output.
 - Each run must give the same result.
 - The model cannot infer a detail of the environment.
 
-Delete a procedure that a capable model can infer. Keep owner conventions, exact formats, and project contracts.
+Put determinism in a script, not in prose. Keep owner conventions, exact formats, and project contracts.
+
+### Flow rules
+
+Each agent, skill, and command obeys these rules:
+
+- **Assume, note, continue.** Ask the user only before an action that is irreversible or visible to other people: push, PR, merge into the user's branch, delete user data or untracked work, run a migration on real data, rewrite history. For all other gaps, select the most reasonable option, continue, and report the assumption at the end.
+- **No stop for a recoverable gap.** A worker with missing input makes the smallest safe assumption and reports it. Stop only when the target cannot be found or the rule above applies.
+- **Save tokens.** A subagent brief is self-contained: the subagent does not load the coordinator skill. Keep the brief in the skill: a file in `assets/` or one code block. Delete legacy notes such as "formerly ...".
 
 ## Skills
 
@@ -101,7 +125,7 @@ Each skill has exactly one body. Put every skill at `skills/<skill>/SKILL.md`. D
 
 Name each skill `oc-<short-name>`: kebab-case, three short words maximum after the prefix, identical to the directory name.
 
-Skill frontmatter contains `name`, `description`, `license`, `metadata.author`, strict SemVer `metadata.version`, and `metadata.status`. Status is `backlog`, `in-progress`, `testing`, or `done`.
+Skill frontmatter contains `name`, `description`, `license`, `metadata.author`, strict SemVer `metadata.version`, and `metadata.status`. Status is `backlog`, `in-progress`, `testing`, or `done`. The `description` has 160 characters maximum, triggers included. A new skill starts at version `1.0.0` with status `testing`.
 
 Bump the version for each skill change:
 
@@ -114,7 +138,7 @@ Keep the runtime contract short. Put concrete templates in `assets/`. Put extend
 Line cap for `SKILL.md`:
 
 - A skill has 80 lines maximum.
-- A coordinator skill has 120 lines maximum. A coordinator skill controls workers or modes through its references. The coordinator skills are `oc-sdd` and `oc-plan`.
+- A coordinator skill has 120 lines maximum. A coordinator skill controls workers or modes through its references. The coordinator skills are `oc-plan` and `oc-build`.
 
 Put each rule in one place. A reference adds only its own procedure. A mode reference of a coordinator skill can use its own headings and inherits the IDSD fields of its parent `SKILL.md`. It does not copy the `Limits` or `Fails if` of its parent `SKILL.md`. Define a shared term one time, where the skill first uses it.
 

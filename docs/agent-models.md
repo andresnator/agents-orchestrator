@@ -1,6 +1,6 @@
 # Assign Models to Agents
 
-`orchestraitor` never hardcodes `model:`. Assign providers, models, and variants in the global or project OpenCode config.
+No agent hardcodes `model:`. Assign providers, models, and variants in the global or project OpenCode config.
 
 ## Quick path
 
@@ -12,12 +12,13 @@ The project config overrides the global config.
 
 ## Tier guidance
 
-| Tier | Agents | Guidance |
+| Agent | Work | Guidance |
 |---|---|---|
-| Coordination, planning, architecture, review | `orchestraitor` (loads `oc-plan`, `oc-arch`, `oc-review`) | Strong reasoning; suggested `high` variant |
-| Delegated workers | built-in `general` (loads `oc-sdd` roles, `oc-refactor` lens mode, `oc-judge`) | Strong code-writing model |
+| `orchestraitor` | Routes, plans, coordinates, and decides | The strongest model that you have; suggested `high` variant |
+| `worker` | Implements one brief: edits files and runs checks | A mid code model |
+| `scout` | Read-only: explores, verifies, and judges | A small, cheap model |
 
-Per-worker models do not exist. The `oc-judge` lenses a and b share the `general` model. For a different provider on the second lens, run it in a separate session or change the `general` model temporarily.
+The two `dual` review judges share the `scout` model. Factory tasks use the `worker` model. If `worker` or `scout` is not installed, the built-in `general` agent does the work with its own model.
 
 ## Manual configuration
 
@@ -30,8 +31,11 @@ Set `agent.<name>` entries in `opencode.json` or `opencode.jsonc`:
       "model": "provider/frontier-model",
       "variant": "high"
     },
-    "general": {
+    "worker": {
       "model": "provider/code-model"
+    },
+    "scout": {
+      "model": "provider/small-model"
     }
   }
 }

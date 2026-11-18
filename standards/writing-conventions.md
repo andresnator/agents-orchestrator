@@ -6,7 +6,7 @@ All text uses ASD-STE100 Simplified Technical English (STE): READMEs, guides, sk
 
 - Write repository artifacts (code, comments, documentation, prompts, commits) in English. Use Spanish only for literal triggers and [glossary](glossary.md) terms.
 - "Spanglish" rule: do not translate technical terms (`Kubernetes`, `pull request`, `commit`, `deploy`, `endpoint`), also in Spanish text.
-- Do not translate literal triggers such as `"ejecuta el plan <change>"`. They are activation contracts.
+- Do not translate literal triggers such as `"ejecuta el plan <path>"`. They are activation contracts.
 
 ## ASD-STE100 rules
 
