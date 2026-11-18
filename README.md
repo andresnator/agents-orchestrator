@@ -123,7 +123,7 @@ The agent asks you only before an action that is irreversible or visible to othe
 | `/factory merge <id>` | Merges a `done` task into your branch. A conflict aborts the merge |
 | `/factory drop <id>` | Stops the task and removes its worktree, branch, and state |
 
-A merge occurs only when you ask, or when you say `automerge`.
+A merge occurs only when you ask, or when you say `automerge`. See the [Software factory guide](docs/factory.md) for task states, files, and the script.
 
 ### Skills by purpose
 
@@ -153,6 +153,7 @@ Run `make mcp` to add the Context7 and Engram MCP servers to the global OpenCode
 | Guide | Purpose |
 |---|---|
 | [Agent models](docs/agent-models.md) | Assign provider models and variants to `orchestraitor`, `worker`, and `scout` |
+| [Software factory](docs/factory.md) | Run independent tasks in parallel worktrees: commands, task states, files, and troubleshooting |
 | [Orchestration permissions](docs/orchestration-permissions.md) | Write permission blocks for the three agents and `general` |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |
 | [LM Studio](docs/lm-studio.md) | Connect OpenCode to LAN-hosted models |
