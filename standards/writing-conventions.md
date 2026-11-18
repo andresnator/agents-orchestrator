@@ -33,7 +33,7 @@ All text uses ASD-STE100 Simplified Technical English (STE): READMEs, guides, sk
 
 ## Abbreviations
 
-In agents-orchestrator, define each abbreviation in the [glossary](glossary.md) before you use it. Use one form in a section (`k8s` or `Kubernetes`). Do not invent abbreviations.
+A common industry abbreviation (`API`, `JSON`, `CLI`) needs no [glossary](glossary.md) entry. Add an entry only for a term that is specific to agents-orchestrator or that has a specific meaning here. Use one form in a section (`k8s` or `Kubernetes`). Do not invent abbreviations.
 
 ## Examples
 

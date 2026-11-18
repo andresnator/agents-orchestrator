@@ -4,7 +4,7 @@ Rules for all code, scripts, and tests. For language-specific rules, load the `o
 
 ## General
 
-- Names tell the intent. In agents-orchestrator, use only abbreviations from the [glossary](glossary.md).
+- Names tell the intent. In a name, use only a common industry abbreviation or a [glossary](glossary.md) abbreviation. Do not invent abbreviations.
 - One function does one thing. One module has one reason to change.
 - Comments tell why, not what, in STE ([writing-conventions.md](writing-conventions.md)).
 - Do not add code that no test or caller uses.

@@ -7,7 +7,7 @@ agents-orchestrator is a set of OpenCode agents, commands, skills, and plugins. 
 ## Repository contract
 
 - Read [standards/README.md](standards/README.md) and all files that it lists before you make a change. They own the language, ASD-STE100, and trigger rules.
-- Add each new abbreviation or term to [standards/glossary.md](standards/glossary.md) before you use it.
+- Add a term to [standards/glossary.md](standards/glossary.md) only if it is specific to this repository or has a specific meaning here. A common industry abbreviation needs no entry. Do not invent abbreviations.
 - The layout is flat by type: `agents/`, `commands/`, `skills/`, `tui-plugins/`, and `external-plugins/`.
 - `standards/` applies to this repository only. The installer does not install it. The root `AGENTS.md` tells agents in this repository to read it.
 - `global/AGENTS.md` is the installable runtime rules file. `CONTRIBUTING.md` is maintainer guidance. Do not merge their roles.
@@ -21,7 +21,7 @@ Three agents are allowed and no more:
 | Agent | Mode | Role |
 | --- | --- | --- |
 | `orchestraitor` | `primary` | Routes, plans, coordinates, and owns Git in the main working tree. |
-| `worker` | `subagent` | Implements one self-contained brief. |
+| `worker` | `all` | Implements one self-contained brief. The factory also starts it directly. |
 | `scout` | `subagent` | Read-only: explores, verifies, judges. `edit` is denied. |
 
 Do not add agents. Add an `oc-*` skill. Delegation is one level deep. The three agents let the user give a different model to each role.
