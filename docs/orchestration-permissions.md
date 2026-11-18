@@ -25,4 +25,4 @@ Use `--project` for `./.opencode`. Use `--target <dir>` for an explicit target. 
 
 ## Boundaries
 
-Each block sets all permission keys to `allow`, then applies the frontmatter entries. A frontmatter deny stays: `scout` keeps `edit: deny`. `off` also removes blocks from the retired `sdd-*` and `jd-*` agents. The script uses `jq`, so it rejects JSONC comments. It makes a timestamped backup before it changes a config.
+Each block sets all permission keys to `allow`, then applies the frontmatter entries. It writes the `*` key first, because OpenCode uses the last rule that matches. A frontmatter deny thus stays: `scout` keeps `edit: deny`. `off` also removes blocks from the retired `sdd-*` and `jd-*` agents. The script uses `jq`, so it rejects JSONC comments. It makes a timestamped backup before it changes a config.

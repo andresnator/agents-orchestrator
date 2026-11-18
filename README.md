@@ -20,6 +20,14 @@ installers/opencode.sh install
 
 After the install, restart OpenCode. `--reload` does not reload plugin code.
 
+## Daily flow
+
+1. Ask for a plan, for example `plan: add retry to the export job`. `orchestraitor` saves it to `.ai/plans/<slug>.md` and stops.
+2. Say `ejecuta el plan .ai/plans/<slug>.md`. `oc-build` does all tasks without stops and ticks each task in the plan.
+3. Read the report: done, failed, assumptions, and deviations. To resume, give the same trigger again.
+
+For several independent tasks at the same time, use `/factory`. See [Software factory](#software-factory).
+
 ### Optional: quiet Mini interface
 
 Run this setup step after installation. It requires Python 3 and OpenCode 2 with `opencode mini`.
@@ -83,7 +91,7 @@ installers/opencode.sh status
 | `ejecuta el plan <path>` | Runs the plan with `oc-build`. To resume, give the same trigger again: ticked tasks are skipped |
 | `/factory` | Runs independent tasks at the same time, each in its own worktree. See [Software factory](#software-factory) |
 | `/arch map\|review\|ideate\|boundary` | Architecture docs, risks, ADR, or service boundary map. Dependency focus gives an inventory only and never runs dependency audit commands |
-| `/review [solo\|dual\|defend] [fix] [scope]` | `solo` (default) uses one judge. `dual` uses two judges in parallel. Add `fix` to repair critical and warning findings. `defend` is a read-only design defense |
+| `/review [solo\|dual\|defend] [fix] [target]` | `solo` (default) uses one judge. `dual` uses two judges in parallel. Add `fix` to repair critical and warning findings. `defend` is a read-only design defense |
 | `/doc` | Routes to the most specific documentation skill |
 | `/grill [me\|docs\|plan] [topic]` | Focused interview to stress-test an idea |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
