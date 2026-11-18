@@ -11,8 +11,9 @@ These rules apply to `orchestraitor`, to the `worker` and `scout` subagents, and
 
 ## Standards
 
-- Before you write code or tests, read `standards/code-conventions.md` (in `standards/`, next to this file). If the repository has different consistent conventions, follow them and report each deviation.
-- Before you write documentation, prompts, or skills, read `standards/writing-conventions.md` and `standards/glossary.md`. Do not read them for other work.
+- The standards are in the `standards/` folder of the OpenCode configuration directory: `~/.config/opencode/standards/`, or `.opencode/standards/` in a project installation. If you cannot find them, follow the conventions of the repository and continue.
+- Before you write code or tests, read `code-conventions.md` there. If the repository has different consistent conventions, follow them and report each deviation.
+- Before you write documentation, prompts, or skills, read `writing-conventions.md` and `glossary.md` there. Do not read them for other work.
 - Write all text in ASD-STE100 (STE).
 - For code and tests, load `oc-conventions`.
 

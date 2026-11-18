@@ -6,4 +6,4 @@ argument-hint: "[map|review|ideate|boundary] [target or focus]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Load `oc-arch` and run `operation=<first argument>`. Pass the remaining arguments as target or focus. If the operation is missing or unknown, ask one closed choice among `map`, `review`, `ideate`, and `boundary`.
+Load `oc-arch` and run `operation=<first argument>`. Pass the remaining arguments as target or focus. If the operation is missing or unknown, pick the one that matches the request best among `map`, `review`, `ideate`, and `boundary`. Say which one in one line and continue.

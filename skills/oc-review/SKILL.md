@@ -6,14 +6,14 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "4.0.0"
+  version: "4.0.1"
   status: testing
 ---
 # Review
 
 ## Intent
 
-- **Goal:** Give one review verdict for a target, with evidence for each finding. Fix findings only when the request contains the word `fix`.
+- **Goal:** Give one review verdict for a target, with evidence for each finding. Fix findings only when the request tells you to fix: the word `fix`, `arregla`, or `corrige` as an instruction. These are the `fix` word in the steps below.
 - **Limits:** The request decides the operation and the fix. Do not ask the user to select them. Do not stage, commit, or push. `defend` never edits.
 - **Fails if:** a file changes when the request has no `fix` word, a finding has no `path:line`, or the report has no verdict.
 
