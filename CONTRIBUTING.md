@@ -21,7 +21,7 @@ Three agents are allowed and no more:
 | Agent | Mode | Role |
 | --- | --- | --- |
 | `orchestraitor` | `primary` | Routes, plans, coordinates, and owns Git in the main working tree. |
-| `worker` | `subagent` | Implements one self-contained brief. |
+| `worker` | `all` | Implements one self-contained brief. The factory also starts it directly. |
 | `scout` | `subagent` | Read-only: explores, verifies, judges. `edit` is denied. |
 
 Do not add agents. Add an `oc-*` skill. Delegation is one level deep. The three agents let the user give a different model to each role.

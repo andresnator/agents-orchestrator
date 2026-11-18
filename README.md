@@ -5,7 +5,7 @@ Agents Orchestrator gives reusable OpenCode agents, commands, skills, and plugin
 | Agent | Mode | Role |
 |---|---|---|
 | `orchestraitor` | primary | Routes, plans, coordinates, and owns Git in the main working tree |
-| `worker` | subagent | Implements one self-contained brief. It can edit files and run checks |
+| `worker` | all | Implements one self-contained brief. It can edit files and run checks. The factory also starts it directly |
 | `scout` | subagent | Read-only. It explores, verifies, and judges |
 
 You talk only to `orchestraitor`. It loads `oc-*` skills and delegates one level deep. If `worker` or `scout` is not available, it uses the built-in `general` subagent. Skills and agent bodies use the [IDSD format](CONTRIBUTING.md#idsd-format).
