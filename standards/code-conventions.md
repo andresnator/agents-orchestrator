@@ -30,14 +30,13 @@ A tautological test cannot fail. Do not write one:
 
 Use literal expected values that you calculated independently. Each test must fail when you break its behavior. To prove this for a doubtful test, break the production code temporarily and see the test fail.
 
-### Minimum scenarios
+### Which scenarios to test
 
-Test each behavior for these scenarios when they apply:
+Write one test for each different way that a behavior can fail. Start with the normal case.
 
-1. **Happy path:** a typical valid input gives the correct result.
-2. **Boundary:** minimum, maximum, empty, and one-element inputs.
-3. **Invalid input:** a wrong input gives the specified error.
-4. **Failure of a dependency:** the code handles a dependency error.
+Boundary, invalid input, and failure of a dependency are prompts, not required items. Add one of these tests only when the code has a branch, limit, validation, or external call that can fail.
+
+Two tests that fail for the same broken line are one test. Do not add a test to complete a list.
 
 ### Structure
 
