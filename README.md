@@ -1,6 +1,14 @@
 # Agents Orchestrator
 
-Agents Orchestrator gives reusable OpenCode commands, skills, and plugins. `orchestraitor` is the only agent. It loads each `oc-*` skill itself or gives it to the built-in `general` subagent (one delegation level). Skills, the agent body, and plans use the [IDSD format](CONTRIBUTING.md#idsd-format).
+Agents Orchestrator gives reusable OpenCode agents, commands, skills, and plugins. It has three agents:
+
+| Agent | Mode | Role |
+|---|---|---|
+| `orchestraitor` | primary | Routes, plans, coordinates, and owns Git in the main working tree |
+| `worker` | subagent | Implements one self-contained brief. It can edit files and run checks |
+| `scout` | subagent | Read-only. It explores, verifies, and judges |
+
+You talk only to `orchestraitor`. It loads `oc-*` skills and delegates one level deep. If `worker` or `scout` is not available, it uses the built-in `general` subagent. Skills and agent bodies use the [IDSD format](CONTRIBUTING.md#idsd-format).
 
 ## Quick path
 
@@ -46,7 +54,7 @@ See the [OpenCode Mini settings](https://opencode.ai/docs/cli/config#mini).
 
 | Path | Ownership |
 |---|---|
-| `agents/` | The single OpenCode agent, `orchestraitor` |
+| `agents/` | The three OpenCode agents: `orchestraitor`, `worker`, and `scout` |
 | `commands/` | Fused OpenCode commands |
 | `skills/<skill>/` | All skill bodies, one `SKILL.md` each. Never copy a body or add symlinks |
 | `tui-plugins/` | Repository-specific TUI plugins |
@@ -69,28 +77,53 @@ installers/opencode.sh status
 
 | Entry | Result |
 |---|---|
-| Ask `orchestraitor` for a change | Verified, uncommitted diff (Direct or SDD) |
-| Ask for a light or deep plan | IDSD plan in `.ai/deep-planner/plans/<slug>.md` |
-| Ask to explore an idea | Wayfinder discovery in `.ai/deep-planner/discoveries/<slug>.md`. Say `convert this discovery into a plan` to get a plan |
-| `ejecuta el plan <path>` | Runs an exact plan. No new approval. Structural and checksum checks still run |
-| `continúa <run>` | Resumes an SDD run without a new approval |
+| Ask `orchestraitor` for a change | Verified, uncommitted diff |
+| Ask for a light or deep plan | Plan in `.ai/plans/<slug>.md`. The work stops after the plan |
+| Ask to explore an idea | Wayfinder discovery in `.ai/discoveries/<slug>.md`. Say `convert this discovery into a plan` to get a plan |
+| `ejecuta el plan <path>` | Runs the plan with `oc-build`. To resume, give the same trigger again: ticked tasks are skipped |
+| `/factory` | Runs independent tasks at the same time, each in its own worktree. See [Software factory](#software-factory) |
 | `/arch map\|review\|ideate\|boundary` | Architecture docs, risks, ADR, or service boundary map. Dependency focus gives an inventory only and never runs dependency audit commands |
-| `/review judgment\|light\|defend` | Adversarial code review or design defense. Judgment fixes only authorized, confirmed findings. Defend is read-only |
+| `/review [solo\|dual\|defend] [fix] [scope]` | `solo` (default) uses one judge. `dual` uses two judges in parallel. Add `fix` to repair critical and warning findings. `defend` is a read-only design defense |
 | `/doc` | Routes to the most specific documentation skill |
-| `/grill` | Focused interview to stress-test an idea |
+| `/grill [me\|docs\|plan] [topic]` | Focused interview to stress-test an idea |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
 | `/wait-what [fragment]` | Explains the fragment or the last response in chat, with only supported context. Preserves facts, uncertainty, vocabulary, and the user's language |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
-For delivery and Git rules, see [`agents/orchestraitor.md`](agents/orchestraitor.md). The `oc-sdd` skill owns the SDD approval gate.
+Changes stay in the working tree by default. `orchestraitor` commits only when the request or the plan line `Delivery: commits` asks for it. The `oc-commits` skill owns the commit rules. For the routes, see [`agents/orchestraitor.md`](agents/orchestraitor.md).
+
+### How the flow behaves
+
+The rule is "assume, note, continue". When data is missing, the agent selects the most reasonable option and continues. It reports each assumption at the end. A plan is a living guide: `oc-build` can correct it and records each change in `## Deviations`.
+
+The agent asks you only before an action that is irreversible or visible to other people:
+
+- Push, open a PR, or merge into your branch.
+- Delete user data or untracked work.
+- Run a migration on real data.
+- Rewrite history.
+
+### Software factory
+
+`oc-factory` runs each task in its own worktree on the branch `factory/<id>`. It returns at once and does not wait. The state is in `.ai/factory/`. A question from one task does not stop the other tasks.
+
+| You say | Result |
+|---|---|
+| `/factory add the CSV export; fix the login timeout` | Adds one brief for each task, starts the tasks, and gives you the ids |
+| `/factory status` | Shows each task: `queued`, `running`, `done`, `needs-input`, `failed`, `merged`, or `conflict` |
+| `/factory answer <id> <text>` | Answers a `needs-input` task and starts it again |
+| `/factory merge <id>` | Merges a `done` task into your branch. A conflict aborts the merge |
+| `/factory drop <id>` | Stops the task and removes its worktree, branch, and state |
+
+A merge occurs only when you ask, or when you say `automerge`.
 
 ### Skills by purpose
 
 | Purpose | Skills |
 |---|---|
-| Execution (SDD) | `oc-sdd`, `oc-routing`, `oc-commits` |
+| Execution | `oc-build`, `oc-commits`, `oc-factory` |
 | Planning | `oc-plan`, `oc-grill` |
-| Review | `oc-review`, `oc-judge` |
+| Review | `oc-review` |
 | Architecture | `oc-arch`, `oc-adr` |
 | Code quality | `oc-conventions`, `oc-domain`, `oc-refactor` |
 | Documentation | `oc-prd`, `oc-rfc`, `oc-issue`, `oc-jira`, `oc-usm`, `oc-slides`, `oc-summarize`, `oc-whisper`, `oc-doc-design` |
@@ -111,8 +144,8 @@ Run `make mcp` to add the Context7 and Engram MCP servers to the global OpenCode
 
 | Guide | Purpose |
 |---|---|
-| [Agent models](docs/agent-models.md) | Assign provider models and variants to orchestraitor and `general` |
-| [Orchestration permissions](docs/orchestration-permissions.md) | Toggle `orchestraitor` and `general` permissions |
+| [Agent models](docs/agent-models.md) | Assign provider models and variants to `orchestraitor`, `worker`, and `scout` |
+| [Orchestration permissions](docs/orchestration-permissions.md) | Write permission blocks for the three agents and `general` |
 | [Hot reload](docs/hot-reload.md) | Apply supported configuration changes live |
 | [LM Studio](docs/lm-studio.md) | Connect OpenCode to LAN-hosted models |
 | [OpenCode database growth](docs/opencode-db-growth.md) | Inspect and prune local session data |

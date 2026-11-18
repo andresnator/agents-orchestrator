@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Toggle orchestration permissions in OpenCode. Complete agent permission
-# blocks remove tool prompts while preserving frontmatter denies and question
-# gates. Repository files are never modified. See docs/orchestration-permissions.md.
+# blocks remove tool prompts while preserving frontmatter denies.
+# Repository files are never modified. See docs/orchestration-permissions.md.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,10 +37,10 @@ usage() {
   cat <<'EOF'
 usage: scripts/orchestration-permissions.sh on|off|show [options]
 
-Toggle automatic permissions for orchestraitor: write complete
-agent.<name>.permission blocks into the user's OpenCode config so work runs
-without tool-permission prompts. Frontmatter denies are preserved verbatim
-and workflow question gates are unaffected. Repo files are never modified.
+Toggle automatic permissions for each agent in agents/ (orchestraitor,
+worker, scout): write complete agent.<name>.permission blocks into the
+user's OpenCode config so work runs without tool-permission prompts.
+Frontmatter denies are preserved verbatim. Repo files are never modified.
 
 actions:
   on      write permission blocks for every orchestration agent (+ general)
@@ -126,6 +126,7 @@ permission_entries() {
     /^  [^ ]/ {
       line = substr($0, 3)
       key = line; sub(/:.*$/, "", key)
+      gsub(/"/, "", key)
       val = line; sub(/^[^:]*:/, "", val)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
       gsub(/"/, "", val)
@@ -160,14 +161,16 @@ validate_entries() {
 }
 
 # Full auto-mode permission object for one agent: every key set to allow,
-# then every frontmatter entry applied verbatim on top.
+# then every frontmatter entry applied verbatim on top. The "*" key goes
+# first so that it cannot override a later deny (for example scout's edit).
 automode_block() {
   local file="$1" entries
   entries="$(permission_entries "$file")"
   validate_entries "$file" <<<"$entries"
   printf '%s\n' "$entries" | jq -Rn --argjson base "$ALL_ALLOW_JSON" '
     reduce (inputs | select(length > 0) | split("\t")) as $e ($base;
-      if ($e | length) == 2 then .[$e[0]] = $e[1]
+      if ($e | length) == 2 and $e[0] == "*" then {"*": $e[1]} + del(.["*"])
+      elif ($e | length) == 2 then .[$e[0]] = $e[1]
       else .[$e[0]] = (((.[$e[0]] // {}) | if type == "object" then . else {} end)
                        + {($e[1]): $e[2]})
       end)'

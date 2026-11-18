@@ -21,7 +21,7 @@ This glossary defines the abbreviations and technical terms for this repository.
 | HTTP | Hypertext Transfer Protocol | The protocol that web clients and servers use. |
 | ICE | Intent, Context, Expectations | The three parts of an IDSD body. |
 | ID | Identifier | A value that identifies one item. |
-| IDSD | Intent-Driven Software Development | The format for agents, skills, and plans in this repository. |
+| IDSD | Intent-Driven Software Development | The format for agents and skills in this repository. |
 | JIT | Just-In-Time | An action that occurs only when it is necessary. |
 | JSON | JavaScript Object Notation | A text data format. |
 | JSONC | JSON with Comments | JSON that also permits comments. |
