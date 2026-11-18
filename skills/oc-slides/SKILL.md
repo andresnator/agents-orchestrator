@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.4"
+  version: "2.1.5"
 ---
 
 # Slidev Retro Deck
@@ -20,7 +20,7 @@ metadata:
   - One accent has one meaning in text, borders, stamps, and diagram nodes.
   - Obey each theme's heading scale. Pixel fonts (Silkscreen, Press Start 2P) are much wider than VT323.
   - Presenter notes are a trailing `<!-- ... -->` comment in the slide. Keep the `prefers-reduced-motion` guard on the cursor.
-- **Fails if:** you claim "done" without a PNG inspection of every slide in each scheme the deck uses, a mermaid block does not parse, or a slide clips or overflows.
+- **Fails if:** you claim "done" without a PNG inspection of every slide in each scheme the deck uses. A mermaid block does not parse, or a slide clips or overflows.
 
 ## Context
 

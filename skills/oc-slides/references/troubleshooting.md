@@ -20,7 +20,7 @@ Failures actually hit while building retro decks, as symptom → cause → fix.
 
 **Cause:** a `classDef` line with a value mermaid's grammar cannot parse — notably `var(--token)`; mermaid does not support CSS variables in `classDef`. The diagram never renders, so the export waits forever.
 
-**Fix:** remove `classDef` from fences entirely. Tag nodes with `class <id> a|b|aux` and let the theme's `mermaid-setup.ts` style those classes via `themeCSS` — that keeps node accents day/night-aware with no color literals in the fence.
+**Fix:** remove `classDef` from fences entirely. Tag nodes with `class <id> a|b|aux` and let the theme's `mermaid-setup.ts` style those classes via `themeCSS`. That keeps node accents day/night-aware with no color literals in the fence.
 
 ## Cover slide ignores the theme (gray background, white text in day scheme)
 
@@ -36,7 +36,7 @@ Failures actually hit while building retro decks, as symptom → cause → fix.
 
 **Cause:** mono fonts are wider and taller than proportional fonts; content that fits with a default font overflows here.
 
-**Fix:** add per-slide frontmatter `class: text-sm` to the dense slide; shrink footers to `text-xs` and reduce their top margin (`mt-2` instead of `mt-4`); as a last resort trim copy. Always verify in the exported PNG, not the dev server — the export is the ground truth for clipping.
+**Fix:** add per-slide frontmatter `class: text-sm` to the dense slide. Shrink footers to `text-xs` and reduce their top margin (`mt-2` instead of `mt-4`); as a last resort trim copy. Always verify in the exported PNG, not the dev server — the export is the ground truth for clipping.
 
 ## `playwright-chromium` never downloads its browser
 

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.2.0"
+  version: "2.2.1"
 ---
 
 # Book Chapter Summary
@@ -15,24 +15,24 @@ metadata:
 - **Goal:** A detailed, didactic chapter summary that builds deep reader comprehension, saved as a local `.md` file when file-writing is available.
 - **Limits:**
   - Order is fixed: read the chapter, generate the summary, save the local `.md`, then optionally publish. **Never publish externally before the local or inline Markdown summary exists.**
-  - Publish to a knowledge base only when the user requested or configured it and the environment provides that capability; never assume a specific MCP, tool name, workspace, or page exists.
-- **Fails if:** the summary is written before reading the entire chapter, sections are missing or out of order, the file ignores `assets/chapter-summary-template.md`, or no file was written while file-writing was available.
+  - Publish to a knowledge base only when the user requested or configured it and the environment provides that capability. Never assume a specific MCP, tool name, workspace, or page exists.
+- **Fails if:** the summary is written before reading the entire chapter. Sections are missing or out of order. The file ignores `assets/chapter-summary-template.md`, or no file was written while file-writing was available.
 
 ## Context
 
 - **Reads:** the full chapter (pasted text, PDF/EPUB, or reference); `assets/chapter-summary-template.md`; for PDFs over 20 pages, text extracted with `scripts/extract_pdf_pages.py`.
-- **Scope:** summarizing or studying a book chapter, analyzing a text or document, extracting key ideas, Cornell notes, or a TL;DR of long-form content, including uploaded PDF/EPUB/documents (English and Spanish triggers in the description).
+- **Scope:** summarizing or studying a book chapter, analyzing a text or document, extracting key ideas, Cornell notes, or a TL;DR of long-form content. Includes uploaded PDF/EPUB/documents (English and Spanish triggers in the description).
 
 ## Expectations
 
 - **Scenarios:**
-  - WHEN book, chapter, or save path is missing THEN infer book and chapter from the content, save in the current working directory, and report the assumptions. Do not publish unless the user asked.
+  - WHEN book, chapter, or save path is missing THEN infer book and chapter from the content and save in the current working directory. Report the assumptions. Do not publish unless the user asked.
   - WHEN file-writing is unavailable THEN return the complete Markdown inline and say no file was created.
-  - WHEN publishing is requested and available THEN publish from the saved `.md` (if no file exists, use the generated Markdown content) and show only the TL;DR, file path, and link/identifier in chat (full summary only if asked).
+  - WHEN publishing is requested and available THEN publish from the saved `.md` (if no file exists, use the generated Markdown content). Show only the TL;DR, file path, and link/identifier in chat (full summary only if asked).
   - WHEN publishing is not available THEN show the full summary in chat and say: *"The summary was saved at `[path/file.md]`. Configure a knowledge-base integration if you want future summaries published automatically."*
-  - WHEN summarizing a book chapter by chapter THEN keep one folder per book (for example `refactoring-fowler/chapter-01-code-smell.md`) and you may offer: *"Would you like to continue with the next chapter?"*
-- **Done means:** a file named `chapter-NN-short-title.md` (lowercase, hyphenated, e.g. `chapter-07-basic-refactoring.md`) built from the template with YAML frontmatter (book, chapter, author, date) and all sections in order, and the full path confirmed to the user (or confirmation that it was returned inline).
-- **Quality needs:** didactic, clear, professional tone, like a good teacher who wants students to understand; explain technical terms on first use and favor the learning curve over erudition. Identify main ideas, technical concepts, supporting arguments, and author examples, explaining each in accessible language without losing rigor; simple examples for abstract concepts; a Java code-block example for programming concepts.
+  - WHEN summarizing a book chapter by chapter THEN keep one folder per book (for example `refactoring-fowler/chapter-01-code-smell.md`). You may offer: *"Would you like to continue with the next chapter?"*
+- **Done means:** a file named `chapter-NN-short-title.md` (lowercase, hyphenated, e.g. `chapter-07-basic-refactoring.md`) built from the template. It has YAML frontmatter (book, chapter, author, date) and all sections in order. The full path is confirmed to the user (or confirmation that it was returned inline).
+- **Quality needs:** didactic, clear, professional tone, like a good teacher who wants students to understand. Explain technical terms on first use and favor the learning curve over erudition. Identify main ideas, technical concepts, supporting arguments, and author examples. Explain each in accessible language without losing rigor. Use simple examples for abstract concepts; a Java code-block example for programming concepts.
 
 ## Method
 
@@ -46,7 +46,7 @@ metadata:
 
 ### Publishing
 
-Create the page with the descriptive title as title, the `.md` body as content (exclude YAML frontmatter, but use it to infer properties if the target is a database), and the parent destination indicated by the user or configured by the environment. Show the link or identifier when available.
+Create the page with the descriptive title as title and the `.md` body as content. Exclude YAML frontmatter, but use it to infer properties if the target is a database. Use the parent destination indicated by the user or configured by the environment. Show the link or identifier when available.
 
 ### Large PDFs (more than 20 pages)
 

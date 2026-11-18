@@ -7,16 +7,16 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.2.0"
+  version: "2.2.1"
 ---
 
 # Domain Modeling
 
 ## Intent
 
-- **Goal:** Actively build and sharpen the project's domain model while designing: challenge terms, invent edge-case scenarios, and write the glossary and decisions down the moment they crystallise.
+- **Goal:** Actively build and sharpen the project's domain model while designing. Challenge terms, invent edge-case scenarios, and write the glossary and decisions down the moment they crystallise.
 - **Limits:** `CONTEXT.md` is a glossary and nothing else: no implementation details, not a spec, scratch pad, or decision log. Create files lazily: `CONTEXT.md` when the first term is resolved, `docs/adr/` (`doc/adr/` when the repository uses `doc/`) when the first ADR is needed. Offer ADRs sparingly.
-- **Fails if:** A term conflict or code contradiction goes unchallenged, resolved terms are batched instead of captured inline, or an ADR is offered without all three ADR criteria.
+- **Fails if:** A term conflict or code contradiction goes unchallenged. Resolved terms are batched instead of captured inline. An ADR is offered without all three ADR criteria.
 
 ## Context
 
@@ -26,10 +26,10 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN a term conflicts with `CONTEXT.md` THEN call it out immediately: "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
+  - WHEN a term conflicts with `CONTEXT.md` THEN call it out immediately. Example: "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
   - WHEN a term is vague or overloaded THEN propose a precise canonical term: "You're saying 'account' — do you mean the Customer or the User?"
   - WHEN domain relationships are discussed THEN stress-test them with invented edge-case scenarios that force precise boundaries.
-  - WHEN the user states how something works THEN check the code and surface contradictions: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
+  - WHEN the user states how something works THEN check the code and surface contradictions. Example: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
   - WHEN a term is resolved THEN update `CONTEXT.md` right there using [CONTEXT-FORMAT.md](./assets/CONTEXT-FORMAT.md).
 - **Done means:** Resolved terms are in `CONTEXT.md`; qualifying decisions are offered as ADRs in [ADR-FORMAT.md](./assets/ADR-FORMAT.md) format.
 - **Quality needs:** Glossary entries are implementation-free and canonical.

@@ -50,8 +50,8 @@ mcp-engram: ## Run engram setup opencode: MCP server and plugin (needs engram; F
 mcp-engram-remove: ## Remove the Engram MCP server and plugin if they are what engram setup adds
 	@$(MAKE_ENV) make-scripts/mcp.sh remove engram
 
-lint: ## Syntax-check shell scripts (bash -n)
-	@for f in $(SCRIPTS); do bash -n "$$f" || exit 1; done
+lint: ## Syntax-check shell scripts and check the sentence length of the Markdown files
+	@NODE="$(NODE)" make-scripts/lint.sh $(SCRIPTS)
 
 test: lint ## Run lint and all unit tests
 	@NODE="$(NODE)" make-scripts/test.sh

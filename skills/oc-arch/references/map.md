@@ -6,7 +6,7 @@ Loaded by `oc-arch`. Triggers: architecture map, C4 diagram, container diagram, 
 
 - **Goal:** Evidence-backed C4-lite docs: context, containers, key runtime flows.
 - **Limits:** No code-level design, story mapping, or AI-harness analysis. Never remove manually owned files.
-- **Fails if:** A node/edge lacks evidence and no `hypothesis` mark; a diagram exceeds ~30 nodes or a file 120 lines; Mermaid unbalanced; split files lack cross-links.
+- **Fails if:** A node/edge lacks evidence and no `hypothesis` mark. A diagram exceeds ~30 nodes or a file 120 lines; Mermaid unbalanced; split files lack cross-links.
 
 ## Context
 

@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "5.0.0"
+  version: "5.0.1"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
@@ -19,7 +19,7 @@ metadata:
   - Keep behavior-preserving work and functional change in different steps. Record a bug that you find as follow-up work. Do not fix it in the refactor.
   - Analysis modes (`lens`, `impact`, `tooling`) are read-only. They do not edit, ask, delegate, or fetch.
   - Do not refactor across a bounded-context boundary.
-- **Fails if:** observable behavior changes; a public contract changes silently; a claim has no `file:line` and no `hypothesis` mark; a characterization test asserts desired behavior instead of current behavior.
+- **Fails if:** observable behavior changes; a public contract changes silently; a claim has no `file:line` and no `hypothesis` mark. A characterization test asserts desired behavior instead of current behavior.
 
 ## Context
 
@@ -42,7 +42,7 @@ metadata:
 
 ### Lens mode
 
-Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field gets a default, reported in `nf=<reason>`: `target` = the path that the brief names, else `.`; `target_slug` and `unit` = kebab-case of the target; `lens=kiss`; `lenses=none`; `skills=none`; `focus` empty; `max=7`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly (example last line: `TOTAL findings=3 nf=lens-missing-used-kiss`):
+Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field gets a default, reported in `nf=<reason>`. Defaults: `target` = the path that the brief names, else `.`; `target_slug` and `unit` = kebab-case of the target; `lens=kiss`; `lenses=none`; `skills=none`; `focus` empty; `max=7`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly (example last line: `TOTAL findings=3 nf=lens-missing-used-kiss`):
 
 ```text
 OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>

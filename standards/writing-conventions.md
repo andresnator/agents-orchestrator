@@ -12,7 +12,7 @@ All text uses ASD-STE100 Simplified Technical English (STE): READMEs, guides, sk
 
 | Rule | Instruction |
 | --- | --- |
-| Sentence length | Procedures: 20 words maximum. Descriptions: 25 words maximum. |
+| Sentence length | Procedures: 20 words maximum. Descriptions: 25 words maximum. `make test` checks the 25-word maximum (`scripts/lint-sentences.mjs`). |
 | One instruction | One instruction in each sentence. |
 | Imperative | Start procedures with a verb: "Run the linter.", not "The linter should be run." |
 | Active voice | Use passive voice only when the agent is not known. |

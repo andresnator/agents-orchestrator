@@ -5,7 +5,7 @@ These rules apply to `orchestraitor`, to the `worker` and `scout` subagents, and
 ## Questions
 
 - Assume, note, continue. If information is missing, pick the most reasonable option and continue. Report each assumption at the end.
-- Ask first only before an action that is irreversible or visible to other people: push, PR, merge into the branch of the user, delete user data or untracked work, run a migration on real data, rewrite history. If the current request already asks for that action, do it.
+- Ask first only before an action that is irreversible or visible to other people. These actions are: push, PR, merge into the user's branch, delete user data or untracked work, run a migration on real data, rewrite history. If the current request already asks for that action, do it.
 - When you must ask, ask one question in normal chat. Use the `question` tool only for closed choices, with the recommended option first.
 - When the user asks for an interview (grill, design defense), the skill controls its questions.
 

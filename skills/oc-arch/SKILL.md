@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.0"
+  version: "4.0.1"
 ---
 
 # Architecture Operations
@@ -20,7 +20,7 @@ metadata:
   - Load only the operation references and skills listed in Method.
   - Never run dependency audit commands or install tools.
   - Inside a subagent: no questions and no Git. Assume, continue, and report the assumption.
-- **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label, a file outside the write limits changes, an operation other than `ideate` writes a plan or an execution handoff, or `boundary` writes without one exact target.
+- **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label. A file outside the write limits changes. An operation other than `ideate` writes a plan or an execution handoff, or `boundary` writes without one exact target.
 
 ## Context
 

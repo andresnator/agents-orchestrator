@@ -6,7 +6,7 @@ metadata:
   author: Matt Pocock
   adapted_by: andresnator
   source: https://github.com/mattpocock/skills
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 
@@ -14,13 +14,13 @@ metadata:
 
 ## Intent
 
-- **Goal:** Find where one session lost time, tokens, or user attention, and propose changes to the environment of the agent that prevent it in the next run.
+- **Goal:** Find where one session lost time, tokens, or user attention. Propose changes to the environment of the agent that prevent it in the next run.
 - **Limits:** Report only. Do not edit the harness, the project, or Git. The one write is the report file under `.ai/retro/`.
-- **Fails if:** a candidate has no evidence from the session; a candidate blames the model and names no file to change; the report has more than seven candidates.
+- **Fails if:** a candidate has no evidence from the session; a candidate blames the model and names no file to change. The report has more than seven candidates.
 
 ## Context
 
-- **Reads:** the session; the plan file and its `## Deviations` and `- [!]` tasks; `.ai/factory/board.md` and `.ai/factory/logs/`; the harness files that the session used (skills, agents, commands, the global `AGENTS.md`); the check commands of the project.
+- **Reads:** the session; the plan file and its `## Deviations` and `- [!]` tasks; `.ai/factory/board.md` and `.ai/factory/logs/`. Also: the harness files that the session used (skills, agents, commands, the global `AGENTS.md`); the check commands of the project.
 - **Scope:** `/retro`, or a request for a retrospective. The default session is the current conversation. For a different session, use the export file or the session id that the user gives.
 
 ## Expectations
@@ -32,10 +32,10 @@ metadata:
 
 ## Method
 
-1. Read the session from start to end. List each event of these types: a question to the user, a stop, a retry, a wrong route or skill, a search that took many steps, a failed check, a correction from the user.
+1. Read the session from start to end. List each event of these types: a question to the user, a stop, a retry, a wrong route or skill. Also list: a search that took many steps, a failed check, a correction from the user.
 2. For each event, find the cause in the environment. Use the categories below.
 3. Keep the events that a file change can prevent. Join events with the same cause.
-4. Write one candidate for each cause. Select the cheapest fix that works, in this order: a script or automated check, a change to one skill or command, a rule in the global `AGENTS.md`.
+4. Write one candidate for each cause. Select the cheapest fix that works. Use this order: a script or automated check, a change to one skill or command, a rule in the global `AGENTS.md`.
 5. Save the report. Show it in chat.
 
 ### Categories

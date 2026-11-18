@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "4.0.0"
+  version: "4.0.1"
 ---
 
 # Cognitive Output Refiner
@@ -14,10 +14,10 @@ metadata:
 
 - **Goal:** Turn heavy textual output into a concise, faithful, non-duplicative, easier-to-scan version.
 - **Limits:**
-  - Redaction takes precedence over all exact-preservation requirements, including the output template. Never include credential material (secrets, credentials, inline credentials, connection strings, URL-embedded credentials, API keys, access tokens, cookies, passwords, private keys, session identifiers, authorization headers) in whole or in part; replace the full value with a placeholder such as `[REDACTED_TOKEN]`. When an ID's sensitivity is ambiguous, redact it.
+  - Redaction takes precedence over all exact-preservation requirements, including the output template. Never include credential material in whole or in part; replace the full value with a placeholder such as `[REDACTED_TOKEN]`. Credential material: secrets, credentials, inline credentials, connection strings, URL-embedded credentials, API keys, access tokens, cookies, passwords, private keys, session identifiers, authorization headers. When an ID's sensitivity is ambiguous, redact it.
   - Preserve the input language; do not translate unless asked.
   - Never overwrite source content; produce a separate response or file.
-- **Fails if:** an inference is presented as input fact (label it `Inference`, `Likely cause`, or `Possible next step`); useful diagnostic detail is lost; meaningful differences between duplicates disappear; credential material or ambiguous sensitive identifiers appear.
+- **Fails if:** an inference is presented as input fact (label it `Inference`, `Likely cause`, or `Possible next step`). Useful diagnostic detail is lost; meaningful differences between duplicates disappear; credential material or ambiguous sensitive identifiers appear.
 
 ## Context
 
@@ -28,10 +28,10 @@ metadata:
 
 - **Scenarios:**
   - WHEN input is already concise THEN say no refinement is needed and offer at most a micro-improvement.
-  - WHEN the user asks to save/create a document or provides a file as input THEN write `{topic_snake_case}_v<semver>.md` in the current working directory unless a path is given; infer the topic; do not save the original; start at `v1.0.0` when no prior refined version exists. SemVer: patch for clarity/order/deduplication, minor for added information or structure changes, major for changed interpretation.
+  - WHEN the user asks to save/create a document or provides a file as input THEN write `{topic_snake_case}_v<semver>.md`. Use the current working directory unless a path is given. Infer the topic; do not save the original; start at `v1.0.0` when no prior refined version exists. SemVer: patch for clarity/order/deduplication, minor for added information or structure changes, major for changed interpretation.
   - WHEN the user asks for a correction THEN generate a new complete version, not a patch.
 - **Done means:** the output contract below, with every Satisfaction Check item honestly true before rendering (fix the output first if one fails).
-- **Quality needs:** target 30–50% of original size; 10–20% only for explicit ultra-compact requests. Fidelity beats size. Keep errors, relevant stack frames, commands, paths, public/non-sensitive IDs, decisions, trade-offs, critical warnings, verification steps, and next steps, redacting usernames, local/private path prefixes, internal hostnames, and credentials while keeping filenames, function names, line numbers, error codes, and public IDs. Deduplicate to one canonical version.
+- **Quality needs:** target 30–50% of original size; 10–20% only for explicit ultra-compact requests. Fidelity beats size. Keep errors, relevant stack frames, commands, paths, public/non-sensitive IDs, decisions, trade-offs, critical warnings, verification steps, and next steps. Redact usernames, local/private path prefixes, internal hostnames, and credentials. Keep filenames, function names, line numbers, error codes, and public IDs. Deduplicate to one canonical version.
 
 ## Method
 

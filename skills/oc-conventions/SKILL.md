@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.2.2"
+  version: "3.2.3"
 ---
 
 # Code Conventions
@@ -24,7 +24,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN writing a plan or design document THEN record the detected language and tool versions with evidence (e.g. `java.version` in `pom.xml`, `typescript` in `package.json`) so the implementer can fetch version-correct documentation.
+  - WHEN writing a plan or design document THEN record the detected language and tool versions with evidence (e.g. `java.version` in `pom.xml`, `typescript` in `package.json`). The implementer can then fetch version-correct documentation.
 - **Done means:** Code and tests follow the Method rules or the repo's winning convention; any deviation is named in the plan, design, or summary.
 - **Quality needs:** Single Responsibility and Open-Closed carry weight. Introduce interfaces or dependency inversion only for real variation, test seams, or architectural boundaries, never as SOLID dogma (see `oc-refactor` lens mode, `dip` lens).
 
@@ -41,7 +41,7 @@ metadata:
 - **Naming:** `should{Behavior}When{Condition}` or `when{X}Then{Y}`. Never Given-When-Then in the name.
 - **Section markers:** every non-trivial test body is split with `// Given`, `// When`, `// Then` comments. They delimit phases; they are not explanatory comments.
 - **Unified asserts:** fluent single-entry assertions: AssertJ `assertThat` in Java, `expect` in TS.
-- **Whole-object asserts:** for complex objects or DTOs with many fields, assert the full object (`usingRecursiveComparison()` or ApprovalTests in Java, `toMatchObject`/`toMatchSnapshot` in Vitest/Jest), never a cascade of field-by-field asserts. Prefer structured comparison over raw snapshots when golden-master fragility hurts.
+- **Whole-object asserts:** for complex objects or DTOs with many fields, assert the full object (`usingRecursiveComparison()` or ApprovalTests in Java, `toMatchObject`/`toMatchSnapshot` in Vitest/Jest). Never write a cascade of field-by-field asserts. Prefer structured comparison over raw snapshots when golden-master fragility hurts.
 - **Characterization tests live apart:** a dedicated class/file per unit, `{ClassName}CharacterizationTest` (Java) or `<name>.characterization.test.ts` (TS). They are a permanent regression net.
 
 ### Java

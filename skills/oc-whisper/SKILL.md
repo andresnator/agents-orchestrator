@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.2.0"
+  version: "2.2.1"
 ---
 
 # Whisper Extract
@@ -18,7 +18,7 @@ metadata:
   - Ask only when the file path is missing. For other missing inputs, use the defaults in `Inputs` and report them.
   - Clear `/tmp/whisper-extract-temp` before each run. Never read files from earlier runs.
   - Do not paraphrase the transcript or invent speaker turns. Do not put it in chat.
-- **Fails if:** the transcript is not Whisper's raw text, a stale file from an earlier run is used, the command is split across lines, or a Whisper error is not reported with a fix.
+- **Fails if:** the transcript is not Whisper's raw text. A stale file from an earlier run is used. The command is split across lines, or a Whisper error is not reported with a fix.
 
 ## Context
 
@@ -33,7 +33,7 @@ metadata:
 
 ## Method
 
-- **Inputs:** Required: file path. Optional, with defaults: language (auto-detect), recording context (from the file name), model (`turbo`; needs `openai-whisper` >= 20240930), output directory (the file directory), summary language (the recording language).
+- **Inputs:** Required: file path. Optional, with defaults: language (auto-detect), recording context (from the file name), model (`turbo`; needs `openai-whisper` >= 20240930), output directory (the file directory). Summary language: the recording language.
 - **Command:** one line only. In zsh, a space after a `\` continuation gives Whisper an empty second path. For auto-detect, omit `--language`.
 
 ```bash

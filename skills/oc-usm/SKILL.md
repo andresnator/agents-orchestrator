@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.2"
+  version: "4.0.3"
 ---
 
 # User Story Mapping
@@ -18,7 +18,7 @@ metadata:
   - Do not produce the final artifact before the Closure criteria are true, also if the user says "generate now". Block only on structural gaps. Mark minor unknowns as assumptions.
   - Print only. Save only on explicit request: suggest `docs/usm/{product-or-feature-name}-usm.md` and wait for confirmation.
   - Do not create issues.
-- **Fails if:** the map is feature-first or a flat feature list, has no Primary Actor or MVP Slice, has fewer than 3 activities, or keeps template labels (for example `{Activity 1}`), placeholder rows, unused optional sections, or template notes. Structural Mermaid node IDs can stay.
+- **Fails if:** the map is feature-first or a flat feature list, has no Primary Actor or MVP Slice, or has fewer than 3 activities. The map keeps template labels (for example `{Activity 1}`), placeholder rows, unused optional sections, or template notes. Structural Mermaid node IDs can stay.
 
 ## Context
 
@@ -31,7 +31,7 @@ metadata:
   - WHEN the user gives features THEN ask where each feature is in the journey before you map it.
   - WHEN multiple actors exist THEN require one Primary Actor. Record the others as variants or constraints.
   - WHEN a phase ends THEN show a compact partial summary.
-- **Done means:** one Markdown artifact from `assets/usm-template.md`: metadata, goal, actors, User Journey Map, Backbone, User Tasks by Activity, Slice Plan with MVP Slice, Mermaid `flowchart LR`, Open Questions, Risks, Assumptions, and Next Steps that suggest MVP-to-issues conversion.
+- **Done means:** one Markdown artifact from `assets/usm-template.md`. It has metadata, goal, actors, User Journey Map, Backbone, User Tasks by Activity, Slice Plan with MVP Slice, and Mermaid `flowchart LR`. It also has Open Questions, Risks, Assumptions, and Next Steps that suggest MVP-to-issues conversion.
 - **Quality needs:**
   - Activities are high-level journey stages, not screens or implementation steps.
   - Cards are concise user tasks, not full `As a/I want/so that` stories.

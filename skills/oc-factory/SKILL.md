@@ -4,7 +4,7 @@ description: "Run independent tasks in parallel worktrees. Trigger: factory, sof
 license: MIT
 metadata:
   author: andresnator
-  version: 1.0.0
+  version: 1.0.1
   status: testing
 ---
 # Software factory
@@ -18,7 +18,7 @@ metadata:
 ## Context
 
 - **Reads:** the user request, the repository files that you need to write good briefs, and the output of `scripts/factory.sh`.
-- **Scope:** several independent tasks at the same time, `factory`, `/factory`, a request for the state of the tasks; inside a Git repository with one commit or more.
+- **Scope:** several independent tasks at the same time, `factory`, `/factory`, a request for the state of the tasks. It applies inside a Git repository with one commit or more.
 
 ## Expectations
 

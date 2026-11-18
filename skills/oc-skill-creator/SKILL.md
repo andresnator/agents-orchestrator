@@ -6,7 +6,7 @@ metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "4.2.0"
+  version: "4.2.1"
   status: in-progress
 ---
 
@@ -19,7 +19,7 @@ metadata:
   - Do not create a skill for a one-off task, a trivial pattern, or knowledge that already has a document. Add a reference instead.
   - Never copy skill bodies. No symlinks.
   - No Keywords section, no troubleshooting section, no web URLs in references.
-- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `SKILL.md` exceeds its line cap (80 lines; 120 for the coordinator skills `oc-plan` and `oc-build`) or `description` exceeds 160 characters; a frontmatter rule below is broken or a required IDSD field is missing.
+- **Fails if:** the skill already exists in `skills/*/SKILL.md`. `SKILL.md` exceeds its line cap (80 lines; 120 for the coordinator skills `oc-plan` and `oc-build`) or `description` exceeds 160 characters. A frontmatter rule below is broken or a required IDSD field is missing.
 
 ## Context
 
@@ -29,7 +29,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:** WHEN a high-impact discipline skill fails reproducibly while available THEN run the pilot in [references/behavioral-evaluation.md](references/behavioral-evaluation.md). It is never a routine step or CI gate.
-- **Done means:** `skills/<name>/SKILL.md` exists with complete frontmatter, an IDSD body with every required field, no more lines than its cap, and a correct version and status.
+- **Done means:** `skills/<name>/SKILL.md` exists with complete frontmatter, an IDSD body with every required field, and no more lines than its cap. Its version and status are correct.
 - **Quality needs:** ASD-STE100 text; critical rules first; tables for decisions; literal triggers and return lines kept exactly.
 
 ## Method
@@ -58,5 +58,5 @@ Write for a small model:
 | `description` | one line, 160 characters maximum: what it does plus its most useful `Trigger:` keywords |
 | `license` | usually `MIT` or `Apache-2.0` |
 | `metadata.author` | author or maintainer |
-| `metadata.version` | SemVer string, `1.0.0` for a new skill: patch for wording or path fixes, minor for new capabilities, major for changed or reduced activation or output contract |
+| `metadata.version` | SemVer string, `1.0.0` for a new skill. Patch for wording or path fixes, minor for new capabilities, major for changed or reduced activation or output contract |
 | `metadata.status` | `backlog`, `in-progress`, `testing`, or `done`; `testing` for a new skill |

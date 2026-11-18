@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "3.1.2"
+  version: "3.1.3"
 ---
 
 # RFC Creator
@@ -29,8 +29,8 @@ metadata:
 
 ## Expectations
 
-- **Done means:** by default, the final RFC as exactly one Markdown code block with no files created; with an explicit path, the saved file plus a summary of its path in chat.
-- **Quality needs:** `TBD` used sparingly and only for intentionally skipped details; optional extended sections (Security Considerations, Testing Strategy, Rollback Plan, Migration Plan, Timeline, Implementation Plan) only when requested or naturally discovered.
+- **Done means:** by default, the final RFC as exactly one Markdown code block with no files created. With an explicit path, the saved file plus a summary of its path in chat.
+- **Quality needs:** `TBD` used sparingly and only for intentionally skipped details. Optional extended sections (Security Considerations, Testing Strategy, Rollback Plan, Migration Plan, Timeline, Implementation Plan) only when requested or naturally discovered.
 
 ## Method
 

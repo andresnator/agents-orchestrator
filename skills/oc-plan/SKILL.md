@@ -4,7 +4,7 @@ description: "Trigger: plan, light plan, plan rápido, deep plan, plan profundo,
 license: MIT
 metadata:
   author: andresnator
-  version: "6.0.0"
+  version: "6.0.1"
   status: testing
 ---
 
@@ -33,10 +33,10 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN the mode is not stated THEN use light. Use deep, and say so in one line, only when the work restructures code that several callers use, breaks an existing public contract, or migrates data.
+  - WHEN the mode is not stated THEN use light. Use deep only when the work restructures code that several callers use, breaks an existing public contract, or migrates data. Then say so in one line.
   - WHEN a fact is unknown THEN find it in the repository.
   - WHEN only the user can decide a detail THEN pick the most reasonable default, continue, and write it in `## Notes` as `Assumption: <default> (<reason>)`.
-  - WHEN the choice controls a task that cannot be undone (delete user data, migrate real data, rewrite history) THEN ask one question before you write the plan.
+  - WHEN the choice controls an irreversible task (delete user data, migrate real data, rewrite history) THEN ask one question before you write the plan.
   - WHEN the user gives the exact path of an existing plan THEN update that file and keep its ticked tasks.
 - **Done means:** the file is saved. The reply gives the plan (light) or a short summary (deep), the assumptions, and the last line `ejecuta el plan <path>`.
 

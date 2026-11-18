@@ -6,7 +6,7 @@ metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "2.3.0"
+  version: "2.3.1"
   status: testing
 ---
 
@@ -22,7 +22,7 @@ metadata:
 - **Fails if:**
   - A README claim is promoted as proven behavior without source, activation-point, or wiring evidence.
   - A practice is recommended without contrast against this repository.
-  - Findings are fabricated when a red flag applies: the path does not exist, the user wants general code review, no AI-config surface exists, or practices are documented but not wired. Surface these explicitly.
+  - Findings are fabricated when a red flag applies. Red flags: the path does not exist, the user wants general code review, no AI-config surface exists, or practices are documented but not wired. Surface these explicitly.
 
 ## Context
 
@@ -39,8 +39,8 @@ metadata:
   - WHEN targets are given THEN resolve them (verify local paths), list them in the report, and continue without a confirmation.
   - WHEN this repository already covers a practice well THEN it is marked `no adoption needed`.
   - WHEN the user explicitly asks not to persist THEN the file is skipped and the same structure returns as a concise chat summary.
-- **Done means:** the report exists at `.ai/absorb/YYYY-MM-DD-<slug>.md` (`<slug>` is short kebab-case focus or target; fallback `external-practices`; create `.ai/absorb/` if missing), unless chat-only was requested. Return: resolved targets; key verified practices; rejected or conditional practices with reasons; our advantages; shortlist with proposed target paths in this repository; report path (always, unless the user opted out of persistence).
-- **Quality needs:** each recommended practice has file-level evidence; at least one `no adoption needed` or `Our Advantages` item; no unverified README-only claims in the shortlist; no commit or automatic adoption.
+- **Done means:** the report exists at `.ai/absorb/YYYY-MM-DD-<slug>.md` (`<slug>` is short kebab-case focus or target; fallback `external-practices`; create `.ai/absorb/` if missing), unless chat-only was requested. Return: resolved targets; key verified practices; rejected or conditional practices with reasons; our advantages. Also return: shortlist with proposed target paths in this repository; report path (always, unless the user opted out of persistence).
+- **Quality needs:** each recommended practice has file-level evidence; at least one `no adoption needed` or `Our Advantages` item. No unverified README-only claims in the shortlist; no commit or automatic adoption.
 
 ## Method
 
@@ -58,7 +58,7 @@ Delegate read-heavy discovery to `scout` subagents (or the built-in `general`) w
 
 2. **Contrast.** Carry forward only genuinely better or meaningfully missing practices. Record at least three **Our Advantages** points.
 3. **Adversarial filter.** Is it truly verified? Better, or just different? Does it fit this repo's OpenCode-only, compact, contract-focused conventions? Is adoption cost proportional to benefit? Keep only `ADOPT` or `CONDITIONAL` items.
-4. **Report sections:** sources analyzed; one section per external project; verified strengths; Our Advantages; ranked adoption shortlist with target file paths in this repository; immediate text-only wins vs. larger follow-up work.
+4. **Report sections:** sources analyzed; one section per external project; verified strengths; Our Advantages. Then: ranked adoption shortlist with target file paths in this repository; immediate text-only wins vs. larger follow-up work.
 
 ## Attribution
 

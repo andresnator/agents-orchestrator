@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: backlog
-  version: "4.0.0"
+  version: "4.0.1"
 ---
 
 # Skill: oc-issue
@@ -14,7 +14,7 @@ metadata:
 
 - **Goal:** A GitHub issue that an agent or a human can implement without guessing.
 - **Limits:** Do not implement. Create or update an issue on GitHub only when the user asked for an issue or a ticket. For other requests (for example "I need to build X"), show the draft in chat and ask before you create it. Search for duplicate issues before you create one. Do not invent product decisions: read the repository first, then ask one question at a time for a decision that it cannot answer.
-- **Fails if:** a section is missing or has placeholder text, an in-scope item has no Given/When/Then scenario, scope has no in/out boundaries, or no issue URL is returned.
+- **Fails if:** a section is missing or has placeholder text. An in-scope item has no Given/When/Then scenario. Scope has no in/out boundaries, or no issue URL is returned.
 
 ## Context
 

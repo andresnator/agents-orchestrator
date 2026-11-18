@@ -1,6 +1,6 @@
 # Edge-Case Validation Checklist
 
-Walk each branch of the design against these categories before closing the plan. The trigger questions are prompts, not a form to fill: skip a category only when you can say in one line why it does not apply.
+Walk each branch of the design against these categories before closing the plan. The trigger questions are prompts, not a form to fill. Skip a category only when you can say in one line why it does not apply.
 
 ## Data boundaries
 

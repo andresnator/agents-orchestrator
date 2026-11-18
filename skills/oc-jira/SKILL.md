@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # Jira Ticket
@@ -20,7 +20,7 @@ metadata:
   - Refinement: ask one question at a time. Generate only when the user explicitly asks to generate, create, print, or finalize.
   - Explore the codebase only in Refinement (or on request), lightly. Get confirmation before deep exploration.
   - Talk in the user's language. Write the ticket in English unless the user asks for another language.
-- **Fails if:** the output is not one Jira Markup block, uses the sections of another type, has empty sections or placeholders, is generated before the request in Refinement, asks for the type, or has factual claims without an Evidence Summary.
+- **Fails if:** the output is not one Jira Markup block, uses the sections of another type, or has empty sections or placeholders. The output is generated before the request in Refinement, asks for the type, or has factual claims without an Evidence Summary.
 
 ## Context
 
@@ -28,7 +28,7 @@ metadata:
 - **Never reads:** the Jira API or the templates of other types.
 - **Scope:** two modes:
   - Quick Creation (default).
-  - Refinement, only on explicit intent: refine, improve, complete, add detail, clarify, make developer-ready, ready to build, add acceptance criteria, or Spanish refinar, mejorar, completar, agregar detalle, hacer mas claro, dejar listo para dev, anadir criterios de aceptacion.
+  - Refinement, only on explicit intent: refine, improve, complete, add detail, clarify, make developer-ready, ready to build, add acceptance criteria. Spanish: refinar, mejorar, completar, agregar detalle, hacer mas claro, dejar listo para dev, anadir criterios de aceptacion.
 
 ## Expectations
 

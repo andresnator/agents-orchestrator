@@ -4,7 +4,7 @@ description: "Execute a plan file to the end without stops; resume it later. Tri
 license: MIT
 metadata:
   author: andresnator
-  version: "1.0.0"
+  version: "1.0.1"
   status: testing
 ---
 
@@ -32,7 +32,7 @@ metadata:
 - **Scenarios:**
   - WHEN the plan was executed before THEN skip `- [x]` tasks and try `- [!]` tasks again.
   - WHEN the plan is old or malformed THEN use it (see "Imperfect plan").
-  - WHEN a task needs an action that the question rule of `global/AGENTS.md` protects, and the current request does not ask for that action, THEN mark the task `- [!]`, add `(needs the user)` to the end of its line, do the other tasks, and name it in the report.
+  - WHEN a task needs a protected action (question rule of `global/AGENTS.md`) that the current request does not ask for THEN mark the task `- [!]`. Add `(needs the user)` to the end of its line, do the other tasks, and name it in the report.
 - **Done means:** each task is `- [x]` or `- [!]`, each `Done means` item of the plan has a fresh result, and the final report is sent.
 
 ## Method
@@ -41,16 +41,16 @@ The plan is a guide. You can correct it. Make each decision yourself, write it d
 
 ### Loop
 
-1. Read the plan. A group is done when all its tasks are `- [x]`; a task with `(needs the user)` does not count. A group is ready when it is not done, you did not try it in this run, and each group in its `Depends on:` line is done.
-2. Compare each ready group with the repository. If the plan is wrong (a file does not exist, an approach is not possible), correct that group in the plan file, write the change in `## Deviations`, and continue.
-3. Make the parallel set: take the ready groups in plan order, and add a group when its `Files:` share no path with the groups in the set. A path in a listed directory is a shared path. A group without `Files:` does not go in the set.
+1. Read the plan. A group is done when all its tasks are `- [x]`; a task with `(needs the user)` does not count. A group is ready when it is not done, you did not try it in this run, and each group in its `Depends on:` is done.
+2. Compare each ready group with the repository. The plan can be wrong: a file does not exist, or an approach is not possible. Then correct that group in the plan file, write the change in `## Deviations`, and continue.
+3. Make the parallel set. Take the ready groups in plan order, and add a group when its `Files:` share no path with the groups in the set. A path in a listed directory is a shared path. A group without `Files:` does not go in the set.
 4. Implement the tasks that are not `- [x]`:
    - The set has two or more groups: fill `assets/worker-brief.md` for each group and send the briefs to `worker` agents, all in one message. Use the built-in `general` if `worker` is not available.
    - The set has one group or is empty: implement the first ready group yourself.
    - The other ready groups stay ready for the next pass.
 5. Run the check of each group yourself, also after `RESULT: ok`. The check is the narrowest command that proves the tasks of the group, for example the tests of the changed files. Put the same command in the brief. If there is no such command, read the diff against the tasks and note it.
 6. If the check passes, change the tasks of the group to `- [x]` in the plan file. Copy worker `NOTES` that are not `none` to `## Deviations`.
-7. If the check fails, fix the problem yourself and run the check again. Do two retries maximum. A worker reply with `RESULT: failed`, or without the three return lines, is a failed check: read the diff of the group, complete its tasks yourself, and run the check.
+7. If the check fails, fix the problem yourself and run the check again. Do two retries maximum. A worker reply with `RESULT: failed`, or without the three return lines, is a failed check. Then read the diff of the group, complete its tasks yourself, and run the check.
 8. If the check still fails after two retries, change the tasks of the group to `- [!]`, write the reason in `## Deviations`, and continue.
 9. Do steps 1 to 8 again until no group is ready. Then change each task that is still `- [ ]` to `- [!]` with the reason `depends on <n>`.
 10. Run each `Done means` item fresh. If an item fails, fix it one time and run it again. Report the last result.

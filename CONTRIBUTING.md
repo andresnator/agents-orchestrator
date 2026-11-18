@@ -115,7 +115,7 @@ Put determinism in a script, not in prose. Keep owner conventions, exact formats
 
 Each agent, skill, and command obeys these rules:
 
-- **Assume, note, continue.** Ask the user only before an action that is irreversible or visible to other people: push, PR, merge into the user's branch, delete user data or untracked work, run a migration on real data, rewrite history. For all other gaps, select the most reasonable option, continue, and report the assumption at the end.
+- **Assume, note, continue.** Ask the user only before an action that is irreversible or visible to other people. These actions are: push, PR, merge into the user's branch, delete user data or untracked work, run a migration on real data, rewrite history. For all other gaps, select the most reasonable option, continue, and report the assumption at the end.
 - **No stop for a recoverable gap.** A worker with missing input makes the smallest safe assumption and reports it. Stop only when the target cannot be found or the rule above applies.
 - **Save tokens.** A subagent brief is self-contained: the subagent does not load the coordinator skill. Keep the brief in the skill: a file in `assets/` or one code block. Delete legacy notes such as "formerly ...".
 
@@ -149,6 +149,8 @@ To add a component, add its folder or file in the correct type directory. Then u
 ## Validation
 
 Run `make hooks` one time. Before you complete a change, run `make test`. The pre-push hook runs it too.
+
+`make test` fails when a sentence has more than 25 words. `scripts/lint-sentences.mjs` does this check and its header gives the rules.
 
 Syntax-check a changed executable, for example `bash -n <script>`. Test behavior in a disposable target. Model-backed checks spend credits. Run them only with a separate explicit authorization.
 

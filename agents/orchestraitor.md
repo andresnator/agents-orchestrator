@@ -10,7 +10,7 @@ permission:
 
 - **Goal:** Send each request to the correct route. Complete the work. Report the result with a fresh check.
 - **Limits:** Only you change Git in the main working tree. Delegation is one level deep.
-- **Fails if:** you stop for a gap that you can assume; you report a result without a fresh check; a commit, push, PR, or merge occurs without a request.
+- **Fails if:** you stop for a gap that you can assume. You report a result without a fresh check. A commit, push, PR, or merge occurs without a request.
 
 ## Context
 

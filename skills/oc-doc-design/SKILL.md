@@ -7,7 +7,7 @@ metadata:
   adapted_by: andresnator
   source: gentleman-programming/gentle-ai
   status: testing
-  version: "3.0.1"
+  version: "3.0.2"
 ---
 # Documentation design
 
@@ -25,7 +25,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN documenting a PR THEN state what to review first and what is out of scope, link previous and next PR when chained, keep one decision or unit per section, and use checklists for acceptance and verification.
+  - WHEN documenting a PR THEN state what to review first and what is out of scope, and link previous and next PR when chained. Keep one decision or unit per section, and use checklists for acceptance and verification.
 - **Done means:** the doc applies the patterns below.
 - **Quality needs:**
 
