@@ -10,14 +10,14 @@ Loaded by `oc-arch`. Triggers: architecture refactor ideas, target architecture,
 
 ## Context
 
-- **Reads:** Evidenced architecture and domain boundaries; `oc-plan`, `oc-routing`.
+- **Reads:** Evidenced architecture and domain boundaries; the plan template of `oc-plan`; the ADR template of `oc-adr`.
 - **Never reads:** Folder layout as module proof.
 - **Scope:** Activation per the triggers above.
 
 ## Expectations
 
-- **Done means:** 2-3 candidates compared (forces, trade-offs, migration cost, first reversible step) and one recommended. ADR with decision and rejected candidates; `.ai/architect/plans/<slug>.md` naming skills per group. Return chosen architecture, ADR path, plan path, first reversible step, `ejecuta el plan <path>`.
-- **Quality needs:** Group 1 adds fitness functions; later groups keep the build green.
+- **Done means:** 2-3 candidates compared (forces, trade-offs, migration cost, first reversible step) and one recommended. ADR at `<docfolder>/adr/NNNN-slug.md` (next free number) with decision and rejected candidates; plan at `.ai/plans/<slug>.md` in the `oc-plan` template (add `-2` if the path exists). Return chosen architecture, ADR path, plan path, first reversible step, `ejecuta el plan <path>`.
+- **Quality needs:** Group 1 adds fitness functions; later groups keep the build green. Each group has `Files:` and `Depends on:`.
 
 ## Method
 

@@ -1,8 +1,8 @@
 # ADR Format
 
-ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
+All ADRs are in `docs/adr/NNNN-slug.md` (`doc/adr/` when the repository uses `doc/`): `0001-slug.md`, `0002-slug.md`, and so on. Create the directory only when the first ADR is necessary.
 
-Create the `docs/adr/` directory lazily — only when the first ADR is needed.
+This file gives the lightweight format for a small decision. A formal ADR with options uses the `oc-adr` template in the same folder and the same numbering.
 
 ## Template
 
@@ -24,7 +24,7 @@ Only include these when they add genuine value. Most ADRs won't need them.
 
 ## Numbering
 
-Scan `docs/adr/` for the highest existing number and increment by one.
+Find the highest number in the ADR folder and add one.
 
 ## When to offer an ADR
 

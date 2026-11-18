@@ -1,11 +1,11 @@
 ---
 name: oc-conventions
-description: "Trigger: writing production code or tests, applying test naming/assert style, extracting constants, placing DTOs or characterization tests, Java tests, JUnit, Mockito, ApprovalTests. Andres's personal code and test conventions, with Java-specific rules."
+description: "Andres's code and test conventions, with Java rules. Trigger: writing production code or tests, test naming, constants, DTOs, JUnit, Mockito, ApprovalTests."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.2.1"
+  version: "3.2.2"
 ---
 
 # Code Conventions
@@ -19,7 +19,7 @@ metadata:
 ## Context
 
 - **Reads:** The code under change, the repo's existing conventions.
-- **Scope:** Load when writing production code or tests. Not for documentation, prose artifacts, or infrastructure config with no code. Planners route it by name via `oc-routing` without loading this body.
+- **Scope:** Load when writing production code or tests. Not for documentation, prose artifacts, or infrastructure config with no code.
 
 ## Expectations
 

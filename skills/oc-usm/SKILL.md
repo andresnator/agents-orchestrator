@@ -1,11 +1,11 @@
 ---
 name: oc-usm
-description: "Trigger: USM, user story map, story map, mapa de historias, MVP slice. Create journey-first story maps with MVP slicing and Mermaid output."
+description: "Create a journey-first user story map with an MVP slice and Mermaid diagrams. Trigger: USM, user story map, story map, mapa de historias, MVP slice."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.1"
+  version: "4.0.2"
 ---
 
 # User Story Mapping
@@ -50,6 +50,7 @@ metadata:
 
 ### Diagrams
 
+- The artifact is file content. Its diagrams use Mermaid, also when you print the artifact in chat.
 - Main diagram: Mermaid `flowchart LR`, one subgraph for each activity, tasks top-to-bottom, classes that separate MVP from later releases.
 - Add a Mermaid `journey` diagram only when phase and emotion data exist. It does not replace the journey table.
 - If no later slices exist, write `None planned yet; defer until MVP learning is reviewed.`

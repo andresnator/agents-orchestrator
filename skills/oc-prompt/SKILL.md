@@ -1,12 +1,10 @@
 ---
 name: oc-prompt
-description: >
-  Trigger: improve prompt, rewrite prompt, prompt structure, prompt para agente, ordenar instrucciones, convertir idea en prompt, prompt review, prompt evaluation, evaluar prompt.
-  Convert loose ideas, rough instructions, or messy text into clear, brief, executable prompts for local agents such as Codex, Claude Code, OpenCode, and similar runtimes.
+description: "Rewrite rough text into a clear agent prompt, or evaluate a prompt. Trigger: improve prompt, rewrite prompt, prompt review, prompt para agente, evaluar prompt."
 license: MIT
 metadata:
   author: andresnator
-  version: "3.0.1"
+  version: "3.0.2"
   status: testing
 ---
 

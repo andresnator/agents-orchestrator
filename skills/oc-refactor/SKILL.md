@@ -1,11 +1,11 @@
 ---
 name: oc-refactor
-description: "Trigger: refactor, refactorizar, code smells, clean code, limpiar código, legacy code, characterization tests, safe refactor, refactor lens, architecture impact review, tooling audit. Behavior-preserving refactor in any language, plus read-only lens, impact, and tooling-audit modes."
+description: "Behavior-preserving refactor, plus read-only lens, impact, and tooling modes. Trigger: refactor, refactorizar, code smells, limpiar código, legacy code."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.0.3"
+  version: "4.1.0"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 
@@ -32,7 +32,7 @@ metadata:
 - **Scenarios:**
   - WHEN the target has no sufficient tests THEN write characterization tests for the touched zone first, in a dedicated test file per unit (per `oc-conventions`). Find seams and break dependencies minimally before structural change.
   - WHEN the language is Java THEN use only APIs that the detected Java version supports, and keep checked-exception and public API contracts.
-  - WHEN a brief gives `target=... lens=...` THEN use lens mode.
+  - WHEN a brief gives `target=... lens=...` THEN use lens mode. It is read-only, so a `scout` subagent can run it.
   - WHEN the question is local versus architectural THEN use impact mode.
   - WHEN a high or critical risk plan needs safety tooling THEN use tooling mode.
 - **Done means:** refactor: the change is applied in small steps, tests pass after each step, and each change has a short reason. Analysis modes: only the output contract of that mode.
@@ -42,7 +42,7 @@ metadata:
 
 ### Lens mode
 
-Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field returns `BLOCK plan/analyze <reason>`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly:
+Input line: `target=<path> target_slug=<slug> unit=<slug> lens=<lens> lenses=<csv|none> skills=<csv|none> focus=<text> max=7`. A missing field gets a default, reported in `nf=<reason>`: `target` = the path that the brief names, else `.`; `target_slug` and `unit` = kebab-case of the target; `lens=kiss`; `lenses=none`; `skills=none`; `focus` empty; `max=7`. Lens ids: `srp`, `dry`, `kiss`, `ocp`, `dip`, `coupling`, `big-o`, `god-object`, `spaghetti`, `logging`, `preconditions`. An unknown lens id or a skill outside the allowlist (`oc-conventions`, `oc-refactor`) continues with `nf=<reason>`. Maximum seven findings. Output exactly (example last line: `TOTAL findings=3 nf=lens-missing-used-kiss`):
 
 ```text
 OK plan/analyze target=<path> target_slug=<slug> unit=<slug> lens=<lens>

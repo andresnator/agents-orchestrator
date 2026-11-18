@@ -1,11 +1,11 @@
 ---
 name: oc-prd
-description: "Trigger: PRD, product requirements, technical product spec, PRD light, quick PRD, lightweight PRD, MVP requirements. Create rigorous PRDs (mode=full) for high-stakes, cross-team, regulated, or security-sensitive work, or lightweight PRDs (mode=light) for small features, internal tools, and early ideas."
+description: "Create a full or light PRD through an interview. Trigger: PRD, product requirements, technical product spec, PRD light, quick PRD, MVP requirements."
 license: MIT
 metadata:
   author: andresnator
   status: done
-  version: "5.0.1"
+  version: "5.0.2"
 ---
 
 # PRD

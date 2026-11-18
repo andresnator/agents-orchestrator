@@ -1,21 +1,11 @@
 ---
 name: oc-whisper
-description: |
-  Extract, transcribe, and summarize audio or video files using OpenAI Whisper. Use this skill
-  whenever the user wants to transcribe audio or video, extract what was said in a recording,
-  get a transcript of a meeting/interview/lecture/podcast, or generate a summary of spoken content.
-  Also trigger when the user mentions files like .mp3, .mp4, .wav, .m4a, .ogg, .flac, .webm,
-  .mkv, .mov and wants text out of them. Generates a .md file with an AI summary followed by
-  the full literal transcript.
-  También se activa en castellano: "transcribir", "transcripción", "extraer audio",
-  "qué dice este audio", "transcribir reunión", "transcribir entrevista",
-  "pasar audio a texto", "resumir grabación", "transcribir este video",
-  "extraer texto de audio", "transcript", "whisper", "grabar y resumir".
+description: "Transcribe and summarize audio or video with Whisper into a .md file. Trigger: transcribe, transcript, whisper, .mp3, .mp4, transcribir, pasar audio a texto."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.2"
+  version: "2.2.0"
 ---
 
 # Whisper Extract
@@ -25,7 +15,7 @@ metadata:
 - **Goal:** A `.md` file with an AI summary, then the complete literal Whisper transcript of an audio or video file.
 - **Limits:**
   - Check Whisper first: `whisper --help > /dev/null 2>&1 && echo "OK" || echo "NOT FOUND"`. If it is missing, tell the user to run `pipx install openai-whisper` (and `brew install ffmpeg`), then wait.
-  - Ask for missing inputs once, in one message.
+  - Ask only when the file path is missing. For other missing inputs, use the defaults in `Inputs` and report them.
   - Clear `/tmp/whisper-extract-temp` before each run. Never read files from earlier runs.
   - Do not paraphrase the transcript or invent speaker turns. Do not put it in chat.
 - **Fails if:** the transcript is not Whisper's raw text, a stale file from an earlier run is used, the command is split across lines, or a Whisper error is not reported with a fix.
@@ -43,7 +33,7 @@ metadata:
 
 ## Method
 
-- **Inputs:** Required: file path, language (or auto-detect), recording context. Optional: model (default `turbo`; needs `openai-whisper` >= 20240930), output directory (default: the file directory), summary language.
+- **Inputs:** Required: file path. Optional, with defaults: language (auto-detect), recording context (from the file name), model (`turbo`; needs `openai-whisper` >= 20240930), output directory (the file directory), summary language (the recording language).
 - **Command:** one line only. In zsh, a space after a `\` continuation gives Whisper an empty second path. For auto-detect, omit `--language`.
 
 ```bash

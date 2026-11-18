@@ -1,13 +1,13 @@
 ---
 name: oc-domain
-description: "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, or when another skill needs to maintain the domain model. Formal ADR requests belong to oc-adr."
+description: "Build and sharpen the domain model in CONTEXT.md. Trigger: domain model, domain terminology, ubiquitous language, glossary. Formal ADRs belong to oc-adr."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.1.3"
+  version: "3.0.0"
 ---
 
 # Domain Modeling
@@ -15,7 +15,7 @@ metadata:
 ## Intent
 
 - **Goal:** Actively build and sharpen the project's domain model while designing: challenge terms, invent edge-case scenarios, and write the glossary and decisions down the moment they crystallise.
-- **Limits:** `CONTEXT.md` is a glossary and nothing else: no implementation details, not a spec, scratch pad, or decision log. Create files lazily: `CONTEXT.md` when the first term is resolved, `docs/adr/` when the first ADR is needed. Offer ADRs sparingly.
+- **Limits:** `CONTEXT.md` is a glossary and nothing else: no implementation details, not a spec, scratch pad, or decision log. Create files lazily: `CONTEXT.md` when the first term is resolved, `docs/adr/` (`doc/adr/` when the repository uses `doc/`) when the first ADR is needed. Offer ADRs sparingly.
 - **Fails if:** A term conflict or code contradiction goes unchallenged, resolved terms are batched instead of captured inline, or an ADR is offered without all three ADR criteria.
 
 ## Context
@@ -38,6 +38,8 @@ metadata:
 
 Offer an ADR only when all three criteria in [ADR-FORMAT.md](./assets/ADR-FORMAT.md) are true; otherwise skip it.
 
+All ADRs are in one folder: `docs/adr/NNNN-slug.md`. A small decision uses the lightweight format of ADR-FORMAT.md. A formal ADR with options uses the `oc-adr` template in the same folder.
+
 File layout. Single context:
 
 ```
@@ -56,14 +58,12 @@ A root `CONTEXT-MAP.md` means multiple contexts; the map points to each:
 /
 ├── CONTEXT-MAP.md
 ├── docs/
-│   └── adr/                          ← system-wide decisions
+│   └── adr/                          ← all decisions
 ├── src/
 │   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
+│   │   └── CONTEXT.md
 │   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
+│       └── CONTEXT.md
 ```
 
 ## Attribution

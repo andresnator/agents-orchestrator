@@ -1,14 +1,12 @@
 ---
 name: oc-skill-creator
-description: >
-  Creates new AI agent skills following the Agent Skills spec.
-  Trigger: When user asks to create a new skill, add agent instructions, or document patterns for AI.
+description: "Create or change an oc-* skill that follows the repository skill contract. Trigger: create a new skill, add agent instructions, document a pattern for AI."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "4.1.0"
+  version: "4.2.0"
   status: in-progress
 ---
 
@@ -21,7 +19,7 @@ metadata:
   - Do not create a skill for a one-off task, a trivial pattern, or knowledge that already has a document. Add a reference instead.
   - Never copy skill bodies. No symlinks.
   - No Keywords section, no troubleshooting section, no web URLs in references.
-- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `name` differs from the directory basename or is not `oc-<short-name>`; `SKILL.md` exceeds its line cap (80 lines; 120 for the coordinator skills `oc-sdd` and `oc-plan`); a required IDSD field is missing; `metadata.version` is not strict SemVer; `metadata.status` misstates the lifecycle.
+- **Fails if:** the skill already exists in `skills/*/SKILL.md`; `SKILL.md` exceeds its line cap (80 lines; 120 for the coordinator skills `oc-plan` and `oc-build`) or `description` exceeds 160 characters; a frontmatter rule below is broken or a required IDSD field is missing.
 
 ## Context
 
@@ -46,13 +44,19 @@ Body: the IDSD headings and bold field labels from `CONTRIBUTING.md` `## IDSD fo
 | `Never reads`, `Persona`, `Quality needs` | Optional. Omit if `none`, empty, or a restatement of the title or `Goal`. Put each rule in one field only. |
 | `Scenarios` | Optional. Only real branches and edge cases; never repeat `Method`. |
 
-Method content: give intent by default. Write exact steps only when (a) order matters or a step cannot be undone, (b) another program parses the output, (c) each run must give the same result, or (d) the model cannot infer an environment detail. Delete general practice that a capable agent can infer. Keep owner conventions, exact formats, and project contracts.
+Write for a small model:
+
+1. Use short positive sentences.
+2. Give concrete numbered steps for the main path.
+3. Give one small example where a format matters. Use an exact format only when a program parses it.
+4. Keep `Fails if` to three items maximum. Do not write long lists of prohibitions.
+5. Keep owner conventions and project contracts. Delete legacy notes ("formerly ...").
 
 | Frontmatter | Rule |
 |---|---|
 | `name` | `oc-<short-name>`, kebab-case, at most three short words after the prefix, equal to the directory |
-| `description` | what it does plus `Trigger:` keywords, in one block |
+| `description` | one line, 160 characters maximum: what it does plus its most useful `Trigger:` keywords |
 | `license` | usually `MIT` or `Apache-2.0` |
 | `metadata.author` | author or maintainer |
-| `metadata.version` | SemVer string: patch for wording or path fixes, minor for new capabilities, major for changed or reduced activation or output contract |
-| `metadata.status` | `backlog`, `in-progress`, `testing`, or `done` |
+| `metadata.version` | SemVer string, `1.0.0` for a new skill: patch for wording or path fixes, minor for new capabilities, major for changed or reduced activation or output contract |
+| `metadata.status` | `backlog`, `in-progress`, `testing`, or `done`; `testing` for a new skill |
