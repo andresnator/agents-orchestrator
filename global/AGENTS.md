@@ -9,12 +9,9 @@ These rules apply to `orchestraitor`, to the `worker` and `scout` subagents, and
 - When you must ask, ask one question in normal chat. Use the `question` tool only for closed choices, with the recommended option first.
 - When the user asks for an interview (grill, design defense), the skill controls its questions.
 
-## Standards
+## Conventions
 
-- The standards are in the `standards/` folder of the OpenCode configuration directory: `~/.config/opencode/standards/`, or `.opencode/standards/` in a project installation. If you cannot find them, follow the conventions of the repository and continue.
-- Before you write code or tests, read `code-conventions.md` there. If the repository has different consistent conventions, follow them and report each deviation.
-- Before you write documentation, prompts, or skills, read `writing-conventions.md` and `glossary.md` there. Do not read them for other work.
-- Write all text in ASD-STE100 (STE).
+- Follow the conventions of the repository where you work. If the repository has an `AGENTS.md`, its rules apply in that repository.
 - For code and tests, load `oc-conventions`.
 
 ## Responses

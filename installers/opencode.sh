@@ -28,9 +28,10 @@ Actions:
               registered by exact package version in the matching OpenCode
               config. Repository-local V2 TUI plugins require OpenCode >= 2.0.28.
               Local and npm TUI plugins register in cli.json.
-              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules)
-              and standards/ to $TARGET/standards,
-              regardless of the --status filter. A pre-existing foreign
+              Always links global/AGENTS.md to $TARGET/AGENTS.md (global rules),
+              regardless of the --status filter. standards/ is for this
+              repository only: it is not installed, and a link from an older
+              install is removed. A pre-existing foreign
               AGENTS.md in the target is skipped with a warning unless --force.
   uninstall   Remove manifest-owned links, files, config values, and empty directories.
   status      List selected components and their target state.
@@ -721,7 +722,21 @@ file_mode() {
 
 runtime_install_global() {
   link_component "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md" "$1"
-  link_component "$REPO_ROOT/standards" "$TARGET/standards" "$1"
+  remove_legacy_standards_link
+}
+
+# Older releases linked standards/ into the target. The standards now apply to
+# this repository only, so remove that link. Never touch a foreign path.
+remove_legacy_standards_link() {
+  local dest="$TARGET/standards"
+  [ -L "$dest" ] || return 0
+  [ "$(readlink "$dest")" = "$REPO_ROOT/standards" ] || return 0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'remove: %s (dry run)\n' "$dest"
+  else
+    rm -f "$dest"
+    printf 'remove: %s\n' "$dest"
+  fi
 }
 
 runtime_post_install() {
@@ -782,8 +797,6 @@ runtime_status_global() {
   local state
   state="$(link_state "$REPO_ROOT/global/AGENTS.md" "$TARGET/AGENTS.md")"
   printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "AGENTS.md" "-" "$state"
-  state="$(link_state "$REPO_ROOT/standards" "$TARGET/standards")"
-  printf '%s\t%s\t%s\t%s\t%s\n' "-" "global" "standards" "-" "$state"
 }
 
 harness_main "$@"
