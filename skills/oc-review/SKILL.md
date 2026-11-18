@@ -1,56 +1,80 @@
 ---
 name: oc-review
-description: "Trigger: operation=judgment, operation=defend, /review, review coordination, Socratic defend, judgment day, judgment-day, adversarial review, dual review, doble review, juzgar. Coordinates Judgment (blind review with synthesis, bounded fixes, and escalation) and Defend reviews with blind judge subagents."
+description: "Code review with scout judges: solo, dual, or defend. Fixes findings only on the word fix. Trigger: review, revisar, code review, dual review, defend."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
   adapted_by: andresnator
   source: gentleman-programming/sdd-agent-team
-  version: "3.0.2"
+  version: "4.0.0"
   status: testing
 ---
-# Review Coordination
+# Review
 
 ## Intent
 
-- **Goal:** Deliver a review verdict for `operation=judgment` or `operation=defend` with exact evidence, a compact ledger, and only explicitly authorized fixes.
-- **Limits:** Never implement outside authorized Judgment fixes; `verdict-only` and Defend never edit; never stage, commit, or push; delegate only to `general` subagents loading `oc-judge` (judge or `mode=fix`), one level deep.
-- **Fails if:** a file changes before authorization, a judge sees another judge's output, suspect or contradiction rows are fixed, a Judgment fix loop exceeds two rounds, a partial review runs without a target (missing target is `ASK`), Defend edits or delegates a fix, or the verdict omits evidence or unresolved ids.
+- **Goal:** Give one review verdict for a target, with evidence for each finding. Fix findings only when the request contains the word `fix`.
+- **Limits:** The request decides the operation and the fix. Do not ask the user to select them. Do not stage, commit, or push. `defend` never edits.
+- **Fails if:** a file changes when the request has no `fix` word, a finding has no `path:line`, or the report has no verdict.
 
 ## Context
 
-- **Reads:** the supplied target or working-tree diff, the Judgment protocol below and `assets/` for Judgment, 3-5 distilled project rules, injected identically into every child brief.
-- **Never reads:** other judges' output inside a judge brief; unrelated history or state.
-- **Scope:** loaded by orchestraitor for `/review`, or a review request. Each judge is a separate `general` subagent loading `oc-judge` with `lens=a|b|solo`; the fixer is a `general` subagent loading `oc-judge` with `mode=fix`.
+- **Reads:** the target, and 0 to 5 short project rules from the `AGENTS.md` and `standards/` of the project, when they exist.
+- **Scope:** `/review` or a review request. Judges are `scout` subagents. The fixer is a `worker` subagent. If one is not available, use `general`.
 
 ## Expectations
 
+| Operation | Behavior |
+| --- | --- |
+| `solo` (default; also `light`) | One judge with lens `solo`. |
+| `dual` (also `judgment`) | Two judges in parallel: lens `a` and lens `b`. |
+| `defend` | The user defends the design decisions. Read-only. |
+
 - **Scenarios:**
-  - WHEN `operation=judgment` THEN run the Judgment full protocol in Method (default mode).
-  - WHEN Judgment light mode (`/review light` or a leading `light`) THEN run one `oc-judge lens=solo` sweep; retry malformed output once; auto-fix CRITICAL rows only when light mode was preset, once, with no re-judge; report other findings and recommend full Judgment if evidence is severe or contradictory.
-  - WHEN a Judgment child returns malformed output twice THEN `JUDGMENT: INVALID ROUND`.
-  - WHEN `operation=defend` THEN inspect the scope read-only, one observable design decision at a time; ask the user to defend it with the strongest evidence-backed defense as `Recommendation: ...`; accept a sound defense, challenge a weak one once, then record a finding. Never fix.
-  - WHEN the target or diff is missing THEN ask one direct question.
-- **Done means:** lead with the verdict (Judgment uses a verdict from `assets/output-formats.md`; when requested, persist the ledger in `.ai/orchestration/runs/<slug>/`), then the ledger or changed paths and any user follow-up. Findings are `<path:line> <critical|warning|note> <problem>; fix=<intent>` plus one totals line. Explain blockers directly.
-- **Quality needs:** speak the user's language; A2A lines exact; user questions, security warnings, irreversible actions, ambiguity, and the final verdict in normal language. No praise or empty fields. No logs, diffs, artifact bodies, commits, or push.
+  - WHEN the request names no operation THEN use `solo`.
+  - WHEN the request names no target THEN review the working-tree diff: `git diff HEAD` and the untracked files.
+  - WHEN there is no target and no diff THEN say that there is nothing to review, and stop.
+  - WHEN a judge reply does not follow the format THEN send the same brief one more time. If the second reply is also wrong, add what it found as rows with status `unverified`. Use severity `warning` when it gives none.
+  - WHEN the request has `defend` and `fix` THEN ignore `fix` and say so in the report.
+- **Done means:** the report starts with `APPROVED`, `FINDINGS`, or `FIXED`, then shows the ledger from `assets/output-formats.md`, the check result when a fix ran, and the assumptions. Use the language of the user. Do not paste logs or diffs.
 
 ## Method
 
-### Judgment full protocol
+### `solo` and `dual`
 
-1. Launch `lens=a` (correctness/edge cases) and `lens=b` (security/performance) as independent subagents, preferably in parallel. One sweep each, two only for >400 changed lines or a hot path.
-2. A valid result is clean or holds evidence-backed findings with stable ids and failure scenarios. Retry one malformed child once.
-3. Synthesize: both judges = confirmed; one judge's CRITICAL/WARNING inside its emphasis = emphasis-confirmed; other single findings = suspect; disagreement = contradiction. Keep ids and lifecycle `open | fixed | verified | refuted | wont-fix`.
-4. Without preset mode, ask whether to fix/re-judge, fix only, or stop. `verdict-only` stops; `full` authorizes the first fix.
-5. The `oc-judge mode=fix` fixer touches confirmed and emphasis-confirmed rows only. Re-judge those ids with fresh `lens=a` and `lens=b` subagents. Any open verdict stays open; both fixed = verified; both refuted = refuted. Defects introduced by the fix are new findings.
-6. Each later fix/re-judge round needs a continue gate. Remaining confirmed issues after two rounds escalate; never loop forever.
+1. Find the target. Collect the project rules.
+2. Fill `assets/judge-brief.md` and send it: one brief for `solo`, two briefs at the same time for `dual`. A judge brief never contains the reply of another judge.
+3. Build the ledger. In `dual`, two findings are the same when they show the same problem at the same place. Merge them into one row with source `both` (confirmed) and keep the higher severity.
+4. If the request has no `fix` word, report the verdict and stop.
+5. If the request has `fix`, send one `worker` brief with all `open` rows of severity `critical` or `warning`. Do not send `unverified` rows. If there is no such row, report the verdict now.
+6. Mark a sent row `fixed` when the `worker` changed its file and `NOTES` does not reject it. All other rows stay `open`. Then run the project checks (tests and lint) one time. If the project has no check command, say so and continue.
+7. In `dual` only, send one more judge brief with lens `solo`, the changed files as target, and the fixed rows in `Recheck`. Each finding in the reply is an `open` row: set a returned `Recheck` row to `open` again, and add a new row for a new finding.
+8. Report the verdict. There is one fix round only. Rows that stay `open` go into the report.
 
-### Assets
+### Fix brief
 
-`oc-judge` owns the judge, re-judge, and fixer return formats.
+Send this text to the `worker`. The `worker` loads no skill.
 
-- `assets/judge-prompt.md`
-- `assets/fix-prompt.md`
-- `assets/output-formats.md`
+```text
+Fix these review findings. Change only the lines that each fix needs.
+Findings:
+<one finding line per row>
+Rules: <0 to 5 project rules, or none>
+Check: <command, or none>
+Do not use Git. Do not ask questions. If a finding is not clear, make the smallest safe fix and report it.
+If a finding is wrong, do not change the code, and say why in NOTES.
+Return exactly:
+RESULT: ok | failed
+FILES: <csv of changed paths>
+NOTES: <assumptions and problems, or none>
+```
 
-Judgment protocol adapted from `gentleman-programming/sdd-agent-team` (Apache-2.0).
+### `defend`
+
+1. Read the target. List its design decisions, the most important first.
+2. Show one decision at a time, with `path:line`. Ask the user to defend it, and give the strongest defense that the evidence supports as `Recommendation: ...`.
+3. If the defense is sound, accept it. If it is weak, challenge it one time with evidence.
+4. If the second defense is also weak, record a finding with source `defend`.
+5. After the last decision, or when the user stops, report `APPROVED` or `FINDINGS` with the ledger.
+
+Review protocol adapted from `gentleman-programming/sdd-agent-team` (Apache-2.0).

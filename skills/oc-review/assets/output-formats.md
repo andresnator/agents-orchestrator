@@ -1,18 +1,20 @@
-# Verdict formats
+# Review report format
 
-Use normal human language for the final verdict. Include target, mode, totals, unresolved ids, fixes, verification state, and one of:
+Start the report with one verdict:
 
-- `JUDGMENT: APPROVED` — clean dual review or every fixed id verified/refuted.
-- `JUDGMENT: VERDICT` — review only; no edits.
-- `JUDGMENT: FIXED (unverified)` — fixes ran without re-judge.
-- `JUDGMENT: LIGHT APPROVED|VERDICT|FIXED (unverified)` — solo mode.
-- `JUDGMENT: ESCALATED` — confirmed issues remain after two fix rounds.
-- `JUDGMENT: STOPPED` — user stopped at a gate.
-- `JUDGMENT: INVALID ROUND` — the same child returned malformed output twice.
+| Verdict | Use it when |
+| --- | --- |
+| `APPROVED` | No `critical` or `warning` row is `open` or `unverified`, and no fix ran. |
+| `FINDINGS` | A `critical` or `warning` row is `open` or `unverified`, or a check fails after the fix. |
+| `FIXED` | The fix ran, no `critical` or `warning` row is `open` or `unverified`, and the checks pass. |
 
-Keep the ledger compact:
+Then show the ledger. Omit the table when there are no rows.
 
-| id | evidence | severity | source | status | fix |
+| # | Evidence | Severity | Source | Status | Problem and fix |
 | --- | --- | --- | --- | --- | --- |
+| 1 | `src/cart.js:42` | critical | both | fixed | `total()` adds the discount; subtract it |
 
-Do not paste logs, diffs, or empty tables. Suspect and contradiction rows never enter automatic fixes.
+- Source: `solo`, `a`, `b`, `both`, or `defend`.
+- Status: `open`, `fixed`, or `unverified`.
+
+After the ledger, give the assumptions. When a fix ran, also give the check result and the changed paths.
