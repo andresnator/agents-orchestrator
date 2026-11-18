@@ -7,7 +7,7 @@ metadata:
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "3.0.0"
+  version: "2.2.0"
 ---
 
 # Domain Modeling
@@ -20,7 +20,7 @@ metadata:
 
 ## Context
 
-- **Reads:** `CONTEXT.md` (or `CONTEXT-MAP.md` plus per-context `CONTEXT.md`), `docs/adr/`, and the code the user describes.
+- **Reads:** `CONTEXT.md` (or `CONTEXT-MAP.md` plus per-context `CONTEXT.md`), the ADR folders, and the code the user describes.
 - **Scope:** Changing the model, not just consuming it. Merely reading `CONTEXT.md` for vocabulary is a one-line habit any skill can do and is not this skill.
 
 ## Expectations
@@ -38,7 +38,7 @@ metadata:
 
 Offer an ADR only when all three criteria in [ADR-FORMAT.md](./assets/ADR-FORMAT.md) are true; otherwise skip it.
 
-All ADRs are in one folder: `docs/adr/NNNN-slug.md`. A small decision uses the lightweight format of ADR-FORMAT.md. A formal ADR with options uses the `oc-adr` template in the same folder.
+One rule for the ADR folder, the same in `oc-adr` and `oc-arch`: the root `docs/adr/NNNN-slug.md` (`doc/adr/` when the repository uses `doc/`). In a multi-context repository, a decision of one context goes in that context's own `docs/adr/`, and a system-wide decision goes in the root folder. Each folder has its own numbering. A small decision uses the lightweight format of ADR-FORMAT.md. A formal ADR with options uses the `oc-adr` template in the same folder.
 
 File layout. Single context:
 
@@ -58,12 +58,14 @@ A root `CONTEXT-MAP.md` means multiple contexts; the map points to each:
 /
 ├── CONTEXT-MAP.md
 ├── docs/
-│   └── adr/                          ← all decisions
+│   └── adr/                          ← system-wide decisions
 ├── src/
 │   ├── ordering/
-│   │   └── CONTEXT.md
+│   │   ├── CONTEXT.md
+│   │   └── docs/adr/                 ← context-specific decisions
 │   └── billing/
-│       └── CONTEXT.md
+│       ├── CONTEXT.md
+│       └── docs/adr/
 ```
 
 ## Attribution

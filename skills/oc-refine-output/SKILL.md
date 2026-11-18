@@ -1,11 +1,11 @@
 ---
 name: oc-refine-output
-description: "Refine heavy tool, log, or chat output into a short, faithful version. Trigger: refine output, summarize output, compact logs, remove duplicates."
+description: "Refine heavy tool, log, or chat output into a short, faithful version. Trigger: refine output, summarize output, compact logs. Documents go to oc-summarize."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.2.0"
+  version: "4.0.0"
 ---
 
 # Cognitive Output Refiner

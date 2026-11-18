@@ -1,6 +1,6 @@
 ---
 name: oc-summarize
-description: "Summarize a book chapter or document for study. Trigger: chapter summary, summarize this document, cornell, resumen del capítulo, resumir, ideas clave."
+description: "Summarize a book chapter or document for study. Trigger: chapter summary, summarize document, cornell, resumen, resumir, ideas clave. Logs: oc-refine-output."
 license: MIT
 metadata:
   author: andresnator

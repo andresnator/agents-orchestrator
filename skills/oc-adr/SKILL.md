@@ -12,7 +12,7 @@ metadata:
 ## Intent
 
 - **Goal:** Produce a concise Architecture Decision Record that explains a decision, the context that forced it, the options considered, and the consequences accepted.
-- **Limits:** Write or modify files only when the user asks for a file. The location is `docs/adr/NNNN-slug.md` (`doc/adr/` when the repository uses `doc/`): use the next free number unless the user gives a path. Do not invent alternatives, pros, cons, or rationale; ask when alternatives are missing. Resolve discoverable repository facts before asking the user; if the decision itself is missing, ask for it first.
+- **Limits:** Write or modify files only when the user asks for a file. The location is `docs/adr/NNNN-slug.md` (`doc/adr/` when the repository uses `doc/`): use the next free number unless the user gives a path. In a multi-context repository (root `CONTEXT-MAP.md`), a decision of one context goes in that context's own `docs/adr/`. Do not invent alternatives, pros, cons, or rationale; ask when alternatives are missing. Resolve discoverable repository facts before asking the user; if the decision itself is missing, ask for it first.
 - **Fails if:** the final ADR contains placeholder instructions, invented content, a wrong status, or `TBD` for anything other than a detail the user intentionally skipped.
 
 ## Context

@@ -44,7 +44,7 @@ metadata:
 
 ## Method
 
-Delegate read-heavy discovery to `scout` subagents when available.
+Delegate read-heavy discovery to `scout` subagents (or the built-in `general`) when available.
 
 1. **Map each harness.** Record how each candidate practice is triggered or wired, and per practice:
 

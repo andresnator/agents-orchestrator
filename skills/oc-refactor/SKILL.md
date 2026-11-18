@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "4.1.0"
+  version: "5.0.0"
   attribution: "lens, legacy, impact, and tooling modes adapted from gentle-ai/plan-refactor (Apache-2.0)"
 ---
 

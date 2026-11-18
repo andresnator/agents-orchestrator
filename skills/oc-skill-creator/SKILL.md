@@ -50,7 +50,7 @@ Write for a small model:
 2. Give concrete numbered steps for the main path.
 3. Give one small example where a format matters. Use an exact format only when a program parses it.
 4. Keep `Fails if` to three items maximum. Do not write long lists of prohibitions.
-5. Keep owner conventions and project contracts. Delete legacy notes ("formerly ...").
+5. Keep owner conventions and project contracts. Delete general practice that a model can infer, and legacy notes ("formerly ...").
 
 | Frontmatter | Rule |
 |---|---|

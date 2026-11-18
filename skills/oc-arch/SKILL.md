@@ -1,6 +1,6 @@
 ---
 name: oc-arch
-description: "Run one architecture operation: map (C4 docs), review, ideate (ADR plus plan), or boundary. Trigger: architecture map, review, ideate, C4 diagram, /arch."
+description: "Architecture map, review, ideate (ADR plus plan), or service boundary. Trigger: /arch, architecture map, architecture review, target architecture, C4 diagram."
 license: MIT
 metadata:
   author: andresnator
@@ -20,7 +20,7 @@ metadata:
   - Load only the operation references and skills listed in Method.
   - Never run dependency audit commands or install tools.
   - Inside a subagent: no questions and no Git. Assume, continue, and report the assumption.
-- **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label, a file outside the write limits changes, an operation invents a plan or execution handoff, or `boundary` writes without one exact target.
+- **Fails if:** a claim lacks `path:line` evidence or a `hypothesis` label, a file outside the write limits changes, an operation other than `ideate` writes a plan or an execution handoff, or `boundary` writes without one exact target.
 
 ## Context
 
@@ -47,5 +47,5 @@ Freeze one target first. Load each operation's references (`references/<op>.md`,
 |---|---|---|
 | `map` | `references/state.md`, `references/map.md` (skeleton `assets/architecture-doc-set.md`) | Create or refresh C4-lite docs with Mermaid diagrams under `<docfolder>/architecture/` in place |
 | `review` | `references/state.md`, `references/issues.md` (`references/fitness-functions.md`) | One ranked report under `.ai/architect/reports/` |
-| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan`, `oc-adr` (the `oc-refactor` `kiss` lens as needed) | One ADR at `<docfolder>/adr/NNNN-slug.md` (`oc-adr` template) and one plan at `.ai/plans/<slug>.md` (`oc-plan` template); group 1 establishes fitness-function guardrails |
+| `ideate` | `references/state.md`, `references/ideate.md`, `oc-plan` (plan format only), `oc-adr` (template only, no interview); the `oc-refactor` `kiss` lens as needed | One ADR at `<docfolder>/adr/NNNN-slug.md` (`oc-adr` template) and one plan at `.ai/plans/<slug>.md` (`oc-plan` template); group 1 establishes fitness-function guardrails |
 | `boundary` | `references/boundary.md` | Require exact target and target-specific path under `.ai/architect/reports/`; write it, then confirm the report exists |
