@@ -95,6 +95,7 @@ installers/opencode.sh status
 | `/doc` | Routes to the most specific documentation skill |
 | `/grill [me\|docs\|plan] [topic]` | Focused interview to stress-test an idea |
 | `/ask-me` | Recommends `oc-*` skills for a use case |
+| `/retro [focus or session]` | Retrospective on a session: ranked changes to skills, agents, commands, or checks, saved in `.ai/retro/` |
 | `/wait-what [fragment]` | Explains the fragment or the last response in chat, with only supported context. Preserves facts, uncertainty, vocabulary, and the user's language |
 | `/models-profiles` (TUI plugin) | Assigns agent models and variants |
 
@@ -138,7 +139,7 @@ A merge occurs only when you ask, or when you say `automerge`. See the [Software
 | Context transfer | `oc-handoff` |
 | File-based courses | `oc-teach` |
 | PR bodies | `oc-pr` |
-| Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb` |
+| Output and meta | `oc-refine-output`, `oc-prompt`, `oc-skill-creator`, `oc-absorb`, `oc-retro` |
 
 The npm plugin `opencode-skill-registry` writes `.ai/atl/skill-registry.md` at each OpenCode start.
 
