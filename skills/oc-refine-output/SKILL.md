@@ -1,11 +1,11 @@
 ---
 name: oc-refine-output
-description: "Trigger: refine output, summarize output, compact logs, reduce cognitive load, remove duplicates. Refines heavy tool, log, or chat output into a concise, faithful, non-duplicative version; book chapters and documents belong to oc-summarize."
+description: "Refine heavy tool, log, or chat output into a short, faithful version. Trigger: refine output, summarize output, compact logs. Documents go to oc-summarize."
 license: MIT
 metadata:
   author: andresnator
   status: in-progress
-  version: "3.1.3"
+  version: "4.0.0"
 ---
 
 # Cognitive Output Refiner
@@ -28,8 +28,8 @@ metadata:
 
 - **Scenarios:**
   - WHEN input is already concise THEN say no refinement is needed and offer at most a micro-improvement.
-  - WHEN the user asks to save/create a document or provides a file as input THEN write `{topic_snake_case}_v<semver>.md` in the current working directory unless a path is given; infer the topic, asking only if unclear; do not save the original; start at `v1.0.0` when no prior refined version exists. SemVer: patch for clarity/order/deduplication, minor for added information or structure changes, major for changed interpretation.
-  - WHEN the user is not satisfied THEN ask correction questions, then generate a new complete version, not a patch.
+  - WHEN the user asks to save/create a document or provides a file as input THEN write `{topic_snake_case}_v<semver>.md` in the current working directory unless a path is given; infer the topic; do not save the original; start at `v1.0.0` when no prior refined version exists. SemVer: patch for clarity/order/deduplication, minor for added information or structure changes, major for changed interpretation.
+  - WHEN the user asks for a correction THEN generate a new complete version, not a patch.
 - **Done means:** the output contract below, with every Satisfaction Check item honestly true before rendering (fix the output first if one fails).
 - **Quality needs:** target 30–50% of original size; 10–20% only for explicit ultra-compact requests. Fidelity beats size. Keep errors, relevant stack frames, commands, paths, public/non-sensitive IDs, decisions, trade-offs, critical warnings, verification steps, and next steps, redacting usernames, local/private path prefixes, internal hostnames, and credentials while keeping filenames, function names, line numbers, error codes, and public IDs. Deduplicate to one canonical version.
 
@@ -65,8 +65,6 @@ Output contract (omit optional `Preserved Details`, `Information Loss`, `Compres
 - [ ] Is easier to scan.
 - [ ] Does not invent conclusions.
 - [ ] Fully replaces credential material and redacts sensitive identifiers before rendering.
-
-Are you satisfied with this refined version?
 ```
 
 Example: headings `Error Details` and `More Error Details` repeating the same failing test become one `### Test Failure` section, with the merge noted in `Compression Notes`.

@@ -1,12 +1,10 @@
 ---
 name: oc-handoff
-description: >-
-  Export portable context for a destination task on explicit request.
-  Trigger: oc-handoff, export context, portable handoff.
+description: "Export portable context for a destination task on explicit request. Trigger: oc-handoff, export context, portable handoff."
 license: MIT
 metadata:
   author: andresnator
-  version: 1.0.1
+  version: "1.0.2"
   status: testing
 ---
 
@@ -15,7 +13,7 @@ metadata:
 ## Intent
 
 - **Goal:** Export one portable note for the user's destination task.
-- **Limits:** Export only. Do not replace SDD resume or Engram. Do not delegate, change Git, edit project files, or change sessions.
+- **Limits:** Export only. Do not replace a plan or Engram. Do not delegate, change Git, edit project files, or change sessions.
 - **Fails if:** The request is not explicit, the destination task or scope is unknown, or the export needs an overwrite.
 
 ## Context
@@ -28,7 +26,7 @@ metadata:
 
 - **Scenarios:** WHEN evidence or access is uncertain THEN record the gap.
 - **Done means:** Return the exact absolute file path and the remaining gaps. If export fails, return the blocker without a success claim.
-- **Quality needs:** Keep verified state separate from uncertainty. Remove secrets and personal data before writing. Never transfer approval or run authority.
+- **Quality needs:** Keep verified state separate from uncertainty. Remove secrets and personal data before writing. Never transfer approval.
 
 ## Method
 
@@ -46,5 +44,5 @@ Include only these task-specific fields:
 | Next step | One proposed action, not permission to execute it. |
 | Artifacts | Paths or links to existing artifacts, not duplicate bodies. Flag inaccessible artifacts and unverified destination access. |
 | Suggested skills | Optional advice only. Do not assert availability without the destination catalog. |
-| Authority | This note transfers no approval or run authority. Use the source run contract for SDD resume. |
+| Authority | This note transfers no approval. To resume a plan, use the plan file with `oc-build`. |
 | Temporary storage | This file can expire or disappear. It does not replace Engram or durable project artifacts. |

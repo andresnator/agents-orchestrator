@@ -20,7 +20,7 @@ Loaded by `oc-arch`. Triggers: architecture map, C4 diagram, container diagram, 
   - WHEN `docs/` exists THEN write `docs/architecture/`; else existing `doc/architecture/`, or create it.
   - WHEN refreshing THEN regenerate, diff against recorded source commit, update changed files only, report added/removed containers, dependency and flow changes.
 - **Done means:** Return folder, files written or updated, `initial generation` or drift summary, hypotheses; source commit recorded.
-- **Quality needs:** GitHub-renderable Mermaid `flowchart`/`sequenceDiagram` only.
+- **Quality needs:** The diagrams in these files use Mermaid: GitHub-renderable `flowchart`/`sequenceDiagram` only.
 
 ## Method
 

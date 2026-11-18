@@ -1,11 +1,10 @@
 ---
 name: oc-pr
-description: >
-  Draft a review-ready PR body from scoped changes and available evidence. Trigger: write PR body, draft PR description, oc-pr.
+description: "Draft a review-ready PR body from scoped changes and available evidence. Trigger: write PR body, draft PR description, oc-pr."
 license: MIT
 metadata:
   author: andresnator
-  version: 1.0.1
+  version: "1.0.2"
   status: testing
 ---
 

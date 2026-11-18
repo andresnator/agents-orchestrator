@@ -1,16 +1,12 @@
 ---
 name: oc-absorb
-description: >
-  Trigger: absorb, analyze external harness, compare agent harness, absorber.
-  Analyze one or more external projects (git URL or local path) to extract
-  AI-harness practices, agent patterns, or instruction logic and contrast them
-  against this repository's harness. Not for application code review.
+description: "Compare an external AI harness (git URL or local path) with this one and shortlist practices to adopt. Trigger: absorb, absorber, analyze external harness."
 license: MIT
 metadata:
   author: abdi
   adapted_by: andresnator
   source: user-provided absorb draft
-  version: "2.2.2"
+  version: "2.3.0"
   status: testing
 ---
 
@@ -40,7 +36,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN targets are given THEN they are resolved (local paths verified) and the list confirmed before deep analysis.
+  - WHEN targets are given THEN resolve them (verify local paths), list them in the report, and continue without a confirmation.
   - WHEN this repository already covers a practice well THEN it is marked `no adoption needed`.
   - WHEN the user explicitly asks not to persist THEN the file is skipped and the same structure returns as a concise chat summary.
 - **Done means:** the report exists at `.ai/absorb/YYYY-MM-DD-<slug>.md` (`<slug>` is short kebab-case focus or target; fallback `external-practices`; create `.ai/absorb/` if missing), unless chat-only was requested. Return: resolved targets; key verified practices; rejected or conditional practices with reasons; our advantages; shortlist with proposed target paths in this repository; report path (always, unless the user opted out of persistence).
@@ -48,7 +44,7 @@ metadata:
 
 ## Method
 
-Delegate read-heavy discovery to subagents or researcher passes when available.
+Delegate read-heavy discovery to `scout` subagents (or the built-in `general`) when available.
 
 1. **Map each harness.** Record how each candidate practice is triggered or wired, and per practice:
 

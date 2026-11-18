@@ -1,18 +1,11 @@
 ---
 name: oc-slides
-description: >
-  Trigger: slidev, slides, presentation, deck, retro console, CRT, terminal
-  theme. Build a Slidev presentation with a retro-console visual identity —
-  three packaged themes (crt-phosphor, dos-terminal, synthwave-arcade), each
-  with day and night schemes — themed Mermaid diagrams, and a mandatory
-  PNG-export verification loop that checks every slide for overflow. También
-  se activa en castellano: "hazme una presentación con Slidev", "presentación
-  estilo consola retro".
+description: "Build a Slidev deck with a retro-console theme and PNG checks. Trigger: slidev, slides, presentation, deck, CRT, presentación con Slidev, consola retro."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.3"
+  version: "2.1.4"
 ---
 
 # Slidev Retro Deck
@@ -38,7 +31,7 @@ metadata:
 
 - **Scenarios:** WHEN a diagram overflows THEN apply the sizing levers in order.
 - **Done means:** the verification loop passed on a full export.
-- **Quality needs:** legible slides and a consistent accent map.
+- **Quality needs:** legible slides and a consistent accent map. Diagrams in `slides.md` use Mermaid fences.
 
 ## Method
 

@@ -1,13 +1,13 @@
 ---
 name: oc-domain
-description: "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, or when another skill needs to maintain the domain model. Formal ADR requests belong to oc-adr."
+description: "Build and sharpen the domain model in CONTEXT.md. Trigger: domain model, domain terminology, ubiquitous language, glossary. Formal ADRs belong to oc-adr."
 license: MIT
 metadata:
   author: Matt Pocock
   adapted_by: Agents Orchestrator maintainers
   source: https://github.com/mattpocock/skills
   status: in-progress
-  version: "2.1.3"
+  version: "2.2.0"
 ---
 
 # Domain Modeling
@@ -15,12 +15,12 @@ metadata:
 ## Intent
 
 - **Goal:** Actively build and sharpen the project's domain model while designing: challenge terms, invent edge-case scenarios, and write the glossary and decisions down the moment they crystallise.
-- **Limits:** `CONTEXT.md` is a glossary and nothing else: no implementation details, not a spec, scratch pad, or decision log. Create files lazily: `CONTEXT.md` when the first term is resolved, `docs/adr/` when the first ADR is needed. Offer ADRs sparingly.
+- **Limits:** `CONTEXT.md` is a glossary and nothing else: no implementation details, not a spec, scratch pad, or decision log. Create files lazily: `CONTEXT.md` when the first term is resolved, `docs/adr/` (`doc/adr/` when the repository uses `doc/`) when the first ADR is needed. Offer ADRs sparingly.
 - **Fails if:** A term conflict or code contradiction goes unchallenged, resolved terms are batched instead of captured inline, or an ADR is offered without all three ADR criteria.
 
 ## Context
 
-- **Reads:** `CONTEXT.md` (or `CONTEXT-MAP.md` plus per-context `CONTEXT.md`), `docs/adr/`, and the code the user describes.
+- **Reads:** `CONTEXT.md` (or `CONTEXT-MAP.md` plus per-context `CONTEXT.md`), the ADR folders, and the code the user describes.
 - **Scope:** Changing the model, not just consuming it. Merely reading `CONTEXT.md` for vocabulary is a one-line habit any skill can do and is not this skill.
 
 ## Expectations
@@ -37,6 +37,8 @@ metadata:
 ## Method
 
 Offer an ADR only when all three criteria in [ADR-FORMAT.md](./assets/ADR-FORMAT.md) are true; otherwise skip it.
+
+One rule for the ADR folder, the same in `oc-adr` and `oc-arch`: the root `docs/adr/NNNN-slug.md` (`doc/adr/` when the repository uses `doc/`). In a multi-context repository, a decision of one context goes in that context's own `docs/adr/`, and a system-wide decision goes in the root folder. Each folder has its own numbering. A small decision uses the lightweight format of ADR-FORMAT.md. A formal ADR with options uses the `oc-adr` template in the same folder.
 
 File layout. Single context:
 

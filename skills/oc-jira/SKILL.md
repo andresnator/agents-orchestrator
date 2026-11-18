@@ -1,11 +1,11 @@
 ---
 name: oc-jira
-description: "Create or refine Jira Task, User Story, and Spike tickets in Jira Markup. Use when the user wants a Jira Task, technical task, implementation task, maintenance task, operational work item, developer-ready task, acceptance criteria for a task, or SDD-ready Task input; a user story, story ticket, product capability, end-user outcome, acceptance criteria for a story, developer-ready story, or SDD-ready User Story input; or a Spike, research ticket, investigation ticket, technical exploration, discovery work, research question, or SDD-ready Spike input."
+description: "Create or refine a Jira Task, User Story, or Spike in Jira Markup. Trigger: Jira ticket, Jira task, user story, spike, acceptance criteria, refinar ticket."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "1.0.3"
+  version: "2.0.0"
 ---
 
 # Jira Ticket
@@ -15,12 +15,12 @@ metadata:
 - **Goal:** One Jira ticket of the inferred type (Task, User Story, or Spike) as one Jira Markup code block in chat.
 - **Limits:**
   - Do not create issues through the Jira API.
-  - Infer the type from the Type table. Ask for the type once, with the `question` tool, only if signals are absent or conflict.
+  - Infer the type from the Type table. If signals are absent or conflict, use Task and say so in one line.
   - Quick Creation: ask only if Title, Description, or Objective is blocked. Ask one question that ends with `?` (`¿...?` in Spanish).
   - Refinement: ask one question at a time. Generate only when the user explicitly asks to generate, create, print, or finalize.
   - Explore the codebase only in Refinement (or on request), lightly. Get confirmation before deep exploration.
   - Talk in the user's language. Write the ticket in English unless the user asks for another language.
-- **Fails if:** the output is not one Jira Markup block, uses the sections of another type, has empty sections or placeholders, is generated before the request in Refinement, asks for a clear type, or has factual claims without an Evidence Summary.
+- **Fails if:** the output is not one Jira Markup block, uses the sections of another type, has empty sections or placeholders, is generated before the request in Refinement, asks for the type, or has factual claims without an Evidence Summary.
 
 ## Context
 
@@ -28,8 +28,7 @@ metadata:
 - **Never reads:** the Jira API or the templates of other types.
 - **Scope:** two modes:
   - Quick Creation (default).
-  - Refinement, only on explicit intent: refine, improve, complete, add detail, clarify, make developer-ready, add acceptance criteria, or Spanish refinar, mejorar, completar, agregar detalle, hacer mas claro, dejar listo para dev, anadir criterios de aceptacion.
-  - SDD-ready is a Refinement variant: listo para SDD, preparalo para SDD, para usarlo en SDD, SDD-ready, ready for SDD, prepare for SDD, as SDD input.
+  - Refinement, only on explicit intent: refine, improve, complete, add detail, clarify, make developer-ready, ready to build, add acceptance criteria, or Spanish refinar, mejorar, completar, agregar detalle, hacer mas claro, dejar listo para dev, anadir criterios de aceptacion.
 
 ## Expectations
 

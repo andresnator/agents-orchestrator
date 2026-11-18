@@ -1,17 +1,11 @@
 ---
 name: oc-summarize
-description: |
-  Expert in pedagogical book chapter synthesis. Use this skill WHENEVER the user wants to summarize a book chapter, analyze text or document content, study a chapter, extract key ideas from a reading, or when they mention words like "chapter summary", "chapter", "book", "analyze this text", "summarize this chapter", "summarize this document", "cornell", "TL;DR" of long-form content. Tool, log, or chat output belongs to oc-refine-output. Also trigger when the user uploads a PDF, EPUB, or document and asks to understand or study it in parts.
-  También se activa en castellano: "resumen", "resumen del capítulo", "resumir esto",
-  "resumir el capítulo", "analizar este texto", "capítulo", "libro", "ideas clave",
-  "resumen del libro", "estudiar el capítulo", "síntesis", "notas cornell",
-  "extraer ideas principales", "dame un resumen", "qué dice este capítulo",
-  "resumir documento", "analizar lectura".
+description: "Summarize a book chapter or document for study. Trigger: chapter summary, summarize document, cornell, resumen, resumir, ideas clave. Logs: oc-refine-output."
 license: MIT
 metadata:
   author: andresnator
   status: testing
-  version: "2.1.3"
+  version: "2.2.0"
 ---
 
 # Book Chapter Summary
@@ -32,7 +26,7 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN book and chapter, save path, or publishing preference are missing THEN ask for them in a single message before starting (save path defaults to the current working directory; publishing only if available).
+  - WHEN book, chapter, or save path is missing THEN infer book and chapter from the content, save in the current working directory, and report the assumptions. Do not publish unless the user asked.
   - WHEN file-writing is unavailable THEN return the complete Markdown inline and say no file was created.
   - WHEN publishing is requested and available THEN publish from the saved `.md` (if no file exists, use the generated Markdown content) and show only the TL;DR, file path, and link/identifier in chat (full summary only if asked).
   - WHEN publishing is not available THEN show the full summary in chat and say: *"The summary was saved at `[path/file.md]`. Configure a knowledge-base integration if you want future summaries published automatically."*
