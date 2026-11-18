@@ -15,8 +15,11 @@ metadata:
 ## Intent
 
 - **Goal:** A clear decision, domain notes, or one saved plan, reached through one question at a time.
-- **Limits:** Planning only. Keep code, tests, and build files unchanged. Write only domain notes (docs mode) or the plan file (plan mode).
-- **Fails if:** the user is asked something the repository can answer; plan mode ends without a saved plan.
+- **Limits:** Planning only. Keep code, tests, and build files unchanged. Plain mode writes no file. Docs mode writes only the domain glossary (`CONTEXT.md`) and an ADR that the user accepted. Plan mode writes only the plan file.
+- **Fails if:**
+  - the user is asked something the repository can answer;
+  - docs mode writes a term or an ADR that the user did not confirm in an answer;
+  - plan mode ends without a saved plan.
 
 ## Context
 
@@ -32,7 +35,8 @@ metadata:
 ## Expectations
 
 - **Scenarios:**
-  - WHEN the mode is docs THEN load `oc-domain` and write the notes that the user confirmed in the interview.
+  - WHEN the mode is docs THEN load `oc-domain`. Write a term to the glossary only after the user confirmed its definition in an answer. List the other terms in the reply as open.
+  - WHEN a decision in docs mode qualifies for an ADR THEN offer it, and write the ADR only if the user accepts.
   - WHEN the user stops the interview early in plan mode THEN write the plan with the open points as assumptions in `## Notes`.
 - **Done means:** the reply gives the current question or the conclusion. At the end it gives the file path, if a file was written, and the open decisions. Plan mode also gives `ejecuta el plan <path>`.
 - **Quality needs:** talk in the language of the user. Write files in English.
@@ -43,10 +47,9 @@ The user asked for an interview, so questions are the work here. Follow `referen
 
 Plan mode:
 
-1. Interview until these are clear: the goal, the checks that show it is done, the task groups with their files, and the main risks.
-2. Load `oc-plan` and use its "Plan format" and `assets/plan-template.md`.
-3. Save the plan to `.ai/plans/<slug>.md`. Make the slug from the goal. If the path exists already, add a numeric suffix (`-2`).
-4. Put decisions from the interview in `## Notes`.
+1. Interview until these are clear: the goal, the checks that show it is done, the scope, and the main risks. Find the files and the task groups in the repository yourself.
+2. Load `oc-plan` and write the plan as its "Plan format" tells. Do not ask for approval before you save it.
+3. Put the decisions from the interview in `## Notes`.
 
 ## Attribution
 
