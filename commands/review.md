@@ -1,9 +1,9 @@
 ---
-description: "Run an oc-review operation: judgment, light, or defend."
+description: "Review code with oc-review: solo, dual, or defend. Add fix to fix the findings."
 agent: orchestraitor
 subtask: false
-argument-hint: "[judgment|light|defend] [scope]"
+argument-hint: "[solo|dual|defend] [fix] [scope]"
 ---
 Raw arguments: `$ARGUMENTS`
 
-Load `oc-review`. The first argument selects the operation: `judgment`, `light` (`operation=judgment` in light mode), or `defend`. Pass the remaining arguments as scope. If the operation is missing or unknown, ask one closed choice among `judgment`, `light`, and `defend`.
+Load `oc-review`. The first argument selects the operation: `solo`, `dual`, or `defend`. If no operation is given, use `solo`. Do not ask which operation to use. The word `fix` asks for the fix step. The remaining arguments are the scope.
