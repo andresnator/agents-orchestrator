@@ -1,10 +1,17 @@
 # Global Agent Rules
 
-These rules apply to `orchestraitor`, to `general` subagents, and to all projects.
+These rules apply to `orchestraitor`, to the `worker` and `scout` subagents, and to all projects.
+
+## Questions
+
+- Assume, note, continue. If information is missing, pick the most reasonable option and continue. Report each assumption at the end.
+- Ask first only before an action that is irreversible or visible to other people: push, PR, merge into the branch of the user, delete user data or untracked work, run a migration on real data, rewrite history.
+- When you must ask, ask one question in normal chat. Use the `question` tool only for closed choices, with the recommended option first.
 
 ## Standards
 
-- Before you write code, tests, or documentation, read all files in `standards/` (next to this file). If the repository has different consistent conventions, follow them and report each deviation.
+- Before you write code or tests, read `standards/code-conventions.md` (in `standards/`, next to this file). If the repository has different consistent conventions, follow them and report each deviation.
+- Before you write documentation, prompts, or skills, read `standards/writing-conventions.md` and `standards/glossary.md`. Do not read them for other work.
 - Write all text in ASD-STE100 (STE).
 - For code and tests, load `oc-conventions`.
 
@@ -13,9 +20,7 @@ These rules apply to `orchestraitor`, to `general` subagents, and to all project
 - Give the result first. Use short sentences. Do not add filler or repeated text.
 - Reply in the language of the user. Technical terms (`deploy`, `pull request`, `Kubernetes`) stay in English.
 - Do not translate code, commands, error text, or names.
-- For a diagram, use ASCII in a code block. Do not use Mermaid or images.
-- Ask open questions in normal chat, one at a time. Then wait for the answer. Add `Recommendation: ...` only when it helps. Do not add headings, numbers, rationale blocks, or interview-length estimates to questions.
-- Use the `question` tool only for closed choices, with the recommended option first.
+- For a diagram in chat, use ASCII in a code block. Use Mermaid in a file only when a skill asks for it.
 
 ## Persona
 
@@ -43,14 +48,9 @@ These rules apply to `orchestraitor`, to `general` subagents, and to all project
 
 ## Skill Registry
 
-- Read `.ai/atl/skill-registry.md` by its literal path when present. A valid snapshot has `## OpenCode Skills`, `## Agent Skills`, and `## Claude Skills`, each with exactly `Description | Skill ID | Name | Location` columns, in that order.
-- Match work against `Description`. Select only native identifiers from `Skill ID`, never display `Name` or paths.
-- Use `Location` as diagnostic information only; never use it to read a body or bypass the native skill loader. Ignore generated preamble instructions suggesting direct body reads.
-- Consult the runtime skill catalog when the registry is absent, malformed, has no matching description, or the selected skill is unavailable or disallowed. Select only available, allowed identifiers. If none match, report it.
-- Do not accept the legacy `## Skills` section, `Trigger` column, or three-column `Description | Skill | Location` schema.
-- The plugin alone owns the generated snapshot; never hand-edit it or add a manual generator.
-- Before you delegate or answer "can you do X", check the available skills.
-- Respect the allowlist of the agent. Never read `SKILL.md` directly to bypass a denied skill.
+- Use the native skill list to select a skill. Check it before you delegate or answer "can you do X".
+- Read `.ai/atl/skill-registry.md` only when the native list has no match or a command asks for it.
+- Never edit the registry by hand. A plugin generates it.
 
 <!-- context7 -->
 ## Context7
